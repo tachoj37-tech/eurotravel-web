@@ -468,7 +468,28 @@
   .note { font-size: 12.5px; color: var(--muted); margin-top: 20px; }
 
   /* ================= pasos ================= */
-  .reserve-card { background: #fff; border: 1px solid var(--line); border-radius: 16px; box-shadow: var(--shadow); overflow: hidden; margin-top: 26px; }
+  .steps-top { border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
+
+  /* resumen del viaje ya capturado */
+  .viaje-box {
+    margin-top: 22px; border: 1px solid var(--line); border-radius: var(--radius);
+    background: var(--soft); padding: 18px 20px;
+    display: flex; flex-wrap: wrap; gap: 14px; align-items: center; justify-content: space-between;
+  }
+  .viaje-datos { display: flex; flex-wrap: wrap; gap: 10px 26px; }
+  .viaje-datos > div { display: flex; flex-direction: column; gap: 2px; }
+  .viaje-datos b {
+    font-family: 'Archivo'; font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase;
+    color: var(--muted); font-weight: 600;
+  }
+  .viaje-datos span { font-size: 14.5px; font-weight: 500; }
+
+  .datos-card {
+    margin-top: 22px; background: #fff; border: 1px solid var(--line);
+    border-radius: 16px; box-shadow: var(--shadow); padding: 24px 20px;
+  }
+  @media (min-width: 720px) { .datos-card { padding: 30px; } }
+
   .steps { display: flex; border-bottom: 1px solid var(--line); background: #fbfbfa; }
   .step { flex: 1; padding: 15px 14px; display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--muted); border-right: 1px solid var(--line); }
   .step:last-child { border-right: none; }
@@ -611,6 +632,24 @@
   .loc-list b { font-weight: 500; font-size: 14.5px; }
   .loc-list small { display: block; color: var(--muted); font-size: 12px; }
   .loc-empty { padding: 14px 22px; color: var(--muted); font-size: 13.5px; }
+
+  /* sugerencias de Google bajo el campo de calle */
+  .loc-sug {
+    display: none; position: absolute; top: 100%; left: 0; right: 0; z-index: 5;
+    background: #fff; border: 1px solid var(--line); border-radius: var(--radius-sm);
+    box-shadow: var(--shadow-lg); margin-top: 4px; max-height: 236px; overflow-y: auto;
+  }
+  .loc-sug.on { display: block; }
+  .loc-sug button {
+    width: 100%; text-align: left; background: none; border: none;
+    border-bottom: 1px solid var(--line); padding: 10px 12px; cursor: pointer; font: inherit;
+    display: flex; gap: 10px; align-items: center;
+  }
+  .loc-sug button:last-child { border-bottom: none; }
+  .loc-sug button:hover, .loc-sug button.hl { background: var(--soft); }
+  .loc-sug svg { width: 15px; height: 15px; color: var(--red); flex-shrink: 0; }
+  .loc-sug b { font-weight: 500; font-size: 14px; display: block; }
+  .loc-sug small { display: block; color: var(--muted); font-size: 11.5px; }
 
   .loc-detail { padding: 16px 22px 22px; background: var(--soft); border-top: 1px solid var(--line); }
   .loc-detail .grid { display: grid; gap: 12px; grid-template-columns: 1fr; }
@@ -854,224 +893,180 @@ window.IMGS = {
 
   <!-- ============ COTIZAR ============ -->
   <section class="view" id="v-cotizar">
-    <div class="search-shell">
-      <div class="wrap">
-        <span class="eyebrow">Cotizaciones</span>
-        <h2>¿A dónde va tu grupo?</h2>
-        <p class="sub">
-          Elige el tipo de unidad, marca origen y destino con dirección exacta y te decimos qué te
-          conviene.
-        </p>
+    <!-- ===== PASO 1 · VIAJE ===== -->
+    <div id="paso-viaje">
+      <div class="search-shell">
+        <div class="wrap">
+          <span class="eyebrow">Cotizaciones</span>
+          <h2>¿A dónde va tu grupo?</h2>
+          <p class="sub">
+            Elige el tipo de unidad, marca origen y destino con dirección exacta y te decimos qué te
+            conviene.
+          </p>
 
-        <div class="trip">
-          <label><input type="radio" name="trip" value="redondo" checked /> Viaje redondo</label>
-          <label><input type="radio" name="trip" value="sencillo" /> Solo ida</label>
+          <div class="trip">
+            <label><input type="radio" name="trip" value="redondo" checked /> Viaje redondo</label>
+            <label><input type="radio" name="trip" value="sencillo" /> Solo ida</label>
+          </div>
+
+          <div class="search-card">
+            <div class="field" id="fw-origen">
+              <label>Origen</label>
+              <button class="locbtn empty" type="button" id="btn-origen">
+                <svg aria-hidden="true"><use href="#i-target" /></svg>
+                <span><b>¿De dónde salen?</b><small>Ciudad, terminal o dirección exacta</small></span>
+              </button>
+              <span class="msg">Indica el punto de salida.</span>
+            </div>
+
+            <div class="field" id="fw-destino">
+              <label>Destino</label>
+              <button class="locbtn empty" type="button" id="btn-destino">
+                <svg aria-hidden="true"><use href="#i-pin" /></svg>
+                <span><b>¿A dónde van?</b><small>Ciudad, hotel o dirección exacta</small></span>
+              </button>
+              <span class="msg">Indica el destino.</span>
+            </div>
+
+            <div class="field" id="fw-salida">
+              <label for="s-salida">Salida</label>
+              <input id="s-salida" type="datetime-local" />
+              <span class="msg">Elige fecha y hora.</span>
+            </div>
+
+            <div class="field" id="fw-regreso">
+              <label for="s-regreso">Regreso</label>
+              <input id="s-regreso" type="datetime-local" />
+            </div>
+
+            <div class="field" id="fw-unidad">
+              <label for="s-unidad">Tipo de unidad</label>
+              <select id="s-unidad"></select>
+              <span class="msg">Elige la unidad.</span>
+            </div>
+
+            <div class="field">
+              <button class="btn btn-red" id="s-go" type="button" style="height: 44px">
+                <svg aria-hidden="true"><use href="#i-search" /></svg> Buscar
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="wrap" style="padding-bottom: 84px">
+        <div class="results" id="results">
+          <div class="res-head">
+            <div class="route" id="res-route"></div>
+            <div class="meta" id="res-meta"></div>
+          </div>
+          <div id="res-list"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== PASO 2 · TUS DATOS ===== -->
+    <div id="paso-datos" style="display: none">
+      <div class="wrap pad">
+        <div class="steps steps-top">
+          <div class="step done"><b>&#10003;</b> Viaje <span></span></div>
+          <div class="step on"><b>2</b> Tus datos <span></span></div>
+          <div class="step"><b>3</b> Listo <span></span></div>
         </div>
 
-        <div class="search-card">
-          <div class="field" id="fw-origen">
-            <label>Origen</label>
-            <button class="locbtn empty" type="button" id="btn-origen">
-              <svg aria-hidden="true"><use href="#i-target" /></svg>
-              <span><b>¿De dónde salen?</b><small>Ciudad, terminal o dirección exacta</small></span>
-            </button>
-            <span class="msg">Indica el punto de salida.</span>
+        <div class="viaje-box">
+          <div class="viaje-datos" id="viaje-datos"></div>
+          <button class="btn btn-line btn-sm" type="button" id="editar-viaje">Editar viaje</button>
+        </div>
+
+        <div class="sec-head" style="margin-top: 34px">
+          <span class="eyebrow">Casi listo</span>
+          <h2>¿Con quién nos comunicamos?</h2>
+          <p class="lede">Solo faltan tus datos. Al terminar recibes un resumen listo para enviarnos.</p>
+        </div>
+
+        <div class="datos-card">
+          <div class="grid-2">
+            <div class="field" data-req>
+              <label for="f-nombre">Nombre completo *</label>
+              <input id="f-nombre" type="text" placeholder="Nombre y apellido" autocomplete="name" />
+              <span class="msg">Necesitamos tu nombre.</span>
+            </div>
+            <div class="field" data-req>
+              <label for="f-tel">Teléfono / WhatsApp *</label>
+              <input id="f-tel" type="tel" placeholder="33 1234 5678" autocomplete="tel" />
+              <span class="msg">Escribe un teléfono de contacto.</span>
+            </div>
+            <div class="field">
+              <label for="f-mail">Correo electrónico</label>
+              <input id="f-mail" type="email" placeholder="tucorreo@ejemplo.com" autocomplete="email" />
+            </div>
+            <div class="field">
+              <label for="f-empresa">Empresa o grupo (opcional)</label>
+              <input id="f-empresa" type="text" placeholder="Nombre de la empresa" />
+            </div>
+            <div class="field">
+              <label for="f-uso">Motivo del viaje</label>
+              <select id="f-uso">
+                <option value="">Selecciona</option>
+                <option>Turismo / excursión</option>
+                <option>Empresarial</option>
+                <option>Evento social (boda, XV, graduación)</option>
+                <option>Escolar</option>
+                <option>Religioso / peregrinación</option>
+                <option>Deportivo / artístico</option>
+                <option>Traslado aeropuerto u hotel</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="f-paradas">Paradas o escalas</label>
+              <input id="f-paradas" type="text" placeholder="Tequila, Chapala…" />
+            </div>
+            <div class="field full">
+              <label for="f-notas">Comentarios</label>
+              <textarea id="f-notas" placeholder="Itinerario, horarios, requerimientos especiales…"></textarea>
+            </div>
           </div>
 
-          <div class="field" id="fw-destino">
-            <label>Destino</label>
-            <button class="locbtn empty" type="button" id="btn-destino">
-              <svg aria-hidden="true"><use href="#i-pin" /></svg>
-              <span><b>¿A dónde van?</b><small>Ciudad, hotel o dirección exacta</small></span>
-            </button>
-            <span class="msg">Indica el destino.</span>
-          </div>
-
-          <div class="field" id="fw-salida">
-            <label>Salida</label>
-            <input id="s-salida" type="date" />
-            <span class="msg">Elige la fecha.</span>
-          </div>
-
-          <div class="field" id="fw-regreso">
-            <label>Regreso</label>
-            <input id="s-regreso" type="date" />
-          </div>
-
-          <div class="field" id="fw-unidad">
-            <label for="s-unidad">Tipo de unidad</label>
-            <select id="s-unidad"></select>
-            <span class="msg">Elige la unidad.</span>
-          </div>
-
-          <div class="field">
-            <button class="btn btn-red" id="s-go" type="button" style="height: 44px">
-              <svg aria-hidden="true"><use href="#i-search" /></svg> Buscar
-            </button>
+          <div class="panel-actions">
+            <button class="btn btn-line" type="button" id="volver-viaje">Atrás</button>
+            <button class="btn btn-red" type="button" id="f-review">Ver resumen <svg class="arw" aria-hidden="true"><use href="#i-arrow" /></svg></button>
           </div>
         </div>
       </div>
     </div>
 
-    <div class="wrap" style="padding-bottom: 84px">
-      <div class="results" id="results">
-        <div class="res-head">
-          <div class="route" id="res-route"></div>
-          <div class="meta" id="res-meta"></div>
-        </div>
-        <div id="res-list"></div>
-      </div>
-
-      <div style="margin-top: 46px">
-        <div class="sec-head">
-          <span class="eyebrow">Solicitud</span>
-          <h2>Completa tu solicitud</h2>
-          <p class="lede">Al terminar recibes un resumen listo para enviarnos por WhatsApp o correo.</p>
+    <!-- ===== PASO 3 · LISTO ===== -->
+    <div id="paso-listo" style="display: none">
+      <div class="wrap pad">
+        <div class="steps steps-top">
+          <div class="step done"><b>&#10003;</b> Viaje <span></span></div>
+          <div class="step done"><b>&#10003;</b> Tus datos <span></span></div>
+          <div class="step on"><b>3</b> Listo <span></span></div>
         </div>
 
-        <div class="reserve-card">
-          <div class="steps" id="steps">
-            <div class="step on" data-step="1"><b>1</b> Ruta y fechas <span></span></div>
-            <div class="step" data-step="2"><b>2</b> Servicio y unidad <span></span></div>
-            <div class="step" data-step="3"><b>3</b> Tus datos <span></span></div>
-          </div>
+        <div class="sec-head" style="margin-top: 34px">
+          <span class="eyebrow">Último paso</span>
+          <h2>Revisa y envía tu solicitud</h2>
+          <p class="lede">Mándanoslo por WhatsApp o correo y te respondemos el mismo día hábil.</p>
+        </div>
 
-          <div class="panel on" data-panel="1">
-            <div class="grid-2">
-              <div class="field" data-req>
-                <label for="f-origen">Ciudad de origen *</label>
-                <input id="f-origen" type="text" placeholder="Guadalajara, Jal." />
-                <span class="msg">Indica desde dónde sale el grupo.</span>
-              </div>
-              <div class="field" data-req>
-                <label for="f-destino">Ciudad de destino *</label>
-                <input id="f-destino" type="text" placeholder="Puerto Vallarta, Jal." />
-                <span class="msg">Indica el destino principal.</span>
-              </div>
-              <div class="field full">
-                <label for="f-dir">Detalles de subida y bajada (opcional)</label>
-                <textarea id="f-dir" placeholder="Salida: Av. Alba 1666, Lomas de San Pedrito, Tlaquepaque. Llegada: Hotel, Blvd. Fco. Medina Ascencio 2000, Puerto Vallarta."></textarea>
-              </div>
-              <div class="field" data-req>
-                <label for="f-salida">Fecha de salida *</label>
-                <input id="f-salida" type="date" />
-                <span class="msg">Selecciona la fecha de salida.</span>
-              </div>
-              <div class="field">
-                <label for="f-regreso">Fecha de regreso</label>
-                <input id="f-regreso" type="date" />
-              </div>
-              <div class="field">
-                <label for="f-hora">Hora aproximada de salida</label>
-                <input id="f-hora" type="time" />
-              </div>
-              <div class="field">
-                <label for="f-paradas">Paradas o escalas</label>
-                <input id="f-paradas" type="text" placeholder="Tequila, Chapala…" />
-              </div>
-            </div>
-            <div class="panel-actions">
-              <span></span>
-              <button class="btn btn-ink" type="button" data-next="2">Siguiente <svg class="arw" aria-hidden="true"><use href="#i-arrow" /></svg></button>
-            </div>
+        <div class="datos-card">
+          <div class="summary">
+            <span class="eyebrow">Resumen de tu solicitud</span>
+            <dl id="sum-list"></dl>
           </div>
-
-          <div class="panel" data-panel="2">
-            <div class="grid-2">
-              <div class="field" data-req>
-                <label for="f-tipo">Tipo de servicio *</label>
-                <select id="f-tipo">
-                  <option value="">Selecciona una opción</option>
-                  <option>Renta de autobuses</option>
-                  <option>Renta de Sprinter</option>
-                  <option>Transporte ejecutivo (Suburban)</option>
-                  <option>Grupos</option>
-                  <option>Transporte por horas</option>
-                  <option>Renta por día</option>
-                  <option>Servicios para eventos</option>
-                  <option>Recorridos turísticos</option>
-                  <option>Transporte de personal</option>
-                </select>
-                <span class="msg">Elige el tipo de servicio.</span>
-              </div>
-              <div class="field" data-req>
-                <label for="f-pax">Número de pasajeros *</label>
-                <input id="f-pax" type="number" min="1" max="200" placeholder="45" />
-                <span class="msg">Indica cuántas personas viajan.</span>
-              </div>
-              <div class="field">
-                <label for="f-unidad">Unidad preferida</label>
-                <select id="f-unidad"><option value="">Sin preferencia / recomiéndenme</option></select>
-              </div>
-              <div class="field">
-                <label for="f-uso">Motivo del viaje</label>
-                <select id="f-uso">
-                  <option value="">Selecciona</option>
-                  <option>Turismo / excursión</option>
-                  <option>Empresarial</option>
-                  <option>Evento social (boda, XV, graduación)</option>
-                  <option>Escolar</option>
-                  <option>Religioso / peregrinación</option>
-                  <option>Deportivo / artístico</option>
-                  <option>Traslado aeropuerto u hotel</option>
-                </select>
-              </div>
-            </div>
-            <div class="panel-actions">
-              <button class="btn btn-line" type="button" data-prev="1">Atrás</button>
-              <button class="btn btn-ink" type="button" data-next="3">Siguiente <svg class="arw" aria-hidden="true"><use href="#i-arrow" /></svg></button>
-            </div>
+          <div class="send-row">
+            <a class="btn btn-red" id="send-wa" href="#" target="_blank" rel="noopener"><svg aria-hidden="true"><use href="#i-wa" /></svg> Enviar por WhatsApp</a>
+            <a class="btn btn-ink" id="send-mail" href="#"><svg aria-hidden="true"><use href="#i-mail" /></svg> Enviar por correo</a>
+            <button class="btn btn-line" type="button" id="copy-sum">Copiar resumen</button>
+            <button class="btn btn-line" type="button" id="volver-datos">Editar datos</button>
           </div>
-
-          <div class="panel" data-panel="3">
-            <div class="grid-2">
-              <div class="field" data-req>
-                <label for="f-nombre">Nombre completo *</label>
-                <input id="f-nombre" type="text" placeholder="Nombre y apellido" />
-                <span class="msg">Necesitamos tu nombre.</span>
-              </div>
-              <div class="field" data-req>
-                <label for="f-tel">Teléfono / WhatsApp *</label>
-                <input id="f-tel" type="tel" placeholder="33 1234 5678" />
-                <span class="msg">Escribe un teléfono de contacto.</span>
-              </div>
-              <div class="field">
-                <label for="f-mail">Correo electrónico</label>
-                <input id="f-mail" type="email" placeholder="tucorreo@ejemplo.com" />
-              </div>
-              <div class="field">
-                <label for="f-empresa">Empresa o grupo (opcional)</label>
-                <input id="f-empresa" type="text" placeholder="Nombre de la empresa" />
-              </div>
-              <div class="field full">
-                <label for="f-notas">Comentarios</label>
-                <textarea id="f-notas" placeholder="Itinerario, horarios, requerimientos especiales…"></textarea>
-              </div>
-            </div>
-            <div class="panel-actions">
-              <button class="btn btn-line" type="button" data-prev="2">Atrás</button>
-              <button class="btn btn-red" type="button" id="f-review">Ver resumen <svg class="arw" aria-hidden="true"><use href="#i-arrow" /></svg></button>
-            </div>
-          </div>
-
-          <div class="panel" data-panel="4">
-            <div class="summary">
-              <span class="eyebrow">Resumen de tu solicitud</span>
-              <dl id="sum-list"></dl>
-            </div>
-            <div class="send-row">
-              <a class="btn btn-red" id="send-wa" href="#" target="_blank" rel="noopener"><svg aria-hidden="true"><use href="#i-wa" /></svg> Enviar por WhatsApp</a>
-              <a class="btn btn-ink" id="send-mail" href="#"><svg aria-hidden="true"><use href="#i-mail" /></svg> Enviar por correo</a>
-              <button class="btn btn-line" type="button" id="copy-sum">Copiar resumen</button>
-              <button class="btn btn-line" type="button" data-prev="3">Editar</button>
-            </div>
-            <p class="copied" id="copied">Resumen copiado al portapapeles.</p>
-          </div>
+          <p class="copied" id="copied">Resumen copiado al portapapeles.</p>
         </div>
       </div>
     </div>
   </section>
-
   <!-- ============ NOSOTROS ============ -->
   <section class="view" id="v-nosotros">
     <div class="wrap pad">
@@ -1226,7 +1221,8 @@ window.IMGS = {
       <div class="grid" style="margin-top: 12px">
         <div class="field">
           <label for="loc-calle">Calle y número</label>
-          <input id="loc-calle" type="text" placeholder="Av. Alba 1666" />
+          <input id="loc-calle" type="text" placeholder="Av. Alba 1666" autocomplete="off" />
+          <div class="loc-sug" id="loc-sug"></div>
         </div>
         <div class="field">
           <label for="loc-cp">C.P.</label>
@@ -1262,6 +1258,7 @@ window.IMGS = {
   </div>
 </div>
 
+<script src="config.js"></script>
 <script src="unidades.js"></script>
 <script>
   (function () {
@@ -1370,7 +1367,6 @@ window.IMGS = {
     var UNITS = window.UNIDADES || [];
 
     var fleetEl = byId('fleet');
-    var unitSel = byId('f-unidad');
 
     UNITS.forEach(function (u) {
       var card = document.createElement('button');
@@ -1388,10 +1384,6 @@ window.IMGS = {
       card.addEventListener('click', function () { openModal(u.id); });
       fleetEl.appendChild(card);
 
-      var opt = document.createElement('option');
-      opt.value = u.name;
-      opt.textContent = u.name + ' — ' + u.cap;
-      unitSel.appendChild(opt);
     });
 
     document.querySelectorAll('.chip').forEach(function (chip) {
@@ -1424,13 +1416,11 @@ window.IMGS = {
       else { seatBox.style.display = 'none'; }
 
       byId('m-book').onclick = function () {
-        unitSel.value = u.name;
-        byId('f-tipo').value = servicioDe(u);
-        // deja el buscador con esta unidad exacta, no solo con su categoría
+        // deja el buscador con esta unidad exacta, listo para capturar ruta y fechas
         setUnidad(u.id);
         closeModal();
         go('cotizar');
-        setTimeout(function () { goStep(2); }, 300);
+        verPantalla('paso-viaje');
       };
 
       modal.classList.add('on');
@@ -1482,6 +1472,8 @@ window.IMGS = {
     var LOC = { origen: null, destino: null };
     var locTarget = 'origen';
     var locPick = null;
+    var locPlaceId = null;
+    var locDireccion = "";
     var locCoords = null;
 
     var ACC = { 'á': 'a', 'é': 'e', 'í': 'i', 'ó': 'o', 'ú': 'u', 'ü': 'u', 'ñ': 'n' };
@@ -1538,6 +1530,9 @@ window.IMGS = {
       var saved = LOC[which];
       locPick = saved ? saved.place : null;
       locCoords = saved ? saved.coords : null;
+      locPlaceId = saved ? saved.placeId : null;
+      locDireccion = saved ? (saved.direccionGoogle || '') : '';
+      if (typeof cierraSugerencias === 'function') cierraSugerencias();
 
       byId('loc-kind').textContent = which === 'origen' ? 'Origen' : 'Destino';
       byId('loc-title').textContent = which === 'origen' ? '¿Desde dónde salen?' : '¿A dónde van?';
@@ -1599,7 +1594,9 @@ window.IMGS = {
         col: byId('loc-col').value.trim(),
         cp: byId('loc-cp').value.trim(),
         ref: byId('loc-ref').value.trim(),
-        coords: locCoords
+        coords: locCoords,
+        placeId: locPlaceId,
+        direccionGoogle: locDireccion
       };
 
       paintLoc(locTarget);
@@ -1634,9 +1631,166 @@ window.IMGS = {
       btn.querySelector('small').textContent = locLine(l) || (l.place[1] ? l.place[1] + ' · ' + l.place[2] : 'Ubicación seleccionada');
     }
 
+    /* ================= autocompletado de Google ================= */
+    /* Habla directo con Places API (New) por REST. No carga el SDK de mapas,
+       así que basta con tener habilitada Places API (New) en Google Cloud.
+       Sin clave configurada, el campo funciona como un input normal. */
+
+    var GKEY = (window.CONFIG || {}).GOOGLE_MAPS_KEY || '';
+    var GPAIS = (window.CONFIG || {}).PAIS || 'mx';
+    var GIDIOMA = (window.CONFIG || {}).IDIOMA || 'es';
+    var gSesion = null;
+    var gTimer = 0;
+    var gSugerencias = [];
+    var gIndice = -1;
+
+    function nuevaSesion() {
+      // token de sesión: agrupa las teclas + el detalle en un solo cobro
+      gSesion = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+        var r = (Math.random() * 16) | 0;
+        return (c === 'x' ? r : (r & 0x3) | 0x8).toString(16);
+      });
+    }
+
+    var cajaSug = byId('loc-sug');
+    var campoCalle = byId('loc-calle');
+
+    function cierraSugerencias() {
+      cajaSug.classList.remove('on');
+      cajaSug.innerHTML = '';
+      gSugerencias = [];
+      gIndice = -1;
+    }
+
+    function pintaSugerencias(lista) {
+      gSugerencias = lista;
+      gIndice = -1;
+      if (!lista.length) { cierraSugerencias(); return; }
+      cajaSug.innerHTML = lista.map(function (s, i) {
+        return '<button type="button" data-i="' + i + '">' +
+          '<svg aria-hidden="true"><use href="#i-pin"/></svg>' +
+          '<span><b>' + esc(s.principal) + '</b><small>' + esc(s.secundario) + '</small></span></button>';
+      }).join('');
+      cajaSug.classList.add('on');
+    }
+
+    function buscaSugerencias(texto) {
+      if (!GKEY || texto.trim().length < 3) { cierraSugerencias(); return; }
+      if (!gSesion) nuevaSesion();
+
+      fetch('https://places.googleapis.com/v1/places:autocomplete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Goog-Api-Key': GKEY },
+        body: JSON.stringify({
+          input: texto,
+          includedRegionCodes: [GPAIS],
+          languageCode: GIDIOMA,
+          sessionToken: gSesion
+        })
+      })
+        .then(function (r) { return r.json(); })
+        .then(function (d) {
+          if (d.error) { console.warn('Places:', d.error.message); cierraSugerencias(); return; }
+          var lista = (d.suggestions || []).map(function (s) {
+            var p = s.placePrediction || {};
+            return {
+              id: p.placeId,
+              principal: (p.structuredFormat && p.structuredFormat.mainText && p.structuredFormat.mainText.text) || (p.text && p.text.text) || '',
+              secundario: (p.structuredFormat && p.structuredFormat.secondaryText && p.structuredFormat.secondaryText.text) || ''
+            };
+          }).filter(function (s) { return s.id; });
+          pintaSugerencias(lista);
+        }, function () { cierraSugerencias(); });
+    }
+
+    /* Al elegir una sugerencia se rellenan solos calle, colonia, C.P. y coordenadas. */
+    function tomaDetalle(placeId) {
+      if (!GKEY || !placeId) return;
+      fetch('https://places.googleapis.com/v1/places/' + encodeURIComponent(placeId) +
+        '?languageCode=' + GIDIOMA + '&sessionToken=' + (gSesion || ''), {
+        headers: {
+          'X-Goog-Api-Key': GKEY,
+          'X-Goog-FieldMask': 'id,formattedAddress,location,addressComponents,displayName'
+        }
+      })
+        .then(function (r) { return r.json(); })
+        .then(function (d) {
+          if (d.error) { console.warn('Places detalle:', d.error.message); return; }
+
+          var comp = d.addressComponents || [];
+          function busca() {
+            var tipos = [].slice.call(arguments);
+            for (var i = 0; i < comp.length; i++) {
+              for (var j = 0; j < tipos.length; j++) {
+                if ((comp[i].types || []).indexOf(tipos[j]) >= 0) return comp[i].longText || comp[i].shortText || '';
+              }
+            }
+            return '';
+          }
+
+          var calle = busca('route');
+          var numero = busca('street_number');
+          campoCalle.value = (calle ? calle + (numero ? ' ' + numero : '') : (d.displayName && d.displayName.text) || campoCalle.value);
+          byId('loc-col').value = busca('sublocality_level_1', 'sublocality', 'neighborhood') || byId('loc-col').value;
+          byId('loc-cp').value = busca('postal_code') || byId('loc-cp').value;
+
+          if (d.location) {
+            locCoords = Number(d.location.latitude).toFixed(6) + ', ' + Number(d.location.longitude).toFixed(6);
+            byId('loc-coords').textContent = locCoords;
+            byId('loc-pin').classList.add('on');
+          }
+
+          locPlaceId = d.id || placeId;
+          locDireccion = d.formattedAddress || '';
+          gSesion = null; // la sesión se cierra al pedir el detalle
+          cierraSugerencias();
+        }, function () {});
+    }
+
+    if (GKEY) {
+      campoCalle.setAttribute('placeholder', 'Escribe y elige de las sugerencias…');
+      campoCalle.setAttribute('autocomplete', 'off');
+
+      campoCalle.addEventListener('input', function () {
+        var v = this.value;
+        clearTimeout(gTimer);
+        gTimer = setTimeout(function () { buscaSugerencias(v); }, 250);
+      });
+
+      campoCalle.addEventListener('keydown', function (e) {
+        if (!gSugerencias.length) return;
+        if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+          e.preventDefault();
+          gIndice += e.key === 'ArrowDown' ? 1 : -1;
+          if (gIndice < 0) gIndice = gSugerencias.length - 1;
+          if (gIndice >= gSugerencias.length) gIndice = 0;
+          [].slice.call(cajaSug.children).forEach(function (b, i) { b.classList.toggle('hl', i === gIndice); });
+        } else if (e.key === 'Enter' && gIndice >= 0) {
+          e.preventDefault();
+          tomaDetalle(gSugerencias[gIndice].id);
+        } else if (e.key === 'Escape') {
+          cierraSugerencias();
+        }
+      });
+
+      cajaSug.addEventListener('click', function (e) {
+        var b = e.target.closest ? e.target.closest('[data-i]') : null;
+        if (!b) return;
+        var s = gSugerencias[Number(b.getAttribute('data-i'))];
+        if (s) { campoCalle.value = s.principal; tomaDetalle(s.id); }
+      });
+
+      document.addEventListener('click', function (e) {
+        if (e.target !== campoCalle && !cajaSug.contains(e.target)) cierraSugerencias();
+      });
+    }
+
     /* ================= buscador ================= */
 
-    /* tipoUnidad: id de la unidad elegida en el buscador. Viaja por todo el flujo. */
+    /* Estado del viaje. Se llena en el paso 1 y se lee en los pasos 2 y 3:
+       ningún dato se vuelve a preguntar. */
+    var VIAJE = { origen: null, destino: null, salida: '', regreso: '', unidad: null, redondo: true };
+
     var tipoUnidad = '';
     var unidadSel = byId('s-unidad');
 
@@ -1671,10 +1825,7 @@ window.IMGS = {
       pintaBotonBuscar();
     }
 
-    unidadSel.addEventListener('change', function () {
-      setUnidad(this.value);
-    });
-
+    unidadSel.addEventListener('change', function () { setUnidad(this.value); });
     pintaBotonBuscar();
 
     document.querySelectorAll('input[name="trip"]').forEach(function (r) {
@@ -1685,15 +1836,17 @@ window.IMGS = {
       });
     });
 
-    function fmtDate(v) {
+    /* "2026-12-05T08:30" -> "5 dic 2026, 08:30" */
+    function fmtFechaHora(v) {
       if (!v) return '';
-      var p = v.split('-');
-      if (p.length !== 3) return v;
+      var partes = v.split('T');
+      var f = partes[0].split('-');
+      if (f.length !== 3) return v;
       var m = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
-      return Number(p[2]) + ' ' + m[Number(p[1]) - 1] + ' ' + p[0];
+      var texto = Number(f[2]) + ' ' + m[Number(f[1]) - 1] + ' ' + f[0];
+      return partes[1] ? texto + ', ' + partes[1].slice(0, 5) : texto;
     }
 
-    /* Servicio del formulario según la categoría de la unidad. */
     function servicioDe(u) {
       if (!u) return '';
       if (u.cat === 'sprinter') return 'Renta de Sprinter';
@@ -1711,13 +1864,18 @@ window.IMGS = {
       if (!ok) return;
 
       var u = unidadPorId(tipoUnidad);
-      var salida = byId('s-salida').value;
-      var regreso = byId('s-regreso').value;
+
+      VIAJE.origen = LOC.origen;
+      VIAJE.destino = LOC.destino;
+      VIAJE.salida = byId('s-salida').value;
+      VIAJE.regreso = byId('s-regreso').value;
+      VIAJE.unidad = u;
+      VIAJE.redondo = document.querySelector('input[name="trip"]:checked').value === 'redondo';
 
       byId('res-route').innerHTML =
         '<span>' + esc(LOC.origen.place[0]) + '</span><svg aria-hidden="true"><use href="#i-arrow"/></svg><span>' + esc(LOC.destino.place[0]) + '</span>';
       byId('res-meta').textContent =
-        fmtDate(salida) + (regreso ? ' → ' + fmtDate(regreso) : ' · solo ida');
+        fmtFechaHora(VIAJE.salida) + (VIAJE.regreso ? '  →  ' + fmtFechaHora(VIAJE.regreso) : ' · solo ida');
 
       var nota = u.cotizadorAutomatico
         ? '<span class="fit"><svg aria-hidden="true"><use href="#i-check"/></svg>Cotización en línea disponible para esta unidad</span>'
@@ -1729,118 +1887,119 @@ window.IMGS = {
         '<div><h4>' + esc(u.name) + '</h4><div class="caps">' + esc(u.cap) + '</div>' +
         '<div class="amen">' + u.amen.slice(0, 3).map(function (a) { return '<span>' + esc(a) + '</span>'; }).join('') + '</div>' +
         nota + '</div>' +
-        '<button class="btn btn-red" type="button" data-pick="' + esc(u.name) + '">' +
-        (u.cotizadorAutomatico ? 'Continuar' : 'Solicitar cotización') + '</button></div>';
+        '<button class="btn btn-red" type="button" id="ir-datos">Continuar <svg class="arw" aria-hidden="true"><use href="#i-arrow"/></svg></button></div>';
 
       byId('results').classList.add('on');
-
-      byId('f-origen').value = locFull(LOC.origen);
-      byId('f-destino').value = locFull(LOC.destino);
-      byId('f-salida').value = salida;
-      byId('f-regreso').value = regreso;
-      byId('f-tipo').value = servicioDe(u);
-      unitSel.value = u.name;
-
       byId('results').scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' });
     });
 
-    byId('res-list').addEventListener('click', function (e) {
-      var b = e.target.closest ? e.target.closest('[data-pick]') : null;
-      if (!b) return;
-      unitSel.value = b.getAttribute('data-pick');
-      goStep(2);
-    });
+    /* ================= flujo de pantallas ================= */
+    var PANTALLAS = ['paso-viaje', 'paso-datos', 'paso-listo'];
 
-    /* ================= pasos ================= */
-    function goStep(n) {
-      document.querySelectorAll('.panel').forEach(function (p) { p.classList.toggle('on', Number(p.getAttribute('data-panel')) === n); });
-      document.querySelectorAll('.step').forEach(function (s) {
-        var sn = Number(s.getAttribute('data-step'));
-        s.classList.toggle('on', sn === Math.min(n, 3));
-        s.classList.toggle('done', sn < n);
-      });
-      var card = document.querySelector('.reserve-card');
-      window.scrollTo({ top: card.getBoundingClientRect().top + window.pageYOffset - 90, behavior: reduce ? 'auto' : 'smooth' });
+    function verPantalla(cual) {
+      PANTALLAS.forEach(function (p) { byId(p).style.display = p === cual ? '' : 'none'; });
+      window.scrollTo({ top: 0, behavior: reduce ? 'auto' : 'smooth' });
     }
 
-    function validate(panelNum) {
-      var panel = document.querySelector('.panel[data-panel="' + panelNum + '"]');
+    /* Pinta el viaje ya capturado arriba del formulario de datos. */
+    function pintaResumenViaje() {
+      var filas = [
+        ['Origen', VIAJE.origen ? VIAJE.origen.place[0] : ''],
+        ['Destino', VIAJE.destino ? VIAJE.destino.place[0] : ''],
+        ['Salida', fmtFechaHora(VIAJE.salida)],
+        [VIAJE.regreso ? 'Regreso' : 'Viaje', VIAJE.regreso ? fmtFechaHora(VIAJE.regreso) : 'Solo ida'],
+        ['Unidad', VIAJE.unidad ? VIAJE.unidad.name : '']
+      ];
+      byId('viaje-datos').innerHTML = filas.map(function (f) {
+        return '<div><b>' + f[0] + '</b><span>' + esc(f[1]) + '</span></div>';
+      }).join('');
+    }
+
+    document.addEventListener('click', function (e) {
+      var b = e.target.closest ? e.target.closest('#ir-datos') : null;
+      if (!b) return;
+      pintaResumenViaje();
+      verPantalla('paso-datos');
+    });
+
+    byId('editar-viaje').addEventListener('click', function () { verPantalla('paso-viaje'); });
+    byId('volver-viaje').addEventListener('click', function () { verPantalla('paso-viaje'); });
+    byId('volver-datos').addEventListener('click', function () { verPantalla('paso-datos'); });
+
+    function validaDatos() {
       var ok = true;
-      panel.querySelectorAll('.field[data-req]').forEach(function (f) {
+      document.querySelectorAll('#paso-datos .field[data-req]').forEach(function (f) {
         var input = f.querySelector('input, select');
-        var bad = !input.value.trim();
-        f.classList.toggle('err', bad);
-        if (bad && ok) { input.focus(); ok = false; }
+        var mal = !input.value.trim();
+        f.classList.toggle('err', mal);
+        if (mal && ok) { input.focus(); ok = false; }
       });
       return ok;
     }
 
-    document.querySelectorAll('[data-next]').forEach(function (b) {
-      b.addEventListener('click', function () {
-        var c = Number(b.closest('.panel').getAttribute('data-panel'));
-        if (validate(c)) goStep(Number(b.getAttribute('data-next')));
+    document.querySelectorAll('#paso-datos .field[data-req] input').forEach(function (i) {
+      i.addEventListener('input', function () {
+        if (i.value.trim()) i.closest('.field').classList.remove('err');
       });
-    });
-
-    document.querySelectorAll('[data-prev]').forEach(function (b) {
-      b.addEventListener('click', function () { goStep(Number(b.getAttribute('data-prev'))); });
-    });
-
-    document.querySelectorAll('.field[data-req] input, .field[data-req] select').forEach(function (i) {
-      i.addEventListener('input', function () { if (i.value.trim()) i.closest('.field').classList.remove('err'); });
     });
 
     /* ================= resumen ================= */
-    var FIELDS = [
-      ['Origen', 'f-origen'], ['Destino', 'f-destino'], ['Subida y bajada', 'f-dir'], ['Salida', 'f-salida'],
-      ['Regreso', 'f-regreso'], ['Hora de salida', 'f-hora'], ['Paradas', 'f-paradas'], ['Servicio', 'f-tipo'],
-      ['Pasajeros', 'f-pax'], ['Unidad', 'f-unidad'], ['Motivo', 'f-uso'], ['Nombre', 'f-nombre'],
-      ['Teléfono', 'f-tel'], ['Correo', 'f-mail'], ['Empresa', 'f-empresa'], ['Comentarios', 'f-notas']
+    var CAMPOS_DATOS = [
+      ['Nombre', 'f-nombre'], ['Teléfono', 'f-tel'], ['Correo', 'f-mail'], ['Empresa', 'f-empresa'],
+      ['Motivo', 'f-uso'], ['Paradas', 'f-paradas'], ['Comentarios', 'f-notas']
     ];
 
-    function collect() {
-      var out = [];
-      FIELDS.forEach(function (f) {
-        var el = byId(f[1]);
-        var v = (el.value || '').trim();
-        if (!v) return;
-        if (el.type === 'date') v = fmtDate(v);
-        out.push([f[0], v]);
+    function armaResumen() {
+      var filas = [
+        ['Origen', locFull(VIAJE.origen)],
+        ['Destino', locFull(VIAJE.destino)],
+        ['Salida', fmtFechaHora(VIAJE.salida)]
+      ];
+      if (VIAJE.regreso) filas.push(['Regreso', fmtFechaHora(VIAJE.regreso)]);
+      else filas.push(['Viaje', 'Solo ida']);
+      filas.push(['Unidad', VIAJE.unidad ? VIAJE.unidad.name + ' · ' + VIAJE.unidad.cap : '']);
+      filas.push(['Servicio', servicioDe(VIAJE.unidad)]);
+
+      CAMPOS_DATOS.forEach(function (c) {
+        var v = (byId(c[1]).value || '').trim();
+        if (v) filas.push([c[0], v]);
       });
-      return out;
+      return filas;
     }
 
     byId('f-review').addEventListener('click', function () {
-      if (!validate(3)) return;
-      var rows = collect();
-      byId('sum-list').innerHTML = rows.map(function (r) {
+      if (!validaDatos()) return;
+      var filas = armaResumen();
+
+      byId('sum-list').innerHTML = filas.map(function (r) {
         return '<div class="row"><dt>' + r[0] + '</dt><dd>' + esc(r[1]).replace(/\n/g, ' · ') + '</dd></div>';
       }).join('');
 
-      var text = 'Solicitud de cotización — Eurotravel\n\n';
-      rows.forEach(function (r) { text += r[0] + ': ' + r[1] + '\n'; });
+      var texto = 'Solicitud de cotización — Eurotravel\n\n';
+      filas.forEach(function (r) { texto += r[0] + ': ' + r[1] + '\n'; });
 
-      byId('send-wa').href = 'https://wa.me/523324002285?text=' + encodeURIComponent(text);
+      byId('send-wa').href = 'https://wa.me/523324002285?text=' + encodeURIComponent(texto);
       byId('send-mail').href = 'mailto:ventas@eurotravel.com.mx?subject=' +
-        encodeURIComponent('Cotización de viaje — ' + (byId('f-origen').value || '') + ' a ' + (byId('f-destino').value || '')) +
-        '&body=' + encodeURIComponent(text);
-      byId('copy-sum').setAttribute('data-text', text);
+        encodeURIComponent('Cotización — ' + (VIAJE.origen ? VIAJE.origen.place[0] : '') + ' a ' + (VIAJE.destino ? VIAJE.destino.place[0] : '')) +
+        '&body=' + encodeURIComponent(texto);
+      byId('copy-sum').setAttribute('data-text', texto);
       byId('copied').classList.remove('on');
-      goStep(4);
+
+      verPantalla('paso-listo');
     });
 
     byId('copy-sum').addEventListener('click', function () {
-      var text = this.getAttribute('data-text') || '';
-      var done = function () { byId('copied').classList.add('on'); };
-      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(done, done);
+      var texto = this.getAttribute('data-text') || '';
+      var listo = function () { byId('copied').classList.add('on'); };
+      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(texto).then(listo, listo);
       else {
         var ta = document.createElement('textarea');
-        ta.value = text;
+        ta.value = texto;
         document.body.appendChild(ta);
         ta.select();
         try { document.execCommand('copy'); } catch (e) {}
         document.body.removeChild(ta);
-        done();
+        listo();
       }
     });
 
@@ -1858,10 +2017,11 @@ window.IMGS = {
 
     /* ================= varios ================= */
     byId('year').textContent = new Date().getFullYear();
-    var today = new Date().toISOString().split('T')[0];
-    ['s-salida', 's-regreso', 'f-salida', 'f-regreso'].forEach(function (id) { byId(id).min = today; });
-    byId('s-salida').addEventListener('change', function () { byId('s-regreso').min = this.value || today; });
-    byId('f-salida').addEventListener('change', function () { byId('f-regreso').min = this.value || today; });
+    // datetime-local usa el formato AAAA-MM-DDTHH:mm, en hora local (no UTC)
+    var ahora = new Date();
+    var minLocal = new Date(ahora.getTime() - ahora.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+    ['s-salida', 's-regreso'].forEach(function (id) { byId(id).min = minLocal; });
+    byId('s-salida').addEventListener('change', function () { byId('s-regreso').min = this.value || minLocal; });
   })();
 </script>
 </body>
