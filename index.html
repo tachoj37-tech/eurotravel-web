@@ -490,6 +490,47 @@
   }
   @media (min-width: 720px) { .datos-card { padding: 30px; } }
 
+  /* ---- movimientos en destino ---- */
+  .mov-info { font-size: 14.5px; color: var(--ink-2); background: var(--soft); border-radius: var(--radius-sm); padding: 12px 14px; }
+
+  /* despliegue suave, misma técnica que el acordeón de preguntas frecuentes */
+  .mov-detalle { display: grid; grid-template-rows: 0fr; transition: grid-template-rows 320ms var(--ease); }
+  .mov-detalle.on { grid-template-rows: 1fr; }
+  .mov-detalle > div { overflow: hidden; }
+
+  .mov-dia { border: 1px solid var(--line); border-radius: var(--radius); padding: 18px; margin-top: 16px; background: #fcfcfb; }
+  .mov-dia-cab { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+  .mov-dia-cab b { font-family: 'Archivo'; font-size: 13px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+
+  .mov-quitar {
+    background: none; border: none; color: var(--muted); cursor: pointer;
+    font: inherit; font-size: 12.5px; display: inline-flex; align-items: center; gap: 5px;
+    transition: color 200ms var(--ease);
+  }
+  .mov-quitar:hover { color: var(--red); }
+  .mov-quitar svg { width: 13px; height: 13px; }
+
+  .mov-visitas { margin-top: 14px; display: grid; gap: 10px; }
+  .mov-visita { position: relative; }
+  .mov-visita input { padding-right: 38px; }
+  .mov-quitar-punto {
+    position: absolute; right: 8px; bottom: 30px; width: 26px; height: 26px;
+    border: none; background: none; color: var(--muted); cursor: pointer;
+    display: grid; place-items: center; border-radius: 50%;
+  }
+  .mov-quitar-punto:hover { color: var(--red); background: var(--soft); }
+  .mov-quitar-punto svg { width: 13px; height: 13px; }
+
+  .mov-error { display: none; margin-top: 14px; font-size: 13.5px; color: var(--red); }
+  .mov-error.on { display: block; }
+
+  .aviso-mov {
+    display: flex; gap: 11px; align-items: flex-start; margin-top: 18px;
+    background: #fff8e6; border: 1px solid #f0dcae; border-radius: var(--radius-sm);
+    padding: 14px 16px; font-size: 14px; line-height: 1.55; color: #6b5518;
+  }
+  .aviso-mov svg { width: 18px; height: 18px; color: #b8860b; flex-shrink: 0; margin-top: 1px; }
+
   .steps { display: flex; border-bottom: 1px solid var(--line); background: #fbfbfa; }
   .step { flex: 1; padding: 15px 14px; display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--muted); border-right: 1px solid var(--line); }
   .step:last-child { border-right: none; }
@@ -979,6 +1020,49 @@ window.IMGS = {
           <button class="btn btn-line btn-sm" type="button" id="editar-viaje">Editar viaje</button>
         </div>
 
+        <!-- ===== movimientos en destino ===== -->
+        <div id="mov-bloque" style="display: none">
+          <div class="sec-head" style="margin-top: 34px">
+            <span class="eyebrow">Movimientos</span>
+            <h2>¿El servicio incluye movimientos en el destino?</h2>
+            <p class="lede">
+              Normalmente la unidad se queda estacionada durante la estadía. Dinos si necesitas que
+              haga recorridos locales: traslados a restaurantes, tours, playa o eventos.
+            </p>
+          </div>
+
+          <div class="datos-card">
+            <p class="mov-info" id="mov-info"></p>
+
+            <div class="filters" style="margin-top: 14px">
+              <button class="chip" type="button" id="mov-si" aria-pressed="false">Sí, habrá movimientos</button>
+              <button class="chip" type="button" id="mov-no" aria-pressed="true">No, la unidad se queda</button>
+            </div>
+
+            <div class="mov-detalle" id="mov-detalle">
+              <div>
+                <div class="field" style="max-width: 320px; margin-top: 22px">
+                  <label for="mov-dias">¿En cuántos de esos días habrá movimientos?</label>
+                  <input id="mov-dias" type="number" min="1" value="1" />
+                </div>
+
+                <div id="mov-lista"></div>
+
+                <button class="btn btn-line btn-sm" type="button" id="mov-agregar" style="margin-top: 14px">
+                  + Agregar día
+                </button>
+
+                <div class="field" style="margin-top: 20px">
+                  <label for="mov-notas">Notas o indicaciones</label>
+                  <textarea id="mov-notas" placeholder="Horarios preferidos, número de personas por recorrido, requerimientos especiales…"></textarea>
+                </div>
+
+                <p class="mov-error" id="mov-error"></p>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <div class="sec-head" style="margin-top: 34px">
           <span class="eyebrow">Casi listo</span>
           <h2>¿Con quién nos comunicamos?</h2>
@@ -1056,6 +1140,12 @@ window.IMGS = {
             <span class="eyebrow">Resumen de tu solicitud</span>
             <dl id="sum-list"></dl>
           </div>
+
+          <p class="aviso-mov" id="aviso-mov" style="display: none">
+            <svg aria-hidden="true"><use href="#i-shield" /></svg>
+            <span>Los movimientos en destino se cotizan por separado. Un asesor de Eurotravel
+            confirmará el costo final antes de cerrar tu reserva.</span>
+          </p>
           <div class="send-row">
             <a class="btn btn-red" id="send-wa" href="#" target="_blank" rel="noopener"><svg aria-hidden="true"><use href="#i-wa" /></svg> Enviar por WhatsApp</a>
             <a class="btn btn-ink" id="send-mail" href="#"><svg aria-hidden="true"><use href="#i-mail" /></svg> Enviar por correo</a>
@@ -1532,7 +1622,8 @@ window.IMGS = {
       locCoords = saved ? saved.coords : null;
       locPlaceId = saved ? saved.placeId : null;
       locDireccion = saved ? (saved.direccionGoogle || '') : '';
-      if (typeof cierraSugerencias === 'function') cierraSugerencias();
+      // cierra cualquier lista de sugerencias que hubiera quedado abierta
+      document.querySelectorAll('.loc-sug.on').forEach(function (c) { c.classList.remove('on'); });
 
       byId('loc-kind').textContent = which === 'origen' ? 'Origen' : 'Destino';
       byId('loc-title').textContent = which === 'origen' ? '¿Desde dónde salen?' : '¿A dónde van?';
@@ -1634,27 +1725,13 @@ window.IMGS = {
     /* ================= autocompletado de direcciones ================= */
     /* El navegador nunca ve la clave de Google: le pide a /api/places y ese
        endpoint, del lado del servidor, es quien consulta Places API.
-       Si el endpoint no responde, el campo funciona como un input normal. */
+       conectaAutocompletado() se puede enganchar a cualquier campo de texto,
+       por eso lo usan tanto el buscador como los renglones de movimientos. */
 
     var API_PLACES = (window.CONFIG || {}).API_PLACES || '/api/places';
     var GPAIS = (window.CONFIG || {}).PAIS || 'mx';
     var GIDIOMA = (window.CONFIG || {}).IDIOMA || 'es';
-    var gSesion = null;
-    var gTimer = 0;
-    var gSugerencias = [];
-    var gIndice = -1;
     var gDisponible = true;
-
-    function nuevaSesion() {
-      // token de sesión: agrupa las teclas + el detalle en un solo cobro
-      gSesion = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
-        var r = (Math.random() * 16) | 0;
-        return (c === 'x' ? r : (r & 0x3) | 0x8).toString(16);
-      });
-    }
-
-    var cajaSug = byId('loc-sug');
-    var campoCalle = byId('loc-calle');
 
     function pideAlProxy(datos) {
       return fetch(API_PLACES, {
@@ -1668,104 +1745,123 @@ window.IMGS = {
       });
     }
 
-    function cierraSugerencias() {
-      cajaSug.classList.remove('on');
-      cajaSug.innerHTML = '';
-      gSugerencias = [];
-      gIndice = -1;
+    function nuevoToken() {
+      // token de sesión: agrupa las teclas + el detalle en un solo cobro
+      return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+        var r = (Math.random() * 16) | 0;
+        return (c === 'x' ? r : (r & 0x3) | 0x8).toString(16);
+      });
     }
 
-    function pintaSugerencias(lista) {
-      gSugerencias = lista;
-      gIndice = -1;
-      if (!lista.length) { cierraSugerencias(); return; }
-      cajaSug.innerHTML = lista.map(function (s, i) {
-        return '<button type="button" data-i="' + i + '">' +
-          '<svg aria-hidden="true"><use href="#i-pin"/></svg>' +
-          '<span><b>' + esc(s.principal) + '</b><small>' + esc(s.secundario) + '</small></span></button>';
-      }).join('');
-      cajaSug.classList.add('on');
-    }
+    /* Engancha sugerencias de direcciones a un input.
+       alElegir(detalle) recibe { id, calle, colonia, cp, direccion, lat, lng } */
+    function conectaAutocompletado(input, alElegir, cajaExistente) {
+      if (!input || input.dataset.autocompletado === '1') return;
+      input.dataset.autocompletado = '1';
+      input.setAttribute('autocomplete', 'off');
 
-    function buscaSugerencias(texto) {
-      if (!gDisponible || texto.trim().length < 3) { cierraSugerencias(); return; }
-      if (!gSesion) nuevaSesion();
-
-      pideAlProxy({
-        accion: 'autocomplete',
-        input: texto,
-        pais: GPAIS,
-        idioma: GIDIOMA,
-        sessionToken: gSesion
-      }).then(function (d) {
-        if (!d) { cierraSugerencias(); return; }
-        pintaSugerencias(d.suggestions || []);
-      }, function () { cierraSugerencias(); });
-    }
-
-    /* Al elegir una sugerencia se rellenan solos calle, colonia, C.P. y coordenadas. */
-    function tomaDetalle(placeId) {
-      if (!gDisponible || !placeId) return;
-
-      pideAlProxy({
-        accion: 'detalle',
-        placeId: placeId,
-        idioma: GIDIOMA,
-        sessionToken: gSesion
-      }).then(function (d) {
-        if (!d) return;
-
-        if (d.calle) campoCalle.value = d.calle;
-        if (d.colonia) byId('loc-col').value = d.colonia;
-        if (d.cp) byId('loc-cp').value = d.cp;
-
-        if (d.lat != null && d.lng != null) {
-          locCoords = Number(d.lat).toFixed(6) + ', ' + Number(d.lng).toFixed(6);
-          byId('loc-coords').textContent = locCoords;
-          byId('loc-pin').classList.add('on');
-        }
-
-        locPlaceId = d.id || placeId;
-        locDireccion = d.direccion || '';
-        gSesion = null; // la sesión se cierra al pedir el detalle
-        cierraSugerencias();
-      }, function () {});
-    }
-
-    campoCalle.setAttribute('autocomplete', 'off');
-
-    campoCalle.addEventListener('input', function () {
-      var v = this.value;
-      clearTimeout(gTimer);
-      gTimer = setTimeout(function () { buscaSugerencias(v); }, 250);
-    });
-
-    campoCalle.addEventListener('keydown', function (e) {
-      if (!gSugerencias.length) return;
-      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
-        e.preventDefault();
-        gIndice += e.key === 'ArrowDown' ? 1 : -1;
-        if (gIndice < 0) gIndice = gSugerencias.length - 1;
-        if (gIndice >= gSugerencias.length) gIndice = 0;
-        [].slice.call(cajaSug.children).forEach(function (b, i) { b.classList.toggle('hl', i === gIndice); });
-      } else if (e.key === 'Enter' && gIndice >= 0) {
-        e.preventDefault();
-        tomaDetalle(gSugerencias[gIndice].id);
-      } else if (e.key === 'Escape') {
-        cierraSugerencias();
+      var caja = cajaExistente;
+      if (!caja) {
+        caja = document.createElement('div');
+        caja.className = 'loc-sug';
+        input.parentNode.appendChild(caja);
       }
-    });
 
-    cajaSug.addEventListener('click', function (e) {
-      var b = e.target.closest ? e.target.closest('[data-i]') : null;
-      if (!b) return;
-      var s = gSugerencias[Number(b.getAttribute('data-i'))];
-      if (s) { campoCalle.value = s.principal; tomaDetalle(s.id); }
-    });
+      var sesion = null;
+      var timer = 0;
+      var lista = [];
+      var indice = -1;
 
-    document.addEventListener('click', function (e) {
-      if (e.target !== campoCalle && !cajaSug.contains(e.target)) cierraSugerencias();
-    });
+      function cierra() {
+        caja.classList.remove('on');
+        caja.innerHTML = '';
+        lista = [];
+        indice = -1;
+      }
+
+      function pinta(res) {
+        lista = res;
+        indice = -1;
+        if (!res.length) { cierra(); return; }
+        caja.innerHTML = res.map(function (s, i) {
+          return '<button type="button" data-i="' + i + '">' +
+            '<svg aria-hidden="true"><use href="#i-pin"/></svg>' +
+            '<span><b>' + esc(s.principal) + '</b><small>' + esc(s.secundario) + '</small></span></button>';
+        }).join('');
+        caja.classList.add('on');
+      }
+
+      function busca(texto) {
+        if (!gDisponible || texto.trim().length < 3) { cierra(); return; }
+        if (!sesion) sesion = nuevoToken();
+        pideAlProxy({
+          accion: 'autocomplete', input: texto, pais: GPAIS, idioma: GIDIOMA, sessionToken: sesion
+        }).then(function (d) {
+          if (!d) { cierra(); return; }
+          pinta(d.suggestions || []);
+        }, function () { cierra(); });
+      }
+
+      function detalle(placeId) {
+        if (!gDisponible || !placeId) return;
+        pideAlProxy({
+          accion: 'detalle', placeId: placeId, idioma: GIDIOMA, sessionToken: sesion
+        }).then(function (d) {
+          if (!d) return;
+          sesion = null; // la sesión se cierra al pedir el detalle
+          cierra();
+          if (alElegir) alElegir(d);
+        }, function () {});
+      }
+
+      input.addEventListener('input', function () {
+        var v = this.value;
+        clearTimeout(timer);
+        timer = setTimeout(function () { busca(v); }, 250);
+      });
+
+      input.addEventListener('keydown', function (e) {
+        if (!lista.length) return;
+        if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+          e.preventDefault();
+          indice += e.key === 'ArrowDown' ? 1 : -1;
+          if (indice < 0) indice = lista.length - 1;
+          if (indice >= lista.length) indice = 0;
+          [].slice.call(caja.children).forEach(function (b, i) { b.classList.toggle('hl', i === indice); });
+        } else if (e.key === 'Enter' && indice >= 0) {
+          e.preventDefault();
+          input.value = lista[indice].principal;
+          detalle(lista[indice].id);
+        } else if (e.key === 'Escape') {
+          cierra();
+        }
+      });
+
+      caja.addEventListener('click', function (e) {
+        var b = e.target.closest ? e.target.closest('[data-i]') : null;
+        if (!b) return;
+        var s = lista[Number(b.getAttribute('data-i'))];
+        if (s) { input.value = s.principal; detalle(s.id); }
+      });
+
+      document.addEventListener('click', function (e) {
+        if (e.target !== input && !caja.contains(e.target)) cierra();
+      });
+    }
+
+    /* Campo "Calle y número" del selector de ubicación */
+    conectaAutocompletado(byId('loc-calle'), function (d) {
+      if (d.calle) byId('loc-calle').value = d.calle;
+      if (d.colonia) byId('loc-col').value = d.colonia;
+      if (d.cp) byId('loc-cp').value = d.cp;
+      if (d.lat != null && d.lng != null) {
+        locCoords = Number(d.lat).toFixed(6) + ', ' + Number(d.lng).toFixed(6);
+        byId('loc-coords').textContent = locCoords;
+        byId('loc-pin').classList.add('on');
+      }
+      locPlaceId = d.id || null;
+      locDireccion = d.direccion || '';
+    }, byId('loc-sug'));
 
     /* ================= buscador ================= */
 
@@ -1901,6 +1997,7 @@ window.IMGS = {
       var b = e.target.closest ? e.target.closest('#ir-datos') : null;
       if (!b) return;
       pintaResumenViaje();
+      refrescaBloqueMovimientos();
       verPantalla('paso-datos');
     });
 
@@ -1925,6 +2022,323 @@ window.IMGS = {
       });
     });
 
+    /* ================= movimientos en destino ================= */
+    /* Un servicio foráneo normal deja la unidad estacionada en el destino.
+       "Movimientos" significa que sí hará recorridos locales durante la
+       estadía, algo que el cálculo por kilómetros no contempla. */
+
+    var MOV = { incluye: false, dias: [], notas: '' };
+
+    /* Noches en destino: solo con eso aparece el bloque. */
+    function diasEstadia() {
+      if (!VIAJE.salida || !VIAJE.regreso) return 0;
+      var s = new Date(VIAJE.salida);
+      var r = new Date(VIAJE.regreso);
+      if (isNaN(s) || isNaN(r)) return 0;
+      var a = new Date(s.getFullYear(), s.getMonth(), s.getDate());
+      var b = new Date(r.getFullYear(), r.getMonth(), r.getDate());
+      return Math.max(0, Math.round((b - a) / 86400000));
+    }
+
+    function soloFecha(v) { return (v || '').split('T')[0]; }
+
+    function fechaLegible(iso) {
+      if (!iso) return '';
+      var p = iso.split('-');
+      if (p.length !== 3) return iso;
+      var m = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+      return Number(p[2]) + ' ' + m[Number(p[1]) - 1];
+    }
+
+    /* Hueco listo para cuando se defina la tarifa de movimientos.
+       Hoy devuelve null a propósito: el precio lo confirma un asesor. */
+    function calculaMovimientos() {
+      return null;
+    }
+
+    var movBloque = byId('mov-bloque');
+    var movDetalle = byId('mov-detalle');
+    var movLista = byId('mov-lista');
+
+    function refrescaBloqueMovimientos() {
+      var dias = diasEstadia();
+      // Solo viajes redondos con noches en destino
+      movBloque.style.display = dias > 0 ? '' : 'none';
+      if (dias === 0) {
+        MOV.incluye = false;
+        MOV.dias = [];
+        pintaInterruptor();
+        return;
+      }
+      byId('mov-info').textContent =
+        'La unidad permanecerá ' + dias + (dias === 1 ? ' día' : ' días') +
+        ' en destino, del ' + fechaLegible(soloFecha(VIAJE.salida)) +
+        ' al ' + fechaLegible(soloFecha(VIAJE.regreso)) + '.';
+      byId('mov-dias').max = dias;
+      pintaInterruptor();
+    }
+
+    function pintaInterruptor() {
+      document.querySelectorAll('#mov-si, #mov-no').forEach(function (b) {
+        b.setAttribute('aria-pressed', String((b.id === 'mov-si') === MOV.incluye));
+      });
+      movDetalle.classList.toggle('on', MOV.incluye);
+      byId('aviso-mov').style.display = MOV.incluye ? '' : 'none';
+    }
+
+    byId('mov-si').addEventListener('click', function () {
+      MOV.incluye = true;
+      if (!MOV.dias.length) agregaDia();
+      if (!byId('mov-dias').value) byId('mov-dias').value = 1;
+      pintaInterruptor();
+    });
+
+    byId('mov-no').addEventListener('click', function () {
+      MOV.incluye = false;
+      pintaInterruptor();
+    });
+
+    function agregaDia() {
+      MOV.dias.push({
+        fecha: '', recorridos: '', horaInicio: '', horaFin: '',
+        partida: null, visitas: []
+      });
+      pintaDias();
+    }
+
+    function quitaDia(i) {
+      MOV.dias.splice(i, 1);
+      if (!MOV.dias.length) agregaDia();
+      else pintaDias();
+    }
+
+    /* Cada renglón se arma en DOM (no con innerHTML) para poder enganchar
+       el autocompletado a sus campos de dirección. */
+    function pintaDias() {
+      movLista.innerHTML = '';
+
+      MOV.dias.forEach(function (dia, i) {
+        var caja = document.createElement('div');
+        caja.className = 'mov-dia';
+
+        var cab = document.createElement('div');
+        cab.className = 'mov-dia-cab';
+        cab.innerHTML = '<b>Día con movimiento ' + (i + 1) + '</b>';
+
+        var quitar = document.createElement('button');
+        quitar.type = 'button';
+        quitar.className = 'mov-quitar';
+        quitar.innerHTML = '<svg aria-hidden="true"><use href="#i-x"/></svg> Quitar';
+        quitar.addEventListener('click', function () { quitaDia(i); });
+        cab.appendChild(quitar);
+        caja.appendChild(cab);
+
+        var rej = document.createElement('div');
+        rej.className = 'grid-2';
+
+        // Fecha, acotada al rango del viaje
+        var fFecha = campo('Fecha del movimiento', 'date', dia.fecha, function (v) { dia.fecha = v; });
+        var inpFecha = fFecha.querySelector('input');
+        inpFecha.min = soloFecha(VIAJE.salida);
+        inpFecha.max = soloFecha(VIAJE.regreso);
+        rej.appendChild(fFecha);
+
+        rej.appendChild(campo('Recorridos ese día', 'number', dia.recorridos, function (v) { dia.recorridos = v; }, '2'));
+        rej.appendChild(campo('Hora de inicio', 'time', dia.horaInicio, function (v) { dia.horaInicio = v; }));
+        rej.appendChild(campo('Hora de fin', 'time', dia.horaFin, function (v) { dia.horaFin = v; }));
+        caja.appendChild(rej);
+
+        // Punto de partida, con autocompletado
+        var fPart = campo('Punto de partida', 'text', dia.partida ? dia.partida.texto : '', function (v) {
+          dia.partida = { texto: v, placeId: dia.partida ? dia.partida.placeId : null, lat: null, lng: null };
+        }, 'Hotel, plaza, domicilio…');
+        caja.appendChild(fPart);
+        conectaAutocompletado(fPart.querySelector('input'), function (d) {
+          var inp = fPart.querySelector('input');
+          inp.value = d.direccion || d.calle || inp.value;
+          dia.partida = { texto: inp.value, placeId: d.id, lat: d.lat, lng: d.lng };
+        });
+
+        // Puntos a visitar, uno o varios
+        var visitas = document.createElement('div');
+        visitas.className = 'mov-visitas';
+        caja.appendChild(visitas);
+
+        function pintaVisitas() {
+          visitas.innerHTML = '';
+          dia.visitas.forEach(function (v, j) {
+            var f = campo(j === 0 ? 'Puntos a visitar' : '', 'text', v.texto, function (val) { v.texto = val; }, 'Restaurante, playa, tour…');
+            f.classList.add('mov-visita');
+
+            var quita = document.createElement('button');
+            quita.type = 'button';
+            quita.className = 'mov-quitar-punto';
+            quita.innerHTML = '<svg aria-hidden="true"><use href="#i-x"/></svg>';
+            quita.setAttribute('aria-label', 'Quitar punto');
+            quita.addEventListener('click', function () {
+              dia.visitas.splice(j, 1);
+              if (!dia.visitas.length) dia.visitas.push({ texto: '', placeId: null });
+              pintaVisitas();
+            });
+            f.appendChild(quita);
+            visitas.appendChild(f);
+
+            conectaAutocompletado(f.querySelector('input'), function (d) {
+              var inp = f.querySelector('input');
+              inp.value = d.direccion || d.calle || inp.value;
+              v.texto = inp.value;
+              v.placeId = d.id;
+              v.lat = d.lat;
+              v.lng = d.lng;
+            });
+          });
+
+          var mas = document.createElement('button');
+          mas.type = 'button';
+          mas.className = 'btn btn-line btn-sm';
+          mas.textContent = '+ Agregar punto';
+          mas.addEventListener('click', function () {
+            dia.visitas.push({ texto: '', placeId: null });
+            pintaVisitas();
+          });
+          visitas.appendChild(mas);
+        }
+
+        if (!dia.visitas.length) dia.visitas.push({ texto: '', placeId: null });
+        pintaVisitas();
+
+        movLista.appendChild(caja);
+      });
+    }
+
+    /* Constructor de campo con el mismo estilo del resto del formulario */
+    function campo(etiqueta, tipo, valor, alCambiar, marcador) {
+      var f = document.createElement('div');
+      f.className = 'field';
+      if (etiqueta) {
+        var l = document.createElement('label');
+        l.textContent = etiqueta;
+        f.appendChild(l);
+      }
+      var i = document.createElement('input');
+      i.type = tipo;
+      i.value = valor || '';
+      if (marcador) i.placeholder = marcador;
+      if (tipo === 'number') { i.min = '1'; i.max = '20'; }
+      i.addEventListener('input', function () {
+        alCambiar(this.value);
+        f.classList.remove('err');
+      });
+      f.appendChild(i);
+      var m = document.createElement('span');
+      m.className = 'msg';
+      m.textContent = 'Completa este dato.';
+      f.appendChild(m);
+      return f;
+    }
+
+    byId('mov-agregar').addEventListener('click', function () {
+      if (MOV.dias.length >= diasEstadia()) {
+        avisaMov('No puedes tener más días con movimiento que días de estadía (' + diasEstadia() + ').');
+        return;
+      }
+      agregaDia();
+      byId('mov-dias').value = MOV.dias.length;
+    });
+
+    byId('mov-dias').addEventListener('input', function () {
+      var n = Number(this.value || 0);
+      var tope = diasEstadia();
+      if (n > tope) { this.value = tope; n = tope; }
+      if (n < 1) return;
+      while (MOV.dias.length < n) MOV.dias.push({ fecha: '', recorridos: '', horaInicio: '', horaFin: '', partida: null, visitas: [] });
+      while (MOV.dias.length > n) MOV.dias.pop();
+      pintaDias();
+    });
+
+    byId('mov-notas').addEventListener('input', function () { MOV.notas = this.value; });
+
+    function avisaMov(texto) {
+      var el = byId('mov-error');
+      el.textContent = texto;
+      el.classList.add('on');
+      setTimeout(function () { el.classList.remove('on'); }, 6000);
+    }
+
+    /* Validación: no se continúa con el bloque incompleto */
+    function validaMovimientos() {
+      if (!MOV.incluye) return true;
+
+      var tope = diasEstadia();
+      if (MOV.dias.length > tope) { avisaMov('Los días con movimiento no pueden exceder los ' + tope + ' de estadía.'); return false; }
+
+      var ok = true;
+      var vistas = {};
+
+      MOV.dias.forEach(function (dia, i) {
+        var caja = movLista.children[i];
+        if (!caja) return;
+        var campos = caja.querySelectorAll('.field');
+
+        function marca(idx, mal) {
+          if (campos[idx]) campos[idx].classList.toggle('err', mal);
+          if (mal) ok = false;
+        }
+
+        marca(0, !dia.fecha);
+        marca(1, !dia.recorridos || Number(dia.recorridos) < 1);
+        marca(2, !dia.horaInicio);
+        marca(3, !dia.horaFin);
+        marca(4, !(dia.partida && dia.partida.texto));
+
+        if (dia.fecha) {
+          if (dia.fecha < soloFecha(VIAJE.salida) || dia.fecha > soloFecha(VIAJE.regreso)) {
+            marca(0, true);
+            avisaMov('La fecha del día ' + (i + 1) + ' está fuera del rango del viaje.');
+          } else if (vistas[dia.fecha]) {
+            marca(0, true);
+            avisaMov('La fecha ' + fechaLegible(dia.fecha) + ' está repetida en dos días.');
+          }
+          vistas[dia.fecha] = true;
+        }
+
+        if (dia.horaInicio && dia.horaFin && dia.horaFin <= dia.horaInicio) {
+          marca(3, true);
+          avisaMov('En el día ' + (i + 1) + ' la hora de fin debe ser posterior a la de inicio.');
+        }
+
+        if (!dia.visitas.filter(function (v) { return v.texto; }).length) {
+          ok = false;
+          avisaMov('Indica al menos un punto a visitar en el día ' + (i + 1) + '.');
+        }
+      });
+
+      if (!ok && !byId('mov-error').classList.contains('on')) {
+        avisaMov('Completa los datos de los días con movimiento.');
+      }
+      return ok;
+    }
+
+    /* Renglones que se agregan al resumen y al mensaje que se envía */
+    function resumenMovimientos() {
+      if (!MOV.incluye) return [];
+      var filas = [['Movimientos en destino', 'Sí · ' + MOV.dias.length + (MOV.dias.length === 1 ? ' día' : ' días')]];
+
+      MOV.dias.forEach(function (dia, i) {
+        var partes = [];
+        if (dia.recorridos) partes.push(dia.recorridos + ' recorridos');
+        if (dia.horaInicio || dia.horaFin) partes.push((dia.horaInicio || '?') + ' a ' + (dia.horaFin || '?'));
+        if (dia.partida && dia.partida.texto) partes.push('Sale de ' + dia.partida.texto);
+        var visitas = dia.visitas.filter(function (v) { return v.texto; }).map(function (v) { return v.texto; });
+        if (visitas.length) partes.push('Visita: ' + visitas.join(' / '));
+        filas.push(['Día ' + (i + 1) + (dia.fecha ? ' (' + fechaLegible(dia.fecha) + ')' : ''), partes.join(' · ')]);
+      });
+
+      if (MOV.notas) filas.push(['Notas de movimientos', MOV.notas]);
+      filas.push(['Revisión', 'Requiere cotización de un asesor (MOVIMIENTOS_EN_DESTINO)']);
+      return filas;
+    }
+
     /* ================= resumen ================= */
     var CAMPOS_DATOS = [
       ['Nombre', 'f-nombre'], ['Teléfono', 'f-tel'], ['Correo', 'f-mail'], ['Empresa', 'f-empresa'],
@@ -1946,11 +2360,15 @@ window.IMGS = {
         var v = (byId(c[1]).value || '').trim();
         if (v) filas.push([c[0], v]);
       });
+
+      /* los movimientos se agregan al final, con su detalle dia por dia */
+      resumenMovimientos().forEach(function (f) { filas.push(f); });
       return filas;
     }
 
     byId('f-review').addEventListener('click', function () {
       if (!validaDatos()) return;
+      if (!validaMovimientos()) return;
       var filas = armaResumen();
 
       byId('sum-list').innerHTML = filas.map(function (r) {
