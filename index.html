@@ -358,9 +358,9 @@
     margin-top: 16px; background: #fff; border-radius: var(--radius); padding: 16px;
     display: grid; gap: 12px; grid-template-columns: 1fr; box-shadow: var(--shadow-lg);
   }
-  @media (min-width: 980px) { .search-card { grid-template-columns: 1.35fr 1.35fr 0.9fr 0.9fr 0.85fr auto; align-items: end; padding: 18px; } }
+  @media (min-width: 980px) { .search-card { grid-template-columns: 1.2fr 1.2fr 0.82fr 0.82fr 1.15fr auto; align-items: end; padding: 18px; } }
 
-  .field { display: flex; flex-direction: column; gap: 6px; position: relative; }
+  .field { display: flex; flex-direction: column; gap: 6px; position: relative; min-width: 0; }
   .field.full { grid-column: 1 / -1; }
   .field label {
     font-family: 'Archivo', sans-serif; font-size: 10.5px; font-weight: 600;
@@ -863,12 +863,6 @@ window.IMGS = {
           conviene.
         </p>
 
-        <div class="seg" id="seg-tipo" role="tablist">
-          <button class="on" data-tipo="autobus" type="button"><svg aria-hidden="true"><use href="#i-bus" /></svg> Autobús</button>
-          <button data-tipo="sprinter" type="button"><svg aria-hidden="true"><use href="#i-van" /></svg> Sprinter</button>
-          <button data-tipo="suburban" type="button"><svg aria-hidden="true"><use href="#i-suv" /></svg> Suburban</button>
-        </div>
-
         <div class="trip">
           <label><input type="radio" name="trip" value="redondo" checked /> Viaje redondo</label>
           <label><input type="radio" name="trip" value="sencillo" /> Solo ida</label>
@@ -904,13 +898,10 @@ window.IMGS = {
             <input id="s-regreso" type="date" />
           </div>
 
-          <div class="field">
-            <label>Pasajeros</label>
-            <div class="stepper">
-              <button type="button" id="pax-menos" aria-label="Menos pasajeros">&minus;</button>
-              <input id="s-pax" type="number" min="1" max="200" value="45" />
-              <button type="button" id="pax-mas" aria-label="Más pasajeros">+</button>
-            </div>
+          <div class="field" id="fw-unidad">
+            <label for="s-unidad">Tipo de unidad</label>
+            <select id="s-unidad"></select>
+            <span class="msg">Elige la unidad.</span>
           </div>
 
           <div class="field">
@@ -1271,6 +1262,7 @@ window.IMGS = {
   </div>
 </div>
 
+<script src="unidades.js"></script>
 <script>
   (function () {
     'use strict';
@@ -1375,32 +1367,7 @@ window.IMGS = {
     if (!reduce) restart();
 
     /* ================= flota ================= */
-    var UNITS = [
-      { id: 'irizar-i6s', cat: 'autobus', tag: 'Autobús · Premium', name: 'Irizar i6S', cap: '51 pasajeros', max: 51, img: 'i6s', full: 'hero2', seat: 'seat_i6s',
-        desc: 'Comodidad, tecnología y diseño para viajes con estilo. Diseño aerodinámico, acabados premium y suspensión avanzada para un trayecto suave, seguro y placentero.',
-        amen: ['Aire acondicionado', 'Baño a bordo', 'Asientos reclinables', '2 puertas'],
-        spec: [['i-users', '51 pasajeros'], ['i-snow', 'Aire acondicionado'], ['i-wc', 'Baño a bordo'], ['i-seat', 'Asientos reclinables con descansapiés'], ['i-bag', 'Amplia capacidad de equipaje'], ['i-shield', 'Seguro de viajero incluido'], ['i-route', 'Suspensión avanzada'], ['i-briefcase', 'Ideal para giras y viajes ejecutivos']] },
-      { id: 'irizar-i6', cat: 'autobus', tag: 'Autobús · Turismo', name: 'Irizar i6', cap: '47 a 51 pasajeros', max: 51, img: 'i6', full: 'hero1',
-        desc: 'El caballito de batalla para excursiones y viajes foráneos: espacio, silencio de marcha y equipamiento completo para trayectos largos.',
-        amen: ['Aire acondicionado', 'Baño a bordo', 'Pantallas', 'Audio'],
-        spec: [['i-users', '47 a 51 pasajeros'], ['i-snow', 'Aire acondicionado'], ['i-wc', 'Baño a bordo'], ['i-tv', 'Pantallas y sistema de audio'], ['i-seat', 'Asientos reclinables'], ['i-bag', 'Cajuela amplia'], ['i-shield', 'Seguro de viajero incluido'], ['i-pin', 'Monitoreo GPS']] },
-      { id: 'irizar-pb', cat: 'autobus', tag: 'Autobús · Larga distancia', name: 'Irizar PB', cap: '47 a 51 pasajeros', max: 51, img: 'pb', full: 'hero3',
-        desc: 'Unidad de piso alto pensada para carretera: mayor visibilidad para el pasajero y bodega generosa para grupos con mucho equipaje.',
-        amen: ['Aire acondicionado', 'Baño a bordo', 'Piso alto', 'Bodega amplia'],
-        spec: [['i-users', '47 a 51 pasajeros'], ['i-snow', 'Aire acondicionado'], ['i-wc', 'Baño a bordo'], ['i-seat', 'Asientos reclinables'], ['i-bag', 'Bodega de gran capacidad'], ['i-tv', 'Pantallas'], ['i-shield', 'Seguro de viajero incluido'], ['i-route', 'Óptimo para viajes de varios días']] },
-      { id: 'neobus', cat: 'autobus', tag: 'Autobús · Grupos grandes', name: 'Neobus', cap: '50 pasajeros', max: 50, img: 'neobus', seat: 'seat_neobus',
-        desc: 'Excelente relación costo-beneficio para traslados de personal, viajes escolares y recorridos de uno o varios días.',
-        amen: ['Aire acondicionado', 'Baño a bordo', 'Pantallas', 'Reclinables'],
-        spec: [['i-users', '50 pasajeros'], ['i-snow', 'Aire acondicionado'], ['i-wc', 'Baño a bordo'], ['i-tv', 'Pantalla y sistema de audio'], ['i-seat', 'Asientos reclinables'], ['i-bag', 'Espacio para equipaje'], ['i-shield', 'Seguro de viajero incluido'], ['i-cap', 'Muy usado en viajes escolares']] },
-      { id: 'sprinter', cat: 'sprinter', tag: 'Sprinter · Grupos pequeños', name: 'Sprinter', cap: '10 a 20 pasajeros', max: 20, img: 'sprinter',
-        desc: 'Moderna, segura y funcional. Diseño compacto y elegante para moverse igual de bien en ciudad que en carretera: traslados ejecutivos, eventos y excursiones familiares.',
-        amen: ['Aire acondicionado', 'Asientos reclinables', 'Audio', 'Pantalla'],
-        spec: [['i-users', '10 a 20 pasajeros'], ['i-snow', 'Aire acondicionado'], ['i-seat', 'Asientos reclinables'], ['i-tv', 'Pantalla y sistema de audio'], ['i-bag', 'Espacio para equipaje'], ['i-shield', 'Seguro de viajero incluido'], ['i-briefcase', 'Traslados ejecutivos y eventos'], ['i-route', 'Ágil en ciudad y carretera']] },
-      { id: 'suburban', cat: 'suburban', tag: 'Suburban · Ejecutivo', name: 'Suburban', cap: 'Hasta 6 pasajeros', max: 6, img: 'suburban',
-        desc: 'Elegancia y comodidad para traslados ejecutivos, recepción de directivos en el aeropuerto y grupos reducidos que viajan con equipaje.',
-        amen: ['Aire acondicionado', 'Servicio ejecutivo', 'Equipaje', 'Chofer'],
-        spec: [['i-users', 'Hasta 6 pasajeros'], ['i-snow', 'Aire acondicionado'], ['i-seat', 'Interiores en piel'], ['i-bag', 'Espacio para equipaje'], ['i-plane', 'Traslados aeropuerto'], ['i-shield', 'Seguro de viajero incluido'], ['i-briefcase', 'Servicio ejecutivo puerta a puerta'], ['i-clock', 'Disponible por horas']] }
-    ];
+    var UNITS = window.UNIDADES || [];
 
     var fleetEl = byId('fleet');
     var unitSel = byId('f-unidad');
@@ -1458,8 +1425,9 @@ window.IMGS = {
 
       byId('m-book').onclick = function () {
         unitSel.value = u.name;
-        byId('f-tipo').value = u.cat === 'sprinter' ? 'Renta de Sprinter' : (u.cat === 'suburban' ? 'Transporte ejecutivo (Suburban)' : 'Renta de autobuses');
-        setSeg(u.cat);
+        byId('f-tipo').value = servicioDe(u);
+        // deja el buscador con esta unidad exacta, no solo con su categoría
+        setUnidad(u.id);
         closeModal();
         go('cotizar');
         setTimeout(function () { goStep(2); }, 300);
@@ -1667,25 +1635,47 @@ window.IMGS = {
     }
 
     /* ================= buscador ================= */
-    var tipoSel = 'autobus';
 
-    function setSeg(cat) {
-      tipoSel = cat;
-      document.querySelectorAll('#seg-tipo button').forEach(function (x) {
-        x.classList.toggle('on', x.getAttribute('data-tipo') === cat);
-      });
+    /* tipoUnidad: id de la unidad elegida en el buscador. Viaja por todo el flujo. */
+    var tipoUnidad = '';
+    var unidadSel = byId('s-unidad');
+
+    function unidadPorId(id) {
+      return UNITS.filter(function (u) { return u.id === id; })[0] || null;
     }
 
-    document.querySelectorAll('#seg-tipo button').forEach(function (b) {
-      b.addEventListener('click', function () {
-        setSeg(b.getAttribute('data-tipo'));
-        var pax = byId('s-pax');
-        var n = Number(pax.value || 0);
-        if (tipoSel === 'suburban' && n > 6) pax.value = 6;
-        if (tipoSel === 'sprinter' && n > 20) pax.value = 20;
-        if (tipoSel === 'autobus' && n < 21) pax.value = 45;
-      });
+    /* El selector se arma desde el catálogo: dar de alta una unidad la agrega sola. */
+    UNITS.forEach(function (u) {
+      var o = document.createElement('option');
+      o.value = u.id;
+      o.textContent = u.name + ' · ' + u.cap;
+      unidadSel.appendChild(o);
     });
+
+    unidadSel.insertBefore(new Option('Selecciona una unidad', ''), unidadSel.firstChild);
+    unidadSel.value = '';
+
+    /* Sprinter cotiza en línea; el resto manda solicitud a la empresa. */
+    function pintaBotonBuscar() {
+      var u = unidadPorId(tipoUnidad);
+      var auto = !!(u && u.cotizadorAutomatico);
+      byId('s-go').innerHTML =
+        '<svg aria-hidden="true"><use href="#' + (auto ? 'i-search' : 'i-mail') + '"/></svg> ' +
+        (auto ? 'Cotizar' : 'Solicitar cotización');
+    }
+
+    function setUnidad(id) {
+      tipoUnidad = unidadPorId(id) ? id : '';
+      unidadSel.value = tipoUnidad;
+      byId('fw-unidad').classList.remove('err');
+      pintaBotonBuscar();
+    }
+
+    unidadSel.addEventListener('change', function () {
+      setUnidad(this.value);
+    });
+
+    pintaBotonBuscar();
 
     document.querySelectorAll('input[name="trip"]').forEach(function (r) {
       r.addEventListener('change', function () {
@@ -1693,16 +1683,6 @@ window.IMGS = {
         byId('s-regreso').disabled = !redondo;
         if (!redondo) byId('s-regreso').value = '';
       });
-    });
-
-    byId('pax-menos').addEventListener('click', function () {
-      var i = byId('s-pax');
-      i.value = Math.max(1, Number(i.value || 1) - 1);
-    });
-
-    byId('pax-mas').addEventListener('click', function () {
-      var i = byId('s-pax');
-      i.value = Math.min(200, Number(i.value || 0) + 1);
     });
 
     function fmtDate(v) {
@@ -1713,37 +1693,44 @@ window.IMGS = {
       return Number(p[2]) + ' ' + m[Number(p[1]) - 1] + ' ' + p[0];
     }
 
+    /* Servicio del formulario según la categoría de la unidad. */
+    function servicioDe(u) {
+      if (!u) return '';
+      if (u.cat === 'sprinter') return 'Renta de Sprinter';
+      if (u.cat === 'suburban') return 'Transporte ejecutivo (Suburban)';
+      return 'Renta de autobuses';
+    }
+
     byId('s-go').addEventListener('click', function () {
       var ok = true;
       if (!LOC.origen) { byId('fw-origen').classList.add('err'); ok = false; }
       if (!LOC.destino) { byId('fw-destino').classList.add('err'); ok = false; }
       if (!byId('s-salida').value) { byId('fw-salida').classList.add('err'); ok = false; }
       else byId('fw-salida').classList.remove('err');
+      if (!tipoUnidad) { byId('fw-unidad').classList.add('err'); ok = false; }
       if (!ok) return;
 
-      var pax = Number(byId('s-pax').value || 1);
-      var list = UNITS.filter(function (u) { return u.cat === tipoSel; });
+      var u = unidadPorId(tipoUnidad);
       var salida = byId('s-salida').value;
       var regreso = byId('s-regreso').value;
 
       byId('res-route').innerHTML =
         '<span>' + esc(LOC.origen.place[0]) + '</span><svg aria-hidden="true"><use href="#i-arrow"/></svg><span>' + esc(LOC.destino.place[0]) + '</span>';
       byId('res-meta').textContent =
-        fmtDate(salida) + (regreso ? ' → ' + fmtDate(regreso) : ' · solo ida') + ' · ' + pax + (pax === 1 ? ' pasajero' : ' pasajeros');
+        fmtDate(salida) + (regreso ? ' → ' + fmtDate(regreso) : ' · solo ida');
 
-      byId('res-list').innerHTML = list.map(function (u) {
-        var cabe = pax <= u.max;
-        var n = Math.ceil(pax / u.max);
-        var nota = cabe
-          ? '<span class="fit"><svg aria-hidden="true"><use href="#i-check"/></svg>Alcanza en una unidad</span>'
-          : '<span class="fit no"><svg aria-hidden="true"><use href="#i-users"/></svg>Se requieren ' + n + ' unidades para ' + pax + ' pasajeros</span>';
-        return '<div class="opt">' +
-          '<img src="' + (I[u.img] || '') + '" alt="' + u.name + '">' +
-          '<div><h4>' + u.name + '</h4><div class="caps">' + u.cap + '</div>' +
-          '<div class="amen">' + u.amen.slice(0, 3).map(function (a) { return '<span>' + a + '</span>'; }).join('') + '</div>' +
-          nota + '</div>' +
-          '<button class="btn btn-red" type="button" data-pick="' + u.name + '">Cotizar esta unidad</button></div>';
-      }).join('');
+      var nota = u.cotizadorAutomatico
+        ? '<span class="fit"><svg aria-hidden="true"><use href="#i-check"/></svg>Cotización en línea disponible para esta unidad</span>'
+        : '<span class="fit no"><svg aria-hidden="true"><use href="#i-mail"/></svg>Esta unidad se cotiza a la medida: te respondemos el mismo día hábil</span>';
+
+      byId('res-list').innerHTML =
+        '<div class="opt">' +
+        '<img src="' + (I[u.img] || '') + '" alt="' + esc(u.name) + '">' +
+        '<div><h4>' + esc(u.name) + '</h4><div class="caps">' + esc(u.cap) + '</div>' +
+        '<div class="amen">' + u.amen.slice(0, 3).map(function (a) { return '<span>' + esc(a) + '</span>'; }).join('') + '</div>' +
+        nota + '</div>' +
+        '<button class="btn btn-red" type="button" data-pick="' + esc(u.name) + '">' +
+        (u.cotizadorAutomatico ? 'Continuar' : 'Solicitar cotización') + '</button></div>';
 
       byId('results').classList.add('on');
 
@@ -1751,8 +1738,8 @@ window.IMGS = {
       byId('f-destino').value = locFull(LOC.destino);
       byId('f-salida').value = salida;
       byId('f-regreso').value = regreso;
-      byId('f-pax').value = pax;
-      byId('f-tipo').value = tipoSel === 'sprinter' ? 'Renta de Sprinter' : (tipoSel === 'suburban' ? 'Transporte ejecutivo (Suburban)' : 'Renta de autobuses');
+      byId('f-tipo').value = servicioDe(u);
+      unitSel.value = u.name;
 
       byId('results').scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' });
     });
