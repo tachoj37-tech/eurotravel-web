@@ -1631,18 +1631,19 @@ window.IMGS = {
       btn.querySelector('small').textContent = locLine(l) || (l.place[1] ? l.place[1] + ' · ' + l.place[2] : 'Ubicación seleccionada');
     }
 
-    /* ================= autocompletado de Google ================= */
-    /* Habla directo con Places API (New) por REST. No carga el SDK de mapas,
-       así que basta con tener habilitada Places API (New) en Google Cloud.
-       Sin clave configurada, el campo funciona como un input normal. */
+    /* ================= autocompletado de direcciones ================= */
+    /* El navegador nunca ve la clave de Google: le pide a /api/places y ese
+       endpoint, del lado del servidor, es quien consulta Places API.
+       Si el endpoint no responde, el campo funciona como un input normal. */
 
-    var GKEY = (window.CONFIG || {}).GOOGLE_MAPS_KEY || '';
+    var API_PLACES = (window.CONFIG || {}).API_PLACES || '/api/places';
     var GPAIS = (window.CONFIG || {}).PAIS || 'mx';
     var GIDIOMA = (window.CONFIG || {}).IDIOMA || 'es';
     var gSesion = null;
     var gTimer = 0;
     var gSugerencias = [];
     var gIndice = -1;
+    var gDisponible = true;
 
     function nuevaSesion() {
       // token de sesión: agrupa las teclas + el detalle en un solo cobro
@@ -1654,6 +1655,18 @@ window.IMGS = {
 
     var cajaSug = byId('loc-sug');
     var campoCalle = byId('loc-calle');
+
+    function pideAlProxy(datos) {
+      return fetch(API_PLACES, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(datos)
+      }).then(function (r) {
+        if (r.status === 503) { gDisponible = false; return null; } // sin clave configurada
+        if (!r.ok) return null;
+        return r.json();
+      });
+    }
 
     function cierraSugerencias() {
       cajaSug.classList.remove('on');
@@ -1675,115 +1688,84 @@ window.IMGS = {
     }
 
     function buscaSugerencias(texto) {
-      if (!GKEY || texto.trim().length < 3) { cierraSugerencias(); return; }
+      if (!gDisponible || texto.trim().length < 3) { cierraSugerencias(); return; }
       if (!gSesion) nuevaSesion();
 
-      fetch('https://places.googleapis.com/v1/places:autocomplete', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-Goog-Api-Key': GKEY },
-        body: JSON.stringify({
-          input: texto,
-          includedRegionCodes: [GPAIS],
-          languageCode: GIDIOMA,
-          sessionToken: gSesion
-        })
-      })
-        .then(function (r) { return r.json(); })
-        .then(function (d) {
-          if (d.error) { console.warn('Places:', d.error.message); cierraSugerencias(); return; }
-          var lista = (d.suggestions || []).map(function (s) {
-            var p = s.placePrediction || {};
-            return {
-              id: p.placeId,
-              principal: (p.structuredFormat && p.structuredFormat.mainText && p.structuredFormat.mainText.text) || (p.text && p.text.text) || '',
-              secundario: (p.structuredFormat && p.structuredFormat.secondaryText && p.structuredFormat.secondaryText.text) || ''
-            };
-          }).filter(function (s) { return s.id; });
-          pintaSugerencias(lista);
-        }, function () { cierraSugerencias(); });
+      pideAlProxy({
+        accion: 'autocomplete',
+        input: texto,
+        pais: GPAIS,
+        idioma: GIDIOMA,
+        sessionToken: gSesion
+      }).then(function (d) {
+        if (!d) { cierraSugerencias(); return; }
+        pintaSugerencias(d.suggestions || []);
+      }, function () { cierraSugerencias(); });
     }
 
     /* Al elegir una sugerencia se rellenan solos calle, colonia, C.P. y coordenadas. */
     function tomaDetalle(placeId) {
-      if (!GKEY || !placeId) return;
-      fetch('https://places.googleapis.com/v1/places/' + encodeURIComponent(placeId) +
-        '?languageCode=' + GIDIOMA + '&sessionToken=' + (gSesion || ''), {
-        headers: {
-          'X-Goog-Api-Key': GKEY,
-          'X-Goog-FieldMask': 'id,formattedAddress,location,addressComponents,displayName'
+      if (!gDisponible || !placeId) return;
+
+      pideAlProxy({
+        accion: 'detalle',
+        placeId: placeId,
+        idioma: GIDIOMA,
+        sessionToken: gSesion
+      }).then(function (d) {
+        if (!d) return;
+
+        if (d.calle) campoCalle.value = d.calle;
+        if (d.colonia) byId('loc-col').value = d.colonia;
+        if (d.cp) byId('loc-cp').value = d.cp;
+
+        if (d.lat != null && d.lng != null) {
+          locCoords = Number(d.lat).toFixed(6) + ', ' + Number(d.lng).toFixed(6);
+          byId('loc-coords').textContent = locCoords;
+          byId('loc-pin').classList.add('on');
         }
-      })
-        .then(function (r) { return r.json(); })
-        .then(function (d) {
-          if (d.error) { console.warn('Places detalle:', d.error.message); return; }
 
-          var comp = d.addressComponents || [];
-          function busca() {
-            var tipos = [].slice.call(arguments);
-            for (var i = 0; i < comp.length; i++) {
-              for (var j = 0; j < tipos.length; j++) {
-                if ((comp[i].types || []).indexOf(tipos[j]) >= 0) return comp[i].longText || comp[i].shortText || '';
-              }
-            }
-            return '';
-          }
-
-          var calle = busca('route');
-          var numero = busca('street_number');
-          campoCalle.value = (calle ? calle + (numero ? ' ' + numero : '') : (d.displayName && d.displayName.text) || campoCalle.value);
-          byId('loc-col').value = busca('sublocality_level_1', 'sublocality', 'neighborhood') || byId('loc-col').value;
-          byId('loc-cp').value = busca('postal_code') || byId('loc-cp').value;
-
-          if (d.location) {
-            locCoords = Number(d.location.latitude).toFixed(6) + ', ' + Number(d.location.longitude).toFixed(6);
-            byId('loc-coords').textContent = locCoords;
-            byId('loc-pin').classList.add('on');
-          }
-
-          locPlaceId = d.id || placeId;
-          locDireccion = d.formattedAddress || '';
-          gSesion = null; // la sesión se cierra al pedir el detalle
-          cierraSugerencias();
-        }, function () {});
+        locPlaceId = d.id || placeId;
+        locDireccion = d.direccion || '';
+        gSesion = null; // la sesión se cierra al pedir el detalle
+        cierraSugerencias();
+      }, function () {});
     }
 
-    if (GKEY) {
-      campoCalle.setAttribute('placeholder', 'Escribe y elige de las sugerencias…');
-      campoCalle.setAttribute('autocomplete', 'off');
+    campoCalle.setAttribute('autocomplete', 'off');
 
-      campoCalle.addEventListener('input', function () {
-        var v = this.value;
-        clearTimeout(gTimer);
-        gTimer = setTimeout(function () { buscaSugerencias(v); }, 250);
-      });
+    campoCalle.addEventListener('input', function () {
+      var v = this.value;
+      clearTimeout(gTimer);
+      gTimer = setTimeout(function () { buscaSugerencias(v); }, 250);
+    });
 
-      campoCalle.addEventListener('keydown', function (e) {
-        if (!gSugerencias.length) return;
-        if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
-          e.preventDefault();
-          gIndice += e.key === 'ArrowDown' ? 1 : -1;
-          if (gIndice < 0) gIndice = gSugerencias.length - 1;
-          if (gIndice >= gSugerencias.length) gIndice = 0;
-          [].slice.call(cajaSug.children).forEach(function (b, i) { b.classList.toggle('hl', i === gIndice); });
-        } else if (e.key === 'Enter' && gIndice >= 0) {
-          e.preventDefault();
-          tomaDetalle(gSugerencias[gIndice].id);
-        } else if (e.key === 'Escape') {
-          cierraSugerencias();
-        }
-      });
+    campoCalle.addEventListener('keydown', function (e) {
+      if (!gSugerencias.length) return;
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        e.preventDefault();
+        gIndice += e.key === 'ArrowDown' ? 1 : -1;
+        if (gIndice < 0) gIndice = gSugerencias.length - 1;
+        if (gIndice >= gSugerencias.length) gIndice = 0;
+        [].slice.call(cajaSug.children).forEach(function (b, i) { b.classList.toggle('hl', i === gIndice); });
+      } else if (e.key === 'Enter' && gIndice >= 0) {
+        e.preventDefault();
+        tomaDetalle(gSugerencias[gIndice].id);
+      } else if (e.key === 'Escape') {
+        cierraSugerencias();
+      }
+    });
 
-      cajaSug.addEventListener('click', function (e) {
-        var b = e.target.closest ? e.target.closest('[data-i]') : null;
-        if (!b) return;
-        var s = gSugerencias[Number(b.getAttribute('data-i'))];
-        if (s) { campoCalle.value = s.principal; tomaDetalle(s.id); }
-      });
+    cajaSug.addEventListener('click', function (e) {
+      var b = e.target.closest ? e.target.closest('[data-i]') : null;
+      if (!b) return;
+      var s = gSugerencias[Number(b.getAttribute('data-i'))];
+      if (s) { campoCalle.value = s.principal; tomaDetalle(s.id); }
+    });
 
-      document.addEventListener('click', function (e) {
-        if (e.target !== campoCalle && !cajaSug.contains(e.target)) cierraSugerencias();
-      });
-    }
+    document.addEventListener('click', function (e) {
+      if (e.target !== campoCalle && !cajaSug.contains(e.target)) cierraSugerencias();
+    });
 
     /* ================= buscador ================= */
 

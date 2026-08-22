@@ -1,24 +1,21 @@
 /* ============================================================
-   Configuración del sitio
+   Configuración pública del sitio
    ------------------------------------------------------------
-   GOOGLE_MAPS_KEY es la clave del NAVEGADOR. Va aquí a propósito:
-   el autocompletado de direcciones corre en el equipo del cliente
-   y no hay forma de ocultarla. Lo que la protege son las
-   restricciones que tiene en Google Cloud:
+   Aquí NO va ninguna clave. El autocompletado de direcciones se
+   pide a /api/places, y es ese endpoint —que corre en el
+   servidor— quien habla con Google usando GOOGLE_PLACES_KEY.
 
-     · Restricción de aplicación: solo https://eurotravel-web.vercel.app/*
-     · Restricción de API: solo Places API (New)
+   Las claves viven solo en las variables de entorno de Vercel:
 
-   Si se deja vacía, el sitio sigue funcionando: las direcciones se
-   escriben a mano, sin sugerencias.
+     GOOGLE_PLACES_KEY  · autocompletado de direcciones
+     GOOGLE_ROUTES_KEY  · cálculo de kilómetros (Fase 2)
 
-   OJO: la clave del SERVIDOR (Routes API, para calcular kilómetros)
-   NUNCA va en este archivo. Esa vive en las variables de entorno de
-   Vercel y solo la lee el backend.
+   Ninguna de las dos se envía al navegador ni se guarda en este
+   repositorio.
    ============================================================ */
 
 window.CONFIG = {
-  GOOGLE_MAPS_KEY: 'AIzaSyDAO0MroYUJaFzkK8NvJvaS2TWJi3yOH84',
   PAIS: 'mx',
-  IDIOMA: 'es'
+  IDIOMA: 'es',
+  API_PLACES: '/api/places'
 };

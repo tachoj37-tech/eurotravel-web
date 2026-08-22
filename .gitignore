@@ -1,3 +1,14 @@
+# Secretos: nunca deben llegar al repositorio
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Vercel
+.vercel
+
+# Sistema
 .DS_Store
 Thumbs.db
-.vercel
+node_modules

@@ -32,3 +32,43 @@ Cada push a `main` publica automáticamente en Vercel.
 - Confirmar capacidades exactas de Irizar i6 y PB (hoy dicen "47 a 51")
 - Revisar las preguntas frecuentes sobre anticipos, tiempos de reserva y facturación
 - Para autocompletado real de direcciones haría falta una API key de Google Maps Platform
+
+## Seguridad de las claves
+
+**Ninguna clave vive en este repositorio ni llega al navegador.**
+
+El autocompletado de direcciones no llama a Google desde el cliente: pide a
+`/api/places`, una función serverless que corre en Vercel y es la única que
+conoce la clave. Lo mismo hará `/api/cotizar` en la Fase 2 con el cálculo de
+kilómetros.
+
+### Variables de entorno
+
+Se configuran en Vercel → Settings → Environment Variables. Ver `.env.example`.
+
+| Variable | Para qué | Restricción en Google Cloud |
+|---|---|---|
+| `GOOGLE_PLACES_KEY` | Autocompletado de direcciones | Places API (New), sin restricción de sitio |
+| `GOOGLE_ROUTES_KEY` | Cálculo de kilómetros (Fase 2) | Routes API, sin restricción de sitio |
+
+Ambas se restringen **por API**, no por sitio web: las llama el servidor, que no
+envía cabecera `Referer`.
+
+### Defensas del proxy
+
+- Solo responde a peticiones desde el dominio del sitio
+- Solo acepta dos acciones (`autocomplete` y `detalle`)
+- Límite de 60 llamadas por minuto por visitante
+- Tope de 2,000 llamadas al día
+- Devuelve solo los campos que la página necesita
+
+### Si el endpoint no responde
+
+El campo de dirección funciona como un input normal y se escribe a mano. El
+sitio no se rompe si Google falla o si se agota la cuota.
+
+### Reglas
+
+- No poner claves en `config.js`, `index.html` ni en ningún archivo del repo
+- `.gitignore` ya bloquea `.env`, `*.key` y `*.pem`
+- Si una clave llega a publicarse, rotarla en Google Cloud (botón **Rotar clave**)
