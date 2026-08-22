@@ -1,0 +1,1881 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="description" content="Eurotravel — renta de autobuses, Sprinters y Suburbans en Tlaquepaque, Jalisco. Turismo, empresas y eventos con operador profesional, seguro de viajero y monitoreo GPS. Cotiza en línea." />
+<meta name="theme-color" content="#db0d0d" />
+<link rel="icon" type="image/png" href="img/icon.png" />
+<meta property="og:type" content="website" />
+<meta property="og:title" content="Eurotravel — Renta de autobuses" />
+<meta property="og:description" content="Autobuses, Sprinters y Suburbans para grupos de 6 a 51 pasajeros. Cotiza tu viaje en línea." />
+<meta property="og:image" content="img/hero2.jpg" />
+<title>Eurotravel</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link
+  href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap"
+  rel="stylesheet"
+/>
+
+<style>
+  :root {
+    --red: #db0d0d;
+    --red-dk: #b00a0a;
+    --ink: #1d1d1b;
+    --ink-2: #333331;
+    --muted: #6e6e6a;
+    --line: #e6e6e3;
+    --soft: #f6f6f4;
+    --radius: 14px;
+    --radius-sm: 10px;
+    --shadow: 0 1px 2px rgba(29, 29, 27, 0.05), 0 8px 30px rgba(29, 29, 27, 0.07);
+    --shadow-lg: 0 20px 60px rgba(29, 29, 27, 0.16);
+    --maxw: 1200px;
+    --ease: cubic-bezier(0.22, 0.61, 0.36, 1);
+    --nav-h: 72px;
+  }
+
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+
+  body {
+    margin: 0;
+    background: #fff;
+    color: var(--ink);
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-size: 16px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    overflow-x: hidden;
+  }
+
+  h1, h2, h3, h4 {
+    font-family: 'Archivo', 'Inter', sans-serif;
+    font-weight: 700;
+    letter-spacing: -0.025em;
+    line-height: 1.1;
+    margin: 0;
+  }
+
+  p { margin: 0; }
+  a { color: inherit; text-decoration: none; }
+  img, svg { display: block; max-width: 100%; }
+
+  .wrap { width: 100%; max-width: var(--maxw); margin: 0 auto; padding: 0 20px; }
+
+  .eyebrow {
+    display: inline-block;
+    font-family: 'Archivo', sans-serif;
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    font-weight: 600;
+    color: var(--red);
+  }
+
+  .lede { color: var(--muted); line-height: 1.7; }
+
+  /* ================= INTRO ================= */
+  #intro {
+    position: fixed;
+    inset: 0;
+    z-index: 300;
+    background: #fff;
+    display: grid;
+    place-items: center;
+    overflow: hidden;
+  }
+
+  #intro.out { animation: introOut 700ms var(--ease) forwards; }
+  @keyframes introOut { to { opacity: 0; visibility: hidden; } }
+
+  .intro-stage { width: min(760px, 88vw); text-align: center; }
+
+  .intro-road {
+    position: relative;
+    height: 4px;
+    background: var(--line);
+    margin-top: 4px;
+    overflow: hidden;
+    border-radius: 2px;
+  }
+
+  .intro-road::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: repeating-linear-gradient(90deg, var(--ink) 0 26px, transparent 26px 52px);
+    opacity: 0.22;
+    animation: roadRun 620ms linear infinite;
+  }
+
+  @keyframes roadRun { to { transform: translateX(-52px); } }
+
+  .intro-bus { transform: translateX(-135%); animation: driveIn 1500ms cubic-bezier(0.16, 0.72, 0.24, 1) forwards; }
+  @keyframes driveIn { to { transform: translateX(0); } }
+
+  .intro-wheel { transform-box: fill-box; transform-origin: center; animation: spinW 620ms linear infinite; }
+  @keyframes spinW { to { transform: rotate(360deg); } }
+
+  .intro-lines line { stroke-dasharray: 70; stroke-dashoffset: 70; animation: dashIn 1500ms linear forwards; }
+  @keyframes dashIn { 40% { stroke-dashoffset: 0; opacity: 1; } to { stroke-dashoffset: -70; opacity: 0; } }
+
+  .intro-logo {
+    margin: 28px auto 0;
+    height: 42px;
+    width: auto;
+    opacity: 0;
+    transform: translateY(14px);
+    animation: riseIn 700ms var(--ease) 1450ms forwards;
+  }
+
+  .intro-tag {
+    font-family: 'Archivo', sans-serif;
+    font-size: 11.5px;
+    letter-spacing: 0.32em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-top: 14px;
+    opacity: 0;
+    transform: translateY(10px);
+    animation: riseIn 700ms var(--ease) 1750ms forwards;
+  }
+
+  @keyframes riseIn { to { opacity: 1; transform: none; } }
+
+  .intro-bar { width: 180px; height: 2px; background: var(--line); margin: 24px auto 0; overflow: hidden; }
+  .intro-bar i { display: block; height: 100%; width: 100%; background: var(--red); transform: scaleX(0); transform-origin: left; animation: barGrow 2600ms var(--ease) forwards; }
+  @keyframes barGrow { to { transform: scaleX(1); } }
+
+  .intro-skip {
+    position: absolute;
+    bottom: 24px;
+    right: 24px;
+    background: none;
+    border: 1px solid var(--line);
+    color: var(--muted);
+    border-radius: 999px;
+    padding: 8px 16px;
+    font-family: 'Archivo', sans-serif;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 200ms var(--ease);
+  }
+
+  .intro-skip:hover { border-color: var(--ink); color: var(--ink); }
+
+  /* ================= buttons ================= */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 9px;
+    border: 1px solid transparent;
+    border-radius: 8px;
+    padding: 13px 24px;
+    font-family: 'Archivo', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 200ms var(--ease), color 200ms var(--ease), border-color 200ms var(--ease);
+    white-space: nowrap;
+  }
+
+  .btn svg { width: 16px; height: 16px; transition: transform 200ms var(--ease); }
+  .btn:hover svg.arw { transform: translateX(3px); }
+  .btn-red { background: var(--red); color: #fff; box-shadow: 0 6px 18px rgba(219, 13, 13, 0.25); }
+  .btn-red:hover { background: var(--red-dk); }
+  .btn-ink { background: var(--ink); color: #fff; }
+  .btn-ink:hover { background: #000; }
+  .btn-line { background: transparent; border-color: var(--line); color: var(--ink); }
+  .btn-line:hover { border-color: var(--ink); }
+  .btn-white { background: rgba(255, 255, 255, 0.12); border-color: rgba(255, 255, 255, 0.55); color: #fff; backdrop-filter: blur(6px); }
+  .btn-white:hover { background: #fff; color: var(--ink); }
+  .btn-sm { padding: 10px 18px; font-size: 13px; }
+  .btn-block { width: 100%; }
+
+  /* ================= nav ================= */
+  header.nav {
+    position: fixed;
+    inset: 0 0 auto 0;
+    z-index: 90;
+    background: #fff;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .nav-inner { display: flex; align-items: center; justify-content: space-between; gap: 16px; height: var(--nav-h); }
+  .logo-img { height: 28px; width: auto; }
+
+  .tabs { display: flex; align-items: center; gap: 4px; overflow-x: auto; scrollbar-width: none; }
+  .tabs::-webkit-scrollbar { display: none; }
+
+  .tab {
+    position: relative;
+    background: none;
+    border: none;
+    font-family: 'Archivo', sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--muted);
+    padding: 10px 14px;
+    cursor: pointer;
+    white-space: nowrap;
+    border-radius: 8px;
+    transition: color 200ms var(--ease), background-color 200ms var(--ease);
+  }
+
+  .tab:hover { color: var(--ink); background: var(--soft); }
+  .tab.on { color: var(--ink); font-weight: 600; }
+  .tab.on::after {
+    content: '';
+    position: absolute;
+    left: 14px; right: 14px; bottom: -1px;
+    height: 2px;
+    background: var(--red);
+  }
+
+  .nav-right { display: flex; align-items: center; gap: 10px; }
+  .nav-phone { display: none; align-items: center; gap: 8px; font-size: 14px; font-weight: 500; }
+  .nav-phone svg { width: 16px; height: 16px; color: var(--red); }
+
+  .nav-mid { display: none; }
+  @media (min-width: 1000px) { .nav-mid { display: flex; } .nav-phone { display: flex; } }
+
+  .tabs-mobile {
+    display: flex;
+    gap: 4px;
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--line);
+    background: #fff;
+    overflow-x: auto;
+  }
+  @media (min-width: 1000px) { .tabs-mobile { display: none; } }
+
+  /* ================= views ================= */
+  main { padding-top: var(--nav-h); }
+  @media (max-width: 999px) { main { padding-top: calc(var(--nav-h) + 53px); } }
+
+  .view { display: none; }
+  .view.on { display: block; animation: viewIn 420ms var(--ease); }
+  @keyframes viewIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+
+  .pad { padding: 64px 0 88px; }
+  .sec-head { max-width: 660px; }
+  .sec-head h2 { font-size: clamp(28px, 4.2vw, 44px); margin-top: 12px; }
+  .sec-head p { margin-top: 16px; }
+
+  /* ================= hero ================= */
+  .hero {
+    position: relative;
+    height: calc(100vh - var(--nav-h));
+    min-height: 520px;
+    max-height: 860px;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    background: #1d1d1b;
+  }
+
+  .slides { position: absolute; inset: 0; }
+  .slide {
+    position: absolute; inset: 0;
+    background-size: cover; background-position: center 58%;
+    opacity: 0; transform: scale(1.02);
+    transition: opacity 1500ms var(--ease);
+  }
+  .slide.on { opacity: 1; animation: kb 14s linear forwards; }
+  @keyframes kb { from { transform: scale(1.02); } to { transform: scale(1.11); } }
+
+  .scrim {
+    position: absolute; inset: 0;
+    background: linear-gradient(90deg, rgba(15, 15, 14, 0.86) 0%, rgba(15, 15, 14, 0.6) 44%, rgba(15, 15, 14, 0.2) 80%),
+      linear-gradient(180deg, rgba(15, 15, 14, 0.3) 0%, rgba(15, 15, 14, 0) 38%);
+  }
+
+  .hero-in { position: relative; z-index: 2; color: #fff; }
+  .hero-in h1 { font-size: clamp(36px, 6.2vw, 70px); margin-top: 16px; max-width: 15ch; }
+  .hero-in h1 span { color: var(--red); }
+  .hero-p { margin-top: 18px; max-width: 46ch; color: rgba(255, 255, 255, 0.86); font-size: 16.5px; }
+  .hero-cta { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 26px; }
+  .hero-meta { display: flex; flex-wrap: wrap; gap: 10px 24px; margin-top: 28px; font-size: 13.5px; color: rgba(255, 255, 255, 0.8); }
+  .hero-meta span { display: inline-flex; align-items: center; gap: 8px; }
+  .hero-meta svg { width: 16px; height: 16px; color: var(--red); }
+  .hero-dots { position: absolute; z-index: 2; left: 0; right: 0; bottom: 20px; display: flex; justify-content: center; gap: 8px; }
+  .hero-dots button { width: 26px; height: 3px; border: none; padding: 0; cursor: pointer; background: rgba(255, 255, 255, 0.35); }
+  .hero-dots button.on { background: var(--red); }
+
+  /* ================= trust ================= */
+  .trust { background: var(--soft); border-bottom: 1px solid var(--line); }
+  .trust-grid { display: grid; grid-template-columns: repeat(2, 1fr); }
+  @media (min-width: 900px) { .trust-grid { grid-template-columns: repeat(4, 1fr); } }
+  .trust-item { padding: 24px 22px; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+  @media (min-width: 900px) { .trust-item { border-bottom: none; } .trust-item:last-child { border-right: none; } }
+  .trust-item svg { width: 21px; height: 21px; color: var(--red); }
+  .trust-item h4 { font-size: 14.5px; font-weight: 600; margin: 11px 0 5px; }
+  .trust-item p { font-size: 13px; color: var(--muted); line-height: 1.55; }
+
+  .qa-grid { display: grid; gap: 18px; grid-template-columns: 1fr; margin-top: 28px; }
+  @media (min-width: 780px) { .qa-grid { grid-template-columns: repeat(3, 1fr); } }
+
+  .qa-card {
+    border: 1px solid var(--line); border-radius: var(--radius); padding: 26px 22px; background: #fff;
+    text-align: left; font: inherit; color: inherit; cursor: pointer;
+    transition: transform 240ms var(--ease), box-shadow 240ms var(--ease), border-color 240ms var(--ease);
+  }
+  .qa-card:hover { transform: translateY(-4px); box-shadow: var(--shadow); border-color: #d8d8d4; }
+  .qa-card svg.ic { width: 22px; height: 22px; color: var(--red); }
+  .qa-card h3 { font-size: 20px; margin: 14px 0 8px; }
+  .qa-card p { font-size: 14px; color: var(--muted); }
+  .qa-card .go { display: inline-flex; align-items: center; gap: 7px; margin-top: 14px; font-family: 'Archivo'; font-size: 13.5px; font-weight: 600; color: var(--red); }
+  .qa-card .go svg { width: 15px; height: 15px; transition: transform 200ms var(--ease); }
+  .qa-card:hover .go svg { transform: translateX(3px); }
+
+  /* ================= buscador ================= */
+  .search-shell { background: var(--ink); padding: 34px 0 44px; }
+  .search-shell h2 { color: #fff; font-size: clamp(26px, 3.6vw, 38px); margin-top: 10px; }
+  .search-shell p.sub { color: rgba(255, 255, 255, 0.6); margin-top: 10px; font-size: 15px; max-width: 62ch; }
+
+  .seg { display: inline-flex; background: rgba(255, 255, 255, 0.08); border-radius: 999px; padding: 4px; gap: 2px; margin-top: 22px; flex-wrap: wrap; }
+  .seg button {
+    border: none; background: none; color: rgba(255, 255, 255, 0.7);
+    font-family: 'Archivo'; font-size: 13.5px; font-weight: 500;
+    padding: 9px 18px; border-radius: 999px; cursor: pointer;
+    display: inline-flex; align-items: center; gap: 8px;
+    transition: background-color 200ms var(--ease), color 200ms var(--ease);
+  }
+  .seg button svg { width: 17px; height: 17px; }
+  .seg button:hover { color: #fff; }
+  .seg button.on { background: #fff; color: var(--ink); font-weight: 600; }
+
+  .trip { display: flex; gap: 16px; margin-top: 18px; flex-wrap: wrap; }
+  .trip label { display: inline-flex; align-items: center; gap: 8px; color: rgba(255, 255, 255, 0.8); font-size: 13.5px; cursor: pointer; }
+  .trip input { accent-color: var(--red); width: 15px; height: 15px; }
+
+  .search-card {
+    margin-top: 16px; background: #fff; border-radius: var(--radius); padding: 16px;
+    display: grid; gap: 12px; grid-template-columns: 1fr; box-shadow: var(--shadow-lg);
+  }
+  @media (min-width: 980px) { .search-card { grid-template-columns: 1.35fr 1.35fr 0.9fr 0.9fr 0.85fr auto; align-items: end; padding: 18px; } }
+
+  .field { display: flex; flex-direction: column; gap: 6px; position: relative; }
+  .field.full { grid-column: 1 / -1; }
+  .field label {
+    font-family: 'Archivo', sans-serif; font-size: 10.5px; font-weight: 600;
+    letter-spacing: 0.13em; text-transform: uppercase; color: var(--muted);
+  }
+  .field input, .field select, .field textarea {
+    font-family: inherit; font-size: 14.5px; color: var(--ink); background: #fff;
+    border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 11px 12px; width: 100%;
+    transition: border-color 180ms var(--ease), box-shadow 180ms var(--ease);
+  }
+  .field textarea { resize: vertical; min-height: 92px; }
+  .field input:focus, .field select:focus, .field textarea:focus {
+    outline: none; border-color: var(--red); box-shadow: 0 0 0 3px rgba(219, 13, 13, 0.1);
+  }
+  .field.err input, .field.err select, .field.err .locbtn { border-color: var(--red); box-shadow: 0 0 0 3px rgba(219, 13, 13, 0.12); }
+  .field .msg { font-size: 11.5px; color: var(--red); display: none; }
+  .field.err .msg { display: block; }
+
+  .locbtn {
+    width: 100%; text-align: left; background: #fff; border: 1px solid var(--line);
+    border-radius: var(--radius-sm); padding: 8px 12px; cursor: pointer; font: inherit;
+    display: flex; gap: 10px; align-items: center; min-height: 44px;
+    transition: border-color 180ms var(--ease);
+  }
+  .locbtn:hover { border-color: var(--ink); }
+  .locbtn > svg { width: 17px; height: 17px; color: var(--red); flex-shrink: 0; }
+  .locbtn b { display: block; font-size: 14.5px; font-weight: 500; line-height: 1.25; }
+  .locbtn small { display: block; font-size: 11.5px; color: var(--muted); line-height: 1.3; margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 30ch; }
+  .locbtn.empty b { color: #9a9a96; font-weight: 400; }
+
+  .stepper { display: flex; align-items: center; border: 1px solid var(--line); border-radius: var(--radius-sm); height: 44px; }
+  .stepper button {
+    width: 38px; height: 100%; border: none; background: none; cursor: pointer;
+    font-size: 18px; color: var(--muted); line-height: 1;
+    transition: color 180ms var(--ease), background-color 180ms var(--ease);
+  }
+  .stepper button:hover { color: var(--ink); background: var(--soft); }
+  .stepper input { border: none; text-align: center; padding: 0; height: 100%; font-size: 15px; }
+  .stepper input:focus { box-shadow: none; }
+
+  /* ================= resultados ================= */
+  .results { margin-top: 30px; display: none; }
+  .results.on { display: block; }
+
+  .res-head {
+    display: flex; flex-wrap: wrap; gap: 12px; justify-content: space-between; align-items: center;
+    padding: 14px 18px; background: var(--soft); border: 1px solid var(--line); border-radius: var(--radius);
+  }
+  .res-head .route { font-family: 'Archivo'; font-weight: 600; font-size: 16px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .res-head .route svg { width: 16px; height: 16px; color: var(--red); }
+  .res-head .meta { font-size: 13px; color: var(--muted); }
+
+  .opt {
+    display: grid; gap: 16px; grid-template-columns: 1fr; align-items: center;
+    border: 1px solid var(--line); border-radius: var(--radius); padding: 16px; margin-top: 12px; background: #fff;
+    transition: border-color 200ms var(--ease), box-shadow 200ms var(--ease);
+  }
+  @media (min-width: 820px) { .opt { grid-template-columns: 140px 1fr auto; } }
+  .opt:hover { border-color: #d3d3cf; box-shadow: var(--shadow); }
+  .opt img { width: 100%; height: 88px; object-fit: cover; border-radius: 8px; }
+  .opt h4 { font-size: 18px; }
+  .opt .caps { font-size: 13px; color: var(--muted); margin-top: 4px; }
+  .opt .amen { margin-top: 8px; }
+  .opt .fit { font-size: 12.5px; color: #1f7a4d; font-weight: 500; margin-top: 8px; display: inline-flex; align-items: center; gap: 6px; }
+  .opt .fit svg { width: 14px; height: 14px; }
+  .opt .fit.no { color: var(--muted); }
+
+  /* ================= flota ================= */
+  .filters { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 26px; }
+  .chip {
+    border: 1px solid var(--line); background: #fff; color: var(--muted); border-radius: 999px;
+    padding: 8px 17px; font-family: 'Archivo'; font-size: 13.5px; font-weight: 500; cursor: pointer;
+    transition: all 200ms var(--ease);
+  }
+  .chip:hover { border-color: var(--ink); color: var(--ink); }
+  .chip[aria-pressed='true'] { background: var(--ink); border-color: var(--ink); color: #fff; }
+
+  .fleet { display: grid; gap: 22px; margin-top: 26px; grid-template-columns: 1fr; }
+  @media (min-width: 680px) { .fleet { grid-template-columns: repeat(2, 1fr); } }
+  @media (min-width: 1040px) { .fleet { grid-template-columns: repeat(3, 1fr); } }
+
+  .unit {
+    border: 1px solid var(--line); border-radius: var(--radius); background: #fff; overflow: hidden;
+    display: flex; flex-direction: column; cursor: pointer; text-align: left; font: inherit; color: inherit; padding: 0;
+    transition: transform 260ms var(--ease), box-shadow 260ms var(--ease), border-color 260ms var(--ease);
+  }
+  .unit:hover { transform: translateY(-5px); box-shadow: var(--shadow); border-color: #d8d8d4; }
+  .unit-ph { position: relative; aspect-ratio: 16 / 10; overflow: hidden; background: var(--soft); }
+  .unit-ph img { width: 100%; height: 100%; object-fit: cover; transition: transform 700ms var(--ease); }
+  .unit:hover .unit-ph img { transform: scale(1.06); }
+  .unit-tag {
+    position: absolute; top: 12px; left: 12px; background: var(--red); color: #fff;
+    font-family: 'Archivo'; font-size: 10.5px; letter-spacing: 0.1em; text-transform: uppercase;
+    font-weight: 600; padding: 5px 10px; border-radius: 4px;
+  }
+  .unit-body { padding: 18px; display: flex; flex-direction: column; gap: 10px; flex: 1; }
+  .unit-body h3 { font-size: 21px; }
+  .unit-cap { display: inline-flex; align-items: center; gap: 8px; font-size: 13.5px; color: var(--muted); }
+  .unit-cap svg { width: 16px; height: 16px; color: var(--red); }
+  .amen { display: flex; flex-wrap: wrap; gap: 6px; }
+  .amen span { font-size: 11.5px; background: var(--soft); border: 1px solid var(--line); color: var(--muted); padding: 4px 9px; border-radius: 999px; }
+  .unit-more { margin-top: auto; padding-top: 12px; display: inline-flex; align-items: center; gap: 8px; font-family: 'Archivo'; font-size: 13.5px; font-weight: 600; color: var(--red); }
+  .unit-more svg { width: 15px; height: 15px; transition: transform 200ms var(--ease); }
+  .unit:hover .unit-more svg { transform: translateX(3px); }
+  .note { font-size: 12.5px; color: var(--muted); margin-top: 20px; }
+
+  /* ================= pasos ================= */
+  .reserve-card { background: #fff; border: 1px solid var(--line); border-radius: 16px; box-shadow: var(--shadow); overflow: hidden; margin-top: 26px; }
+  .steps { display: flex; border-bottom: 1px solid var(--line); background: #fbfbfa; }
+  .step { flex: 1; padding: 15px 14px; display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--muted); border-right: 1px solid var(--line); }
+  .step:last-child { border-right: none; }
+  .step b {
+    width: 24px; height: 24px; border-radius: 50%; background: #ececea; color: var(--muted);
+    display: grid; place-items: center; font-size: 12px; font-weight: 600; flex-shrink: 0; font-family: 'Archivo';
+  }
+  .step.on { color: var(--ink); background: #fff; }
+  .step.on b { background: var(--ink); color: #fff; }
+  .step.done b { background: var(--red); color: #fff; }
+  .step span { display: none; }
+  @media (min-width: 720px) { .step span { display: inline; } }
+
+  .panel { padding: 24px 20px; display: none; }
+  .panel.on { display: block; }
+  @media (min-width: 720px) { .panel { padding: 30px; } }
+
+  .grid-2 { display: grid; grid-template-columns: 1fr; gap: 16px; }
+  @media (min-width: 640px) { .grid-2 { grid-template-columns: 1fr 1fr; } }
+  .panel-actions { display: flex; justify-content: space-between; gap: 12px; margin-top: 24px; flex-wrap: wrap; }
+
+  .summary { border: 1px solid var(--line); border-radius: var(--radius); background: var(--soft); padding: 20px; }
+  .summary dl { margin: 14px 0 0; }
+  .summary .row { display: flex; justify-content: space-between; gap: 16px; padding: 9px 0; border-bottom: 1px dashed #dededa; font-size: 14px; }
+  .summary .row:last-child { border-bottom: none; }
+  .summary .row dt { color: var(--muted); }
+  .summary .row dd { margin: 0; font-weight: 500; text-align: right; }
+  .send-row { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 20px; }
+  .copied { font-size: 13px; color: #1f7a4d; margin-top: 12px; display: none; }
+  .copied.on { display: block; }
+
+  /* ================= bloques nosotros ================= */
+  .svc { display: grid; gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; margin-top: 26px; grid-template-columns: 1fr; }
+  @media (min-width: 660px) { .svc { grid-template-columns: repeat(2, 1fr); } }
+  @media (min-width: 1000px) { .svc { grid-template-columns: repeat(3, 1fr); } }
+  .svc-item { background: #fff; padding: 24px 22px; position: relative; }
+  .svc-item::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: var(--red); transform: scaleY(0); transform-origin: top; transition: transform 260ms var(--ease); }
+  .svc-item:hover::before { transform: scaleY(1); }
+  .svc-item svg.ic { width: 22px; height: 22px; color: var(--red); }
+  .svc-item h3 { font-size: 18px; margin: 13px 0 7px; }
+  .svc-item p { font-size: 14px; color: var(--muted); line-height: 1.6; }
+
+  .split { display: grid; gap: 34px; align-items: center; grid-template-columns: 1fr; }
+  @media (min-width: 940px) { .split { grid-template-columns: 1fr 1fr; gap: 56px; } }
+  .split img { width: 100%; border-radius: var(--radius); object-fit: cover; aspect-ratio: 3 / 2; }
+  .tick { display: grid; gap: 12px; margin-top: 20px; }
+  .tick div { display: flex; gap: 11px; align-items: flex-start; font-size: 15px; }
+  .tick svg { width: 17px; height: 17px; color: var(--red); flex-shrink: 0; margin-top: 4px; }
+
+  .packs { display: grid; gap: 18px; margin-top: 26px; grid-template-columns: 1fr; }
+  @media (min-width: 700px) { .packs { grid-template-columns: repeat(2, 1fr); } }
+  @media (min-width: 1000px) { .packs { grid-template-columns: repeat(4, 1fr); } }
+  .pack { border: 1px solid var(--line); border-top: 3px solid var(--red); border-radius: 0 0 var(--radius) var(--radius); padding: 22px 20px; background: #fff; transition: transform 240ms var(--ease), box-shadow 240ms var(--ease); }
+  .pack:hover { transform: translateY(-4px); box-shadow: var(--shadow); }
+  .pack svg { width: 22px; height: 22px; color: var(--red); }
+  .pack h3 { font-size: 18px; margin: 13px 0 7px; }
+  .pack p { font-size: 13.5px; color: var(--muted); line-height: 1.6; }
+
+  .flow { display: grid; gap: 22px; margin-top: 30px; grid-template-columns: 1fr; }
+  @media (min-width: 780px) { .flow { grid-template-columns: repeat(3, 1fr); } }
+  .flow-item { border-top: 2px solid var(--line); padding-top: 20px; }
+  .flow-item:first-child { border-top-color: var(--red); }
+  .flow-item .n { font-family: 'Archivo'; font-size: 12.5px; font-weight: 600; letter-spacing: 0.14em; color: var(--red); }
+  .flow-item h3 { font-size: 21px; margin: 8px 0; }
+  .flow-item p { font-size: 14.5px; color: var(--muted); }
+
+  .faq { margin-top: 24px; border-top: 1px solid var(--line); }
+  .qa { border-bottom: 1px solid var(--line); }
+  .qa button {
+    width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 18px;
+    background: none; border: none; padding: 19px 0; font-family: 'Archivo'; font-size: 16.5px;
+    font-weight: 500; color: var(--ink); text-align: left; cursor: pointer;
+  }
+  .qa button svg { width: 18px; height: 18px; color: var(--red); flex-shrink: 0; transition: transform 240ms var(--ease); }
+  .qa.open button svg { transform: rotate(45deg); }
+  .qa .ans { display: grid; grid-template-rows: 0fr; transition: grid-template-rows 280ms var(--ease); }
+  .qa.open .ans { grid-template-rows: 1fr; }
+  .qa .ans > div { overflow: hidden; }
+  .qa .ans p { font-size: 15px; color: var(--muted); padding-bottom: 22px; max-width: 74ch; }
+
+  /* ================= contacto ================= */
+  .contact-grid { display: grid; gap: 34px; margin-top: 34px; grid-template-columns: 1fr; }
+  @media (min-width: 900px) { .contact-grid { grid-template-columns: 1.1fr 0.9fr; gap: 56px; } }
+  .cinfo a, .cinfo div.ci { display: flex; gap: 14px; padding: 16px 0; border-bottom: 1px solid var(--line); transition: color 200ms var(--ease); }
+  .cinfo a:hover { color: var(--red); }
+  .cinfo svg { width: 19px; height: 19px; color: var(--red); flex-shrink: 0; margin-top: 3px; }
+  .cinfo b { display: block; font-family: 'Archivo'; font-size: 10.5px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted); font-weight: 600; margin-bottom: 3px; }
+  .cinfo span.v { font-size: 15.5px; }
+  .cbox { background: var(--ink); color: #fff; border-radius: var(--radius); padding: 26px; }
+  .cbox img { height: 34px; width: auto; margin-bottom: 16px; }
+  .cbox h3 { color: #fff; font-size: 22px; }
+  .cbox p { color: rgba(255, 255, 255, 0.65); font-size: 14.5px; margin-top: 10px; }
+  .cbox .btn { margin-top: 16px; }
+
+  /* ================= footer ================= */
+  footer { background: #fff; border-top: 1px solid var(--line); padding: 26px 0; font-size: 13px; color: var(--muted); }
+  .foot { display: flex; flex-wrap: wrap; gap: 16px; justify-content: space-between; align-items: center; }
+  .foot img { height: 24px; width: auto; }
+  .foot-links { display: flex; flex-wrap: wrap; gap: 18px; }
+  .foot-links button { background: none; border: none; font: inherit; color: inherit; cursor: pointer; padding: 0; }
+  .foot-links button:hover { color: var(--red); }
+
+  /* ================= modales ================= */
+  .modal { position: fixed; inset: 0; z-index: 200; display: none; align-items: center; justify-content: center; padding: 18px; }
+  .modal.on { display: flex; }
+  .modal-bg { position: absolute; inset: 0; background: rgba(20, 20, 18, 0.6); backdrop-filter: blur(4px); }
+  .modal-card { position: relative; background: #fff; border-radius: 16px; max-width: 760px; width: 100%; max-height: 90vh; overflow-y: auto; box-shadow: 0 30px 80px rgba(0, 0, 0, 0.35); }
+  .modal-close {
+    position: absolute; top: 14px; right: 14px; width: 38px; height: 38px; border-radius: 50%;
+    border: none; background: rgba(255, 255, 255, 0.94); display: grid; place-items: center; cursor: pointer; z-index: 3;
+  }
+  .modal-close svg { width: 16px; height: 16px; }
+  .modal-ph { width: 100%; aspect-ratio: 16 / 9; object-fit: cover; }
+  .modal-in { padding: 24px 26px 30px; }
+  .modal-in h3 { font-size: 26px; }
+  .spec { display: grid; gap: 10px; margin-top: 18px; grid-template-columns: 1fr; }
+  @media (min-width: 560px) { .spec { grid-template-columns: 1fr 1fr; } }
+  .spec div { display: flex; gap: 10px; align-items: flex-start; font-size: 14.5px; color: var(--ink-2); }
+  .spec svg { width: 17px; height: 17px; color: var(--red); flex-shrink: 0; margin-top: 3px; }
+  .seatmap { margin-top: 24px; }
+  .seatmap b { display: block; font-family: 'Archivo'; font-size: 10.5px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted); margin-bottom: 10px; }
+  .seatmap img { width: 100%; border: 1px solid var(--line); border-radius: 10px; padding: 10px; background: #fff; }
+
+  .loc-card { max-width: 580px; }
+  .loc-head { padding: 20px 22px 14px; border-bottom: 1px solid var(--line); }
+  .loc-head h3 { font-size: 20px; }
+  .loc-search { padding: 14px 22px; border-bottom: 1px solid var(--line); position: relative; }
+  .loc-search input { width: 100%; border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 12px 12px 12px 38px; font: inherit; font-size: 15px; }
+  .loc-search input:focus { outline: none; border-color: var(--red); box-shadow: 0 0 0 3px rgba(219, 13, 13, 0.1); }
+  .loc-search > svg { position: absolute; left: 34px; top: 50%; transform: translateY(-50%); width: 17px; height: 17px; color: var(--muted); }
+
+  .loc-list { max-height: 230px; overflow-y: auto; }
+  .loc-list button {
+    width: 100%; text-align: left; background: none; border: none; border-bottom: 1px solid var(--line);
+    padding: 12px 22px; cursor: pointer; font: inherit; display: flex; gap: 12px; align-items: center;
+    transition: background-color 160ms var(--ease);
+  }
+  .loc-list button:hover, .loc-list button.hl { background: var(--soft); }
+  .loc-list svg { width: 16px; height: 16px; color: var(--red); flex-shrink: 0; }
+  .loc-list b { font-weight: 500; font-size: 14.5px; }
+  .loc-list small { display: block; color: var(--muted); font-size: 12px; }
+  .loc-empty { padding: 14px 22px; color: var(--muted); font-size: 13.5px; }
+
+  .loc-detail { padding: 16px 22px 22px; background: var(--soft); border-top: 1px solid var(--line); }
+  .loc-detail .grid { display: grid; gap: 12px; grid-template-columns: 1fr; }
+  @media (min-width: 520px) { .loc-detail .grid { grid-template-columns: 2fr 1fr; } }
+  .loc-tools { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+  .loc-pin {
+    display: none; margin-top: 12px; padding: 12px 14px; background: #fff; border: 1px solid var(--line);
+    border-radius: var(--radius-sm); font-size: 13px; align-items: center; gap: 10px;
+  }
+  .loc-pin.on { display: flex; }
+  .loc-pin svg { width: 17px; height: 17px; color: var(--red); flex-shrink: 0; }
+  .loc-pin b { font-family: 'Archivo'; font-size: 10.5px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); display: block; }
+  .loc-actions { display: flex; gap: 10px; justify-content: flex-end; padding: 16px 22px; border-top: 1px solid var(--line); }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: 1ms !important; animation-delay: 0ms !important; transition-duration: 1ms !important; }
+    html { scroll-behavior: auto; }
+  }
+</style>
+</head>
+<body>
+<script>
+window.IMGS = {
+  "logo": "img/logo.png",
+  "icon": "img/icon.png",
+  "hero1": "img/hero1.jpg",
+  "hero2": "img/hero2.jpg",
+  "hero3": "img/hero3.jpg",
+  "i6s": "img/i6s.jpg",
+  "i6": "img/i6.jpg",
+  "pb": "img/pb.jpg",
+  "neobus": "img/neobus.jpg",
+  "sprinter": "img/sprinter.jpg",
+  "suburban": "img/suburban.jpg",
+  "interior": "img/interior.jpg",
+  "seat_i6s": "img/seat-i6s.jpg",
+  "seat_neobus": "img/seat-neobus.jpg"
+};
+</script>
+
+<!-- ============ sprite ============ -->
+<svg width="0" height="0" style="position: absolute" aria-hidden="true">
+  <defs>
+    <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3l7 3v5c0 4.4-3 8.4-7 10-4-1.6-7-5.6-7-10V6l7-3z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M9 12l2 2 4-4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-pin" viewBox="0 0 24 24"><path d="M12 21s7-5.6 7-11a7 7 0 10-14 0c0 5.4 7 11 7 11z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><circle cx="12" cy="10" r="2.6" fill="none" stroke="currentColor" stroke-width="1.6"/></symbol>
+    <symbol id="i-users" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.2" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M3.5 19a5.5 5.5 0 0111 0M16 5.2a3.2 3.2 0 010 5.9M17.5 19a5.6 5.6 0 00-2-4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></symbol>
+    <symbol id="i-fuel" viewBox="0 0 24 24"><path d="M4 20V6a2 2 0 012-2h5a2 2 0 012 2v14M3 20h11" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><path d="M13 9h3a2 2 0 012 2v5a1.8 1.8 0 003.6 0V9l-2.4-2.6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M6 8h5v3H6z" fill="none" stroke="currentColor" stroke-width="1.4"/></symbol>
+    <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.4" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M12 7.4V12l3 1.8" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></symbol>
+    <symbol id="i-phone" viewBox="0 0 24 24"><path d="M6.5 3.5h3l1.5 4-2 1.4a12 12 0 006 6l1.4-2 4 1.5v3A2 2 0 0118.3 19 15.5 15.5 0 015 5.7 2 2 0 016.5 3.5z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></symbol>
+    <symbol id="i-mail" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2.4" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M4 7l8 6 8-6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-wa" viewBox="0 0 24 24"><path d="M4 20l1.3-4A8 8 0 1112 20a8 8 0 01-4-1L4 20z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M9.2 9.4c.3 2.5 2.9 5 5.4 5.4l.9-1.4 1.7.8v1.4c-3.6.6-7.9-3.4-7.4-7.4h1.4l.8 1.7-.8.9z" fill="currentColor" stroke="none"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></symbol>
+    <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="M4.5 12.5l5 5 10-11" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-snow" viewBox="0 0 24 24"><path d="M12 3v18M4.2 7.5l15.6 9M19.8 7.5l-15.6 9" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></symbol>
+    <symbol id="i-briefcase" viewBox="0 0 24 24"><rect x="3" y="7.5" width="18" height="12" rx="2.2" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M9 7.5V6a2 2 0 012-2h2a2 2 0 012 2v1.5M3 12.5h18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></symbol>
+    <symbol id="i-camera" viewBox="0 0 24 24"><path d="M4 8.5h3l1.4-2h7.2l1.4 2H20a1.6 1.6 0 011.6 1.6v7.3A1.6 1.6 0 0120 19H4a1.6 1.6 0 01-1.6-1.6v-7.3A1.6 1.6 0 014 8.5z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><circle cx="12" cy="13.5" r="3.3" fill="none" stroke="currentColor" stroke-width="1.5"/></symbol>
+    <symbol id="i-heart" viewBox="0 0 24 24"><path d="M12 20s-7-4.4-7-9.3A4.2 4.2 0 0112 8.4a4.2 4.2 0 017 2.3c0 4.9-7 9.3-7 9.3z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></symbol>
+    <symbol id="i-cap" viewBox="0 0 24 24"><path d="M2.5 8.6L12 4.5l9.5 4.1L12 12.8 2.5 8.6z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M6.5 10.6v4.6c0 1.6 2.6 2.8 5.5 2.8s5.5-1.2 5.5-2.8v-4.6M20.5 9.4v5.2" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></symbol>
+    <symbol id="i-plane" viewBox="0 0 24 24"><path d="M21.2 2.8L3.4 10.2l6.6 2.4M21.2 2.8L13.8 20.6l-2.4-6.6M21.2 2.8L11.4 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-church" viewBox="0 0 24 24"><path d="M12 2.5v4M10 4.5h4M12 6.5L6 10v11h12V10l-6-3.5z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M10.2 21v-4a1.8 1.8 0 013.6 0v4" fill="none" stroke="currentColor" stroke-width="1.5"/></symbol>
+    <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M12 2.6v2.2M12 19.2v2.2M2.6 12h2.2M19.2 12h2.2M5.4 5.4l1.6 1.6M17 17l1.6 1.6M18.6 5.4L17 7M7 17l-1.6 1.6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></symbol>
+    <symbol id="i-seat" viewBox="0 0 24 24"><path d="M7 4h3a2 2 0 012 2v7H9a2 2 0 01-2-2V4z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M7 13h8a2 2 0 012 2v5M5 20v-4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></symbol>
+    <symbol id="i-wc" viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="18" rx="2.2" fill="none" stroke="currentColor" stroke-width="1.6"/><circle cx="15.5" cy="12" r="1" fill="currentColor" stroke="none"/><path d="M8 8v8" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></symbol>
+    <symbol id="i-tv" viewBox="0 0 24 24"><rect x="3" y="4.5" width="18" height="12" rx="2" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M8.5 20h7" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></symbol>
+    <symbol id="i-bag" viewBox="0 0 24 24"><rect x="5" y="7" width="14" height="12" rx="2" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M9.5 7V5.4A1.4 1.4 0 0110.9 4h2.2a1.4 1.4 0 011.4 1.4V7M9.5 19v1.6M14.5 19v1.6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></symbol>
+    <symbol id="i-route" viewBox="0 0 24 24"><circle cx="6" cy="6" r="2.6" fill="none" stroke="currentColor" stroke-width="1.6"/><circle cx="18" cy="18" r="2.6" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M8.6 6H14a3.4 3.4 0 010 6.8h-4a3.4 3.4 0 000 6.8h5.4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></symbol>
+    <symbol id="i-bus" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="12.5" rx="2.4" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M3 9.5h18M8 4v5.5M16 4v5.5M6.5 16.5v2M17.5 16.5v2" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><circle cx="7.5" cy="13.5" r="1" fill="currentColor" stroke="none"/><circle cx="16.5" cy="13.5" r="1" fill="currentColor" stroke="none"/></symbol>
+    <symbol id="i-van" viewBox="0 0 24 24"><path d="M2.5 16V9.5A2 2 0 014.5 7.5h8l4 3.2h3A2 2 0 0121.5 13v3" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M2.5 16h2.2M9.8 16h4.4M19.3 16h2.2M12.5 7.5v3.2" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><circle cx="7.2" cy="16.4" r="2.1" fill="none" stroke="currentColor" stroke-width="1.6"/><circle cx="16.8" cy="16.4" r="2.1" fill="none" stroke="currentColor" stroke-width="1.6"/></symbol>
+    <symbol id="i-suv" viewBox="0 0 24 24"><path d="M2.5 15.5v-3l2-.6 2.6-3.4h9l3 3.4 2.4.9v2.7" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M2.5 15.5h2.3M9.7 15.5h4.6M19.2 15.5h2.3M4.5 11.9h15" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><circle cx="7.2" cy="15.9" r="2.1" fill="none" stroke="currentColor" stroke-width="1.6"/><circle cx="16.8" cy="15.9" r="2.1" fill="none" stroke="currentColor" stroke-width="1.6"/></symbol>
+    <symbol id="i-target" viewBox="0 0 24 24"><circle cx="12" cy="12" r="7.6" fill="none" stroke="currentColor" stroke-width="1.6"/><circle cx="12" cy="12" r="2.4" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M12 1.6v3.2M12 19.2v3.2M1.6 12h3.2M19.2 12h3.2" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></symbol>
+    <symbol id="i-link" viewBox="0 0 24 24"><path d="M10.5 13.5a4 4 0 005.7 0l2.8-2.8a4 4 0 10-5.7-5.7l-1.2 1.2" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><path d="M13.5 10.5a4 4 0 00-5.7 0L5 13.3a4 4 0 105.7 5.7l1.2-1.2" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></symbol>
+    <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.6" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M16 16l4.5 4.5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></symbol>
+  </defs>
+</svg>
+
+<!-- ============ INTRO ============ -->
+<div id="intro">
+  <div class="intro-stage">
+    <svg viewBox="0 0 640 212" aria-hidden="true">
+      <g class="intro-bus">
+        <g class="intro-lines" stroke="#db0d0d" stroke-width="4" stroke-linecap="round">
+          <line x1="18" y1="70" x2="96" y2="70" />
+          <line x1="0" y1="102" x2="78" y2="102" />
+          <line x1="24" y1="134" x2="102" y2="134" />
+        </g>
+        <ellipse cx="380" cy="184" rx="215" ry="9" fill="#1d1d1b" opacity=".1" />
+        <path d="M150 44 H500 C544 44 578 72 590 116 L600 158 C602 170 593 180 581 180 H152 C139 180 129 170 129 157 V66 C129 53 138 44 150 44 Z" fill="#1d1d1b" />
+        <path d="M129 158 H598 L600 170 C601 176 594 180 588 180 H152 C139 180 129 171 129 158 Z" fill="#db0d0d" />
+        <rect x="156" y="62" width="300" height="56" rx="10" fill="#8c8c88" />
+        <rect x="156" y="62" width="300" height="24" rx="10" fill="#a5a5a0" opacity=".75" />
+        <path d="M470 62 H500 C524 62 546 82 556 112 L558 118 H470 Z" fill="#8c8c88" />
+        <rect x="430" y="124" width="30" height="56" rx="5" fill="#3a3a37" />
+        <rect x="176" y="128" width="222" height="28" rx="6" fill="#111110" />
+        <rect x="566" y="132" width="26" height="14" rx="4" fill="#f2e2bd" />
+        <g>
+          <circle cx="222" cy="180" r="30" fill="#111110" />
+          <circle class="intro-wheel" cx="222" cy="180" r="14" fill="none" stroke="#9a9a95" stroke-width="5" stroke-dasharray="7 8" />
+          <circle cx="222" cy="180" r="5" fill="#9a9a95" />
+        </g>
+        <g>
+          <circle cx="502" cy="180" r="30" fill="#111110" />
+          <circle class="intro-wheel" cx="502" cy="180" r="14" fill="none" stroke="#9a9a95" stroke-width="5" stroke-dasharray="7 8" />
+          <circle cx="502" cy="180" r="5" fill="#9a9a95" />
+        </g>
+        <path d="M562 66 l20 -13" stroke="#1d1d1b" stroke-width="5" stroke-linecap="round" />
+      </g>
+    </svg>
+
+    <div class="intro-road"></div>
+    <img class="intro-logo" id="intro-logo" alt="Eurotravel" />
+    <div class="intro-tag">Renta de autobuses · Tlaquepaque, Jalisco</div>
+    <div class="intro-bar"><i></i></div>
+  </div>
+  <button class="intro-skip" type="button" id="skip">Saltar</button>
+</div>
+
+<!-- ============ NAV ============ -->
+<header class="nav">
+  <div class="wrap nav-inner">
+    <button style="background: none; border: none; padding: 0; cursor: pointer" data-go="inicio" aria-label="Inicio">
+      <img class="logo-img" id="logo-nav" alt="Eurotravel" />
+    </button>
+
+    <div class="tabs nav-mid" role="tablist">
+      <button class="tab on" data-go="inicio" role="tab">Inicio</button>
+      <button class="tab" data-go="unidades" role="tab">Unidades</button>
+      <button class="tab" data-go="cotizar" role="tab">Cotizaciones</button>
+      <button class="tab" data-go="nosotros" role="tab">Sobre nosotros</button>
+      <button class="tab" data-go="contacto" role="tab">Contacto</button>
+    </div>
+
+    <div class="nav-right">
+      <a class="nav-phone" href="tel:+523324002285"><svg aria-hidden="true"><use href="#i-phone" /></svg> 33 2400 2285</a>
+      <button class="btn btn-red btn-sm" data-go="cotizar">Cotizar viaje</button>
+    </div>
+  </div>
+
+  <div class="tabs-mobile" role="tablist">
+    <button class="tab on" data-go="inicio" role="tab">Inicio</button>
+    <button class="tab" data-go="unidades" role="tab">Unidades</button>
+    <button class="tab" data-go="cotizar" role="tab">Cotizaciones</button>
+    <button class="tab" data-go="nosotros" role="tab">Nosotros</button>
+    <button class="tab" data-go="contacto" role="tab">Contacto</button>
+  </div>
+</header>
+
+<main>
+  <!-- ============ INICIO ============ -->
+  <section class="view on" id="v-inicio">
+    <div class="hero">
+      <div class="slides" id="slides"></div>
+      <div class="scrim"></div>
+      <div class="wrap hero-in">
+        <span class="eyebrow" style="color: #fff; opacity: 0.75">Tlaquepaque, Jalisco · Cobertura nacional</span>
+        <h1>Viaja seguro y cómodo<span>.</span></h1>
+        <p class="hero-p">
+          Renta de autobuses, Sprinters y Suburbans para turismo, empresas y eventos. Operador
+          profesional, seguro de viajero, monitoreo GPS, combustible y casetas incluidos.
+        </p>
+        <div class="hero-cta">
+          <button class="btn btn-red" data-go="cotizar">Cotizar viaje <svg class="arw" aria-hidden="true"><use href="#i-arrow" /></svg></button>
+          <button class="btn btn-white" data-go="unidades">Ver unidades</button>
+        </div>
+        <div class="hero-meta">
+          <span><svg aria-hidden="true"><use href="#i-shield" /></svg> Seguro de viajero</span>
+          <span><svg aria-hidden="true"><use href="#i-pin" /></svg> Monitoreo GPS 24/7</span>
+          <span><svg aria-hidden="true"><use href="#i-fuel" /></svg> Combustible y casetas</span>
+        </div>
+      </div>
+      <div class="hero-dots" id="dots"></div>
+    </div>
+
+    <div class="trust">
+      <div class="wrap">
+        <div class="trust-grid">
+          <div class="trust-item"><svg aria-hidden="true"><use href="#i-shield" /></svg><h4>Seguro de viajero</h4><p>Todas las unidades salen con póliza vigente para cada pasajero.</p></div>
+          <div class="trust-item"><svg aria-hidden="true"><use href="#i-users" /></svg><h4>Operadores profesionales</h4><p>Choferes con experiencia en rutas urbanas y foráneas.</p></div>
+          <div class="trust-item"><svg aria-hidden="true"><use href="#i-pin" /></svg><h4>Monitoreo GPS</h4><p>Seguimiento del recorrido de principio a fin, las 24 horas.</p></div>
+          <div class="trust-item"><svg aria-hidden="true"><use href="#i-fuel" /></svg><h4>Todo incluido</h4><p>Combustible, casetas y viáticos del operador dentro de la tarifa.</p></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="wrap pad">
+      <div class="sec-head">
+        <span class="eyebrow">¿Por dónde empiezo?</span>
+        <h2>Tres caminos, la misma respuesta el mismo día</h2>
+      </div>
+      <div class="qa-grid">
+        <button class="qa-card" data-go="cotizar">
+          <svg class="ic" aria-hidden="true"><use href="#i-search" /></svg>
+          <h3>Cotizar un viaje</h3>
+          <p>Busca por ruta y fechas como si reservaras un vuelo: te decimos qué unidad conviene.</p>
+          <span class="go">Ir a cotizaciones <svg aria-hidden="true"><use href="#i-arrow" /></svg></span>
+        </button>
+        <button class="qa-card" data-go="unidades">
+          <svg class="ic" aria-hidden="true"><use href="#i-bus" /></svg>
+          <h3>Ver las unidades</h3>
+          <p>Fotos reales, capacidades, equipamiento y mapas de asientos de cada modelo.</p>
+          <span class="go">Ver flota <svg aria-hidden="true"><use href="#i-arrow" /></svg></span>
+        </button>
+        <button class="qa-card" data-go="contacto">
+          <svg class="ic" aria-hidden="true"><use href="#i-wa" /></svg>
+          <h3>Hablar con un asesor</h3>
+          <p>WhatsApp, teléfono o correo directo con la persona que arma tu servicio.</p>
+          <span class="go">Contacto <svg aria-hidden="true"><use href="#i-arrow" /></svg></span>
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ UNIDADES ============ -->
+  <section class="view" id="v-unidades">
+    <div class="wrap pad">
+      <div class="sec-head">
+        <span class="eyebrow">Nuestra flota</span>
+        <h2>Unidades para grupos de 6 a 51 pasajeros</h2>
+        <p class="lede">
+          Autobuses Irizar y Neobus, Sprinters y Suburbans en mantenimiento constante. Toca una
+          unidad para ver equipamiento, fotos y mapa de asientos.
+        </p>
+      </div>
+
+      <div class="filters" role="group" aria-label="Filtrar unidades">
+        <button class="chip" data-filter="todas" aria-pressed="true">Todas</button>
+        <button class="chip" data-filter="autobus" aria-pressed="false">Autobuses</button>
+        <button class="chip" data-filter="sprinter" aria-pressed="false">Sprinter</button>
+        <button class="chip" data-filter="suburban" aria-pressed="false">Suburban</button>
+      </div>
+
+      <div class="fleet" id="fleet"></div>
+
+      <p class="note">
+        Capacidades y equipamiento pueden variar según la unidad asignada y la disponibilidad de la
+        fecha. Confirmamos el modelo exacto al momento de cotizar.
+      </p>
+    </div>
+  </section>
+
+  <!-- ============ COTIZAR ============ -->
+  <section class="view" id="v-cotizar">
+    <div class="search-shell">
+      <div class="wrap">
+        <span class="eyebrow">Cotizaciones</span>
+        <h2>¿A dónde va tu grupo?</h2>
+        <p class="sub">
+          Elige el tipo de unidad, marca origen y destino con dirección exacta y te decimos qué te
+          conviene.
+        </p>
+
+        <div class="seg" id="seg-tipo" role="tablist">
+          <button class="on" data-tipo="autobus" type="button"><svg aria-hidden="true"><use href="#i-bus" /></svg> Autobús</button>
+          <button data-tipo="sprinter" type="button"><svg aria-hidden="true"><use href="#i-van" /></svg> Sprinter</button>
+          <button data-tipo="suburban" type="button"><svg aria-hidden="true"><use href="#i-suv" /></svg> Suburban</button>
+        </div>
+
+        <div class="trip">
+          <label><input type="radio" name="trip" value="redondo" checked /> Viaje redondo</label>
+          <label><input type="radio" name="trip" value="sencillo" /> Solo ida</label>
+        </div>
+
+        <div class="search-card">
+          <div class="field" id="fw-origen">
+            <label>Origen</label>
+            <button class="locbtn empty" type="button" id="btn-origen">
+              <svg aria-hidden="true"><use href="#i-target" /></svg>
+              <span><b>¿De dónde salen?</b><small>Ciudad, terminal o dirección exacta</small></span>
+            </button>
+            <span class="msg">Indica el punto de salida.</span>
+          </div>
+
+          <div class="field" id="fw-destino">
+            <label>Destino</label>
+            <button class="locbtn empty" type="button" id="btn-destino">
+              <svg aria-hidden="true"><use href="#i-pin" /></svg>
+              <span><b>¿A dónde van?</b><small>Ciudad, hotel o dirección exacta</small></span>
+            </button>
+            <span class="msg">Indica el destino.</span>
+          </div>
+
+          <div class="field" id="fw-salida">
+            <label>Salida</label>
+            <input id="s-salida" type="date" />
+            <span class="msg">Elige la fecha.</span>
+          </div>
+
+          <div class="field" id="fw-regreso">
+            <label>Regreso</label>
+            <input id="s-regreso" type="date" />
+          </div>
+
+          <div class="field">
+            <label>Pasajeros</label>
+            <div class="stepper">
+              <button type="button" id="pax-menos" aria-label="Menos pasajeros">&minus;</button>
+              <input id="s-pax" type="number" min="1" max="200" value="45" />
+              <button type="button" id="pax-mas" aria-label="Más pasajeros">+</button>
+            </div>
+          </div>
+
+          <div class="field">
+            <button class="btn btn-red" id="s-go" type="button" style="height: 44px">
+              <svg aria-hidden="true"><use href="#i-search" /></svg> Buscar
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="wrap" style="padding-bottom: 84px">
+      <div class="results" id="results">
+        <div class="res-head">
+          <div class="route" id="res-route"></div>
+          <div class="meta" id="res-meta"></div>
+        </div>
+        <div id="res-list"></div>
+      </div>
+
+      <div style="margin-top: 46px">
+        <div class="sec-head">
+          <span class="eyebrow">Solicitud</span>
+          <h2>Completa tu solicitud</h2>
+          <p class="lede">Al terminar recibes un resumen listo para enviarnos por WhatsApp o correo.</p>
+        </div>
+
+        <div class="reserve-card">
+          <div class="steps" id="steps">
+            <div class="step on" data-step="1"><b>1</b> Ruta y fechas <span></span></div>
+            <div class="step" data-step="2"><b>2</b> Servicio y unidad <span></span></div>
+            <div class="step" data-step="3"><b>3</b> Tus datos <span></span></div>
+          </div>
+
+          <div class="panel on" data-panel="1">
+            <div class="grid-2">
+              <div class="field" data-req>
+                <label for="f-origen">Ciudad de origen *</label>
+                <input id="f-origen" type="text" placeholder="Guadalajara, Jal." />
+                <span class="msg">Indica desde dónde sale el grupo.</span>
+              </div>
+              <div class="field" data-req>
+                <label for="f-destino">Ciudad de destino *</label>
+                <input id="f-destino" type="text" placeholder="Puerto Vallarta, Jal." />
+                <span class="msg">Indica el destino principal.</span>
+              </div>
+              <div class="field full">
+                <label for="f-dir">Detalles de subida y bajada (opcional)</label>
+                <textarea id="f-dir" placeholder="Salida: Av. Alba 1666, Lomas de San Pedrito, Tlaquepaque. Llegada: Hotel, Blvd. Fco. Medina Ascencio 2000, Puerto Vallarta."></textarea>
+              </div>
+              <div class="field" data-req>
+                <label for="f-salida">Fecha de salida *</label>
+                <input id="f-salida" type="date" />
+                <span class="msg">Selecciona la fecha de salida.</span>
+              </div>
+              <div class="field">
+                <label for="f-regreso">Fecha de regreso</label>
+                <input id="f-regreso" type="date" />
+              </div>
+              <div class="field">
+                <label for="f-hora">Hora aproximada de salida</label>
+                <input id="f-hora" type="time" />
+              </div>
+              <div class="field">
+                <label for="f-paradas">Paradas o escalas</label>
+                <input id="f-paradas" type="text" placeholder="Tequila, Chapala…" />
+              </div>
+            </div>
+            <div class="panel-actions">
+              <span></span>
+              <button class="btn btn-ink" type="button" data-next="2">Siguiente <svg class="arw" aria-hidden="true"><use href="#i-arrow" /></svg></button>
+            </div>
+          </div>
+
+          <div class="panel" data-panel="2">
+            <div class="grid-2">
+              <div class="field" data-req>
+                <label for="f-tipo">Tipo de servicio *</label>
+                <select id="f-tipo">
+                  <option value="">Selecciona una opción</option>
+                  <option>Renta de autobuses</option>
+                  <option>Renta de Sprinter</option>
+                  <option>Transporte ejecutivo (Suburban)</option>
+                  <option>Grupos</option>
+                  <option>Transporte por horas</option>
+                  <option>Renta por día</option>
+                  <option>Servicios para eventos</option>
+                  <option>Recorridos turísticos</option>
+                  <option>Transporte de personal</option>
+                </select>
+                <span class="msg">Elige el tipo de servicio.</span>
+              </div>
+              <div class="field" data-req>
+                <label for="f-pax">Número de pasajeros *</label>
+                <input id="f-pax" type="number" min="1" max="200" placeholder="45" />
+                <span class="msg">Indica cuántas personas viajan.</span>
+              </div>
+              <div class="field">
+                <label for="f-unidad">Unidad preferida</label>
+                <select id="f-unidad"><option value="">Sin preferencia / recomiéndenme</option></select>
+              </div>
+              <div class="field">
+                <label for="f-uso">Motivo del viaje</label>
+                <select id="f-uso">
+                  <option value="">Selecciona</option>
+                  <option>Turismo / excursión</option>
+                  <option>Empresarial</option>
+                  <option>Evento social (boda, XV, graduación)</option>
+                  <option>Escolar</option>
+                  <option>Religioso / peregrinación</option>
+                  <option>Deportivo / artístico</option>
+                  <option>Traslado aeropuerto u hotel</option>
+                </select>
+              </div>
+            </div>
+            <div class="panel-actions">
+              <button class="btn btn-line" type="button" data-prev="1">Atrás</button>
+              <button class="btn btn-ink" type="button" data-next="3">Siguiente <svg class="arw" aria-hidden="true"><use href="#i-arrow" /></svg></button>
+            </div>
+          </div>
+
+          <div class="panel" data-panel="3">
+            <div class="grid-2">
+              <div class="field" data-req>
+                <label for="f-nombre">Nombre completo *</label>
+                <input id="f-nombre" type="text" placeholder="Nombre y apellido" />
+                <span class="msg">Necesitamos tu nombre.</span>
+              </div>
+              <div class="field" data-req>
+                <label for="f-tel">Teléfono / WhatsApp *</label>
+                <input id="f-tel" type="tel" placeholder="33 1234 5678" />
+                <span class="msg">Escribe un teléfono de contacto.</span>
+              </div>
+              <div class="field">
+                <label for="f-mail">Correo electrónico</label>
+                <input id="f-mail" type="email" placeholder="tucorreo@ejemplo.com" />
+              </div>
+              <div class="field">
+                <label for="f-empresa">Empresa o grupo (opcional)</label>
+                <input id="f-empresa" type="text" placeholder="Nombre de la empresa" />
+              </div>
+              <div class="field full">
+                <label for="f-notas">Comentarios</label>
+                <textarea id="f-notas" placeholder="Itinerario, horarios, requerimientos especiales…"></textarea>
+              </div>
+            </div>
+            <div class="panel-actions">
+              <button class="btn btn-line" type="button" data-prev="2">Atrás</button>
+              <button class="btn btn-red" type="button" id="f-review">Ver resumen <svg class="arw" aria-hidden="true"><use href="#i-arrow" /></svg></button>
+            </div>
+          </div>
+
+          <div class="panel" data-panel="4">
+            <div class="summary">
+              <span class="eyebrow">Resumen de tu solicitud</span>
+              <dl id="sum-list"></dl>
+            </div>
+            <div class="send-row">
+              <a class="btn btn-red" id="send-wa" href="#" target="_blank" rel="noopener"><svg aria-hidden="true"><use href="#i-wa" /></svg> Enviar por WhatsApp</a>
+              <a class="btn btn-ink" id="send-mail" href="#"><svg aria-hidden="true"><use href="#i-mail" /></svg> Enviar por correo</a>
+              <button class="btn btn-line" type="button" id="copy-sum">Copiar resumen</button>
+              <button class="btn btn-line" type="button" data-prev="3">Editar</button>
+            </div>
+            <p class="copied" id="copied">Resumen copiado al portapapeles.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ NOSOTROS ============ -->
+  <section class="view" id="v-nosotros">
+    <div class="wrap pad">
+      <div class="sec-head">
+        <span class="eyebrow">Sobre nosotros</span>
+        <h2>Movemos personas, no solo camiones</h2>
+        <p class="lede">
+          Somos una empresa de Tlaquepaque, Jalisco, dedicada al traslado de personas por turismo,
+          excursiones, viajes de trabajo y eventos artísticos o deportivos, dentro y fuera de la
+          República. Cada servicio se planea con una persona a cargo, de la cotización al regreso.
+        </p>
+      </div>
+
+      <div class="split" style="margin-top: 46px">
+        <div>
+          <span class="eyebrow">A bordo</span>
+          <h2 style="font-size: clamp(26px, 3.6vw, 36px); margin-top: 12px">Cada detalle pensado para el trayecto largo</h2>
+          <div class="tick">
+            <div><svg aria-hidden="true"><use href="#i-check" /></svg><span>Asientos reclinables con descansapiés en unidades de larga distancia</span></div>
+            <div><svg aria-hidden="true"><use href="#i-check" /></svg><span>Clima, sistema de audio y pantallas a bordo</span></div>
+            <div><svg aria-hidden="true"><use href="#i-check" /></svg><span>Baño en autobuses foráneos y amplia capacidad de equipaje</span></div>
+            <div><svg aria-hidden="true"><use href="#i-check" /></svg><span>Revisión mecánica y limpieza antes de cada servicio</span></div>
+          </div>
+        </div>
+        <div><img id="img-interior" alt="Interior de autobús Eurotravel" /></div>
+      </div>
+
+      <div style="margin-top: 70px">
+        <div class="sec-head"><span class="eyebrow">Servicios</span><h2>Un traslado para cada tipo de grupo</h2></div>
+        <div class="svc">
+          <div class="svc-item"><svg class="ic" aria-hidden="true"><use href="#i-briefcase" /></svg><h3>Empresariales</h3><p>Transporte de personal, convenciones y traslados ejecutivos con contrato y facturación.</p></div>
+          <div class="svc-item"><svg class="ic" aria-hidden="true"><use href="#i-camera" /></svg><h3>Recorridos turísticos</h3><p>Excursiones de uno o varios días con itinerario armado a la medida del grupo.</p></div>
+          <div class="svc-item"><svg class="ic" aria-hidden="true"><use href="#i-heart" /></svg><h3>Eventos sociales</h3><p>Bodas, XV años y graduaciones: llevamos y regresamos a tus invitados sin contratiempos.</p></div>
+          <div class="svc-item"><svg class="ic" aria-hidden="true"><use href="#i-cap" /></svg><h3>Escolares</h3><p>Viajes de estudio y prácticas con unidades revisadas y protocolo de seguridad.</p></div>
+          <div class="svc-item"><svg class="ic" aria-hidden="true"><use href="#i-clock" /></svg><h3>Por horas o por día</h3><p>Unidad y operador a tu disposición durante la jornada que necesites.</p></div>
+          <div class="svc-item"><svg class="ic" aria-hidden="true"><use href="#i-plane" /></svg><h3>Traslados aeropuerto y hotel</h3><p>Recepción de grupos, shuttles entre sedes y llegadas coordinadas con vuelos.</p></div>
+        </div>
+      </div>
+
+      <div style="margin-top: 70px">
+        <div class="sec-head"><span class="eyebrow">Paquetes turísticos</span><h2>Paquetes a tu medida, todo el año</h2></div>
+        <div class="packs">
+          <article class="pack"><svg aria-hidden="true"><use href="#i-sun" /></svg><h3>Playa y descanso</h3><p>Vallarta, Manzanillo, Mazatlán y más, con salidas de fin de semana.</p></article>
+          <article class="pack"><svg aria-hidden="true"><use href="#i-church" /></svg><h3>Religiosos</h3><p>Peregrinaciones y santuarios con logística para grupos grandes.</p></article>
+          <article class="pack"><svg aria-hidden="true"><use href="#i-camera" /></svg><h3>Pueblos mágicos</h3><p>Tequila, Mazamitla, San Miguel y rutas culturales de uno o dos días.</p></article>
+          <article class="pack"><svg aria-hidden="true"><use href="#i-briefcase" /></svg><h3>Corporativos</h3><p>Convenciones, integraciones y viajes de incentivo llave en mano.</p></article>
+        </div>
+      </div>
+
+      <div style="margin-top: 70px">
+        <div class="sec-head"><span class="eyebrow">Cómo trabajamos</span><h2>De la cotización al regreso</h2></div>
+        <div class="flow">
+          <div class="flow-item"><span class="n">PASO 01</span><h3>Cotiza</h3><p>Nos compartes ruta, fechas y número de pasajeros. Te respondemos el mismo día hábil con la unidad recomendada y la tarifa cerrada.</p></div>
+          <div class="flow-item"><span class="n">PASO 02</span><h3>Confirma</h3><p>Apartas con un anticipo, firmamos contrato de servicio y quedan asignados unidad y operador para tu fecha.</p></div>
+          <div class="flow-item"><span class="n">PASO 03</span><h3>Viaja</h3><p>La unidad llega al punto acordado y damos seguimiento por GPS durante todo el recorrido, con contacto directo por WhatsApp.</p></div>
+        </div>
+      </div>
+
+      <div style="margin-top: 70px">
+        <div class="sec-head"><span class="eyebrow">Preguntas frecuentes</span><h2>Lo que casi siempre nos preguntan</h2></div>
+        <div class="faq">
+          <div class="qa"><button type="button">¿Qué incluye la renta? <svg aria-hidden="true"><use href="#i-plus" /></svg></button><div class="ans"><div><p>Unidad con operador profesional, combustible, casetas, viáticos del operador, seguro de viajero para cada pasajero y monitoreo GPS. Estacionamientos, entradas y hospedaje del grupo se cotizan aparte si los necesitas.</p></div></div></div>
+          <div class="qa"><button type="button">¿Con cuánta anticipación debo reservar? <svg aria-hidden="true"><use href="#i-plus" /></svg></button><div class="ans"><div><p>Recomendamos apartar con dos a cuatro semanas de anticipación, y con más tiempo en temporada alta (Semana Santa, verano y diciembre). Aun así, consúltanos: seguido tenemos unidades disponibles para salidas inmediatas.</p></div></div></div>
+          <div class="qa"><button type="button">¿Hacen viajes fuera de Jalisco? <svg aria-hidden="true"><use href="#i-plus" /></svg></button><div class="ans"><div><p>Sí. Operamos servicios a toda la República Mexicana, tanto de un día como de varios, con relevo de operador cuando el recorrido lo requiere.</p></div></div></div>
+          <div class="qa"><button type="button">¿Cómo son los pagos y la facturación? <svg aria-hidden="true"><use href="#i-plus" /></svg></button><div class="ans"><div><p>Se aparta con anticipo y se liquida antes de la salida. Aceptamos transferencia y pagos en línea, y emitimos factura con los datos fiscales que nos proporciones.</p></div></div></div>
+          <div class="qa"><button type="button">¿Puedo elegir una unidad específica? <svg aria-hidden="true"><use href="#i-plus" /></svg></button><div class="ans"><div><p>Puedes indicar tu preferencia en el formulario de cotización y la confirmamos sujeta a disponibilidad de la fecha. Si el modelo no está libre, asignamos una unidad de características equivalentes y te avisamos antes.</p></div></div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ CONTACTO ============ -->
+  <section class="view" id="v-contacto">
+    <div class="wrap pad">
+      <div class="sec-head">
+        <span class="eyebrow">Contacto</span>
+        <h2>Cotiza tu próximo viaje</h2>
+        <p class="lede">Escríbenos con la ruta y las fechas. Un asesor te responde el mismo día hábil.</p>
+      </div>
+
+      <div class="contact-grid">
+        <div class="cinfo">
+          <a href="tel:+523324002285"><svg aria-hidden="true"><use href="#i-phone" /></svg><span><b>Teléfono</b><span class="v">33 2400 2285</span></span></a>
+          <a href="https://wa.me/523321832993" target="_blank" rel="noopener"><svg aria-hidden="true"><use href="#i-wa" /></svg><span><b>WhatsApp</b><span class="v">33 2183 2993</span></span></a>
+          <a href="mailto:ventas@eurotravel.com.mx"><svg aria-hidden="true"><use href="#i-mail" /></svg><span><b>Correo</b><span class="v">ventas@eurotravel.com.mx</span></span></a>
+          <a href="https://maps.google.com/?q=Alba+1666,+Lomas+de+San+Pedrito,+Tlaquepaque,+Jalisco+45625" target="_blank" rel="noopener"><svg aria-hidden="true"><use href="#i-pin" /></svg><span><b>Oficina</b><span class="v">Alba 1666, Col. Lomas de San Pedrito<br />Tlaquepaque, Jalisco, C.P. 45625</span></span></a>
+          <div class="ci"><svg aria-hidden="true"><use href="#i-clock" /></svg><span><b>Atención</b><span class="v">Lunes a sábado · Servicios operando 24/7</span></span></div>
+        </div>
+
+        <div class="cbox">
+          <img id="logo-icon" alt="" />
+          <h3>¿Ya tienes fechas?</h3>
+          <p>Cotiza en línea y te devolvemos una tarifa cerrada, sin sorpresas de última hora.</p>
+          <button class="btn btn-red btn-block" data-go="cotizar">Ir a cotizaciones <svg class="arw" aria-hidden="true"><use href="#i-arrow" /></svg></button>
+          <button class="btn btn-white btn-block" style="margin-top: 10px" data-go="unidades">Ver unidades</button>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap foot">
+    <img id="logo-foot" alt="Eurotravel" />
+    <div class="foot-links">
+      <button type="button" data-go="inicio">Inicio</button>
+      <button type="button" data-go="unidades">Unidades</button>
+      <button type="button" data-go="cotizar">Cotizaciones</button>
+      <button type="button" data-go="nosotros">Sobre nosotros</button>
+      <button type="button" data-go="contacto">Contacto</button>
+    </div>
+    <div>© <span id="year"></span> Eurotravel · Tlaquepaque, Jalisco</div>
+  </div>
+</footer>
+
+<!-- ============ modal unidad ============ -->
+<div class="modal" id="modal" role="dialog" aria-modal="true" aria-labelledby="m-title">
+  <div class="modal-bg" data-close></div>
+  <div class="modal-card">
+    <button class="modal-close" type="button" data-close aria-label="Cerrar"><svg aria-hidden="true"><use href="#i-x" /></svg></button>
+    <img class="modal-ph" id="m-ph" alt="" />
+    <div class="modal-in">
+      <span class="eyebrow" id="m-tag"></span>
+      <h3 id="m-title" style="margin-top: 8px"></h3>
+      <p class="lede" id="m-desc" style="margin-top: 12px"></p>
+      <div class="spec" id="m-spec"></div>
+      <div class="seatmap" id="m-seat" style="display: none"><b>Distribución de asientos</b><img id="m-seat-img" alt="Mapa de asientos" /></div>
+      <button class="btn btn-red" id="m-book" type="button" style="margin-top: 24px">Cotizar esta unidad <svg class="arw" aria-hidden="true"><use href="#i-arrow" /></svg></button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ modal ubicación ============ -->
+<div class="modal" id="locmodal" role="dialog" aria-modal="true" aria-labelledby="loc-title">
+  <div class="modal-bg" data-loc-close></div>
+  <div class="modal-card loc-card">
+    <button class="modal-close" type="button" data-loc-close aria-label="Cerrar"><svg aria-hidden="true"><use href="#i-x" /></svg></button>
+    <div class="loc-head">
+      <span class="eyebrow" id="loc-kind">Origen</span>
+      <h3 id="loc-title" style="margin-top: 6px">¿Desde dónde salen?</h3>
+    </div>
+
+    <div class="loc-search">
+      <svg aria-hidden="true"><use href="#i-search" /></svg>
+      <input id="loc-q" type="text" placeholder="Ciudad, aeropuerto, terminal, hotel…" autocomplete="off" />
+    </div>
+
+    <div class="loc-list" id="loc-list"></div>
+
+    <div class="loc-detail">
+      <span class="eyebrow">Ubicación exacta (opcional)</span>
+      <div class="grid" style="margin-top: 12px">
+        <div class="field">
+          <label for="loc-calle">Calle y número</label>
+          <input id="loc-calle" type="text" placeholder="Av. Alba 1666" />
+        </div>
+        <div class="field">
+          <label for="loc-cp">C.P.</label>
+          <input id="loc-cp" type="text" placeholder="45625" inputmode="numeric" />
+        </div>
+      </div>
+      <div class="grid" style="margin-top: 12px">
+        <div class="field">
+          <label for="loc-col">Colonia</label>
+          <input id="loc-col" type="text" placeholder="Lomas de San Pedrito" />
+        </div>
+        <div class="field">
+          <label for="loc-ref">Referencia</label>
+          <input id="loc-ref" type="text" placeholder="Frente a la gasolinera" />
+        </div>
+      </div>
+
+      <div class="loc-tools">
+        <button class="btn btn-line btn-sm" type="button" id="loc-gps"><svg aria-hidden="true"><use href="#i-target" /></svg> Usar mi ubicación</button>
+        <button class="btn btn-line btn-sm" type="button" id="loc-maps"><svg aria-hidden="true"><use href="#i-link" /></svg> Pegar link de Google Maps</button>
+      </div>
+
+      <div class="loc-pin" id="loc-pin">
+        <svg aria-hidden="true"><use href="#i-pin" /></svg>
+        <span><b>Coordenadas fijadas</b><span id="loc-coords"></span></span>
+      </div>
+    </div>
+
+    <div class="loc-actions">
+      <button class="btn btn-line" type="button" data-loc-close>Cancelar</button>
+      <button class="btn btn-red" type="button" id="loc-ok">Confirmar ubicación</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  (function () {
+    'use strict';
+    var I = window.IMGS || {};
+    var byId = function (id) { return document.getElementById(id); };
+    var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    /* ================= marca ================= */
+    byId('logo-nav').src = I.logo;
+    byId('logo-foot').src = I.logo;
+    byId('logo-icon').src = I.icon;
+    byId('intro-logo').src = I.logo;
+    byId('img-interior').src = I.interior;
+
+    /* ================= intro ================= */
+    var intro = byId('intro');
+    var introDone = false;
+
+    function endIntro() {
+      if (introDone) return;
+      introDone = true;
+      document.body.style.overflow = '';
+      intro.classList.add('out');
+      setTimeout(function () { if (intro.parentNode) intro.parentNode.removeChild(intro); }, 760);
+      try { sessionStorage.setItem('et_intro', '1'); } catch (e) {}
+    }
+
+    var seen = false;
+    try { seen = sessionStorage.getItem('et_intro') === '1'; } catch (e) {}
+
+    if (seen || reduce) {
+      if (intro.parentNode) intro.parentNode.removeChild(intro);
+      introDone = true;
+    } else {
+      document.body.style.overflow = 'hidden';
+      setTimeout(endIntro, 3200);
+      byId('skip').addEventListener('click', endIntro);
+    }
+
+    /* ================= pestañas ================= */
+    var VIEWS = ['inicio', 'unidades', 'cotizar', 'nosotros', 'contacto'];
+
+    function go(view, noScroll) {
+      if (VIEWS.indexOf(view) < 0) view = 'inicio';
+      VIEWS.forEach(function (v) { byId('v-' + v).classList.toggle('on', v === view); });
+      document.querySelectorAll('.tab').forEach(function (t) { t.classList.toggle('on', t.dataset.go === view); });
+      if (location.hash !== '#/' + view) {
+        try { history.replaceState(null, '', '#/' + view); } catch (e) {}
+      }
+      if (!noScroll) window.scrollTo({ top: 0, behavior: reduce ? 'auto' : 'smooth' });
+    }
+
+    document.addEventListener('click', function (e) {
+      var el = e.target.closest ? e.target.closest('[data-go]') : null;
+      if (!el) return;
+      e.preventDefault();
+      go(el.getAttribute('data-go'));
+    });
+
+    window.addEventListener('hashchange', function () { go((location.hash || '').replace('#/', ''), true); });
+    go((location.hash || '').replace('#/', '') || 'inicio', true);
+
+    /* ================= hero ================= */
+    var HERO = [I.hero1, I.hero2, I.hero3];
+    var slidesEl = byId('slides');
+    var dotsEl = byId('dots');
+    var slides = [], dots = [];
+
+    HERO.forEach(function (src, i) {
+      var d = document.createElement('div');
+      d.className = 'slide' + (i === 0 ? ' on' : '');
+      d.style.backgroundImage = 'url("' + src + '")';
+      slidesEl.appendChild(d);
+      slides.push(d);
+
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.className = i === 0 ? 'on' : '';
+      b.setAttribute('aria-label', 'Foto ' + (i + 1));
+      b.addEventListener('click', function () { show(i); });
+      dotsEl.appendChild(b);
+      dots.push(b);
+    });
+
+    var cur = 0, timer = 0;
+
+    function show(n) {
+      if (n === cur) return;
+      slides[cur].classList.remove('on');
+      dots[cur].classList.remove('on');
+      cur = n;
+      var s = slides[cur];
+      s.style.animation = 'none';
+      void s.offsetWidth;
+      s.style.animation = '';
+      s.classList.add('on');
+      dots[cur].classList.add('on');
+      restart();
+    }
+
+    function restart() { clearInterval(timer); timer = setInterval(function () { show((cur + 1) % slides.length); }, 6500); }
+    if (!reduce) restart();
+
+    /* ================= flota ================= */
+    var UNITS = [
+      { id: 'irizar-i6s', cat: 'autobus', tag: 'Autobús · Premium', name: 'Irizar i6S', cap: '51 pasajeros', max: 51, img: 'i6s', full: 'hero2', seat: 'seat_i6s',
+        desc: 'Comodidad, tecnología y diseño para viajes con estilo. Diseño aerodinámico, acabados premium y suspensión avanzada para un trayecto suave, seguro y placentero.',
+        amen: ['Aire acondicionado', 'Baño a bordo', 'Asientos reclinables', '2 puertas'],
+        spec: [['i-users', '51 pasajeros'], ['i-snow', 'Aire acondicionado'], ['i-wc', 'Baño a bordo'], ['i-seat', 'Asientos reclinables con descansapiés'], ['i-bag', 'Amplia capacidad de equipaje'], ['i-shield', 'Seguro de viajero incluido'], ['i-route', 'Suspensión avanzada'], ['i-briefcase', 'Ideal para giras y viajes ejecutivos']] },
+      { id: 'irizar-i6', cat: 'autobus', tag: 'Autobús · Turismo', name: 'Irizar i6', cap: '47 a 51 pasajeros', max: 51, img: 'i6', full: 'hero1',
+        desc: 'El caballito de batalla para excursiones y viajes foráneos: espacio, silencio de marcha y equipamiento completo para trayectos largos.',
+        amen: ['Aire acondicionado', 'Baño a bordo', 'Pantallas', 'Audio'],
+        spec: [['i-users', '47 a 51 pasajeros'], ['i-snow', 'Aire acondicionado'], ['i-wc', 'Baño a bordo'], ['i-tv', 'Pantallas y sistema de audio'], ['i-seat', 'Asientos reclinables'], ['i-bag', 'Cajuela amplia'], ['i-shield', 'Seguro de viajero incluido'], ['i-pin', 'Monitoreo GPS']] },
+      { id: 'irizar-pb', cat: 'autobus', tag: 'Autobús · Larga distancia', name: 'Irizar PB', cap: '47 a 51 pasajeros', max: 51, img: 'pb', full: 'hero3',
+        desc: 'Unidad de piso alto pensada para carretera: mayor visibilidad para el pasajero y bodega generosa para grupos con mucho equipaje.',
+        amen: ['Aire acondicionado', 'Baño a bordo', 'Piso alto', 'Bodega amplia'],
+        spec: [['i-users', '47 a 51 pasajeros'], ['i-snow', 'Aire acondicionado'], ['i-wc', 'Baño a bordo'], ['i-seat', 'Asientos reclinables'], ['i-bag', 'Bodega de gran capacidad'], ['i-tv', 'Pantallas'], ['i-shield', 'Seguro de viajero incluido'], ['i-route', 'Óptimo para viajes de varios días']] },
+      { id: 'neobus', cat: 'autobus', tag: 'Autobús · Grupos grandes', name: 'Neobus', cap: '50 pasajeros', max: 50, img: 'neobus', seat: 'seat_neobus',
+        desc: 'Excelente relación costo-beneficio para traslados de personal, viajes escolares y recorridos de uno o varios días.',
+        amen: ['Aire acondicionado', 'Baño a bordo', 'Pantallas', 'Reclinables'],
+        spec: [['i-users', '50 pasajeros'], ['i-snow', 'Aire acondicionado'], ['i-wc', 'Baño a bordo'], ['i-tv', 'Pantalla y sistema de audio'], ['i-seat', 'Asientos reclinables'], ['i-bag', 'Espacio para equipaje'], ['i-shield', 'Seguro de viajero incluido'], ['i-cap', 'Muy usado en viajes escolares']] },
+      { id: 'sprinter', cat: 'sprinter', tag: 'Sprinter · Grupos pequeños', name: 'Sprinter', cap: '10 a 20 pasajeros', max: 20, img: 'sprinter',
+        desc: 'Moderna, segura y funcional. Diseño compacto y elegante para moverse igual de bien en ciudad que en carretera: traslados ejecutivos, eventos y excursiones familiares.',
+        amen: ['Aire acondicionado', 'Asientos reclinables', 'Audio', 'Pantalla'],
+        spec: [['i-users', '10 a 20 pasajeros'], ['i-snow', 'Aire acondicionado'], ['i-seat', 'Asientos reclinables'], ['i-tv', 'Pantalla y sistema de audio'], ['i-bag', 'Espacio para equipaje'], ['i-shield', 'Seguro de viajero incluido'], ['i-briefcase', 'Traslados ejecutivos y eventos'], ['i-route', 'Ágil en ciudad y carretera']] },
+      { id: 'suburban', cat: 'suburban', tag: 'Suburban · Ejecutivo', name: 'Suburban', cap: 'Hasta 6 pasajeros', max: 6, img: 'suburban',
+        desc: 'Elegancia y comodidad para traslados ejecutivos, recepción de directivos en el aeropuerto y grupos reducidos que viajan con equipaje.',
+        amen: ['Aire acondicionado', 'Servicio ejecutivo', 'Equipaje', 'Chofer'],
+        spec: [['i-users', 'Hasta 6 pasajeros'], ['i-snow', 'Aire acondicionado'], ['i-seat', 'Interiores en piel'], ['i-bag', 'Espacio para equipaje'], ['i-plane', 'Traslados aeropuerto'], ['i-shield', 'Seguro de viajero incluido'], ['i-briefcase', 'Servicio ejecutivo puerta a puerta'], ['i-clock', 'Disponible por horas']] }
+    ];
+
+    var fleetEl = byId('fleet');
+    var unitSel = byId('f-unidad');
+
+    UNITS.forEach(function (u) {
+      var card = document.createElement('button');
+      card.type = 'button';
+      card.className = 'unit';
+      card.setAttribute('data-cat', u.cat);
+      card.setAttribute('data-id', u.id);
+      card.innerHTML =
+        '<div class="unit-ph"><span class="unit-tag">' + u.tag.split(' · ')[1] + '</span>' +
+        '<img loading="lazy" alt="' + u.name + '" src="' + (I[u.img] || '') + '"></div>' +
+        '<div class="unit-body"><h3>' + u.name + '</h3>' +
+        '<span class="unit-cap"><svg aria-hidden="true"><use href="#i-users"/></svg>' + u.cap + '</span>' +
+        '<div class="amen">' + u.amen.map(function (a) { return '<span>' + a + '</span>'; }).join('') + '</div>' +
+        '<span class="unit-more">Ver detalles <svg aria-hidden="true"><use href="#i-arrow"/></svg></span></div>';
+      card.addEventListener('click', function () { openModal(u.id); });
+      fleetEl.appendChild(card);
+
+      var opt = document.createElement('option');
+      opt.value = u.name;
+      opt.textContent = u.name + ' — ' + u.cap;
+      unitSel.appendChild(opt);
+    });
+
+    document.querySelectorAll('.chip').forEach(function (chip) {
+      chip.addEventListener('click', function () {
+        document.querySelectorAll('.chip').forEach(function (c) { c.setAttribute('aria-pressed', String(c === chip)); });
+        var f = chip.getAttribute('data-filter');
+        document.querySelectorAll('.unit').forEach(function (card) {
+          card.style.display = f === 'todas' || card.getAttribute('data-cat') === f ? '' : 'none';
+        });
+      });
+    });
+
+    /* ================= modal unidad ================= */
+    var modal = byId('modal');
+
+    function openModal(id) {
+      var u = UNITS.filter(function (x) { return x.id === id; })[0];
+      if (!u) return;
+      byId('m-ph').src = I[u.full] || I[u.img] || '';
+      byId('m-ph').alt = u.name;
+      byId('m-tag').textContent = u.tag;
+      byId('m-title').textContent = u.name;
+      byId('m-desc').textContent = u.desc;
+      byId('m-spec').innerHTML = u.spec.map(function (s) {
+        return '<div><svg aria-hidden="true"><use href="#' + s[0] + '"/></svg><span>' + s[1] + '</span></div>';
+      }).join('');
+
+      var seatBox = byId('m-seat');
+      if (u.seat && I[u.seat]) { byId('m-seat-img').src = I[u.seat]; seatBox.style.display = ''; }
+      else { seatBox.style.display = 'none'; }
+
+      byId('m-book').onclick = function () {
+        unitSel.value = u.name;
+        byId('f-tipo').value = u.cat === 'sprinter' ? 'Renta de Sprinter' : (u.cat === 'suburban' ? 'Transporte ejecutivo (Suburban)' : 'Renta de autobuses');
+        setSeg(u.cat);
+        closeModal();
+        go('cotizar');
+        setTimeout(function () { goStep(2); }, 300);
+      };
+
+      modal.classList.add('on');
+      document.body.style.overflow = 'hidden';
+      document.querySelector('#modal .modal-close').focus();
+    }
+
+    function closeModal() { modal.classList.remove('on'); document.body.style.overflow = ''; }
+    modal.querySelectorAll('[data-close]').forEach(function (el) { el.addEventListener('click', closeModal); });
+
+    /* ================= catálogo de lugares ================= */
+    var PLACES = [
+      ['Guadalajara', 'Jalisco', 'ciudad'], ['Zapopan', 'Jalisco', 'ciudad'], ['San Pedro Tlaquepaque', 'Jalisco', 'ciudad'],
+      ['Tonalá', 'Jalisco', 'ciudad'], ['Tlajomulco de Zúñiga', 'Jalisco', 'ciudad'], ['El Salto', 'Jalisco', 'zona industrial'],
+      ['Aeropuerto Internacional de Guadalajara (GDL)', 'Jalisco', 'aeropuerto'],
+      ['Central de Autobuses Nueva de Guadalajara', 'Jalisco', 'terminal'],
+      ['Expo Guadalajara', 'Jalisco', 'recinto'], ['Estadio Akron', 'Jalisco', 'recinto'], ['Auditorio Telmex', 'Jalisco', 'recinto'],
+      ['Puerto Vallarta', 'Jalisco', 'playa'], ['Aeropuerto de Puerto Vallarta (PVR)', 'Jalisco', 'aeropuerto'],
+      ['Chapala', 'Jalisco', 'lago'], ['Ajijic', 'Jalisco', 'pueblo mágico'], ['Tequila', 'Jalisco', 'pueblo mágico'],
+      ['Mazamitla', 'Jalisco', 'pueblo mágico'], ['Tapalpa', 'Jalisco', 'pueblo mágico'], ['San Sebastián del Oeste', 'Jalisco', 'pueblo mágico'],
+      ['Lagos de Moreno', 'Jalisco', 'ciudad'], ['San Juan de los Lagos', 'Jalisco', 'santuario'],
+      ['Ciudad Guzmán', 'Jalisco', 'ciudad'], ['Autlán de Navarro', 'Jalisco', 'ciudad'],
+      ['Barra de Navidad', 'Jalisco', 'playa'], ['San Patricio Melaque', 'Jalisco', 'playa'],
+      ['Manzanillo', 'Colima', 'playa'], ['Colima', 'Colima', 'ciudad'], ['Comala', 'Colima', 'pueblo mágico'],
+      ['Mazatlán', 'Sinaloa', 'playa'], ['Tepic', 'Nayarit', 'ciudad'], ['Sayulita', 'Nayarit', 'playa'],
+      ['Nuevo Vallarta', 'Nayarit', 'playa'], ['Punta Mita', 'Nayarit', 'playa'], ['San Blas', 'Nayarit', 'playa'],
+      ['Aguascalientes', 'Aguascalientes', 'ciudad'], ['León', 'Guanajuato', 'ciudad'], ['Guanajuato', 'Guanajuato', 'ciudad'],
+      ['San Miguel de Allende', 'Guanajuato', 'pueblo mágico'], ['Dolores Hidalgo', 'Guanajuato', 'pueblo mágico'],
+      ['Querétaro', 'Querétaro', 'ciudad'], ['Tequisquiapan', 'Querétaro', 'pueblo mágico'], ['Bernal', 'Querétaro', 'pueblo mágico'],
+      ['Ciudad de México', 'CDMX', 'ciudad'], ['Aeropuerto de la Ciudad de México (MEX)', 'CDMX', 'aeropuerto'],
+      ['Teotihuacán', 'Estado de México', 'zona arqueológica'], ['Toluca', 'Estado de México', 'ciudad'],
+      ['Valle de Bravo', 'Estado de México', 'pueblo mágico'], ['Morelia', 'Michoacán', 'ciudad'],
+      ['Pátzcuaro', 'Michoacán', 'pueblo mágico'], ['Uruapan', 'Michoacán', 'ciudad'], ['Zamora', 'Michoacán', 'ciudad'],
+      ['Zacatecas', 'Zacatecas', 'ciudad'], ['San Luis Potosí', 'San Luis Potosí', 'ciudad'],
+      ['Real de Catorce', 'San Luis Potosí', 'pueblo mágico'], ['Huasteca Potosina', 'San Luis Potosí', 'región'],
+      ['Monterrey', 'Nuevo León', 'ciudad'], ['Saltillo', 'Coahuila', 'ciudad'], ['Torreón', 'Coahuila', 'ciudad'],
+      ['Durango', 'Durango', 'ciudad'], ['Chihuahua', 'Chihuahua', 'ciudad'], ['Barrancas del Cobre', 'Chihuahua', 'región'],
+      ['Puebla', 'Puebla', 'ciudad'], ['Cholula', 'Puebla', 'pueblo mágico'], ['Veracruz', 'Veracruz', 'ciudad'],
+      ['Oaxaca de Juárez', 'Oaxaca', 'ciudad'], ['Puerto Escondido', 'Oaxaca', 'playa'], ['Huatulco', 'Oaxaca', 'playa'],
+      ['Acapulco', 'Guerrero', 'playa'], ['Ixtapa Zihuatanejo', 'Guerrero', 'playa'], ['Taxco', 'Guerrero', 'pueblo mágico'],
+      ['Cuernavaca', 'Morelos', 'ciudad'], ['Tepoztlán', 'Morelos', 'pueblo mágico'],
+      ['Cancún', 'Quintana Roo', 'playa'], ['Playa del Carmen', 'Quintana Roo', 'playa'], ['Tulum', 'Quintana Roo', 'playa'],
+      ['Mérida', 'Yucatán', 'ciudad'], ['Chichén Itzá', 'Yucatán', 'zona arqueológica'],
+      ['San Cristóbal de las Casas', 'Chiapas', 'pueblo mágico'], ['Palenque', 'Chiapas', 'zona arqueológica']
+    ];
+
+    /* ================= selector de ubicación ================= */
+    var locModal = byId('locmodal');
+    var LOC = { origen: null, destino: null };
+    var locTarget = 'origen';
+    var locPick = null;
+    var locCoords = null;
+
+    var ACC = { 'á': 'a', 'é': 'e', 'í': 'i', 'ó': 'o', 'ú': 'u', 'ü': 'u', 'ñ': 'n' };
+
+    function norm(s) {
+      return (s || '').toLowerCase().replace(/[áéíóúüñ]/g, function (c) { return ACC[c] || c; });
+    }
+
+    function esc(s) { return (s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+
+    function renderList(q) {
+      var list = byId('loc-list');
+      var query = norm(q);
+      var res = PLACES.filter(function (p) {
+        return !query || norm(p[0]).indexOf(query) >= 0 || norm(p[1]).indexOf(query) >= 0 || norm(p[2]).indexOf(query) >= 0;
+      }).slice(0, 40);
+
+      list.innerHTML = '';
+
+      if (!res.length) {
+        var msg = document.createElement('div');
+        msg.className = 'loc-empty';
+        msg.textContent = 'Sin coincidencias en el catálogo. Puedes usar tu texto como punto y precisar la dirección abajo.';
+        list.appendChild(msg);
+        if (q) {
+          var custom = document.createElement('button');
+          custom.type = 'button';
+          custom.innerHTML = '<svg aria-hidden="true"><use href="#i-pin"/></svg><span><b>' + esc(q) + '</b><small>Usar este texto como ubicación</small></span>';
+          custom.addEventListener('click', function () { setPick([q, '', 'personalizado']); });
+          list.appendChild(custom);
+        }
+        return;
+      }
+
+      res.forEach(function (p) {
+        var b = document.createElement('button');
+        b.type = 'button';
+        if (locPick && locPick[0] === p[0]) b.className = 'hl';
+        b.innerHTML = '<svg aria-hidden="true"><use href="#i-pin"/></svg><span><b>' + esc(p[0]) + '</b><small>' + esc(p[1]) + ' · ' + esc(p[2]) + '</small></span>';
+        b.addEventListener('click', function () { setPick(p); });
+        list.appendChild(b);
+      });
+    }
+
+    function setPick(p) {
+      locPick = p;
+      byId('loc-q').value = p[0];
+      renderList('');
+      byId('loc-calle').focus();
+    }
+
+    function openLoc(which) {
+      locTarget = which;
+      var saved = LOC[which];
+      locPick = saved ? saved.place : null;
+      locCoords = saved ? saved.coords : null;
+
+      byId('loc-kind').textContent = which === 'origen' ? 'Origen' : 'Destino';
+      byId('loc-title').textContent = which === 'origen' ? '¿Desde dónde salen?' : '¿A dónde van?';
+      byId('loc-q').value = saved ? saved.place[0] : '';
+      byId('loc-calle').value = saved ? saved.calle : '';
+      byId('loc-col').value = saved ? saved.col : '';
+      byId('loc-cp').value = saved ? saved.cp : '';
+      byId('loc-ref').value = saved ? saved.ref : '';
+      byId('loc-pin').classList.toggle('on', !!locCoords);
+      byId('loc-coords').textContent = locCoords || '';
+      byId('loc-gps').innerHTML = '<svg aria-hidden="true"><use href="#i-target"/></svg> Usar mi ubicación';
+
+      renderList('');
+      locModal.classList.add('on');
+      document.body.style.overflow = 'hidden';
+      setTimeout(function () { byId('loc-q').focus(); }, 60);
+    }
+
+    function closeLoc() { locModal.classList.remove('on'); document.body.style.overflow = ''; }
+
+    byId('btn-origen').addEventListener('click', function () { openLoc('origen'); });
+    byId('btn-destino').addEventListener('click', function () { openLoc('destino'); });
+    locModal.querySelectorAll('[data-loc-close]').forEach(function (el) { el.addEventListener('click', closeLoc); });
+    byId('loc-q').addEventListener('input', function () { renderList(this.value); });
+
+    byId('loc-gps').addEventListener('click', function () {
+      var btn = this;
+      if (!navigator.geolocation) { alert('Tu navegador no permite obtener la ubicación.'); return; }
+      btn.textContent = 'Obteniendo…';
+      navigator.geolocation.getCurrentPosition(function (pos) {
+        locCoords = pos.coords.latitude.toFixed(6) + ', ' + pos.coords.longitude.toFixed(6);
+        byId('loc-coords').textContent = locCoords;
+        byId('loc-pin').classList.add('on');
+        btn.innerHTML = '<svg aria-hidden="true"><use href="#i-check"/></svg> Ubicación fijada';
+      }, function () {
+        btn.innerHTML = '<svg aria-hidden="true"><use href="#i-target"/></svg> Usar mi ubicación';
+        alert('No se pudo obtener la ubicación. Revisa los permisos del navegador.');
+      }, { enableHighAccuracy: true, timeout: 10000 });
+    });
+
+    byId('loc-maps').addEventListener('click', function () {
+      var url = prompt('Pega el link de Google Maps o las coordenadas (ej. 20.659700, -103.349600):');
+      if (!url) return;
+      var m = url.match(/(-?\d{1,3}\.\d{3,})[,\s/@]+(-?\d{1,3}\.\d{3,})/);
+      if (!m) { alert('No encontré coordenadas en ese texto. Abre el punto en Google Maps, copia el link completo y pégalo otra vez.'); return; }
+      locCoords = m[1] + ', ' + m[2];
+      byId('loc-coords').textContent = locCoords;
+      byId('loc-pin').classList.add('on');
+    });
+
+    byId('loc-ok').addEventListener('click', function () {
+      var q = byId('loc-q').value.trim();
+      if (!locPick && !q) { byId('loc-q').focus(); return; }
+      var place = locPick && locPick[0] === q ? locPick : [q, '', 'personalizado'];
+
+      LOC[locTarget] = {
+        place: place,
+        calle: byId('loc-calle').value.trim(),
+        col: byId('loc-col').value.trim(),
+        cp: byId('loc-cp').value.trim(),
+        ref: byId('loc-ref').value.trim(),
+        coords: locCoords
+      };
+
+      paintLoc(locTarget);
+      byId('fw-' + locTarget).classList.remove('err');
+      closeLoc();
+    });
+
+    function locLine(l) {
+      var bits = [];
+      if (!l) return '';
+      if (l.calle) bits.push(l.calle);
+      if (l.col) bits.push('Col. ' + l.col);
+      if (l.cp) bits.push('C.P. ' + l.cp);
+      if (l.ref) bits.push('Ref: ' + l.ref);
+      if (l.coords) bits.push('GPS ' + l.coords);
+      return bits.join(' · ');
+    }
+
+    function locFull(l) {
+      if (!l) return '';
+      var t = l.place[0] + (l.place[1] ? ', ' + l.place[1] : '');
+      var d = locLine(l);
+      return d ? t + ' — ' + d : t;
+    }
+
+    function paintLoc(which) {
+      var l = LOC[which];
+      var btn = byId('btn-' + which);
+      if (!l) return;
+      btn.classList.remove('empty');
+      btn.querySelector('b').textContent = l.place[0];
+      btn.querySelector('small').textContent = locLine(l) || (l.place[1] ? l.place[1] + ' · ' + l.place[2] : 'Ubicación seleccionada');
+    }
+
+    /* ================= buscador ================= */
+    var tipoSel = 'autobus';
+
+    function setSeg(cat) {
+      tipoSel = cat;
+      document.querySelectorAll('#seg-tipo button').forEach(function (x) {
+        x.classList.toggle('on', x.getAttribute('data-tipo') === cat);
+      });
+    }
+
+    document.querySelectorAll('#seg-tipo button').forEach(function (b) {
+      b.addEventListener('click', function () {
+        setSeg(b.getAttribute('data-tipo'));
+        var pax = byId('s-pax');
+        var n = Number(pax.value || 0);
+        if (tipoSel === 'suburban' && n > 6) pax.value = 6;
+        if (tipoSel === 'sprinter' && n > 20) pax.value = 20;
+        if (tipoSel === 'autobus' && n < 21) pax.value = 45;
+      });
+    });
+
+    document.querySelectorAll('input[name="trip"]').forEach(function (r) {
+      r.addEventListener('change', function () {
+        var redondo = document.querySelector('input[name="trip"]:checked').value === 'redondo';
+        byId('s-regreso').disabled = !redondo;
+        if (!redondo) byId('s-regreso').value = '';
+      });
+    });
+
+    byId('pax-menos').addEventListener('click', function () {
+      var i = byId('s-pax');
+      i.value = Math.max(1, Number(i.value || 1) - 1);
+    });
+
+    byId('pax-mas').addEventListener('click', function () {
+      var i = byId('s-pax');
+      i.value = Math.min(200, Number(i.value || 0) + 1);
+    });
+
+    function fmtDate(v) {
+      if (!v) return '';
+      var p = v.split('-');
+      if (p.length !== 3) return v;
+      var m = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+      return Number(p[2]) + ' ' + m[Number(p[1]) - 1] + ' ' + p[0];
+    }
+
+    byId('s-go').addEventListener('click', function () {
+      var ok = true;
+      if (!LOC.origen) { byId('fw-origen').classList.add('err'); ok = false; }
+      if (!LOC.destino) { byId('fw-destino').classList.add('err'); ok = false; }
+      if (!byId('s-salida').value) { byId('fw-salida').classList.add('err'); ok = false; }
+      else byId('fw-salida').classList.remove('err');
+      if (!ok) return;
+
+      var pax = Number(byId('s-pax').value || 1);
+      var list = UNITS.filter(function (u) { return u.cat === tipoSel; });
+      var salida = byId('s-salida').value;
+      var regreso = byId('s-regreso').value;
+
+      byId('res-route').innerHTML =
+        '<span>' + esc(LOC.origen.place[0]) + '</span><svg aria-hidden="true"><use href="#i-arrow"/></svg><span>' + esc(LOC.destino.place[0]) + '</span>';
+      byId('res-meta').textContent =
+        fmtDate(salida) + (regreso ? ' → ' + fmtDate(regreso) : ' · solo ida') + ' · ' + pax + (pax === 1 ? ' pasajero' : ' pasajeros');
+
+      byId('res-list').innerHTML = list.map(function (u) {
+        var cabe = pax <= u.max;
+        var n = Math.ceil(pax / u.max);
+        var nota = cabe
+          ? '<span class="fit"><svg aria-hidden="true"><use href="#i-check"/></svg>Alcanza en una unidad</span>'
+          : '<span class="fit no"><svg aria-hidden="true"><use href="#i-users"/></svg>Se requieren ' + n + ' unidades para ' + pax + ' pasajeros</span>';
+        return '<div class="opt">' +
+          '<img src="' + (I[u.img] || '') + '" alt="' + u.name + '">' +
+          '<div><h4>' + u.name + '</h4><div class="caps">' + u.cap + '</div>' +
+          '<div class="amen">' + u.amen.slice(0, 3).map(function (a) { return '<span>' + a + '</span>'; }).join('') + '</div>' +
+          nota + '</div>' +
+          '<button class="btn btn-red" type="button" data-pick="' + u.name + '">Cotizar esta unidad</button></div>';
+      }).join('');
+
+      byId('results').classList.add('on');
+
+      byId('f-origen').value = locFull(LOC.origen);
+      byId('f-destino').value = locFull(LOC.destino);
+      byId('f-salida').value = salida;
+      byId('f-regreso').value = regreso;
+      byId('f-pax').value = pax;
+      byId('f-tipo').value = tipoSel === 'sprinter' ? 'Renta de Sprinter' : (tipoSel === 'suburban' ? 'Transporte ejecutivo (Suburban)' : 'Renta de autobuses');
+
+      byId('results').scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' });
+    });
+
+    byId('res-list').addEventListener('click', function (e) {
+      var b = e.target.closest ? e.target.closest('[data-pick]') : null;
+      if (!b) return;
+      unitSel.value = b.getAttribute('data-pick');
+      goStep(2);
+    });
+
+    /* ================= pasos ================= */
+    function goStep(n) {
+      document.querySelectorAll('.panel').forEach(function (p) { p.classList.toggle('on', Number(p.getAttribute('data-panel')) === n); });
+      document.querySelectorAll('.step').forEach(function (s) {
+        var sn = Number(s.getAttribute('data-step'));
+        s.classList.toggle('on', sn === Math.min(n, 3));
+        s.classList.toggle('done', sn < n);
+      });
+      var card = document.querySelector('.reserve-card');
+      window.scrollTo({ top: card.getBoundingClientRect().top + window.pageYOffset - 90, behavior: reduce ? 'auto' : 'smooth' });
+    }
+
+    function validate(panelNum) {
+      var panel = document.querySelector('.panel[data-panel="' + panelNum + '"]');
+      var ok = true;
+      panel.querySelectorAll('.field[data-req]').forEach(function (f) {
+        var input = f.querySelector('input, select');
+        var bad = !input.value.trim();
+        f.classList.toggle('err', bad);
+        if (bad && ok) { input.focus(); ok = false; }
+      });
+      return ok;
+    }
+
+    document.querySelectorAll('[data-next]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        var c = Number(b.closest('.panel').getAttribute('data-panel'));
+        if (validate(c)) goStep(Number(b.getAttribute('data-next')));
+      });
+    });
+
+    document.querySelectorAll('[data-prev]').forEach(function (b) {
+      b.addEventListener('click', function () { goStep(Number(b.getAttribute('data-prev'))); });
+    });
+
+    document.querySelectorAll('.field[data-req] input, .field[data-req] select').forEach(function (i) {
+      i.addEventListener('input', function () { if (i.value.trim()) i.closest('.field').classList.remove('err'); });
+    });
+
+    /* ================= resumen ================= */
+    var FIELDS = [
+      ['Origen', 'f-origen'], ['Destino', 'f-destino'], ['Subida y bajada', 'f-dir'], ['Salida', 'f-salida'],
+      ['Regreso', 'f-regreso'], ['Hora de salida', 'f-hora'], ['Paradas', 'f-paradas'], ['Servicio', 'f-tipo'],
+      ['Pasajeros', 'f-pax'], ['Unidad', 'f-unidad'], ['Motivo', 'f-uso'], ['Nombre', 'f-nombre'],
+      ['Teléfono', 'f-tel'], ['Correo', 'f-mail'], ['Empresa', 'f-empresa'], ['Comentarios', 'f-notas']
+    ];
+
+    function collect() {
+      var out = [];
+      FIELDS.forEach(function (f) {
+        var el = byId(f[1]);
+        var v = (el.value || '').trim();
+        if (!v) return;
+        if (el.type === 'date') v = fmtDate(v);
+        out.push([f[0], v]);
+      });
+      return out;
+    }
+
+    byId('f-review').addEventListener('click', function () {
+      if (!validate(3)) return;
+      var rows = collect();
+      byId('sum-list').innerHTML = rows.map(function (r) {
+        return '<div class="row"><dt>' + r[0] + '</dt><dd>' + esc(r[1]).replace(/\n/g, ' · ') + '</dd></div>';
+      }).join('');
+
+      var text = 'Solicitud de cotización — Eurotravel\n\n';
+      rows.forEach(function (r) { text += r[0] + ': ' + r[1] + '\n'; });
+
+      byId('send-wa').href = 'https://wa.me/523324002285?text=' + encodeURIComponent(text);
+      byId('send-mail').href = 'mailto:ventas@eurotravel.com.mx?subject=' +
+        encodeURIComponent('Cotización de viaje — ' + (byId('f-origen').value || '') + ' a ' + (byId('f-destino').value || '')) +
+        '&body=' + encodeURIComponent(text);
+      byId('copy-sum').setAttribute('data-text', text);
+      byId('copied').classList.remove('on');
+      goStep(4);
+    });
+
+    byId('copy-sum').addEventListener('click', function () {
+      var text = this.getAttribute('data-text') || '';
+      var done = function () { byId('copied').classList.add('on'); };
+      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(done, done);
+      else {
+        var ta = document.createElement('textarea');
+        ta.value = text;
+        document.body.appendChild(ta);
+        ta.select();
+        try { document.execCommand('copy'); } catch (e) {}
+        document.body.removeChild(ta);
+        done();
+      }
+    });
+
+    /* ================= faq ================= */
+    document.querySelectorAll('.qa button').forEach(function (b) {
+      b.addEventListener('click', function () { b.parentElement.classList.toggle('open'); });
+    });
+
+    /* ================= escape ================= */
+    document.addEventListener('keydown', function (e) {
+      if (e.key !== 'Escape') return;
+      if (locModal.classList.contains('on')) closeLoc();
+      else if (modal.classList.contains('on')) closeModal();
+    });
+
+    /* ================= varios ================= */
+    byId('year').textContent = new Date().getFullYear();
+    var today = new Date().toISOString().split('T')[0];
+    ['s-salida', 's-regreso', 'f-salida', 'f-regreso'].forEach(function (id) { byId(id).min = today; });
+    byId('s-salida').addEventListener('change', function () { byId('s-regreso').min = this.value || today; });
+    byId('f-salida').addEventListener('change', function () { byId('f-regreso').min = this.value || today; });
+  })();
+</script>
+</body>
+</html>
