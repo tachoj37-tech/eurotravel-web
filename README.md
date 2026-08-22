@@ -72,3 +72,24 @@ sitio no se rompe si Google falla o si se agota la cuota.
 - No poner claves en `config.js`, `index.html` ni en ningún archivo del repo
 - `.gitignore` ya bloquea `.env`, `*.key` y `*.pem`
 - Si una clave llega a publicarse, rotarla en Google Cloud (botón **Rotar clave**)
+
+### Comprobar que las claves funcionan
+
+```
+POST /api/diagnostico
+```
+
+Devuelve si cada variable está configurada y si Google acepta la clave, sin
+revelar su valor. Solo responde desde el dominio del sitio.
+
+Respuesta sana:
+
+```json
+{
+  "GOOGLE_PLACES_KEY": { "configurada": true, "largo": 39, "prueba": { "ok": true, "sugerencias": 5 } },
+  "GOOGLE_ROUTES_KEY": { "configurada": true, "largo": 39, "prueba": { "ok": true, "km": 311 } }
+}
+```
+
+Si `configurada` es `false`, falta registrar la variable en Vercel **y volver a
+desplegar**: las variables no se aplican a despliegues ya existentes.
