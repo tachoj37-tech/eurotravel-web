@@ -87,15 +87,28 @@ module.exports = async function handler(req, res) {
       const texto = String(cuerpo.input || '').slice(0, 200);
       if (texto.trim().length < 3) { res.status(200).json({ suggestions: [] }); return; }
 
+      /* Acotar la búsqueda al destino elegido. Sin esto, quien busca una
+         dirección en Puerto Vallarta recibe coincidencias de todo el país. */
+      const peticion = {
+        input: texto,
+        includedRegionCodes: [String(cuerpo.pais || 'mx').slice(0, 2)],
+        languageCode: String(cuerpo.idioma || 'es').slice(0, 5),
+        sessionToken: sesion
+      };
+
+      const cLat = Number(cuerpo.centroLat), cLng = Number(cuerpo.centroLng);
+      if (isFinite(cLat) && isFinite(cLng) && Math.abs(cLat) <= 90 && Math.abs(cLng) <= 180) {
+        // radio en metros, entre 5 y 200 km
+        const radio = Math.min(200000, Math.max(5000, Number(cuerpo.radio) || 60000));
+        peticion.locationRestriction = {
+          circle: { center: { latitude: cLat, longitude: cLng }, radius: radio }
+        };
+      }
+
       const r = await fetch(GOOGLE + '/places:autocomplete', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-Goog-Api-Key': clave },
-        body: JSON.stringify({
-          input: texto,
-          includedRegionCodes: [String(cuerpo.pais || 'mx').slice(0, 2)],
-          languageCode: String(cuerpo.idioma || 'es').slice(0, 5),
-          sessionToken: sesion
-        })
+        body: JSON.stringify(peticion)
       });
 
       const d = await r.json();

@@ -428,6 +428,142 @@
   .opt .fit svg { width: 14px; height: 14px; }
   .opt .fit.no { color: var(--muted); }
 
+  /* ---------- apartar y abonar ---------- */
+  .pago { display: none; margin-top: 22px; }
+  .pago.on { display: block; }
+
+  .pago-card {
+    border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; background: #fff;
+  }
+  .pago-cab { background: var(--ink); color: #fff; padding: 18px 20px; }
+  .pago-cab .eyebrow { color: #fff; opacity: 0.62; }
+  .pago-cab h3 { font-size: 20px; margin-top: 8px; }
+  .pago-cab p { font-size: 13.5px; color: rgba(255, 255, 255, 0.72); margin-top: 6px; line-height: 1.55; }
+
+  .pago-montos { display: grid; grid-template-columns: 1fr; gap: 1px; background: var(--line); }
+  @media (min-width: 620px) { .pago-montos { grid-template-columns: repeat(3, 1fr); } }
+  .pago-montos div { background: #fff; padding: 15px 18px; }
+  .pago-montos span {
+    display: block; font-family: 'Archivo'; font-size: 10.5px; letter-spacing: 0.12em;
+    text-transform: uppercase; color: var(--muted);
+  }
+  .pago-montos b { display: block; font-family: 'Archivo'; font-size: 22px; font-weight: 700; margin-top: 4px; letter-spacing: -0.01em; }
+  .pago-montos .ahora b { color: var(--red); }
+
+  .pago-cuerpo { padding: 18px 20px; }
+  .pago-cuerpo > p { font-size: 13.5px; color: var(--muted); line-height: 1.6; }
+  .pago-canal { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+  .pago-canal label {
+    display: inline-flex; align-items: center; gap: 8px; cursor: pointer;
+    border: 1px solid var(--line); border-radius: 999px; padding: 8px 15px;
+    font-family: 'Archivo'; font-size: 13.5px; transition: all 180ms var(--ease);
+  }
+  .pago-canal label:hover { border-color: var(--ink); }
+  .pago-canal label.on { border-color: var(--red); background: rgba(219, 13, 13, 0.05); }
+  .pago-acciones { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 18px; align-items: center; }
+  .pago-error { display: none; font-size: 13px; color: var(--red); margin-top: 12px; }
+  .pago-error.on { display: block; }
+  .pago-seguro { font-size: 12px; color: var(--muted); margin-top: 14px; display: flex; align-items: center; gap: 7px; }
+  .pago-seguro svg { width: 14px; height: 14px; flex-shrink: 0; }
+
+  .pago-hecho {
+    display: none; border: 1px solid #bfe0cb; background: #f0f8f3; border-radius: var(--radius);
+    padding: 18px 20px; margin-top: 22px;
+  }
+  .pago-hecho.on { display: block; }
+  .pago-hecho h3 { font-size: 19px; color: #1f7a4d; }
+  .pago-hecho p { font-size: 13.5px; color: var(--ink); margin-top: 8px; line-height: 1.6; }
+  .pago-hecho .folio {
+    display: inline-block; font-family: 'Archivo'; font-size: 17px; font-weight: 700; letter-spacing: 0.04em;
+    background: #fff; border: 1px solid #bfe0cb; border-radius: var(--radius-sm); padding: 7px 13px; margin-top: 12px;
+  }
+  /* ---------- calendario de rango ---------- */
+  .field-fechas { position: relative; }
+
+  .rango-btn {
+    width: 100%; display: flex; align-items: center; gap: 10px;
+    background: #fff; border: 1px solid var(--line); border-radius: var(--radius-sm);
+    padding: 9px 12px; cursor: pointer; text-align: left; font: inherit; color: var(--ink);
+    transition: border-color 180ms var(--ease), box-shadow 180ms var(--ease);
+  }
+  .rango-btn:hover { border-color: #c9c9c5; }
+  .rango-btn.abierto { border-color: var(--red); box-shadow: 0 0 0 3px rgba(219, 13, 13, 0.10); }
+  .rango-lado { flex: 1; min-width: 0; }
+  .rango-lado small {
+    display: block; font-family: 'Archivo'; font-size: 10px; letter-spacing: 0.12em;
+    text-transform: uppercase; color: var(--muted);
+  }
+  .rango-lado b {
+    display: block; font-size: 14.5px; font-weight: 500; margin-top: 2px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .rango-lado.vacio b { color: var(--muted); font-weight: 400; }
+  .rango-flecha { width: 15px; height: 15px; color: var(--red); flex-shrink: 0; }
+  .rango-flecha svg { width: 15px; height: 15px; }
+  .rango-btn.sencillo .rango-flecha, .rango-btn.sencillo .rango-lado + .rango-lado { display: none; }
+
+  .cal {
+    display: none; position: absolute; z-index: 60; top: calc(100% + 6px); left: 0;
+    background: #fff; border: 1px solid var(--line); border-radius: var(--radius);
+    box-shadow: var(--shadow-lg); padding: 16px; width: max-content; max-width: 92vw;
+  }
+  .cal.on { display: block; }
+  @media (max-width: 680px) { .cal { left: 50%; transform: translateX(-50%); } }
+
+  .cal-cab { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
+  .cal-nav {
+    width: 30px; height: 30px; border: 1px solid var(--line); background: #fff; border-radius: 50%;
+    cursor: pointer; color: var(--ink); display: grid; place-items: center; font-size: 16px; line-height: 1;
+  }
+  .cal-nav:hover { border-color: var(--ink); }
+  .cal-nav[disabled] { opacity: 0.35; cursor: default; }
+  .cal-nav[disabled]:hover { border-color: var(--line); }
+  .cal-titulos { display: flex; gap: 28px; flex: 1; justify-content: space-around; }
+  .cal-titulos span { font-family: 'Archivo'; font-size: 14px; font-weight: 600; text-transform: capitalize; }
+
+  .cal-meses { display: flex; gap: 28px; }
+  @media (max-width: 680px) { .cal-meses > :nth-child(2), .cal-titulos > :nth-child(2) { display: none; } }
+
+  .cal-mes { display: grid; grid-template-columns: repeat(7, 36px); gap: 0 0; }
+  .cal-mes .dow {
+    font-family: 'Archivo'; font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase;
+    color: var(--muted); text-align: center; padding-bottom: 6px;
+  }
+  .cal-dia {
+    height: 34px; border: none; background: transparent; cursor: pointer;
+    font-family: 'Archivo'; font-size: 13.5px; color: var(--ink); position: relative;
+  }
+  .cal-dia span {
+    position: relative; z-index: 2; display: grid; place-items: center;
+    width: 32px; height: 32px; margin: 0 auto; border-radius: 50%;
+  }
+  .cal-dia:not(.apagado):hover span { background: var(--soft); }
+  .cal-dia.vacio, .cal-dia.apagado { cursor: default; color: #c8c8c4; }
+  .cal-dia.apagado span { text-decoration: line-through; }
+
+  /* la franja que une las dos fechas */
+  .cal-dia.dentro::before, .cal-dia.ini::before, .cal-dia.fin::before {
+    content: ''; position: absolute; z-index: 1; top: 1px; bottom: 1px; left: 0; right: 0;
+    background: rgba(219, 13, 13, 0.10);
+  }
+  .cal-dia.ini::before { left: 50%; border-radius: 999px 0 0 999px; }
+  .cal-dia.fin::before { right: 50%; border-radius: 0 999px 999px 0; }
+  .cal-dia.ini.fin::before { display: none; }
+  .cal-dia.ini span, .cal-dia.fin span { background: var(--red); color: #fff; font-weight: 600; }
+  .cal-dia.ini:hover span, .cal-dia.fin:hover span { background: var(--red); }
+  .cal-dia.hoy:not(.ini):not(.fin) span { box-shadow: inset 0 0 0 1px var(--line); }
+
+  .cal-horas { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--line); }
+  .cal-horas label {
+    display: grid; gap: 4px; font-family: 'Archivo'; font-size: 10px; letter-spacing: 0.12em;
+    text-transform: uppercase; color: var(--muted);
+  }
+  .cal-horas select {
+    font: inherit; font-size: 14px; color: var(--ink); background: #fff;
+    border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 7px 9px; cursor: pointer;
+  }
+  .cal-pie { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-top: 14px; flex-wrap: wrap; }
+  .cal-pie span { font-size: 13px; color: var(--muted); }
   /* ---------- tarifa calculada ---------- */
   .precio {
     border: 1px solid var(--line); border-radius: var(--radius); background: var(--soft);
@@ -455,6 +591,12 @@
     font-size: 13px; line-height: 1.55; color: #6b5518; background: #fdf6e3;
     border: 1px solid #f0e2b6; border-radius: var(--radius-sm); padding: 11px 13px; margin-top: 14px;
   }
+  .precio-afinar {
+    font-size: 13px; line-height: 1.55; color: var(--ink-2, var(--ink));
+    background: #eef4fb; border: 1px solid #d3e3f2; border-left: 3px solid #4a7fb5;
+    border-radius: var(--radius-sm); padding: 11px 13px; margin-top: 14px;
+  }
+  .precio-afinar b { font-weight: 600; }
   .precio-cargando { display: flex; align-items: center; gap: 10px; font-size: 14px; color: var(--muted); }
   .precio-cargando i {
     display: block; width: 15px; height: 15px; border: 2px solid var(--line);
@@ -967,6 +1109,16 @@ window.IMGS = {
 
   <!-- ============ COTIZAR ============ -->
   <section class="view" id="v-cotizar">
+    <!-- Se enciende al volver de Stripe. Va aquí arriba y no dentro de un paso,
+         porque al regresar la página se recarga y el flujo empieza de cero. -->
+    <div class="wrap" style="padding-top: 22px">
+      <div class="pago-hecho" id="pago-hecho">
+        <h3>Listo, tu viaje está apartado</h3>
+        <p id="pago-hecho-texto">Te mandamos el folio y las instrucciones para abonar el resto.</p>
+        <div class="folio" id="pago-folio">—</div>
+      </div>
+    </div>
+
     <!-- ===== PASO 1 · VIAJE ===== -->
     <div id="paso-viaje">
       <div class="search-shell">
@@ -1002,17 +1154,40 @@ window.IMGS = {
               <span class="msg">Indica el destino.</span>
             </div>
 
-            <div class="field" id="fw-salida">
-              <label for="s-salida">Salida</label>
-              <input id="s-salida" type="datetime-local" />
-              <span class="msg">Elige fecha y hora.</span>
+            <div class="field field-fechas" id="fw-fechas">
+              <label>Fechas del viaje</label>
+              <button type="button" class="rango-btn" id="rango-btn" aria-haspopup="dialog" aria-expanded="false">
+                <span class="rango-lado vacio" id="rango-lado-ida">
+                  <small>Salida</small><b id="rango-ida">Elige la fecha</b>
+                </span>
+                <span class="rango-flecha"><svg aria-hidden="true"><use href="#i-arrow" /></svg></span>
+                <span class="rango-lado vacio" id="rango-lado-vuelta">
+                  <small>Regreso</small><b id="rango-vuelta">—</b>
+                </span>
+              </button>
+              <span class="msg" id="rango-msg">Elige las fechas del viaje.</span>
+
+              <div class="cal" id="cal" role="dialog" aria-label="Calendario del viaje">
+                <div class="cal-cab">
+                  <button type="button" class="cal-nav" id="cal-prev" aria-label="Mes anterior">&lsaquo;</button>
+                  <div class="cal-titulos" id="cal-titulos"></div>
+                  <button type="button" class="cal-nav" id="cal-next" aria-label="Mes siguiente">&rsaquo;</button>
+                </div>
+                <div class="cal-meses" id="cal-meses"></div>
+                <div class="cal-horas">
+                  <label>Hora de salida<select id="cal-hora-ida"></select></label>
+                  <label id="cal-hora-vuelta-caja">Hora de regreso<select id="cal-hora-vuelta"></select></label>
+                </div>
+                <div class="cal-pie">
+                  <span id="cal-resumen">Toca el día de salida y luego el de regreso.</span>
+                  <button type="button" class="btn btn-red btn-sm" id="cal-ok">Listo</button>
+                </div>
+              </div>
             </div>
 
-            <div class="field" id="fw-regreso">
-              <label for="s-regreso">Regreso</label>
-              <input id="s-regreso" type="datetime-local" />
-              <span class="msg">El regreso no puede ser antes de la salida.</span>
-            </div>
+            <!-- los guarda el calendario; se quedan para que el resto del flujo los lea igual -->
+            <input id="s-salida" type="hidden" />
+            <input id="s-regreso" type="hidden" />
 
             <div class="field" id="fw-unidad">
               <label for="s-unidad">Tipo de unidad</label>
@@ -1166,7 +1341,7 @@ window.IMGS = {
 
         <div class="sec-head" style="margin-top: 34px">
           <span class="eyebrow">Último paso</span>
-          <h2>Revisa y envía tu solicitud</h2>
+          <h2 id="listo-titulo">Revisa y envía tu solicitud</h2>
           <p class="lede">Mándanoslo por WhatsApp o correo y te respondemos el mismo día hábil.</p>
         </div>
 
@@ -1188,6 +1363,45 @@ window.IMGS = {
             <button class="btn btn-line" type="button" id="volver-datos">Editar datos</button>
           </div>
           <p class="copied" id="copied">Resumen copiado al portapapeles.</p>
+          <!-- ===== apartar con el anticipo ===== -->
+          <div class="pago" id="pago">
+            <div class="pago-card">
+              <div class="pago-cab">
+                <span class="eyebrow">Aparta tu viaje</span>
+                <h3 id="pago-titulo">Aparta con el 20%</h3>
+                <p>La unidad queda reservada a tu nombre. El resto lo abonas cuando puedas, en los pagos que quieras, hasta antes de la salida.</p>
+              </div>
+
+              <div class="pago-montos">
+                <div><span>Total del viaje</span><b id="pago-total">—</b></div>
+                <div class="ahora"><span>Pagas ahora</span><b id="pago-anticipo">—</b></div>
+                <div><span>Queda por abonar</span><b id="pago-saldo">—</b></div>
+              </div>
+
+              <div class="pago-cuerpo">
+                <p>No necesitas crear cuenta. ¿A dónde te mandamos el folio y las instrucciones para seguir abonando?</p>
+                <div class="pago-canal" id="pago-canal">
+                  <label class="on"><input type="radio" name="canal" value="correo" checked /> A mi correo</label>
+                  <label><input type="radio" name="canal" value="whatsapp" /> A mi WhatsApp</label>
+                </div>
+
+                <div class="pago-acciones">
+                  <button class="btn btn-red" type="button" id="pago-ir">
+                    Pagar anticipo <svg class="arw" aria-hidden="true"><use href="#i-arrow" /></svg>
+                  </button>
+                  <span style="font-size: 12.5px; color: var(--muted)">Tarjeta o efectivo en OXXO</span>
+                </div>
+
+                <p class="pago-error" id="pago-error"></p>
+                <p class="pago-seguro">
+                  <svg aria-hidden="true"><use href="#i-shield" /></svg>
+                  <span>El cobro lo procesa Stripe. Eurotravel no guarda los datos de tu tarjeta.</span>
+                </p>
+              </div>
+            </div>
+          </div>
+
+          </div>
         </div>
       </div>
     </div>
@@ -1385,6 +1599,7 @@ window.IMGS = {
 
 <script src="config.js"></script>
 <script src="unidades.js"></script>
+<script src="lugares.js"></script>
 <script>
   (function () {
     'use strict';
@@ -1600,6 +1815,7 @@ window.IMGS = {
     var locPlaceId = null;
     var locDireccion = "";
     var locCoords = null;
+    var locAprox = false;   // true = es el centro del destino, no una direccion exacta
 
     var ACC = { 'á': 'a', 'é': 'e', 'í': 'i', 'ó': 'o', 'ú': 'u', 'ü': 'u', 'ñ': 'n' };
 
@@ -1643,11 +1859,64 @@ window.IMGS = {
       });
     }
 
+    /* Punto en el mapa de cada destino del catálogo. Sirve para acotar la
+       búsqueda de dirección exacta y para que el cotizador mida desde ahí.
+       Si lugares.js no cargó, la tabla queda vacía y todo sigue funcionando. */
+    var PUNTOS = {};
+    (window.LUGARES || []).forEach(function (l) {
+      if (l && l.n) PUNTOS[l.n] = l;
+    });
+
+    /* Qué tan lejos del destino se aceptan direcciones. Generoso a propósito:
+       quien pide Puerto Vallarta puede querer Punta Mita o Sayulita. */
+    var RADIOS = {
+      'aeropuerto': 35000, 'terminal': 35000, 'recinto': 35000,
+      'zona arqueológica': 45000, 'zona industrial': 45000,
+      'pueblo mágico': 45000, 'santuario': 45000, 'lago': 45000,
+      'ciudad': 60000, 'playa': 70000, 'región': 110000
+    };
+    function radioDe(p) { return (p && RADIOS[p[2]]) || 60000; }
+
     function setPick(p) {
       locPick = p;
       byId('loc-q').value = p[0];
+
+      /* el destino del catálogo ya trae su punto: se adopta como ubicación
+         provisional y se afina si el visitante escribe la dirección exacta */
+      var punto = PUNTOS[p[0]];
+      if (punto && punto.lat != null) {
+        locPlaceId = punto.id || null;
+        locCoords = Number(punto.lat).toFixed(6) + ', ' + Number(punto.lng).toFixed(6);
+        locAprox = true;   // es el centro del destino; se afina si escriben la calle
+        byId('loc-coords').textContent = locCoords;
+        byId('loc-pin').classList.add('on');
+      }
+
       renderList('');
       byId('loc-calle').focus();
+    }
+
+    /* Los movimientos pasan en el destino, así que sus campos se acotan ahí. */
+    function cercoDestino() {
+      var l = VIAJE.destino;
+      if (!l || !l.place) return null;
+      var punto = PUNTOS[l.place[0]];
+      if (punto && punto.lat != null) {
+        return { lat: punto.lat, lng: punto.lng, radio: radioDe(l.place) };
+      }
+      if (l.coords) {
+        var c = String(l.coords).split(',');
+        var a = Number(c[0]), b = Number(c[1]);
+        if (isFinite(a) && isFinite(b)) return { lat: a, lng: b, radio: 60000 };
+      }
+      return null;
+    }
+
+    /* centro y radio con los que se acota el campo de dirección del selector */
+    function cercoActual() {
+      var punto = locPick ? PUNTOS[locPick[0]] : null;
+      if (!punto || punto.lat == null) return null;
+      return { lat: punto.lat, lng: punto.lng, radio: radioDe(locPick) };
     }
 
     function openLoc(which) {
@@ -1657,6 +1926,7 @@ window.IMGS = {
       locCoords = saved ? saved.coords : null;
       locPlaceId = saved ? saved.placeId : null;
       locDireccion = saved ? (saved.direccionGoogle || '') : '';
+      locAprox = saved ? !!saved.aprox : false;
       // cierra cualquier lista de sugerencias que hubiera quedado abierta
       document.querySelectorAll('.loc-sug.on').forEach(function (c) { c.classList.remove('on'); });
 
@@ -1722,7 +1992,8 @@ window.IMGS = {
         ref: byId('loc-ref').value.trim(),
         coords: locCoords,
         placeId: locPlaceId,
-        direccionGoogle: locDireccion
+        direccionGoogle: locDireccion,
+        aprox: locAprox
       };
 
       paintLoc(locTarget);
@@ -1790,7 +2061,7 @@ window.IMGS = {
 
     /* Engancha sugerencias de direcciones a un input.
        alElegir(detalle) recibe { id, calle, colonia, cp, direccion, lat, lng } */
-    function conectaAutocompletado(input, alElegir, cajaExistente) {
+    function conectaAutocompletado(input, alElegir, cajaExistente, cerca) {
       if (!input || input.dataset.autocompletado === '1') return;
       input.dataset.autocompletado = '1';
       input.setAttribute('autocomplete', 'off');
@@ -1829,9 +2100,19 @@ window.IMGS = {
       function busca(texto) {
         if (!gDisponible || texto.trim().length < 3) { cierra(); return; }
         if (!sesion) sesion = nuevoToken();
-        pideAlProxy({
+
+        var peticion = {
           accion: 'autocomplete', input: texto, pais: GPAIS, idioma: GIDIOMA, sessionToken: sesion
-        }).then(function (d) {
+        };
+        /* sin cerco, buscar "Hotel Plaza" trae coincidencias de todo el país */
+        var cerco = cerca ? cerca() : null;
+        if (cerco) {
+          peticion.centroLat = cerco.lat;
+          peticion.centroLng = cerco.lng;
+          peticion.radio = cerco.radio;
+        }
+
+        pideAlProxy(peticion).then(function (d) {
           if (!d) { cierra(); return; }
           pinta(d.suggestions || []);
         }, function () { cierra(); });
@@ -1896,7 +2177,8 @@ window.IMGS = {
       }
       locPlaceId = d.id || null;
       locDireccion = d.direccion || '';
-    }, byId('loc-sug'));
+      locAprox = false;   // ya es una direccion exacta
+    }, byId('loc-sug'), cercoActual);
 
     /* ================= buscador ================= */
 
@@ -1968,6 +2250,283 @@ window.IMGS = {
     }
 
 
+
+
+    /* ================= apartar y abonar =================
+       El monto NO se manda desde aquí: /api/pagar vuelve a medir la ruta y a
+       calcular. Esta pantalla solo enseña las cifras y abre el cobro. */
+    (function () {
+      var caja = byId('pago');
+      if (!caja) return;
+
+      var canal = 'correo';
+      document.querySelectorAll('#pago-canal label').forEach(function (l) {
+        l.addEventListener('click', function () {
+          document.querySelectorAll('#pago-canal label').forEach(function (x) { x.classList.remove('on'); });
+          l.classList.add('on');
+          canal = l.querySelector('input').value;
+        });
+      });
+
+      /* la llama armaResumen cada vez que se pinta la última pantalla */
+      window.pintaPago = function () {
+        var c = VIAJE.cotizacion;
+        if (!c || !c.anticipo) {
+          caja.classList.remove('on');
+          return;
+        }
+        byId('pago-total').textContent = pesos.format(c.total);
+        byId('pago-anticipo').textContent = pesos.format(c.anticipo);
+        byId('pago-saldo').textContent = pesos.format(c.saldo);
+        byId('pago-titulo').textContent = 'Aparta con el ' + c.porcentajeAnticipo + '%';
+        byId('listo-titulo').textContent = 'Revisa y aparta tu viaje';
+        caja.classList.add('on');
+      };
+
+      byId('pago-ir').addEventListener('click', function () {
+        var c = VIAJE.cotizacion;
+        if (!c) return;
+
+        var boton = byId('pago-ir'), error = byId('pago-error');
+        error.classList.remove('on');
+        boton.disabled = true;
+        boton.textContent = 'Abriendo el pago…';
+
+        function falla(texto) {
+          error.textContent = texto;
+          error.classList.add('on');
+          boton.disabled = false;
+          boton.innerHTML = 'Pagar anticipo <svg class="arw" aria-hidden="true"><use href="#i-arrow"/></svg>';
+        }
+
+        fetch('/api/pagar', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            origen: puntoDe(VIAJE.origen),
+            destino: puntoDe(VIAJE.destino),
+            salida: VIAJE.salida,
+            regreso: VIAJE.regreso,
+            redondo: VIAJE.redondo,
+            nombre: (byId('f-nombre').value || '').trim(),
+            correo: (byId('f-mail').value || '').trim(),
+            telefono: (byId('f-tel').value || '').trim(),
+            canal: canal,
+            unidad: VIAJE.unidad ? VIAJE.unidad.name : '',
+            rutaTexto: (VIAJE.origen ? VIAJE.origen.place[0] : '') + ' → ' + (VIAJE.destino ? VIAJE.destino.place[0] : '')
+          })
+        }).then(function (r) {
+          return r.json().then(function (d) { return { ok: r.ok, d: d }; },
+                               function () { return { ok: false, d: {} }; });
+        }).then(function (res) {
+          if (!res.ok || !res.d.url) {
+            falla((res.d && res.d.aviso) || 'No pudimos abrir el pago en este momento.') ;
+            return;
+          }
+          location.href = res.d.url;   // se va a Stripe
+        }, function () {
+          falla('No pudimos abrir el pago en este momento.');
+        });
+      });
+
+      /* Al volver de Stripe. Se hace al final del arranque: si se hiciera aquí
+         mismo, lo que inicializa las pestañas después nos regresaría al paso 1. */
+      var vuelta = new URLSearchParams(location.search);
+      if (vuelta.get('pago') === 'listo') {
+        setTimeout(function () {
+          byId('pago-folio').textContent = vuelta.get('folio') || '—';
+          byId('pago-hecho').classList.add('on');
+          go('cotizar');
+          byId('pago-hecho').scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'center' });
+        }, 0);
+      }
+    })();
+    /* ================= calendario de rango =================
+       Reemplaza los dos datetime-local del navegador. Escribe en s-salida y
+       s-regreso, que siguen existiendo ocultos: el resto del flujo los lee igual. */
+    (function () {
+      var MESES = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+      var MESC  = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+      var DOW   = ['L','M','M','J','V','S','D'];
+
+      var btn = byId('rango-btn'), panel = byId('cal');
+      if (!btn || !panel) return;
+
+      var hoy = new Date(); hoy.setHours(0, 0, 0, 0);
+      var mesIzq = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
+      var ini = null, fin = null;
+
+      function esRedondo() {
+        var r = document.querySelector('input[name="trip"]:checked');
+        return !r || r.value === 'redondo';
+      }
+      function mismoDia(a, b) { return a && b && a.getTime() === b.getTime(); }
+      function iso(d) {
+        return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+      }
+      function legible(d) { return d.getDate() + ' ' + MESC[d.getMonth()] + ' ' + d.getFullYear(); }
+
+      /* horas cada media hora */
+      function llenaHoras(sel, porOmision) {
+        var h = '';
+        for (var i = 0; i < 48; i++) {
+          var t = String(Math.floor(i / 2)).padStart(2, '0') + ':' + (i % 2 ? '30' : '00');
+          h += '<option value="' + t + '"' + (t === porOmision ? ' selected' : '') + '>' + t + '</option>';
+        }
+        sel.innerHTML = h;
+      }
+      llenaHoras(byId('cal-hora-ida'), '08:00');
+      llenaHoras(byId('cal-hora-vuelta'), '18:00');
+
+      /* ---- pintar ---- */
+      function pintaMes(base) {
+        var cont = document.createElement('div');
+        cont.className = 'cal-mes';
+
+        DOW.forEach(function (d) {
+          var c = document.createElement('div');
+          c.className = 'dow'; c.textContent = d;
+          cont.appendChild(c);
+        });
+
+        var primero = new Date(base.getFullYear(), base.getMonth(), 1);
+        var hueco = (primero.getDay() + 6) % 7;   // lunes primero
+        var diasMes = new Date(base.getFullYear(), base.getMonth() + 1, 0).getDate();
+
+        for (var h = 0; h < hueco; h++) {
+          var v = document.createElement('div');
+          v.className = 'cal-dia vacio';
+          cont.appendChild(v);
+        }
+
+        for (var d = 1; d <= diasMes; d++) {
+          var fecha = new Date(base.getFullYear(), base.getMonth(), d);
+          var b = document.createElement('button');
+          b.type = 'button';
+          b.className = 'cal-dia';
+          b.innerHTML = '<span>' + d + '</span>';
+
+          if (fecha < hoy) {
+            b.className += ' apagado';
+            b.disabled = true;
+          } else {
+            if (mismoDia(fecha, hoy)) b.className += ' hoy';
+            if (mismoDia(fecha, ini)) b.className += ' ini';
+            if (mismoDia(fecha, fin)) b.className += ' fin';
+            if (ini && fin && fecha > ini && fecha < fin) b.className += ' dentro';
+            (function (f) {
+              b.addEventListener('click', function () { elige(f); });
+            })(fecha);
+          }
+          cont.appendChild(b);
+        }
+        return cont;
+      }
+
+      function pinta() {
+        var mesDer = new Date(mesIzq.getFullYear(), mesIzq.getMonth() + 1, 1);
+
+        byId('cal-titulos').innerHTML =
+          '<span>' + MESES[mesIzq.getMonth()] + ' ' + mesIzq.getFullYear() + '</span>' +
+          '<span>' + MESES[mesDer.getMonth()] + ' ' + mesDer.getFullYear() + '</span>';
+
+        var m = byId('cal-meses');
+        m.innerHTML = '';
+        m.appendChild(pintaMes(mesIzq));
+        m.appendChild(pintaMes(mesDer));
+
+        var tope = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
+        byId('cal-prev').disabled = mesIzq <= tope;
+
+        var redondo = esRedondo();
+        byId('cal-hora-vuelta-caja').style.display = redondo ? '' : 'none';
+        btn.classList.toggle('sencillo', !redondo);
+
+        var r = byId('cal-resumen');
+        if (!ini) r.textContent = redondo ? 'Toca el día de salida y luego el de regreso.' : 'Toca el día de salida.';
+        else if (redondo && !fin) r.textContent = 'Ahora toca el día de regreso.';
+        else if (redondo && fin) {
+          var noches = Math.round((fin - ini) / 86400000);
+          r.textContent = (noches + 1) + (noches === 0 ? ' día de servicio' : ' días de servicio');
+        } else {
+          r.textContent = 'Viaje sencillo, solo ida.';
+        }
+      }
+
+      /* ---- elegir ---- */
+      function elige(fecha) {
+        if (!esRedondo()) { ini = fecha; fin = null; }
+        else if (!ini || fin) { ini = fecha; fin = null; }
+        else if (fecha < ini) { ini = fecha; }
+        else { fin = fecha; }
+        guarda();
+        pinta();
+      }
+
+      /* ---- guardar en los campos que lee el resto de la página ---- */
+      function guarda() {
+        var hIda = byId('cal-hora-ida').value || '08:00';
+        var hVue = byId('cal-hora-vuelta').value || '18:00';
+
+        var sal = byId('s-salida'), reg = byId('s-regreso');
+        sal.value = ini ? iso(ini) + 'T' + hIda : '';
+        reg.value = (esRedondo() && fin) ? iso(fin) + 'T' + hVue : '';
+        sal.dispatchEvent(new Event('change', { bubbles: true }));
+        reg.dispatchEvent(new Event('change', { bubbles: true }));
+
+        var ladoIda = byId('rango-lado-ida'), ladoVue = byId('rango-lado-vuelta');
+        byId('rango-ida').textContent = ini ? legible(ini) + ', ' + hIda : 'Elige la fecha';
+        ladoIda.classList.toggle('vacio', !ini);
+        byId('rango-vuelta').textContent = fin ? legible(fin) + ', ' + hVue : '—';
+        ladoVue.classList.toggle('vacio', !fin);
+
+        if (ini) byId('fw-fechas').classList.remove('err');
+      }
+
+      /* ---- abrir y cerrar ---- */
+      function abre() {
+        panel.classList.add('on');
+        btn.classList.add('abierto');
+        btn.setAttribute('aria-expanded', 'true');
+        if (ini) mesIzq = new Date(ini.getFullYear(), ini.getMonth(), 1);
+        pinta();
+      }
+      function cierra() {
+        panel.classList.remove('on');
+        btn.classList.remove('abierto');
+        btn.setAttribute('aria-expanded', 'false');
+      }
+
+      btn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        panel.classList.contains('on') ? cierra() : abre();
+      });
+      panel.addEventListener('click', function (e) { e.stopPropagation(); });
+      document.addEventListener('click', cierra);
+      document.addEventListener('keydown', function (e) { if (e.key === 'Escape') cierra(); });
+
+      byId('cal-ok').addEventListener('click', cierra);
+      byId('cal-prev').addEventListener('click', function () {
+        mesIzq = new Date(mesIzq.getFullYear(), mesIzq.getMonth() - 1, 1); pinta();
+      });
+      byId('cal-next').addEventListener('click', function () {
+        mesIzq = new Date(mesIzq.getFullYear(), mesIzq.getMonth() + 1, 1); pinta();
+      });
+      byId('cal-hora-ida').addEventListener('change', function () { guarda(); });
+      byId('cal-hora-vuelta').addEventListener('change', function () { guarda(); });
+
+      /* si cambia a solo ida, el regreso se cae */
+      document.querySelectorAll('input[name="trip"]').forEach(function (r) {
+        r.addEventListener('change', function () {
+          if (!esRedondo()) fin = null;
+          guarda();
+          pinta();
+        });
+      });
+
+      guarda();
+      pinta();
+    })();
     /* ================= tarifa calculada =================
        El precio lo arma /api/cotizar en el servidor. Aquí no vive ninguna tarifa:
        si mañana cambia el precio por kilómetro, se cambia allá y ya. */
@@ -2006,17 +2565,39 @@ window.IMGS = {
 
     function dias(n) { return n + (n === 1 ? ' día' : ' días'); }
 
+    /* ¿el punto que eligió es exacto, o nomás el nombre de la ciudad? */
+    function puntoExacto(l) { return !!(l && (l.placeId || l.coords) && !l.aprox); }
+
     function pintaPrecioListo(c) {
       var celdas = [['Ida', c.km.ida + ' km']];
       if (c.redondo) celdas.push(['Vuelta', c.km.vuelta + ' km']);
       celdas.push(['Recorrido total', c.km.total + ' km']);
       celdas.push(['Tarifa', '$' + c.tarifaKm + ' / km']);
 
-      var aviso = '';
+      var notas = [];
+
       if (c.aplicoMinimo) {
-        aviso = '<div class="precio-aviso">Por kilómetros serían ' + pesos.format(c.porKilometro) +
+        notas.push('<div class="precio-aviso">Por kilómetros serían ' + pesos.format(c.porKilometro) +
           ', pero aplica el mínimo de ' + pesos.format(c.minimoPorDia) + ' por día de servicio: ' +
-          dias(c.dias) + ' = ' + pesos.format(c.minimo) + '.</div>';
+          dias(c.dias) + ' = ' + pesos.format(c.minimo) + '.</div>');
+      }
+
+      /* el redondeo siempre va a favor del cliente, así que se enseña */
+      if (c.sinRedondear && c.sinRedondear > c.total) {
+        notas.push('<p class="precio-nota">El cálculo da ' + pesos.format(c.sinRedondear) +
+          ' y se redondea a la baja: se cobra ' + pesos.format(c.total) + '.</p>');
+      }
+
+      /* si alguna punta es solo el nombre de la ciudad, la cifra puede moverse */
+      var faltaOrigen = !puntoExacto(VIAJE.origen);
+      var faltaDestino = !puntoExacto(VIAJE.destino);
+      if (faltaOrigen || faltaDestino) {
+        var cual = (faltaOrigen && faltaDestino) ? 'del origen y del destino'
+                 : (faltaOrigen ? 'del origen' : 'del destino');
+        notas.push('<div class="precio-afinar">' +
+          '<b>Esta cifra puede afinarse.</b> Tomamos el centro ' + cual +
+          ' para medir la ruta. Si marcas la dirección exacta —hotel, salón, domicilio— ' +
+          'los kilómetros salen de ahí y el precio queda más apegado a tu viaje real.</div>');
       }
 
       pintaPrecio(
@@ -2026,7 +2607,7 @@ window.IMGS = {
         '<div class="precio-desglose">' +
           celdas.map(function (r) { return '<div><span>' + r[0] + '</span><b>' + r[1] + '</b></div>'; }).join('') +
         '</div>' +
-        aviso +
+        notas.join('') +
         '<p class="precio-nota">Incluye combustible, casetas, viáticos del operador y seguro de viajero. ' +
         'Los kilómetros los calcula Google por carretera, así que el recorrido real de la unidad puede variar un poco. ' +
         'La tarifa queda cerrada al confirmar el servicio.</p>'
@@ -2084,14 +2665,22 @@ window.IMGS = {
       var ok = true;
       if (!LOC.origen) { byId('fw-origen').classList.add('err'); ok = false; }
       if (!LOC.destino) { byId('fw-destino').classList.add('err'); ok = false; }
-      if (!byId('s-salida').value) { byId('fw-salida').classList.add('err'); ok = false; }
-      else byId('fw-salida').classList.remove('err');
+      var faltaFecha = !byId('s-salida').value;
+      if (faltaFecha) {
+        byId('rango-msg').textContent = 'Elige las fechas del viaje.';
+        byId('fw-fechas').classList.add('err');
+        ok = false;
+      } else byId('fw-fechas').classList.remove('err');
       if (!tipoUnidad) { byId('fw-unidad').classList.add('err'); ok = false; }
 
-      /* el regreso no puede ir antes de la salida: de eso dependen los días que se cobran */
+      /* el calendario ya no deja invertirlas, pero se revisa por si acaso:
+         de esas fechas dependen los días que se cobran */
       var vSal = byId('s-salida').value, vReg = byId('s-regreso').value;
-      if (vReg && vSal && vReg < vSal) { byId('fw-regreso').classList.add('err'); ok = false; }
-      else byId('fw-regreso').classList.remove('err');
+      if (vReg && vSal && vReg < vSal) {
+        byId('rango-msg').textContent = 'El regreso no puede ser antes de la salida.';
+        byId('fw-fechas').classList.add('err');
+        ok = false;
+      }
 
       if (!ok) return;
 
@@ -2313,7 +2902,7 @@ window.IMGS = {
           var inp = fPart.querySelector('input');
           inp.value = d.direccion || d.calle || inp.value;
           dia.partida = { texto: inp.value, placeId: d.id, lat: d.lat, lng: d.lng };
-        });
+        }, null, cercoDestino);
 
         // Puntos a visitar, uno o varios
         var visitas = document.createElement('div');
@@ -2346,7 +2935,7 @@ window.IMGS = {
               v.placeId = d.id;
               v.lat = d.lat;
               v.lng = d.lng;
-            });
+            }, null, cercoDestino);
           });
 
           var mas = document.createElement('button');
@@ -2544,6 +3133,7 @@ window.IMGS = {
       if (!validaMovimientos()) return;
       var filas = armaResumen();
 
+      if (window.pintaPago) window.pintaPago();
       byId('sum-list').innerHTML = filas.map(function (r) {
         return '<div class="row"><dt>' + r[0] + '</dt><dd>' + esc(r[1]).replace(/\n/g, ' · ') + '</dd></div>';
       }).join('');
@@ -2590,11 +3180,8 @@ window.IMGS = {
 
     /* ================= varios ================= */
     byId('year').textContent = new Date().getFullYear();
-    // datetime-local usa el formato AAAA-MM-DDTHH:mm, en hora local (no UTC)
-    var ahora = new Date();
-    var minLocal = new Date(ahora.getTime() - ahora.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
-    ['s-salida', 's-regreso'].forEach(function (id) { byId(id).min = minLocal; });
-    byId('s-salida').addEventListener('change', function () { byId('s-regreso').min = this.value || minLocal; });
+    /* Las fechas las gobierna el calendario de rango, que ya no deja elegir
+       días pasados ni invertir salida y regreso. */
   })();
 </script>
 </body>

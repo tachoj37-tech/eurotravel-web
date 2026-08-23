@@ -66,10 +66,21 @@ module.exports = async function handler(req, res) {
 
   const places = process.env.GOOGLE_PLACES_KEY || '';
   const routes = process.env.GOOGLE_ROUTES_KEY || '';
+  const stripe = process.env.STRIPE_SECRET_KEY || '';
 
   const salida = {
     GOOGLE_PLACES_KEY: { configurada: !!places, largo: places.length },
-    GOOGLE_ROUTES_KEY: { configurada: !!routes, largo: routes.length }
+    GOOGLE_ROUTES_KEY: { configurada: !!routes, largo: routes.length },
+    STRIPE_SECRET_KEY: {
+      configurada: !!stripe,
+      largo: stripe.length,
+      // saber si es de prueba o de verdad importa: con una de produccion,
+      // cualquiera que entre al sitio puede cobrarse dinero real
+      modo: !stripe ? 'sin clave'
+          : stripe.indexOf('sk_test_') === 0 ? 'PRUEBA'
+          : stripe.indexOf('sk_live_') === 0 ? 'PRODUCCION — cobra dinero real'
+          : 'no reconocido'
+    }
   };
 
   if (places) salida.GOOGLE_PLACES_KEY.prueba = await pruebaPlaces(places);

@@ -1,0 +1,96 @@
+/* ============================================================
+   Catálogo de destinos con su punto en el mapa
+   ------------------------------------------------------------
+   Se resolvió UNA VEZ contra Google y se guardó aquí. Sirve para dos cosas:
+
+     · el cotizador mide desde un punto real en vez de geocodificar un nombre
+     · al buscar la dirección exacta, las sugerencias se acotan a un radio
+       alrededor del destino elegido, en vez de traer resultados de todo el país
+
+   Si se agrega un destino a mano, basta con el nombre: sin coordenadas sigue
+   funcionando, nomás pierde esas dos ventajas.
+
+   Para regenerarlo: scratchpad/resuelve-lugares.js
+   ============================================================ */
+
+window.LUGARES = [
+  { n:"Guadalajara", e:"Jalisco", t:"ciudad", id:"ChIJm9MvtYyxKIQRUFeGvwKTPdY", lat:20.675171, lng:-103.347338 },
+  { n:"Zapopan", e:"Jalisco", t:"ciudad", id:"ChIJE0xwqWGuKIQRrALQftSl2K8", lat:20.671956, lng:-103.416501 },
+  { n:"San Pedro Tlaquepaque", e:"Jalisco", t:"ciudad", id:"ChIJA0pBpoezKIQREKq-cByLC14", lat:20.602519, lng:-103.336158 },
+  { n:"Tonalá", e:"Jalisco", t:"ciudad", id:"ChIJW7Bu_fi0KIQRqgroLfZ5CZ0", lat:20.623741, lng:-103.241372 },
+  { n:"Tlajomulco de Zúñiga", e:"Jalisco", t:"ciudad", id:"ChIJk0R9BvdTL4QRL95OIvTG3_k", lat:20.473686, lng:-103.447931 },
+  { n:"El Salto", e:"Jalisco", t:"zona industrial", id:"ChIJt9NHh1hKL4QRFqzO2AILfbI", lat:20.517827, lng:-103.182686 },
+  { n:"Aeropuerto Internacional de Guadalajara (GDL)", e:"Jalisco", t:"aeropuerto", id:"ChIJaQAk1apNL4QRnW99Ljn8FEw", lat:20.525541, lng:-103.309643 },
+  { n:"Central de Autobuses Nueva de Guadalajara", e:"Jalisco", t:"terminal", id:"ChIJF3-CM3SzKIQR7CAMacBNShE", lat:20.620871, lng:-103.287199 },
+  { n:"Expo Guadalajara", e:"Jalisco", t:"recinto", id:"ChIJLblh99qtKIQRNj5PKqwEDi8", lat:20.652914, lng:-103.391764 },
+  { n:"Estadio Akron", e:"Jalisco", t:"recinto", id:"ChIJs46KiTepKIQRiGs17rYNrVI", lat:20.681776, lng:-103.462645 },
+  { n:"Auditorio Telmex", e:"Jalisco", t:"recinto", id:"ChIJ74hLr-qvKIQRTAVIzNvuFhg", lat:20.733319, lng:-103.381159 },
+  { n:"Puerto Vallarta", e:"Jalisco", t:"playa", id:"ChIJf8hjUGNFIYQRdFK_hZm_z3k", lat:20.656518, lng:-105.211358 },
+  { n:"Aeropuerto de Puerto Vallarta (PVR)", e:"Jalisco", t:"aeropuerto", id:"ChIJDTaj3tpFIYQRbOlfpDdYjwk", lat:20.680518, lng:-105.252376 },
+  { n:"Chapala", e:"Jalisco", t:"lago", id:"ChIJt0wfd7FAL4QRU3_YZxtywXM", lat:20.305158, lng:-103.184602 },
+  { n:"Ajijic", e:"Jalisco", t:"pueblo mágico", id:"ChIJtSinkExBL4QRY52kBXEK1rg", lat:20.299699, lng:-103.263707 },
+  { n:"Tequila", e:"Jalisco", t:"pueblo mágico", id:"ChIJb7KBK9oUJoQREk9oc47Nwjg", lat:20.881945, lng:-103.8325 },
+  { n:"Mazamitla", e:"Jalisco", t:"pueblo mágico", id:"ChIJ-7FrncIIL4QRBcASqjnW4LA", lat:19.917341, lng:-103.020731 },
+  { n:"Tapalpa", e:"Jalisco", t:"pueblo mágico", id:"ChIJpQyj5O-aJYQRan-DbqJ6RhU", lat:19.947671, lng:-103.760778 },
+  { n:"San Sebastián del Oeste", e:"Jalisco", t:"pueblo mágico", id:"ChIJ6_SunGS3JoQRX2hCj0vAFtk", lat:20.761331, lng:-104.852807 },
+  { n:"Lagos de Moreno", e:"Jalisco", t:"ciudad", id:"ChIJO14MpyTSK4QRUaU0txjmpxk", lat:21.363496, lng:-101.929102 },
+  { n:"San Juan de los Lagos", e:"Jalisco", t:"santuario", id:"ChIJnXKv3ptxKYQRGCyb02RTCvI", lat:21.247469, lng:-102.3317 },
+  { n:"Ciudad Guzmán", e:"Jalisco", t:"ciudad", id:"ChIJM_AHSjKBL4QRhIdfjn_3sJg", lat:19.705017, lng:-103.468518 },
+  { n:"Autlán de Navarro", e:"Jalisco", t:"ciudad", id:"ChIJTXMbPc5VJIQRH2IMFVFitDQ", lat:19.770774, lng:-104.366758 },
+  { n:"Barra de Navidad", e:"Jalisco", t:"playa", id:"ChIJNYTQV_W4JIQRJktLSdXObUY", lat:19.20811, lng:-104.682695 },
+  { n:"San Patricio Melaque", e:"Jalisco", t:"playa", id:"ChIJaxkIH-K4JIQRMelaF85n-rA", lat:19.22788, lng:-104.705329 },
+  { n:"Manzanillo", e:"Colima", t:"playa", id:"ChIJGT67FzTUJIQRSw1156rps90", lat:19.053629, lng:-104.317072 },
+  { n:"Colima", e:"Colima", t:"ciudad", id:"ChIJF6JVNFJFJYQR5lX1WvyXtLY", lat:19.245234, lng:-103.724087 },
+  { n:"Comala", e:"Colima", t:"pueblo mágico", id:"ChIJY4aVsZtEJYQRHaHemtVYDxc", lat:19.322684, lng:-103.758404 },
+  { n:"Mazatlán", e:"Sinaloa", t:"playa", id:"ChIJwTcYaEFTn4YRsnI88arEpGI", lat:23.249415, lng:-106.411142 },
+  { n:"Tepic", e:"Nayarit", t:"ciudad", id:"ChIJ2889idg1J4QReS0M9EVGeIM", lat:21.504165, lng:-104.894589 },
+  { n:"Sayulita", e:"Nayarit", t:"playa", id:"ChIJjek96mIWIYQRTOjR5sHAMxQ", lat:20.869086, lng:-105.441011 },
+  { n:"Nuevo Vallarta", e:"Nayarit", t:"playa", id:"ChIJx1CMEKNGIYQRPWRRqm8GtUw", lat:20.698621, lng:-105.29649 },
+  { n:"Punta Mita", e:"Nayarit", t:"playa", id:"ChIJz_pftj4TIYQRboc9rQk-DnE", lat:20.771036, lng:-105.530558 },
+  { n:"San Blas", e:"Nayarit", t:"playa", id:"ChIJo0obSje4IIQR9c24KtR0IX0", lat:21.541297, lng:-105.284723 },
+  { n:"Aguascalientes", e:"Aguascalientes", t:"ciudad", id:"ChIJ-9nkOhTsKYQRIFKcZ3hpAQQ", lat:21.885256, lng:-102.291568 },
+  { n:"León", e:"Guanajuato", t:"ciudad", id:"ChIJIefm1v--K4QRJ0OlYeyVbWA", lat:21.125008, lng:-101.68596 },
+  { n:"Guanajuato", e:"Guanajuato", t:"ciudad", id:"ChIJ6_EMi_VzK4QRdB5XZdGw9CU", lat:21.019015, lng:-101.257359 },
+  { n:"San Miguel de Allende", e:"Guanajuato", t:"pueblo mágico", id:"ChIJD7xxmK9RK4QRpLAHHQMBMWU", lat:20.914449, lng:-100.745235 },
+  { n:"Dolores Hidalgo", e:"Guanajuato", t:"pueblo mágico", id:"ChIJkdpFewM8K4QRQknO4_RDuTE", lat:21.151597, lng:-100.936718 },
+  { n:"Querétaro", e:"Querétaro", t:"ciudad", id:"ChIJVZJb3I9b04URL4MbVqqUsJc", lat:20.588793, lng:-100.389888 },
+  { n:"Tequisquiapan", e:"Querétaro", t:"pueblo mágico", id:"ChIJq0UQdwOc04UR_3-xOpOSwz8", lat:20.522769, lng:-99.892649 },
+  { n:"Bernal", e:"Querétaro", t:"pueblo mágico", id:"ChIJV-kw5d9-04URLHhi-YRIH6o", lat:20.737984, lng:-99.943223 },
+  { n:"Ciudad de México", e:"CDMX", t:"ciudad", id:"ChIJB3UJ2yYAzoURQeheJnYQBlQ", lat:19.432608, lng:-99.133208 },
+  { n:"Aeropuerto de la Ciudad de México (MEX)", e:"CDMX", t:"aeropuerto", id:"ChIJnyKTvXf80YURRNK6YfV-0AI", lat:19.436076, lng:-99.071908 },
+  { n:"Teotihuacán", e:"Estado de México", t:"zona arqueológica", id:"ChIJyd0BTvnq0YUR2mRxFCPVfsc", lat:19.68608, lng:-98.871636 },
+  { n:"Toluca", e:"Estado de México", t:"ciudad", id:"ChIJuetQKomJzYURxAgCVdVKP60", lat:19.28261, lng:-99.655665 },
+  { n:"Valle de Bravo", e:"Estado de México", t:"pueblo mágico", id:"ChIJH_QYMoFjzYURfIlS-6HDh7Y", lat:19.195096, lng:-100.132672 },
+  { n:"Morelia", e:"Michoacán", t:"ciudad", id:"ChIJ46edsqILLYQRIIacZ3hpAQQ", lat:19.705632, lng:-101.195016 },
+  { n:"Pátzcuaro", e:"Michoacán", t:"pueblo mágico", id:"ChIJOa7WuKiWLYQRyrHxhviVVuk", lat:19.513455, lng:-101.609188 },
+  { n:"Uruapan", e:"Michoacán", t:"ciudad", id:"ChIJUUj-wljiLYQRNJ8jH-KbflM", lat:19.406449, lng:-102.043048 },
+  { n:"Zamora", e:"Michoacán", t:"ciudad", id:"ChIJDc6O2K2ILoQRKz8GfoKXiKU", lat:19.990177, lng:-102.283407 },
+  { n:"Zacatecas", e:"Zacatecas", t:"ciudad", id:"ChIJVzPDP3pOgoYRwRNCCV-rA8w", lat:22.772791, lng:-102.576571 },
+  { n:"San Luis Potosí", e:"San Luis Potosí", t:"ciudad", id:"ChIJefusBQCiKoQRV4Lhrynu0g4", lat:22.152089, lng:-100.973302 },
+  { n:"Real de Catorce", e:"San Luis Potosí", t:"pueblo mágico", id:"ChIJ31XfbouzgIYRjMyyJ6gOAkI", lat:23.689397, lng:-100.885546 },
+  { n:"Huasteca Potosina", e:"San Luis Potosí", t:"región", id:"ChIJv8IdsTSP1oURPsKDyokOts4", lat:21.474687, lng:-98.957083 },
+  { n:"Monterrey", e:"Nuevo León", t:"ciudad", id:"ChIJ9fg3tDGVYoYRlJjIasrT06M", lat:25.686614, lng:-100.316113 },
+  { n:"Saltillo", e:"Coahuila", t:"ciudad", id:"ChIJ7xnfeJANiIYRwDBHeUGSUak", lat:25.438323, lng:-100.973678 },
+  { n:"Torreón", e:"Coahuila", t:"ciudad", id:"ChIJ-7NFu6nbj4YRHaCucJl6zIs", lat:25.542844, lng:-103.406786 },
+  { n:"Durango", e:"Durango", t:"ciudad", id:"ChIJc9-8GKW3m4YR1EpsOqaO3b8", lat:24.024841, lng:-104.660813 },
+  { n:"Chihuahua", e:"Chihuahua", t:"ciudad", id:"ChIJM0BIXZ1E6oYRex3dBqen8bc", lat:28.643375, lng:-106.058791 },
+  { n:"Barrancas del Cobre", e:"Chihuahua", t:"región", lat:27.5333, lng:-107.8167 },
+  { n:"Puebla", e:"Puebla", t:"ciudad", id:"ChIJO3q8Xr3Az4URla2U5B1Gpkg", lat:19.04144, lng:-98.206273 },
+  { n:"Cholula", e:"Puebla", t:"pueblo mágico", id:"ChIJsc8Ta6HIz4URSuxTjoTdJSg", lat:19.071505, lng:-98.315674 },
+  { n:"Veracruz", e:"Veracruz", t:"ciudad", id:"ChIJxXjKRUJBw4URmwE26ULWpBg", lat:19.173773, lng:-96.134224 },
+  { n:"Oaxaca de Juárez", e:"Oaxaca", t:"ciudad", id:"ChIJsdkm30kix4URO_zfV3aniKw", lat:17.073184, lng:-96.726589 },
+  { n:"Puerto Escondido", e:"Oaxaca", t:"playa", id:"ChIJP7nTd-n3uIURpKCTb4nhhJE", lat:15.867598, lng:-97.079929 },
+  { n:"Huatulco", e:"Oaxaca", t:"playa", id:"ChIJ6VMgy38uv4URRVgPTmippsg", lat:15.834007, lng:-96.319949 },
+  { n:"Acapulco", e:"Guerrero", t:"playa", id:"ChIJyVDOroVXyoUR46SQivfYAZg", lat:16.863951, lng:-99.882281 },
+  { n:"Ixtapa Zihuatanejo", e:"Guerrero", t:"playa", id:"ChIJOwbhVxx3NIQRMDXMPJ0t7SQ", lat:17.641769, lng:-101.551533 },
+  { n:"Taxco", e:"Guerrero", t:"pueblo mágico", id:"ChIJC6AxgDZLzIURIFGj5QxoXsI", lat:18.556547, lng:-99.605121 },
+  { n:"Cuernavaca", e:"Morelos", t:"ciudad", id:"ChIJra8im0nezYURoZC3ubW8tsk", lat:18.924209, lng:-99.221566 },
+  { n:"Tepoztlán", e:"Morelos", t:"pueblo mágico", id:"ChIJdStY3WELzoURIItygPPXAAQ", lat:18.984801, lng:-99.093053 },
+  { n:"Cancún", e:"Quintana Roo", t:"playa", id:"ChIJ21P2rgUrTI8Ris1fYjy3Ms4", lat:21.161908, lng:-86.851528 },
+  { n:"Playa del Carmen", e:"Quintana Roo", t:"playa", id:"ChIJYU4t0iNDTo8R3EqrO3gLweg", lat:20.629559, lng:-87.073885 },
+  { n:"Tulum", e:"Quintana Roo", t:"playa", id:"ChIJSyrkEAPUT48Rt5r_k9vA7Q4", lat:20.211419, lng:-87.46535 },
+  { n:"Mérida", e:"Yucatán", t:"ciudad", id:"ChIJFw1Fq1xxVo8RCeurFVcV_F0", lat:20.96737, lng:-89.592586 },
+  { n:"Chichén Itzá", e:"Yucatán", t:"zona arqueológica", id:"ChIJM_iYoLk4UY8RRQ11MHWmcA8", lat:20.679144, lng:-88.568309 },
+  { n:"San Cristóbal de las Casas", e:"Chiapas", t:"pueblo mágico", id:"ChIJz5uoHjtF7YUR3uJXSaNc1Ug", lat:16.73662, lng:-92.638847 },
+  { n:"Palenque", e:"Chiapas", t:"zona arqueológica", id:"ChIJKTvaAEZP8oUR8XOZc3PNatE", lat:17.510979, lng:-91.993047 }
+];
