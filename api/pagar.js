@@ -145,7 +145,9 @@ module.exports = async function handler(req, res) {
   if (req.method !== 'POST') { res.status(405).json({ error: 'Método no permitido' }); return; }
   if (!origenValido(req)) { res.status(403).json({ error: 'Origen no autorizado' }); return; }
 
-  const claveStripe = process.env.STRIPE_SECRET_KEY;
+  // se recorta: al copiar del panel es facil que se cuele un espacio o un salto
+  // de linea, y con eso hasta la cabecera de autorizacion sale mal
+  const claveStripe = (process.env.STRIPE_SECRET_KEY || '').trim();
   const claveRutas = process.env.GOOGLE_ROUTES_KEY;
 
   if (!claveStripe) {

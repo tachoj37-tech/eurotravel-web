@@ -66,7 +66,8 @@ module.exports = async function handler(req, res) {
 
   const places = process.env.GOOGLE_PLACES_KEY || '';
   const routes = process.env.GOOGLE_ROUTES_KEY || '';
-  const stripe = process.env.STRIPE_SECRET_KEY || '';
+  const stripeCrudo = process.env.STRIPE_SECRET_KEY || '';
+  const stripe = stripeCrudo.trim();
 
   const salida = {
     GOOGLE_PLACES_KEY: { configurada: !!places, largo: places.length },
@@ -76,9 +77,14 @@ module.exports = async function handler(req, res) {
       largo: stripe.length,
       // saber si es de prueba o de verdad importa: con una de produccion,
       // cualquiera que entre al sitio puede cobrarse dinero real
+      teniaEspacios: stripeCrudo !== stripe,
+      // el prefijo no es secreto: es el formato publico de Stripe
       modo: !stripe ? 'sin clave'
-          : stripe.indexOf('sk_test_') === 0 ? 'PRUEBA'
+          : stripe.indexOf('sk_test_') === 0 ? 'PRUEBA — correcta'
           : stripe.indexOf('sk_live_') === 0 ? 'PRODUCCION — cobra dinero real'
+          : stripe.indexOf('rk_test_') === 0 ? 'restringida de prueba — puede que le falten permisos'
+          : stripe.indexOf('rk_live_') === 0 ? 'restringida de produccion — puede que le falten permisos'
+          : stripe.indexOf('pk_') === 0 ? 'ES LA PUBLICABLE, no la secreta — hay que cambiarla'
           : 'no reconocido'
     }
   };
