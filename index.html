@@ -428,6 +428,39 @@
   .opt .fit svg { width: 14px; height: 14px; }
   .opt .fit.no { color: var(--muted); }
 
+  /* ---------- tarifa calculada ---------- */
+  .precio {
+    border: 1px solid var(--line); border-radius: var(--radius); background: var(--soft);
+    margin-top: 12px; padding: 18px; display: none;
+  }
+  .precio.on { display: block; }
+  .precio-cifra b {
+    display: block; font-family: 'Archivo'; font-weight: 700;
+    font-size: clamp(28px, 4.4vw, 40px); letter-spacing: -0.02em; line-height: 1.05; margin-top: 6px;
+  }
+  .precio-cifra small { display: block; font-size: 12.5px; color: var(--muted); margin-top: 6px; }
+  .precio-desglose {
+    display: grid; gap: 1px; background: var(--line); border: 1px solid var(--line);
+    border-radius: 8px; overflow: hidden; margin-top: 16px; grid-template-columns: 1fr 1fr;
+  }
+  @media (min-width: 700px) { .precio-desglose { grid-template-columns: repeat(4, 1fr); } }
+  .precio-desglose div { background: #fff; padding: 11px 13px; }
+  .precio-desglose span {
+    display: block; font-family: 'Archivo'; font-size: 10.5px; letter-spacing: 0.12em;
+    text-transform: uppercase; color: var(--muted);
+  }
+  .precio-desglose b { display: block; font-size: 14.5px; font-weight: 500; margin-top: 3px; }
+  .precio-nota { font-size: 12.5px; color: var(--muted); margin-top: 14px; line-height: 1.6; }
+  .precio-aviso {
+    font-size: 13px; line-height: 1.55; color: #6b5518; background: #fdf6e3;
+    border: 1px solid #f0e2b6; border-radius: var(--radius-sm); padding: 11px 13px; margin-top: 14px;
+  }
+  .precio-cargando { display: flex; align-items: center; gap: 10px; font-size: 14px; color: var(--muted); }
+  .precio-cargando i {
+    display: block; width: 15px; height: 15px; border: 2px solid var(--line);
+    border-top-color: var(--red); border-radius: 50%; animation: spinW 0.8s linear infinite;
+  }
+
   /* ================= flota ================= */
   .filters { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 26px; }
   .chip {
@@ -978,6 +1011,7 @@ window.IMGS = {
             <div class="field" id="fw-regreso">
               <label for="s-regreso">Regreso</label>
               <input id="s-regreso" type="datetime-local" />
+              <span class="msg">El regreso no puede ser antes de la salida.</span>
             </div>
 
             <div class="field" id="fw-unidad">
@@ -1002,6 +1036,7 @@ window.IMGS = {
             <div class="meta" id="res-meta"></div>
           </div>
           <div id="res-list"></div>
+          <div class="precio" id="precio"></div>
         </div>
       </div>
     </div>
@@ -1036,7 +1071,7 @@ window.IMGS = {
 
             <div class="filters" style="margin-top: 14px">
               <button class="chip" type="button" id="mov-si" aria-pressed="false">Sí, habrá movimientos</button>
-              <button class="chip" type="button" id="mov-no" aria-pressed="true">No, la unidad se queda</button>
+              <button class="chip" type="button" id="mov-no" aria-pressed="true">No</button>
             </div>
 
             <div class="mov-detalle" id="mov-detalle">
@@ -1867,7 +1902,7 @@ window.IMGS = {
 
     /* Estado del viaje. Se llena en el paso 1 y se lee en los pasos 2 y 3:
        ningún dato se vuelve a preguntar. */
-    var VIAJE = { origen: null, destino: null, salida: '', regreso: '', unidad: null, redondo: true };
+    var VIAJE = { origen: null, destino: null, salida: '', regreso: '', unidad: null, redondo: true, cotizacion: null };
 
     var tipoUnidad = '';
     var unidadSel = byId('s-unidad');
@@ -1932,6 +1967,119 @@ window.IMGS = {
       return 'Renta de autobuses';
     }
 
+
+    /* ================= tarifa calculada =================
+       El precio lo arma /api/cotizar en el servidor. Aquí no vive ninguna tarifa:
+       si mañana cambia el precio por kilómetro, se cambia allá y ya. */
+
+    var pesos = new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 });
+    var cotizaSerie = 0;   // por si alguien busca dos veces seguidas: gana la última
+
+    /* las coordenadas se guardan como texto "lat, lng" */
+    function puntoDe(l) {
+      var lat = null, lng = null;
+      if (l && l.coords) {
+        var p = String(l.coords).split(',');
+        var a = Number(p[0]), b = Number(p[1]);
+        if (isFinite(a) && isFinite(b)) { lat = a; lng = b; }
+      }
+      /* La dirección en texto es el salvavidas: los destinos de la lista de la
+         página no tienen coordenadas ni place_id, solo nombre y estado. */
+      var texto = (l && l.direccionGoogle) || '';
+      if (!texto && l && l.place) {
+        var partes = [];
+        if (l.calle) partes.push(l.calle);
+        if (l.col) partes.push(l.col);
+        partes.push(l.place[0]);
+        if (l.place[1]) partes.push(l.place[1]);
+        partes.push('México');
+        texto = partes.join(', ');
+      }
+      return { placeId: (l && l.placeId) || '', lat: lat, lng: lng, direccion: texto };
+    }
+
+    function pintaPrecio(html) {
+      var caja = byId('precio');
+      caja.className = 'precio on';
+      caja.innerHTML = html;
+    }
+
+    function dias(n) { return n + (n === 1 ? ' día' : ' días'); }
+
+    function pintaPrecioListo(c) {
+      var celdas = [['Ida', c.km.ida + ' km']];
+      if (c.redondo) celdas.push(['Vuelta', c.km.vuelta + ' km']);
+      celdas.push(['Recorrido total', c.km.total + ' km']);
+      celdas.push(['Tarifa', '$' + c.tarifaKm + ' / km']);
+
+      var aviso = '';
+      if (c.aplicoMinimo) {
+        aviso = '<div class="precio-aviso">Por kilómetros serían ' + pesos.format(c.porKilometro) +
+          ', pero aplica el mínimo de ' + pesos.format(c.minimoPorDia) + ' por día de servicio: ' +
+          dias(c.dias) + ' = ' + pesos.format(c.minimo) + '.</div>';
+      }
+
+      pintaPrecio(
+        '<div class="precio-cifra"><span class="eyebrow">Tarifa estimada</span>' +
+          '<b>' + pesos.format(c.total) + '</b>' +
+          '<small>IVA incluido · ' + dias(c.dias) + ' de servicio</small></div>' +
+        '<div class="precio-desglose">' +
+          celdas.map(function (r) { return '<div><span>' + r[0] + '</span><b>' + r[1] + '</b></div>'; }).join('') +
+        '</div>' +
+        aviso +
+        '<p class="precio-nota">Incluye combustible, casetas, viáticos del operador y seguro de viajero. ' +
+        'Los kilómetros los calcula Google por carretera, así que el recorrido real de la unidad puede variar un poco. ' +
+        'La tarifa queda cerrada al confirmar el servicio.</p>'
+      );
+    }
+
+    /* Al cliente solo se le enseña lo que le sirve. Los motivos técnicos
+       —clave sin configurar, tope alcanzado— se quedan del lado del servidor. */
+    function precioNoDisponible(aviso) {
+      pintaPrecio(
+        '<div class="precio-cifra"><span class="eyebrow">Tarifa</span>' +
+          '<b style="font-size:22px">Te la enviamos hoy mismo</b></div>' +
+        '<p class="precio-nota">' + esc(aviso || 'No pudimos calcular la distancia en este momento.') +
+        ' Continúa con tus datos y te respondemos el mismo día hábil con la tarifa cerrada.</p>'
+      );
+    }
+
+    function cotizaViaje() {
+      var mio = ++cotizaSerie;
+      VIAJE.cotizacion = null;
+
+      /* las unidades que no cotizan en línea no muestran caja: ya lo dice la tarjeta */
+      if (!VIAJE.unidad || !VIAJE.unidad.cotizadorAutomatico) {
+        byId('precio').className = 'precio';
+        byId('precio').innerHTML = '';
+        return;
+      }
+
+      pintaPrecio('<div class="precio-cargando"><i></i> Calculando kilómetros…</div>');
+
+      fetch('/api/cotizar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          origen: puntoDe(VIAJE.origen),
+          destino: puntoDe(VIAJE.destino),
+          salida: VIAJE.salida,
+          regreso: VIAJE.regreso,
+          redondo: VIAJE.redondo
+        })
+      }).then(function (r) {
+        return r.json().then(function (d) { return { ok: r.ok, d: d }; },
+                            function () { return { ok: false, d: {} }; });
+      }).then(function (res) {
+        if (mio !== cotizaSerie) return;          // llegó tarde, ya hay otra búsqueda
+        if (!res.ok) { precioNoDisponible(res.d && res.d.aviso); return; }
+        VIAJE.cotizacion = res.d;
+        pintaPrecioListo(res.d);
+      }, function () {
+        if (mio === cotizaSerie) precioNoDisponible();
+      });
+    }
+
     byId('s-go').addEventListener('click', function () {
       var ok = true;
       if (!LOC.origen) { byId('fw-origen').classList.add('err'); ok = false; }
@@ -1939,6 +2087,12 @@ window.IMGS = {
       if (!byId('s-salida').value) { byId('fw-salida').classList.add('err'); ok = false; }
       else byId('fw-salida').classList.remove('err');
       if (!tipoUnidad) { byId('fw-unidad').classList.add('err'); ok = false; }
+
+      /* el regreso no puede ir antes de la salida: de eso dependen los días que se cobran */
+      var vSal = byId('s-salida').value, vReg = byId('s-regreso').value;
+      if (vReg && vSal && vReg < vSal) { byId('fw-regreso').classList.add('err'); ok = false; }
+      else byId('fw-regreso').classList.remove('err');
+
       if (!ok) return;
 
       var u = unidadPorId(tipoUnidad);
@@ -1969,6 +2123,8 @@ window.IMGS = {
 
       byId('results').classList.add('on');
       byId('results').scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' });
+
+      cotizaViaje();
     });
 
     /* ================= flujo de pantallas ================= */
@@ -2360,6 +2516,23 @@ window.IMGS = {
         var v = (byId(c[1]).value || '').trim();
         if (v) filas.push([c[0], v]);
       });
+
+      /* la tarifa calculada, cuando la unidad cotiza en línea */
+      var c = VIAJE.cotizacion;
+      if (c) {
+        filas.push(['Recorrido', c.redondo
+          ? c.km.total + ' km (ida ' + c.km.ida + ' + vuelta ' + c.km.vuelta + ')'
+          : c.km.total + ' km, solo ida']);
+        filas.push(['Días de servicio', String(c.dias)]);
+        filas.push(['Tarifa', '$' + c.tarifaKm + ' por km, IVA incluido']);
+        if (c.aplicoMinimo) {
+          filas.push(['Mínimo por día', pesos.format(c.minimoPorDia) + ' × ' + c.dias + ' = ' + pesos.format(c.minimo)]);
+        }
+        filas.push(['Total estimado', pesos.format(c.total) + ' IVA incluido']);
+        if (MOV.incluye) {
+          filas.push(['Ojo', 'El total cubre el traslado. Los movimientos en destino se cotizan aparte.']);
+        }
+      }
 
       /* los movimientos se agregan al final, con su detalle dia por dia */
       resumenMovimientos().forEach(function (f) { filas.push(f); });
