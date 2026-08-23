@@ -11,13 +11,13 @@
    como una dirección más del sitio.
 
    Reglas confirmadas por el dueño:
-     · $36 por kilómetro, IVA YA INCLUIDO
+     · $35 por kilómetro, IVA YA INCLUIDO
      · mínimo $3,000 POR DÍA de servicio
      · el total se corta HACIA ABAJO a la centena
      · anticipo del 20% para apartar; el resto se abona
    ============================================================ */
 
-const TARIFA_KM = 36;                 // pesos por kilómetro, IVA incluido
+const TARIFA_KM = 35;                 // pesos por kilómetro, IVA incluido
 const MINIMO_POR_DIA = 3000;          // piso por día de servicio, IVA incluido
 const REDONDEO = 100;                 // el total se corta a la centena de abajo
 const TASA_IVA = 0.16;
@@ -56,14 +56,22 @@ function calcula(kmTotal, dias) {
 
   const subtotal = Math.round((total / (1 + TASA_IVA)) * 100) / 100;
 
+  /* OJO con lo que se devuelve.
+     La tarifa por kilómetro NO puede llegar al navegador. Y no basta con no
+     escribirla en pantalla: si se manda en la respuesta, cualquiera la ve
+     abriendo las herramientas del navegador. Peor aún, con los kilómetros y
+     el total juntos se saca dividiendo. Por eso aquí se separa en dos:
+     `interno`, que se queda en el servidor, y el resto, que sí puede salir. */
   return {
-    tarifaKm: TARIFA_KM,
-    minimoPorDia: MINIMO_POR_DIA,
-    porKilometro: Math.round(porKilometro),
-    minimo: minimo,
-    aplicoMinimo: aplicoMinimo,
-    sinRedondear: Math.round(bruto),
-    redondeo: REDONDEO,
+    interno: {
+      tarifaKm: TARIFA_KM,
+      minimoPorDia: MINIMO_POR_DIA,
+      porKilometro: Math.round(porKilometro),
+      minimo: minimo,
+      aplicoMinimo: aplicoMinimo,
+      sinRedondear: Math.round(bruto),
+      redondeo: REDONDEO
+    },
     total: total,
     ivaIncluido: true,
     subtotal: subtotal,

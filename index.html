@@ -34,6 +34,7 @@
     --shadow-lg: 0 20px 60px rgba(29, 29, 27, 0.16);
     --maxw: 1200px;
     --ease: cubic-bezier(0.22, 0.61, 0.36, 1);
+    --alto-campo: 53px;   /* origen, destino y fechas miden lo mismo por esto */
     --nav-h: 72px;
   }
 
@@ -358,7 +359,7 @@
     margin-top: 16px; background: #fff; border-radius: var(--radius); padding: 16px;
     display: grid; gap: 12px; grid-template-columns: 1fr; box-shadow: var(--shadow-lg);
   }
-  @media (min-width: 980px) { .search-card { grid-template-columns: 1.2fr 1.2fr 0.82fr 0.82fr 1.15fr auto; align-items: end; padding: 18px; } }
+  @media (min-width: 980px) { .search-card { grid-template-columns: 1fr 1fr 1.75fr 0.9fr auto; align-items: end; padding: 18px; } }
 
   .field { display: flex; flex-direction: column; gap: 6px; position: relative; min-width: 0; }
   .field.full { grid-column: 1 / -1; }
@@ -375,6 +376,9 @@
   .field input:focus, .field select:focus, .field textarea:focus {
     outline: none; border-color: var(--red); box-shadow: 0 0 0 3px rgba(219, 13, 13, 0.1);
   }
+  /* dentro del buscador los cuatro controles miden lo mismo */
+  .search-card .field select, .search-card .field input[type="text"] { min-height: var(--alto-campo); }
+
   .field.err input, .field.err select, .field.err .locbtn { border-color: var(--red); box-shadow: 0 0 0 3px rgba(219, 13, 13, 0.12); }
   .field .msg { font-size: 11.5px; color: var(--red); display: none; }
   .field.err .msg { display: block; }
@@ -382,7 +386,7 @@
   .locbtn {
     width: 100%; text-align: left; background: #fff; border: 1px solid var(--line);
     border-radius: var(--radius-sm); padding: 8px 12px; cursor: pointer; font: inherit;
-    display: flex; gap: 10px; align-items: center; min-height: 44px;
+    display: flex; gap: 10px; align-items: center; min-height: var(--alto-campo);
     transition: border-color 180ms var(--ease);
   }
   .locbtn:hover { border-color: var(--ink); }
@@ -483,18 +487,18 @@
   .rango-btn {
     width: 100%; display: flex; align-items: center; gap: 10px;
     background: #fff; border: 1px solid var(--line); border-radius: var(--radius-sm);
-    padding: 9px 12px; cursor: pointer; text-align: left; font: inherit; color: var(--ink);
+    padding: 8px 12px; min-height: var(--alto-campo); cursor: pointer; text-align: left; font: inherit; color: var(--ink);
     transition: border-color 180ms var(--ease), box-shadow 180ms var(--ease);
   }
   .rango-btn:hover { border-color: #c9c9c5; }
   .rango-btn.abierto { border-color: var(--red); box-shadow: 0 0 0 3px rgba(219, 13, 13, 0.10); }
   .rango-lado { flex: 1; min-width: 0; }
   .rango-lado small {
-    display: block; font-family: 'Archivo'; font-size: 10px; letter-spacing: 0.12em;
+    display: block; font-family: 'Archivo'; font-size: 10px; line-height: 1.2; letter-spacing: 0.12em;
     text-transform: uppercase; color: var(--muted);
   }
   .rango-lado b {
-    display: block; font-size: 14.5px; font-weight: 500; margin-top: 2px;
+    display: block; font-size: 14px; line-height: 1.25; font-weight: 500; margin-top: 2px;
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   }
   .rango-lado.vacio b { color: var(--muted); font-weight: 400; }
@@ -2569,24 +2573,17 @@ window.IMGS = {
     function puntoExacto(l) { return !!(l && (l.placeId || l.coords) && !l.aprox); }
 
     function pintaPrecioListo(c) {
-      var celdas = [['Ida', c.km.ida + ' km']];
-      if (c.redondo) celdas.push(['Vuelta', c.km.vuelta + ' km']);
-      celdas.push(['Recorrido total', c.km.total + ' km']);
-      celdas.push(['Tarifa', '$' + c.tarifaKm + ' / km']);
+      /* Aquí NO se pinta ni el kilometraje ni la tarifa por kilómetro.
+         Con los kilómetros y el total a la vista, cualquiera saca el precio
+         por kilómetro dividiendo. El servidor tampoco los manda. */
+      var celdas = [
+        ['Días de servicio', dias(c.dias)],
+        ['Viaje', c.redondo ? 'Redondo' : 'Solo ida'],
+        ['Impuestos', 'IVA incluido'],
+        ['Vigencia', 'Se confirma al apartar']
+      ];
 
       var notas = [];
-
-      if (c.aplicoMinimo) {
-        notas.push('<div class="precio-aviso">Por kilómetros serían ' + pesos.format(c.porKilometro) +
-          ', pero aplica el mínimo de ' + pesos.format(c.minimoPorDia) + ' por día de servicio: ' +
-          dias(c.dias) + ' = ' + pesos.format(c.minimo) + '.</div>');
-      }
-
-      /* el redondeo siempre va a favor del cliente, así que se enseña */
-      if (c.sinRedondear && c.sinRedondear > c.total) {
-        notas.push('<p class="precio-nota">El cálculo da ' + pesos.format(c.sinRedondear) +
-          ' y se redondea a la baja: se cobra ' + pesos.format(c.total) + '.</p>');
-      }
 
       /* si alguna punta es solo el nombre de la ciudad, la cifra puede moverse */
       var faltaOrigen = !puntoExacto(VIAJE.origen);
@@ -2596,8 +2593,8 @@ window.IMGS = {
                  : (faltaOrigen ? 'del origen' : 'del destino');
         notas.push('<div class="precio-afinar">' +
           '<b>Esta cifra puede afinarse.</b> Tomamos el centro ' + cual +
-          ' para medir la ruta. Si marcas la dirección exacta —hotel, salón, domicilio— ' +
-          'los kilómetros salen de ahí y el precio queda más apegado a tu viaje real.</div>');
+          ' para calcular el trayecto. Si marcas la dirección exacta —hotel, salón, domicilio— ' +
+          'el precio queda más apegado a tu viaje real.</div>');
       }
 
       pintaPrecio(
@@ -2609,7 +2606,6 @@ window.IMGS = {
         '</div>' +
         notas.join('') +
         '<p class="precio-nota">Incluye combustible, casetas, viáticos del operador y seguro de viajero. ' +
-        'Los kilómetros los calcula Google por carretera, así que el recorrido real de la unidad puede variar un poco. ' +
         'La tarifa queda cerrada al confirmar el servicio.</p>'
       );
     }
@@ -3106,18 +3102,14 @@ window.IMGS = {
         if (v) filas.push([c[0], v]);
       });
 
-      /* la tarifa calculada, cuando la unidad cotiza en línea */
+      /* La tarifa, sin nada de lo que la delate: ni kilómetros, ni precio por
+         kilómetro, ni el mínimo por día. Solo el total y qué cubre. */
       var c = VIAJE.cotizacion;
       if (c) {
-        filas.push(['Recorrido', c.redondo
-          ? c.km.total + ' km (ida ' + c.km.ida + ' + vuelta ' + c.km.vuelta + ')'
-          : c.km.total + ' km, solo ida']);
         filas.push(['Días de servicio', String(c.dias)]);
-        filas.push(['Tarifa', '$' + c.tarifaKm + ' por km, IVA incluido']);
-        if (c.aplicoMinimo) {
-          filas.push(['Mínimo por día', pesos.format(c.minimoPorDia) + ' × ' + c.dias + ' = ' + pesos.format(c.minimo)]);
-        }
         filas.push(['Total estimado', pesos.format(c.total) + ' IVA incluido']);
+        filas.push(['Para apartar (' + c.porcentajeAnticipo + '%)', pesos.format(c.anticipo)]);
+        filas.push(['Queda por abonar', pesos.format(c.saldo)]);
         if (MOV.incluye) {
           filas.push(['Ojo', 'El total cubre el traslado. Los movimientos en destino se cotizan aparte.']);
         }

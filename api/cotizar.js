@@ -123,19 +123,19 @@ module.exports = async function handler(req, res) {
 
     const p = tarifa.calcula(kmTotal, dias);
 
-    res.status(200).json(Object.assign({
-      km: {
-        ida: Math.round(kmIda * 10) / 10,
-        vuelta: Math.round(kmVuelta * 10) / 10,
-        total: Math.round(kmTotal * 10) / 10
-      },
-      minutos: {
-        ida: Math.round(ida.segundos / 60),
-        vuelta: vuelta ? Math.round(vuelta.segundos / 60) : 0
-      },
+    /* Se enumera a mano lo que sale, en vez de mandar el objeto completo.
+       Los kilometros NO salen: con el total, la tarifa por kilometro se saca
+       dividiendo, y el dueño pidio que el cliente nunca la vea. Lo demas
+       —tarifa, minimo, calculo sin redondear— se queda en el servidor. */
+    res.status(200).json({
+      dias: dias,
       redondo: redondo,
-      dias: dias
-    }, p));
+      total: p.total,
+      ivaIncluido: p.ivaIncluido,
+      porcentajeAnticipo: p.porcentajeAnticipo,
+      anticipo: p.anticipo,
+      saldo: p.saldo
+    });
   } catch (e) {
     res.status(502).json({ error: 'No se pudo calcular la distancia' });
   }
