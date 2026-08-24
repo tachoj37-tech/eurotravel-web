@@ -13,6 +13,7 @@ concepto que no está aquí, se agrega aquí primero.
 | **Unidad** | Una entrada de `unidades.js` (fuente única del catálogo). `cotizadorAutomatico` decide si enseña precio en línea o se **cotiza a la medida**. |
 | **Las defensas** | `api/_defensas.js`. El guardián común de los cuatro endpoints: origen permitido, freno por visitante, tope diario y —lo importante— la **IP de confianza**. Se prueba en Node (`node pruebas/probar-defensas.cjs`). |
 | **La IP de confianza** | La IP con la que se cuenta para frenar. Nunca el primer `x-forwarded-for` (ese lo escribe quien llama): se usa `x-vercel-forwarded-for`, y si falta, el último de la cadena. Frenar por el primero es no tener freno. |
+| **Confirmación de pago** | `api/confirmar.js`. Le pregunta a Stripe si una sesión se pagó. La pantalla de «tu viaje está apartado» **nunca** se cree la dirección: el folio y los montos salen de la metadata de Stripe. Distingue *pagado* de *pendiente* (voucher de OXXO generado pero sin pagar). |
 | **Solicitud** | Lo que sale al final del paso 3: el resumen que se manda por WhatsApp o correo, o el pago del anticipo por `/api/pagar` — que **recalcula** con `_tarifa.js` y jamás confía en un total del navegador. |
 | **Movimientos** | Los traslados dentro del destino, por día, capturados en el paso 2. |
 | **Folio** | Lo asigna EuroSystem al crear el contrato; la página solo lo enseña. La única puerta entre página y sistema es `POST /api/contratos/externo`. |

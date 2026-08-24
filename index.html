@@ -1767,9 +1767,12 @@ window.IMGS = {
     <!-- Se enciende al volver de Stripe. Va aquí arriba y no dentro de un paso,
          porque al regresar la página se recarga y el flujo empieza de cero. -->
     <div class="wrap" style="padding-top: 22px">
+      <!-- El título y el texto los escribe el guion según lo que conteste
+           Stripe. Arrancan neutros a propósito: hasta que Stripe confirme,
+           esta pantalla no afirma que haya un pago. -->
       <div class="pago-hecho" id="pago-hecho">
-        <h3>Listo, tu viaje está apartado</h3>
-        <p id="pago-hecho-texto">Te mandamos el folio y las instrucciones para abonar el resto.</p>
+        <h3 id="pago-hecho-titulo">Confirmando tu pago…</h3>
+        <p id="pago-hecho-texto">Estamos verificando el cobro con el banco.</p>
         <div class="folio" id="pago-folio">—</div>
       </div>
     </div>
@@ -2996,13 +2999,63 @@ window.IMGS = {
 
       /* Al volver de Stripe. Se hace al final del arranque: si se hiciera aquí
          mismo, lo que inicializa las pestañas después nos regresaría al paso 1. */
+      /* NADA de esto se cree por la direccion. Antes bastaba con `?pago=listo`
+         para que saliera «tu viaje esta apartado» con el folio que uno
+         escribiera: una captura de pantalla falsa lista para enseñarse en la
+         oficina. Ahora se le pregunta a Stripe por el id de la sesion, y el
+         folio y los montos salen de la respuesta de Stripe, no de la URL. */
       var vuelta = new URLSearchParams(location.search);
       if (vuelta.get('pago') === 'listo') {
+        var idSesion = vuelta.get('sesion') || '';
+
+        /* El id de la sesion se borra de la barra de direcciones en cuanto se
+           lee: no tiene por que quedarse en el historial ni irse de paseo en
+           la cabecera Referer. */
+        try { history.replaceState(null, '', location.pathname + location.hash); } catch (e) {}
+
         setTimeout(function () {
-          byId('pago-folio').textContent = vuelta.get('folio') || '—';
-          byId('pago-hecho').classList.add('on');
+          var caja = byId('pago-hecho');
+          var titulo = byId('pago-hecho-titulo');
+          var texto = byId('pago-hecho-texto');
+          caja.classList.add('on');
           go('cotizar');
-          byId('pago-hecho').scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'center' });
+          caja.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'center' });
+
+          function noConfirmado() {
+            titulo.textContent = 'Estamos confirmando tu pago';
+            texto.textContent = 'En cuanto el banco lo libere te llega el correo con el folio. ' +
+              'Si tienes dudas, escríbenos por WhatsApp.';
+            byId('pago-folio').textContent = '—';
+          }
+
+          if (!idSesion) { noConfirmado(); return; }
+
+          fetch('/api/confirmar', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ sesion: idSesion })
+          }).then(function (r) {
+            return r.json().then(function (d) { return { ok: r.ok, d: d }; },
+                                 function () { return { ok: false, d: {} }; });
+          }).then(function (res) {
+            var d = res.d || {};
+            if (res.ok && d.estado === 'pagado') {
+              titulo.textContent = 'Listo, tu viaje está apartado';
+              texto.textContent = 'Te mandamos el folio y las instrucciones para abonar el resto.';
+              byId('pago-folio').textContent = d.folio || '—';
+              return;
+            }
+            if (res.ok && d.estado === 'pendiente') {
+              /* OXXO: el voucher ya se genero pero el dinero no ha entrado.
+                 Decirle aqui que su viaje esta apartado seria mentirle. */
+              titulo.textContent = 'Falta pagar tu voucher';
+              texto.textContent = 'Generamos tu ficha de pago. En cuanto la pagues en la tienda, ' +
+                'tu lugar queda apartado y te llega el correo con el folio.';
+              byId('pago-folio').textContent = d.folio || '—';
+              return;
+            }
+            noConfirmado();
+          }, noConfirmado);
         }, 0);
       }
     })();
