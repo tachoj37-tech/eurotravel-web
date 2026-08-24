@@ -11,13 +11,70 @@
    como una dirección más del sitio.
 
    Reglas confirmadas por el dueño:
-     · $35 por kilómetro, IVA YA INCLUIDO
+     · el kilómetro se cobra POR TRAMOS (ver abajo), IVA YA INCLUIDO
      · mínimo $3,000 POR DÍA de servicio
      · el total se corta HACIA ABAJO a la centena
      · anticipo del 20% para apartar; el resto se abona
    ============================================================ */
 
-const TARIFA_KM = 35;                 // pesos por kilómetro, IVA incluido
+/* ------------------------------------------------------------
+   EL KILÓMETRO SE COBRA POR TRAMOS, COMO LOS IMPUESTOS
+   ------------------------------------------------------------
+   No es que un viaje largo entero se cobre más barato: es que
+   los kilómetros QUE PASAN de cada marca se cobran más baratos.
+
+       los primeros    800 km  ->  $35
+       de 800 a      1,000 km  ->  $28
+       de 1,000 en adelante    ->  $26
+
+   Un viaje de 1,200 km, entonces:
+       800 × 35  =  28,000
+       200 × 28  =   5,600
+       200 × 26  =   5,200
+                    ------
+                    38,800
+
+   La cuenta es sobre el kilometraje del VIAJE COMPLETO —ida más
+   vuelta sumadas—, no por tramo del recorrido.
+
+   Cobrarlo de la otra forma (una sola tarifa según el total)
+   tendría un escalón absurdo: a 799 km costaría más que a 801.
+   Así crece siempre, nada más que cada vez más despacio.
+   ------------------------------------------------------------ */
+const TRAMOS = [
+  { hasta: 800, porKm: 35 },
+  { hasta: 1000, porKm: 28 },
+  { hasta: Infinity, porKm: 26 }
+];
+
+/* Se conserva por claridad: es lo que cuesta el kilómetro de un viaje que no
+   pasa del primer tramo, que son casi todos. */
+const TARIFA_KM = TRAMOS[0].porKm;
+
+/* Recorre los tramos y va cobrando lo que cae en cada uno. Devuelve además el
+   desglose, que se queda del lado del servidor: al cliente NUNCA se le
+   enseña ni el kilometraje ni lo que cuesta el kilómetro. */
+function porTramos(kmTotal) {
+  const km = Math.max(0, Number(kmTotal) || 0);
+  let restan = km;
+  let piso = 0;
+  let total = 0;
+  const desglose = [];
+
+  for (let i = 0; i < TRAMOS.length && restan > 0; i++) {
+    const t = TRAMOS[i];
+    const cabenAqui = Math.min(restan, t.hasta - piso);
+    if (cabenAqui > 0) {
+      const importe = cabenAqui * t.porKm;
+      total += importe;
+      desglose.push({ desde: piso, hasta: piso + cabenAqui, km: cabenAqui, porKm: t.porKm, importe: importe });
+      restan -= cabenAqui;
+    }
+    piso = t.hasta;
+  }
+
+  return { total: total, desglose: desglose };
+}
 const MINIMO_POR_DIA = 3000;          // piso por día de servicio, IVA incluido
 const REDONDEO = 100;                 // el total se corta a la centena de abajo
 const TASA_IVA = 0.16;
@@ -40,7 +97,8 @@ function diasDeServicio(salida, regreso) {
 
 /* Del kilometraje y los días sale todo lo demás. */
 function calcula(kmTotal, dias) {
-  const porKilometro = kmTotal * TARIFA_KM;
+  const tramos = porTramos(kmTotal);
+  const porKilometro = tramos.total;
   const minimo = dias * MINIMO_POR_DIA;
   const aplicoMinimo = minimo > porKilometro;
   const bruto = aplicoMinimo ? minimo : porKilometro;
@@ -65,6 +123,7 @@ function calcula(kmTotal, dias) {
   return {
     interno: {
       tarifaKm: TARIFA_KM,
+      tramos: tramos.desglose,       // cuánto cayó en cada tramo y a qué precio
       minimoPorDia: MINIMO_POR_DIA,
       porKilometro: Math.round(porKilometro),
       minimo: minimo,
@@ -82,4 +141,4 @@ function calcula(kmTotal, dias) {
   };
 }
 
-module.exports = { TARIFA_KM, MINIMO_POR_DIA, REDONDEO, TASA_IVA, ANTICIPO, diasDeServicio, calcula };
+module.exports = { TARIFA_KM, TRAMOS, MINIMO_POR_DIA, REDONDEO, TASA_IVA, ANTICIPO, diasDeServicio, porTramos, calcula };
