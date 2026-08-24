@@ -2255,6 +2255,7 @@ window.IMGS = {
 <script src="config.js"></script>
 <script src="unidades.js"></script>
 <script src="lugares.js"></script>
+<script src="cotizacion.js"></script>
 <script>
   (function () {
     'use strict';
@@ -2840,9 +2841,15 @@ window.IMGS = {
 
     /* ================= buscador ================= */
 
-    /* Estado del viaje. Se llena en el paso 1 y se lee en los pasos 2 y 3:
-       ningún dato se vuelve a preguntar. */
-    var VIAJE = { origen: null, destino: null, salida: '', regreso: '', unidad: null, redondo: true, cotizacion: null };
+    /* Estado del viaje. Vive en la máquina de cotización (cotizacion.js);
+       aquí solo queda la vista. Se llena en el paso 1 y se lee en los pasos
+       2 y 3: ningún dato se vuelve a preguntar.
+
+       VIAJE es SOLO de lectura: es el mismo objeto vivo de la máquina, y se
+       escribe únicamente con maquina.pon(). Escribirle directo se brinca la
+       validación y la carrera de "gana la última búsqueda". */
+    var maquina = COTIZACION.crea({});
+    var VIAJE = maquina.estadoVivo();
 
     var tipoUnidad = '';
     var unidadSel = byId('s-unidad');
@@ -2961,8 +2968,8 @@ window.IMGS = {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            origen: puntoDe(VIAJE.origen),
-            destino: puntoDe(VIAJE.destino),
+            origen: COTIZACION.puntoDe(VIAJE.origen),
+            destino: COTIZACION.puntoDe(VIAJE.destino),
             salida: VIAJE.salida,
             regreso: VIAJE.regreso,
             redondo: VIAJE.redondo,
@@ -3190,30 +3197,6 @@ window.IMGS = {
        si mañana cambia el precio por kilómetro, se cambia allá y ya. */
 
     var pesos = new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 });
-    var cotizaSerie = 0;   // por si alguien busca dos veces seguidas: gana la última
-
-    /* las coordenadas se guardan como texto "lat, lng" */
-    function puntoDe(l) {
-      var lat = null, lng = null;
-      if (l && l.coords) {
-        var p = String(l.coords).split(',');
-        var a = Number(p[0]), b = Number(p[1]);
-        if (isFinite(a) && isFinite(b)) { lat = a; lng = b; }
-      }
-      /* La dirección en texto es el salvavidas: los destinos de la lista de la
-         página no tienen coordenadas ni place_id, solo nombre y estado. */
-      var texto = (l && l.direccionGoogle) || '';
-      if (!texto && l && l.place) {
-        var partes = [];
-        if (l.calle) partes.push(l.calle);
-        if (l.col) partes.push(l.col);
-        partes.push(l.place[0]);
-        if (l.place[1]) partes.push(l.place[1]);
-        partes.push('México');
-        texto = partes.join(', ');
-      }
-      return { placeId: (l && l.placeId) || '', lat: lat, lng: lng, direccion: texto };
-    }
 
     function pintaPrecio(html) {
       var caja = byId('precio');
@@ -3223,8 +3206,9 @@ window.IMGS = {
 
     function dias(n) { return n + (n === 1 ? ' día' : ' días'); }
 
-    /* ¿el punto que eligió es exacto, o nomás el nombre de la ciudad? */
-    function puntoExacto(l) { return !!(l && (l.placeId || l.coords) && !l.aprox); }
+    /* ¿el punto que eligió es exacto, o nomás el nombre de la ciudad?
+       La regla vive en la máquina; aquí solo se le pone nombre corto. */
+    var puntoExacto = COTIZACION.puntoExacto;
 
     function pintaPrecioListo(c) {
       /* Aquí NO se pinta ni el kilometraje ni la tarifa por kilómetro.
@@ -3275,12 +3259,12 @@ window.IMGS = {
       );
     }
 
+    /* Adaptador puro: la máquina decide, aquí solo se pinta el veredicto.
+       La carrera de "gana la última búsqueda" y la lista blanca de campos
+       viven allá, no aquí. */
     function cotizaViaje() {
-      var mio = ++cotizaSerie;
-      VIAJE.cotizacion = null;
-
-      /* las unidades que no cotizan en línea no muestran caja: ya lo dice la tarjeta */
-      if (!VIAJE.unidad || !VIAJE.unidad.cotizadorAutomatico) {
+      if (!maquina.cotizaEnAutomatico()) {
+        /* las unidades que no cotizan en línea no muestran caja: ya lo dice la tarjeta */
         byId('precio').className = 'precio';
         byId('precio').innerHTML = '';
         return;
@@ -3288,60 +3272,42 @@ window.IMGS = {
 
       pintaPrecio('<div class="precio-cargando"><i></i> Calculando kilómetros…</div>');
 
-      fetch('/api/cotizar', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          origen: puntoDe(VIAJE.origen),
-          destino: puntoDe(VIAJE.destino),
-          salida: VIAJE.salida,
-          regreso: VIAJE.regreso,
-          redondo: VIAJE.redondo
-        })
-      }).then(function (r) {
-        return r.json().then(function (d) { return { ok: r.ok, d: d }; },
-                            function () { return { ok: false, d: {} }; });
-      }).then(function (res) {
-        if (mio !== cotizaSerie) return;          // llegó tarde, ya hay otra búsqueda
-        if (!res.ok) { precioNoDisponible(res.d && res.d.aviso); return; }
-        VIAJE.cotizacion = res.d;
-        pintaPrecioListo(res.d);
-      }, function () {
-        if (mio === cotizaSerie) precioNoDisponible();
+      maquina.cotiza().then(function (v) {
+        if (v.tipo === 'tarde') return;           // llegó después de otra búsqueda
+        if (v.tipo === 'listo') { pintaPrecioListo(v.cotizacion); return; }
+        precioNoDisponible(v.aviso);
       });
     }
 
     byId('s-go').addEventListener('click', function () {
-      var ok = true;
-      if (!LOC.origen) { byId('fw-origen').classList.add('err'); ok = false; }
-      if (!LOC.destino) { byId('fw-destino').classList.add('err'); ok = false; }
-      var faltaFecha = !byId('s-salida').value;
-      if (faltaFecha) {
+      /* El borrador se junta de los campos y lo valida la máquina; aquí solo
+         se pintan los errores en el campo que corresponde. */
+      var borrador = {
+        origen: LOC.origen,
+        destino: LOC.destino,
+        salida: byId('s-salida').value,
+        regreso: byId('s-regreso').value,
+        unidad: unidadPorId(tipoUnidad),
+        redondo: document.querySelector('input[name="trip"]:checked').value === 'redondo'
+      };
+      var faltan = COTIZACION.faltantes(borrador);
+
+      if (faltan.indexOf('origen') >= 0) byId('fw-origen').classList.add('err');
+      if (faltan.indexOf('destino') >= 0) byId('fw-destino').classList.add('err');
+      if (faltan.indexOf('fecha') >= 0) {
         byId('rango-msg').textContent = 'Elige las fechas del viaje.';
         byId('fw-fechas').classList.add('err');
-        ok = false;
       } else byId('fw-fechas').classList.remove('err');
-      if (!tipoUnidad) { byId('fw-unidad').classList.add('err'); ok = false; }
-
-      /* el calendario ya no deja invertirlas, pero se revisa por si acaso:
-         de esas fechas dependen los días que se cobran */
-      var vSal = byId('s-salida').value, vReg = byId('s-regreso').value;
-      if (vReg && vSal && vReg < vSal) {
+      if (faltan.indexOf('fechasInvertidas') >= 0) {
         byId('rango-msg').textContent = 'El regreso no puede ser antes de la salida.';
         byId('fw-fechas').classList.add('err');
-        ok = false;
       }
+      if (faltan.indexOf('unidad') >= 0) byId('fw-unidad').classList.add('err');
 
-      if (!ok) return;
+      if (faltan.length) return;
 
-      var u = unidadPorId(tipoUnidad);
-
-      VIAJE.origen = LOC.origen;
-      VIAJE.destino = LOC.destino;
-      VIAJE.salida = byId('s-salida').value;
-      VIAJE.regreso = byId('s-regreso').value;
-      VIAJE.unidad = u;
-      VIAJE.redondo = document.querySelector('input[name="trip"]:checked').value === 'redondo';
+      var u = borrador.unidad;
+      maquina.pon(borrador);
 
       byId('res-route').innerHTML =
         '<span>' + esc(LOC.origen.place[0]) + '</span><svg aria-hidden="true"><use href="#i-arrow"/></svg><span>' + esc(LOC.destino.place[0]) + '</span>';
