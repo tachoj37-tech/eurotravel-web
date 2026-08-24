@@ -75,7 +75,10 @@ igual('cuerpo como objeto: no pasa',
 
 process.env.STRIPE_WEBHOOK_SECRET = SECRETO;
 process.env.CONTRATOS_API_KEY = 'llave_de_mentiras';
-const handler = require('../api/webhook-stripe.js');
+const logica = require('../api/_webhook-logica.js');
+/* La logica recibe el crudo y la firma, y devuelve la respuesta: la cascara
+   .mjs solo consigue el cuerpo crudo y no tiene reglas que probar. */
+async function handler(p, r) { const s = await logica.procesa(p.body, p.headers['stripe-signature']); r.status(s.status).json(s.cuerpo); }
 
 function res() {
   const r = { _status: null, _json: null };
@@ -200,11 +203,7 @@ function euroDice(status, datos) {
   igual('otro evento: 200 y se ignora', [r._status, r._json.ignorado], [200, 'customer.created']);
   igual('sin tocar EuroSystem', ultimoEnvio, null);
 
-  /* -------- metodo equivocado -------- */
-  r = res();
-  await handler(pide({ type: 'x', data: { object: {} } }, { metodo: 'GET' }), r);
-  igual('GET: 405', r._status, 405);
-
+  /* -------- el metodo lo filtra la cascara, no la logica -------- */
   /* -------- fechas ilegibles: no se inventa una -------- */
   ultimoEnvio = null;
   euroDice(201, { folio: 4 });

@@ -45,11 +45,6 @@
 
 const firma = require('./_firma-stripe');
 
-/* El cuerpo tiene que llegar CRUDO: la firma se calcula sobre esos bytes
-   exactos. Si Vercel lo parsea a objeto, los bytes cambian al volver a
-   serializar y la firma nunca cuadraria. */
-module.exports.config = { api: { bodyParser: false } };
-
 const EUROSYSTEM = process.env.EUROSYSTEM_URL || 'https://eurosystem-smoky.vercel.app';
 const PUERTA = '/api/contratos/externo';
 
@@ -76,29 +71,6 @@ function claseDeUnidad(nombre) {
   if (n.indexOf('suburban') >= 0) return 'SUBURBAN';
   if (n.indexOf('irizar') >= 0 || n.indexOf('neobus') >= 0 || n.indexOf('autob') >= 0) return 'AUTOBUS';
   return null;
-}
-
-function leeCrudo(req) {
-  return new Promise(function (resuelve, rechaza) {
-    // Si algo ya lo dejo crudo, se usa tal cual.
-    if (Buffer.isBuffer(req.body)) { resuelve(req.body); return; }
-    if (typeof req.body === 'string') { resuelve(Buffer.from(req.body, 'utf8')); return; }
-    if (req.body && typeof req.body === 'object') {
-      // Ya venia parseado: los bytes originales se perdieron y la firma no se
-      // puede comprobar. Mejor fallar ruidosamente que dar por buena una firma.
-      rechaza(new Error('el cuerpo llego parseado; falta bodyParser:false'));
-      return;
-    }
-    const trozos = [];
-    let total = 0;
-    req.on('data', function (d) {
-      total += d.length;
-      if (total > 1048576) { rechaza(new Error('cuerpo demasiado grande')); return; }
-      trozos.push(d);
-    });
-    req.on('end', function () { resuelve(Buffer.concat(trozos)); });
-    req.on('error', rechaza);
-  });
 }
 
 /* Arma el cuerpo que pide CONTRATOS-API.md a partir de la metadata que
@@ -144,8 +116,7 @@ function contratoDesde(m, sesion) {
   };
 }
 
-module.exports = async function handler(req, res) {
-  if (req.method !== 'POST') { res.status(405).json({ error: 'Método no permitido' }); return; }
+async function procesa(crudo, cabeceraFirma) {
 
   /* Ojo: aqui NO va el guardia de origen de _defensas. Stripe llama de
      servidor a servidor y no manda cabecera Origin ni Referer; exigirla
@@ -154,35 +125,24 @@ module.exports = async function handler(req, res) {
 
   const secreto = (process.env.STRIPE_WEBHOOK_SECRET || '').trim();
 
-  let crudo;
-  try {
-    crudo = await leeCrudo(req);
-  } catch (e) {
-    console.error('[webhook] no se pudo leer el cuerpo crudo: ' + e.message);
-    res.status(500).json({ error: 'cuerpo ilegible' });
-    return;
-  }
-
-  const v = firma.verifica(crudo, req.headers['stripe-signature'], secreto);
+  const v = firma.verifica(crudo, cabeceraFirma, secreto);
   if (!v.ok) {
     // El motivo se queda en el registro del servidor. A quien tocó la puerta
     // no se le explica por qué no abrió.
     console.error('[webhook] firma rechazada: ' + v.motivo);
-    res.status(400).json({ error: 'firma inválida' });
-    return;
+    return { status: 400, cuerpo: { error: 'firma inválida' } };
   }
 
   let evento;
   try { evento = JSON.parse(crudo.toString('utf8')); }
-  catch (e) { res.status(400).json({ error: 'cuerpo ilegible' }); return; }
+  catch (e) { return { status: 400, cuerpo: { error: 'cuerpo ilegible' } }; return; }
 
   const tipo = evento.type;
   const sesion = (evento.data && evento.data.object) || {};
 
   const NOS_IMPORTAN = ['checkout.session.completed', 'checkout.session.async_payment_succeeded'];
   if (NOS_IMPORTAN.indexOf(tipo) < 0) {
-    res.status(200).json({ recibido: true, ignorado: tipo });
-    return;
+    return { status: 200, cuerpo: { recibido: true, ignorado: tipo } };
   }
 
   /* No basta el nombre del evento: `completed` tambien llega con OXXO, con el
@@ -191,8 +151,7 @@ module.exports = async function handler(req, res) {
   const pagado = sesion.payment_status === 'paid' || sesion.payment_status === 'no_payment_required';
   if (!pagado) {
     console.log('[webhook] ' + tipo + ' sin pago aún (' + sesion.payment_status + '), no se registra');
-    res.status(200).json({ recibido: true, pendiente: true });
-    return;
+    return { status: 200, cuerpo: { recibido: true, pendiente: true } };
   }
 
   const llave = (process.env.CONTRATOS_API_KEY || '').trim();
@@ -201,8 +160,7 @@ module.exports = async function handler(req, res) {
        oficina tiempo de configurar la llave sin perder el pago. */
     console.error('[webhook] falta CONTRATOS_API_KEY: el pago ' + (sesion.id || '') +
       ' NO se registró. Stripe reintentará.');
-    res.status(500).json({ error: 'sin llave de EuroSystem' });
-    return;
+    return { status: 500, cuerpo: { error: 'sin llave de EuroSystem' } };
   }
 
   const cuerpo = contratoDesde(sesion.metadata || {}, sesion);
@@ -211,8 +169,7 @@ module.exports = async function handler(req, res) {
     console.error('[webhook] fechas ilegibles en la sesión ' + (sesion.id || '') +
       ': salida="' + (sesion.metadata || {}).salida + '" regreso="' + (sesion.metadata || {}).regreso +
       '". Registrar a mano.');
-    res.status(200).json({ recibido: true, error: 'fechas ilegibles' });
-    return;
+    return { status: 200, cuerpo: { recibido: true, error: 'fechas ilegibles' } };
   }
 
   try {
@@ -226,8 +183,7 @@ module.exports = async function handler(req, res) {
     if (r.ok) {
       console.log('[webhook] contrato ' + d.folio + (d.repetido ? ' (ya existía)' : ' creado') +
         ' para la sesión ' + sesion.id);
-      res.status(200).json({ recibido: true, folio: d.folio, repetido: !!d.repetido });
-      return;
+      return { status: 200, cuerpo: { recibido: true, folio: d.folio, repetido: !!d.repetido } };
     }
 
     /* 401/422 no se arreglan reintentando: la llave está mal o los datos no
@@ -236,15 +192,16 @@ module.exports = async function handler(req, res) {
     if (r.status === 401 || r.status === 422 || r.status === 400) {
       console.error('[webhook] EuroSystem rechazó el contrato (' + r.status + '): ' +
         JSON.stringify(d).slice(0, 400) + ' — sesión ' + sesion.id + '. REGISTRAR A MANO.');
-      res.status(200).json({ recibido: true, error: 'rechazado por EuroSystem' });
-      return;
+      return { status: 200, cuerpo: { recibido: true, error: 'rechazado por EuroSystem' } };
     }
 
     // 429, 500, 503: sí se arreglan esperando. Que Stripe reintente.
     console.error('[webhook] EuroSystem contestó ' + r.status + '; Stripe reintentará. Sesión ' + sesion.id);
-    res.status(500).json({ error: 'EuroSystem no disponible' });
+    return { status: 500, cuerpo: { error: 'EuroSystem no disponible' } };
   } catch (e) {
     console.error('[webhook] no se pudo hablar con EuroSystem: ' + e.message + '; Stripe reintentará.');
-    res.status(500).json({ error: 'EuroSystem inalcanzable' });
+    return { status: 500, cuerpo: { error: 'EuroSystem inalcanzable' } };
   }
-};
+}
+
+module.exports = { procesa, contratoDesde, conZona, claseDeUnidad };
