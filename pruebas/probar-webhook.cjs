@@ -4,8 +4,13 @@
        node pruebas/probar-webhook.cjs
 
    Lo que se juega aqui: que nadie pueda mandar un «ya pago»
-   inventado y que se registre un contrato sin dinero de por
-   medio. La firma es lo unico que lo impide.
+   inventado y que se registre un contrato sin dinero de por medio.
+
+   Dos candados, no uno:
+     1. la firma, cuando el entorno deja ver los bytes crudos
+     2. y sobre todo, que del aviso solo se toma el ID: si esta
+        pagado o no se le pregunta a Stripe con nuestra clave.
+        Un aviso mentiroso no sirve de nada.
    ============================================================ */
 'use strict';
 const firma = require('../api/_firma-stripe.js');
@@ -75,6 +80,7 @@ igual('cuerpo como objeto: no pasa',
 
 process.env.STRIPE_WEBHOOK_SECRET = SECRETO;
 process.env.CONTRATOS_API_KEY = 'llave_de_mentiras';
+process.env.STRIPE_SECRET_KEY = 'sk_test_de_mentiras';
 const logica = require('../api/_webhook-logica.js');
 /* La logica recibe el crudo y la firma, y devuelve la respuesta: la cascara
    .mjs solo consigue el cuerpo crudo y no tiene reglas que probar. */
@@ -108,10 +114,17 @@ const sesionPagada = {
   metadata: META, customer_details: { email: 'quien@sea.mx' }
 };
 
-/* lo que EuroSystem "contesta", y lo que se le mando */
+/* Dos destinos que fingir: Stripe —que ahora es la fuente de verdad— y
+   EuroSystem. `sesionEnStripe` es lo que Stripe contesta cuando se le
+   pregunta por la sesion; el aviso del webhook ya no manda. */
 let ultimoEnvio = null;
+let sesionEnStripe = null;
 function euroDice(status, datos) {
   global.fetch = function (url, opc) {
+    if (String(url).indexOf('api.stripe.com') >= 0) {
+      return Promise.resolve({ ok: !!sesionEnStripe, status: sesionEnStripe ? 200 : 404,
+        json: function () { return Promise.resolve(sesionEnStripe || { error: { message: 'no such session' } }); } });
+    }
     ultimoEnvio = { url: url, opciones: opc, cuerpo: JSON.parse(opc.body) };
     return Promise.resolve({ ok: status >= 200 && status < 300, status: status,
       json: function () { return Promise.resolve(datos); } });
@@ -122,6 +135,7 @@ function euroDice(status, datos) {
 
   /* -------- firma inventada: no se registra NADA -------- */
   ultimoEnvio = null;
+  sesionEnStripe = sesionPagada;
   euroDice(201, { folio: 1 });
   let r = res();
   await handler(pide({ type: 'checkout.session.completed', data: { object: sesionPagada } },
@@ -129,8 +143,31 @@ function euroDice(status, datos) {
   igual('evento con firma falsa: 400', r._status, 400);
   igual('y NO se llamó a EuroSystem', ultimoEnvio, null);
 
+  /* -------- EL ATAQUE NUEVO: aviso inventado de una sesión que no existe.
+     Aunque la firma cuadrara, Stripe dice que no la conoce y no pasa nada. */
+  ultimoEnvio = null;
+  sesionEnStripe = null;                      // Stripe: «no conozco esa sesión»
+  euroDice(201, { folio: 9 });
+  r = res();
+  await handler(pide({ type: 'checkout.session.completed',
+    data: { object: { id: 'cs_test_INVENTADA', payment_status: 'paid', metadata: META } } }), r);
+  igual('sesión que Stripe no reconoce: 200 y NO registra', r._status, 200);
+  igual('no se llamó a EuroSystem', ultimoEnvio, null);
+
+  /* -------- el aviso MIENTE sobre el estado: Stripe manda -------- */
+  ultimoEnvio = null;
+  sesionEnStripe = Object.assign({}, sesionPagada, { payment_status: 'unpaid' });
+  euroDice(201, { folio: 8 });
+  r = res();
+  await handler(pide({ type: 'checkout.session.completed',
+    data: { object: Object.assign({}, sesionPagada, { payment_status: 'paid' }) } }), r);
+  igual('el aviso dice pagado y Stripe dice que no: gana Stripe',
+    [r._status, r._json.pendiente], [200, true]);
+  igual('no se registró nada', ultimoEnvio, null);
+
   /* -------- el camino bueno -------- */
   ultimoEnvio = null;
+  sesionEnStripe = sesionPagada;
   euroDice(201, { folio: 43773, repetido: false });
   r = res();
   await handler(pide({ type: 'checkout.session.completed', data: { object: sesionPagada } }), r);
@@ -156,6 +193,7 @@ function euroDice(status, datos) {
 
   /* -------- OXXO: voucher generado, dinero NO entrado -------- */
   ultimoEnvio = null;
+  sesionEnStripe = Object.assign({}, sesionPagada, { payment_status: 'unpaid' });
   euroDice(201, { folio: 2 });
   r = res();
   await handler(pide({ type: 'checkout.session.completed',
@@ -165,6 +203,7 @@ function euroDice(status, datos) {
 
   /* -------- OXXO pagado dias despues: ese SI registra -------- */
   ultimoEnvio = null;
+  sesionEnStripe = Object.assign({}, sesionPagada, { payment_method_types: ['oxxo'] });
   euroDice(201, { folio: 44001 });
   r = res();
   await handler(pide({ type: 'checkout.session.async_payment_succeeded',
@@ -172,6 +211,7 @@ function euroDice(status, datos) {
   igual('OXXO pagado despues: registra', [r._status, r._json.folio], [200, 44001]);
 
   /* -------- semantica de reintentos -------- */
+  sesionEnStripe = sesionPagada;
   euroDice(422, { error: 'validación', detalle: [] });
   r = res();
   await handler(pide({ type: 'checkout.session.completed', data: { object: sesionPagada } }), r);
@@ -188,6 +228,8 @@ function euroDice(status, datos) {
   igual('EuroSystem inalcanzable: 500, que Stripe reintente', r._status, 500);
 
   /* -------- sin llave de EuroSystem: el pago no se pierde -------- */
+  sesionEnStripe = sesionPagada;
+  euroDice(201, { folio: 7 });
   const llave = process.env.CONTRATOS_API_KEY;
   process.env.CONTRATOS_API_KEY = '';
   r = res();
@@ -206,6 +248,7 @@ function euroDice(status, datos) {
   /* -------- el metodo lo filtra la cascara, no la logica -------- */
   /* -------- fechas ilegibles: no se inventa una -------- */
   ultimoEnvio = null;
+  sesionEnStripe = Object.assign({}, sesionPagada, { metadata: Object.assign({}, META, { salida: 'el jueves' }) });
   euroDice(201, { folio: 4 });
   r = res();
   await handler(pide({ type: 'checkout.session.completed', data: { object:

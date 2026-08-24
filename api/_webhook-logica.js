@@ -116,34 +116,91 @@ function contratoDesde(m, sesion) {
   };
 }
 
+/* Le pregunta a Stripe como esta de verdad una sesion. Es la fuente de
+   verdad de todo esto: lo que llega en el aviso solo sirve para saber POR
+   CUAL preguntar. */
+async function traeSesion(id) {
+  const clave = (process.env.STRIPE_SECRET_KEY || '').trim();
+  if (!clave) return { error: 'sin clave de Stripe' };
+  if (!/^cs_[A-Za-z0-9_]{1,100}$/.test(String(id || ''))) return { error: 'id de sesión con mala forma' };
+  try {
+    const r = await fetch('https://api.stripe.com/v1/checkout/sessions/' + encodeURIComponent(id), {
+      headers: { Authorization: 'Bearer ' + clave }
+    });
+    const d = await r.json();
+    if (!r.ok || d.error) return { error: 'Stripe no reconoce la sesión' };
+    return { sesion: d };
+  } catch (e) {
+    return { error: 'no se pudo consultar a Stripe', reintentar: true };
+  }
+}
+
+/* `crudo` puede ser el cuerpo tal cual (Buffer/texto) o el objeto ya
+   parseado, segun lo que deje pasar el entorno. */
 async function procesa(crudo, cabeceraFirma) {
 
   /* Ojo: aqui NO va el guardia de origen de _defensas. Stripe llama de
      servidor a servidor y no manda cabecera Origin ni Referer; exigirla
-     cerraria la puerta justo a quien tiene que entrar. Lo que la protege es
-     la firma, que es mas fuerte que cualquier lista de origenes. */
-
-  const secreto = (process.env.STRIPE_WEBHOOK_SECRET || '').trim();
-
-  const v = firma.verifica(crudo, cabeceraFirma, secreto);
-  if (!v.ok) {
-    // El motivo se queda en el registro del servidor. A quien tocó la puerta
-    // no se le explica por qué no abrió.
-    console.error('[webhook] firma rechazada: ' + v.motivo);
-    return { status: 400, cuerpo: { error: 'firma inválida' } };
-  }
+     cerraria la puerta justo a quien tiene que entrar. */
 
   let evento;
-  try { evento = JSON.parse(crudo.toString('utf8')); }
-  catch (e) { return { status: 400, cuerpo: { error: 'cuerpo ilegible' } }; return; }
+  const traeBytes = Buffer.isBuffer(crudo) || typeof crudo === 'string';
+  if (traeBytes) {
+    try { evento = JSON.parse(crudo.toString('utf8')); }
+    catch (e) { return { status: 400, cuerpo: { error: 'cuerpo ilegible' } }; }
+  } else if (crudo && typeof crudo === 'object') {
+    evento = crudo;
+  } else {
+    return { status: 400, cuerpo: { error: 'cuerpo ilegible' } };
+  }
+
+  /* LA FIRMA, cuando se puede. Solo cuadra si llegaron los BYTES exactos: si
+     el entorno parseo el cuerpo, no hay nada que verificar. Y no pasa nada,
+     porque abajo no se le cree una palabra a este aviso —se le pregunta a
+     Stripe—. La firma es la primera puerta, no la unica. */
+  const secreto = (process.env.STRIPE_WEBHOOK_SECRET || '').trim();
+  if (traeBytes && secreto) {
+    const v = firma.verifica(crudo, cabeceraFirma, secreto);
+    if (!v.ok) {
+      // El motivo se queda en el registro. A quien toco la puerta no se le
+      // explica por que no abrio.
+      console.error('[webhook] firma rechazada: ' + v.motivo);
+      return { status: 400, cuerpo: { error: 'firma inválida' } };
+    }
+  } else if (!secreto) {
+    console.error('[webhook] sin STRIPE_WEBHOOK_SECRET: no se pudo verificar la firma');
+  } else {
+    console.error('[webhook] el cuerpo no llegó crudo: no se pudo verificar la firma; ' +
+      'se procede consultando a Stripe, que es la fuente de verdad');
+  }
 
   const tipo = evento.type;
-  const sesion = (evento.data && evento.data.object) || {};
 
   const NOS_IMPORTAN = ['checkout.session.completed', 'checkout.session.async_payment_succeeded'];
   if (NOS_IMPORTAN.indexOf(tipo) < 0) {
     return { status: 200, cuerpo: { recibido: true, ignorado: tipo } };
   }
+
+  /* ---------------------------------------------------------------------
+     AQUI ESTA LA SEGURIDAD DE VERDAD
+     ---------------------------------------------------------------------
+     Del aviso solo se toma el ID. Todo lo demas —si se pago, cuanto, de
+     quien— se le pregunta a Stripe con nuestra clave secreta. Asi, un aviso
+     inventado no sirve de nada: Stripe contesta que esa sesion no existe, o
+     que no esta pagada, y no se registra nada.
+
+     Es mas fuerte que creerle a un aviso firmado, porque ni siquiera un
+     aviso legitimo pero viejo puede afirmar algo que ya cambio. */
+  const idAviso = (evento.data && evento.data.object && evento.data.object.id) || '';
+  const consulta = await traeSesion(idAviso);
+  if (consulta.error) {
+    console.error('[webhook] ' + consulta.error + ' (' + idAviso + ')');
+    // Si Stripe no contesto, que se reintente. Si no reconoce la sesion, no.
+    return consulta.reintentar
+      ? { status: 500, cuerpo: { error: consulta.error } }
+      : { status: 200, cuerpo: { recibido: true, error: consulta.error } };
+  }
+  const sesion = consulta.sesion;
 
   /* No basta el nombre del evento: `completed` tambien llega con OXXO, con el
      voucher generado y el dinero SIN entrar. Se registra contrato solo cuando
