@@ -68,37 +68,29 @@ async function atiende(a) {
   try {
     crudo = await crudoDeNode(req);
   } catch (e) {
-    console.error('[webhook] no se pudo leer el cuerpo crudo: ' + e.message);
-    /* `forma` describe el ENTORNO, no la peticion: que trae el req y de que
-       tipo. Sirve para saber por que no se pudo leer crudo sin tener que
-       mirar los registros de Vercel. No lleva ni un dato del cliente. */
-    res.status(500).json({
-      error: 'cuerpo ilegible',
-      forma: {
-        rawBody: typeof req.rawBody,
-        body: Array.isArray(req.body) ? 'array' : (req.body === null ? 'null' : typeof req.body),
-        esBuffer: Buffer.isBuffer(req.body),
-        legible: typeof req[Symbol.asyncIterator] === 'function',
-        motivo: e.message
-      }
-    });
+    console.error('[webhook] no se pudo leer el cuerpo: ' + e.message);
+    res.status(500).json({ error: 'cuerpo ilegible' });
     return;
   }
   const r = await logica.procesa(crudo, req.headers['stripe-signature']);
   res.status(r.status).json(r.cuerpo);
 }
 
-/* Se intenta por orden, del mas confiable al menos. Si al final solo queda un
-   objeto ya parseado, se falla RUIDOSAMENTE: mas vale que el pago espere un
-   reintento a que se de por buena una firma que no se pudo comprobar. */
+/* Se intenta por orden, del mas confiable al menos.
+
+   Si al final solo queda un objeto ya parseado —que es lo que pasa en este
+   runtime de Vercel, comprobado— se entrega ASI. Antes esto reventaba, y
+   estaba bien mientras la firma era el unico candado. Ya no lo es: la logica
+   no le cree una palabra al aviso, le pregunta a Stripe por el id. Sin bytes
+   no hay firma que verificar, pero la consulta a Stripe sigue mandando, y esa
+   es mas fuerte. */
 async function crudoDeNode(req) {
   if (Buffer.isBuffer(req.rawBody)) return req.rawBody;
   if (typeof req.rawBody === 'string') return Buffer.from(req.rawBody, 'utf8');
   if (Buffer.isBuffer(req.body)) return req.body;
   if (typeof req.body === 'string') return Buffer.from(req.body, 'utf8');
-  if (req.body && typeof req.body === 'object') {
-    throw new Error('el cuerpo llegó parseado: los bytes originales se perdieron');
-  }
+  if (req.body && typeof req.body === 'object') return req.body;
+
   const trozos = [];
   let total = 0;
   for await (const t of req) {
