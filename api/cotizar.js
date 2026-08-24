@@ -52,6 +52,7 @@ module.exports = async function handler(req, res) {
 
   const redondo = cuerpo.redondo !== false && !!cuerpo.regreso;
   const dias = tarifa.diasDeServicio(cuerpo.salida, cuerpo.regreso);
+  const noches = tarifa.nochesDe(cuerpo.salida, cuerpo.regreso);
 
   try {
     const ida = await rutas.mideTramo(origen, destino, clave);
@@ -80,7 +81,15 @@ module.exports = async function handler(req, res) {
        sacar el mismo número del mismo lugar. */
     const kmTotal = tarifa.kmDe(ida.metros, vuelta ? vuelta.metros : 0);
 
-    const p = tarifa.calcula(kmTotal, dias);
+    /* Las noches extra y los movimientos se suman aquí adentro, no aquí
+       afuera. La lista de movimientos entra CRUDA —tal como la mandó el
+       navegador— y _tarifa la acota: cuántos días caben y en qué banda de
+       horas cae cada uno. Estas dos líneas son idénticas en /api/pagar, y
+       tienen que serlo. */
+    const p = tarifa.calcula(kmTotal, dias, {
+      noches: noches,
+      movimientos: cuerpo.movimientos
+    });
 
     /* Se enumera a mano lo que sale, en vez de mandar el objeto completo.
        Los kilometros NO salen: con el total, la tarifa por kilometro se saca
@@ -93,7 +102,10 @@ module.exports = async function handler(req, res) {
       ivaIncluido: p.ivaIncluido,
       porcentajeAnticipo: p.porcentajeAnticipo,
       anticipo: p.anticipo,
-      saldo: p.saldo
+      saldo: p.saldo,
+      /* El desglose sí sale: dice cuánto pesan las noches extra y los
+         movimientos, sin decir de dónde salió el traslado. */
+      desglose: p.desglose
     });
   } catch (e) {
     res.status(502).json({ error: 'No se pudo calcular la distancia' });

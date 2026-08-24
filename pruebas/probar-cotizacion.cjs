@@ -81,7 +81,15 @@ const AUTOBUS = { id: 'irizar-i6s', name: 'Irizar i6S', cotizadorAutomatico: fal
   const RESPUESTA_SUCIA = {
     dias: 4, redondo: true, total: 21700, ivaIncluido: true,
     porcentajeAnticipo: 20, anticipo: 4340, saldo: 17360,
-    km: 621.2, kmIda: 311.4, tarifaKm: 35, interno: { porKilometro: 21742 }
+    km: 621.2, kmIda: 311.4, tarifaKm: 35, interno: { porKilometro: 21742 },
+    /* El desglose es objeto anidado: si se copiara entero, un campo colado
+       ADENTRO pasaría la lista blanca de afuera sin que nadie lo note. Por eso
+       aquí van kilómetros escondidos un nivel abajo. */
+    desglose: {
+      traslado: 21700, nochesIncluidas: 3, noches: 3, nochesExtra: 0,
+      importeNoches: 0, diasMovimiento: 0, importeMovimientos: 0,
+      km: 621.2, tarifaKm: 35
+    }
   };
   const m2 = COTIZACION.crea({ pide: pideFalso(RESPUESTA_SUCIA) });
   m2.pon({ origen: LUGAR_GDL, destino: LUGAR_PVR, salida: '2026-09-03', regreso: '2026-09-06', unidad: SPRINTER, redondo: true });
@@ -89,10 +97,58 @@ const AUTOBUS = { id: 'irizar-i6s', name: 'Irizar i6S', cotizadorAutomatico: fal
   igual('sprinter: veredicto listo', v2.tipo, 'listo');
   igual('la cotización queda SOLO con los campos permitidos',
     Object.keys(m2.estadoVivo().cotizacion).sort(),
-    ['anticipo', 'dias', 'ivaIncluido', 'porcentajeAnticipo', 'redondo', 'saldo', 'total']);
+    ['anticipo', 'desglose', 'dias', 'ivaIncluido', 'porcentajeAnticipo', 'redondo', 'saldo', 'total']);
+  igual('y el desglose también se filtra, campo por campo',
+    Object.keys(m2.estadoVivo().cotizacion.desglose).sort(),
+    ['diasMovimiento', 'importeMovimientos', 'importeNoches', 'noches',
+     'nochesExtra', 'nochesIncluidas', 'traslado']);
   igual('ni un kilómetro ni tarifa en el estado',
     JSON.stringify(m2.estadoVivo()).match(/km|tarifa|interno/i), null);
   igual('el total sobrevive entero', m2.estadoVivo().cotizacion.total, 21700);
+
+  /* ---------------- los movimientos, camino al servidor -------------- */
+  /* De cada día capturado, al cotizador solo van las horas. Y sobre todo: la
+     lista no se filtra. Un renglón que se cayera aquí sería un día cotizado
+     de menos y cobrado de más. */
+  igual('de cada día solo salen las horas',
+    COTIZACION.horasDe([
+      { fecha: '2026-09-04', horaInicio: '08:00', horaFin: '16:00',
+        partida: { texto: 'Hotel' }, visitas: [{ texto: 'Malecón' }] }
+    ]),
+    [{ horaInicio: '08:00', horaFin: '16:00' }]);
+
+  igual('los días incompletos NO se caen de la lista',
+    COTIZACION.horasDe([{ horaInicio: '08:00', horaFin: '16:00' }, {}, { horaFin: '20:00' }]).length, 3);
+  igual('sin movimientos, lista vacía', COTIZACION.horasDe([]), []);
+  igual('sin nada, lista vacía', COTIZACION.horasDe(null), []);
+
+  /* Y que de verdad viajen en el cuerpo de la petición. */
+  let cuerpoEnviado = null;
+  const m5 = COTIZACION.crea({
+    pide: function (url, opc) {
+      cuerpoEnviado = JSON.parse(opc.body);
+      return Promise.resolve({ ok: true, json: function () { return Promise.resolve({ total: 1 }); } });
+    }
+  });
+  m5.pon({ origen: LUGAR_GDL, destino: LUGAR_PVR, salida: '2026-09-03', regreso: '2026-09-08', unidad: SPRINTER, redondo: true });
+  await m5.cotiza();
+  igual('la primera cotización va sin movimientos', cuerpoEnviado.movimientos, []);
+
+  m5.ponMovimientos([
+    { fecha: '2026-09-04', horaInicio: '08:00', horaFin: '18:00', visitas: [] },
+    { fecha: '2026-09-05', horaInicio: '09:00', horaFin: '21:00', visitas: [] }
+  ]);
+  igual('ponMovimientos suelta la cotización vieja', m5.estadoVivo().cotizacion, null);
+  await m5.cotiza();
+  igual('y la segunda ya los lleva',
+    cuerpoEnviado.movimientos,
+    [{ horaInicio: '08:00', horaFin: '18:00' }, { horaInicio: '09:00', horaFin: '21:00' }]);
+
+  /* Volver a buscar el viaje los suelta: si cambiaron las fechas, los días
+     capturados pueden haber quedado fuera del rango. */
+  m5.pon({ origen: LUGAR_GDL, destino: LUGAR_PVR, salida: '2026-10-01', regreso: '2026-10-04', unidad: SPRINTER, redondo: true });
+  await m5.cotiza();
+  igual('tras pon(), los movimientos se sueltan', cuerpoEnviado.movimientos, []);
 
   /* ---------------- la carrera: gana la última búsqueda -------------- */
   const lenta = pideFalso({ dias: 1, total: 999 }, { retrasa: 40 });

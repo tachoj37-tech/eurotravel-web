@@ -28,14 +28,29 @@ function cierto(nombre, v) { igual(nombre, !!v, true); }
    igualdades se cumplan en TODOS. Un solo fallo es un peso perdido. */
 (function () {
   let casos = 0;
-  const rotos = { suma: [], iva: [], anticipo: [], minimo: [], tramos: [], redondeo: [] };
+  const rotos = { suma: [], iva: [], anticipo: [], minimo: [], tramos: [], redondeo: [], partes: [] };
+
+  /* Las combinaciones de movimientos con las que se barre. La última trae más
+     días que noches a propósito: hay que acotarla, no cobrarla entera. */
+  const MOVIMIENTOS = [
+    [],
+    [{ horaInicio: '08:00', horaFin: '16:00' }],
+    [{ horaInicio: '07:30', horaFin: '20:15' }, { horaInicio: '09:00', horaFin: '17:00' }],
+    [{ horaInicio: '06:00', horaFin: '23:00' }, { horaInicio: '08:00', horaFin: '16:00' },
+     { horaInicio: '10:00', horaFin: '19:30' }, { horaInicio: '08:00', horaFin: '18:01' },
+     { horaInicio: '', horaFin: '' }]
+  ];
 
   for (let metrosIda = 15000; metrosIda <= 1400000; metrosIda += 4871) {
     for (const delta of [0, 340, -1290, 20411]) {
       const metrosVuelta = Math.max(0, metrosIda + delta);
       for (const dias of [1, 2, 4, 7, 12]) {
         const km = t.kmDe(metrosIda, metrosVuelta);
-        const p = t.calcula(km, dias);
+        /* Las noches son los días menos uno: es la relación real entre las dos
+           cuentas, y así el barrido cruza el borde de las 3 incluidas. */
+        const noches = Math.max(0, dias - 1);
+        const movs = MOVIMIENTOS[casos % MOVIMIENTOS.length];
+        const p = t.calcula(km, dias, { noches: noches, movimientos: movs });
         casos++;
 
         // anticipo + saldo tiene que dar EXACTAMENTE el total: ni un centavo
@@ -49,19 +64,28 @@ function cierto(nombre, v) { igual(nombre, !!v, true); }
         // el desglose de tramos suma lo que dice el bruto por kilometro
         const sumaTramos = p.interno.tramos.reduce(function (s, d) { return s + d.importe; }, 0);
         if (Math.abs(sumaTramos - p.interno.porKilometro) > 0.5) rotos.tramos.push({ km, dias, p });
-        // el corte a la centena nunca sube el precio, solo lo baja o lo deja
-        if (p.total > p.interno.sinRedondear) rotos.redondeo.push({ km, dias, p });
+        /* Las tres partes que ve el cliente TIENEN que reconstruir el total.
+           Si no, el resumen enseña un reparto que no suma lo que se cobra. */
+        const d = p.desglose;
+        if (d.traslado + d.importeNoches + d.importeMovimientos !== p.total) {
+          rotos.partes.push({ km, dias, p });
+        }
+        /* El corte a la centena nunca sube el precio. Se mira contra el
+           TRASLADO, no contra el total: desde que hay noches y movimientos, el
+           total pasa del bruto por kilómetro con toda razón. */
+        if (d.traslado > p.interno.sinRedondear) rotos.redondeo.push({ km, dias, p });
       }
     }
   }
 
-  console.log('(' + casos.toLocaleString('es-MX') + ' viajes distintos)');
+  console.log('(' + casos.toLocaleString('es-MX') + ' viajes distintos, con y sin movimientos)');
   igual('anticipo + saldo = total, sin excepción', rotos.suma.length, 0);
   igual('subtotal + IVA = total, sin excepción', rotos.iva.length, 0);
   igual('el anticipo nunca pasa del total', rotos.anticipo.length, 0);
   igual('el total nunca queda bajo el mínimo por día', rotos.minimo.length, 0);
   igual('el desglose por tramos suma el bruto', rotos.tramos.length, 0);
   igual('el redondeo nunca sube el precio', rotos.redondeo.length, 0);
+  igual('traslado + noches + movimientos = total', rotos.partes.length, 0);
 })();
 
 /* ============ 2. COTIZAR Y COBRAR NO PUEDEN SEPARARSE ============
@@ -99,11 +123,19 @@ function cierto(nombre, v) { igual(nombre, !!v, true); }
   process.env.STRIPE_SECRET_KEY = 'sk_test_x';
   const logica = require('../api/_webhook-logica.js');
 
+  const CON_MOVIMIENTOS = [
+    { horaInicio: '08:00', horaFin: '18:00' },   // 10 h -> 4,000
+    { horaInicio: '08:00', horaFin: '22:00' }    // 14 h -> 5,000
+  ];
+
   const viajes = [
-    { ida: 311400, vuelta: 309800, dias: 4 },   // Vallarta redondo, primer tramo
-    { ida: 610000, vuelta: 600000, dias: 5 },   // cruza los tres tramos
-    { ida: 40000, vuelta: 40000, dias: 6 },     // corto y largo en días: manda el mínimo
-    { ida: 900000, vuelta: 0, dias: 1 }         // solo ida, muy largo
+    { ida: 311400, vuelta: 309800, dias: 4, noches: 3 },   // Vallarta redondo, primer tramo
+    { ida: 610000, vuelta: 600000, dias: 5, noches: 4 },   // cruza los tres tramos, 1 noche extra
+    { ida: 40000, vuelta: 40000, dias: 6, noches: 5 },     // corto y largo en días: manda el mínimo
+    { ida: 900000, vuelta: 0, dias: 1, noches: 0 },        // solo ida, muy largo
+    // y los mismos, pero con movimientos encima
+    { ida: 311400, vuelta: 309800, dias: 4, noches: 3, movs: CON_MOVIMIENTOS },
+    { ida: 610000, vuelta: 600000, dias: 8, noches: 7, movs: CON_MOVIMIENTOS }
   ];
 
   let cuadran = 0;
@@ -111,7 +143,7 @@ function cierto(nombre, v) { igual(nombre, !!v, true); }
 
   viajes.forEach(function (v) {
     const km = t.kmDe(v.ida, v.vuelta);
-    const p = t.calcula(km, v.dias);
+    const p = t.calcula(km, v.dias, { noches: v.noches, movimientos: v.movs });
 
     // así es exactamente como pagar.js guarda los montos en Stripe: texto
     const metadata = {
@@ -120,6 +152,10 @@ function cierto(nombre, v) { igual(nombre, !!v, true); }
       origen: 'A', destino: 'B', unidad: 'Sprinter',
       salida: '2026-09-03T08:00', regreso: '2026-09-06T18:00',
       dias: String(v.dias), km: String(Math.round(km * 10) / 10),
+      nochesExtra: String(p.desglose.nochesExtra),
+      importeNoches: String(p.desglose.importeNoches),
+      movDias: String(p.desglose.diasMovimiento),
+      movImporte: String(p.desglose.importeMovimientos),
       total: String(p.total), anticipo: String(p.anticipo), saldo: String(p.saldo)
     };
 
@@ -133,8 +169,38 @@ function cierto(nombre, v) { igual(nombre, !!v, true); }
     else fallas.push({ v: v, calculado: p.total, enContrato: contrato.cobro.montoTotal });
   });
 
-  igual('los 4 viajes llegan al contrato con el mismo total', cuadran, viajes.length);
+  igual('los ' + viajes.length + ' viajes llegan al contrato con el mismo total', cuadran, viajes.length);
   igual('sin fallas', fallas, []);
+
+  /* Que el contrato DIGA de dónde salió el total. Si solo llevara la suma, la
+     oficina no podría cuadrarla con el cliente cuando llame a preguntar. */
+  (function () {
+    const c = logica.contratoDesde({
+      folio: 'F', nombre: 'N', telefono: '33', total: '52000', anticipo: '10400', saldo: '41600',
+      salida: '2026-09-03T08:00', regreso: '2026-09-10T18:00', unidad: 'Sprinter',
+      origen: 'A', destino: 'B',
+      nochesExtra: '4', importeNoches: '4000', movDias: '2', movImporte: '9000',
+      movDetalle: '2026-09-04: 09:00 a 19:00, 3 recorridos | 2026-09-06: 08:00 a 22:00'
+    }, { id: 'cs_2' });
+
+    cierto('las noches extra se explican en el contrato', /4 noches extra/.test(c.observaciones));
+    cierto('los movimientos también', /2 días con movimientos/.test(c.observaciones));
+    cierto('y qué cubre cada día con movimientos', /8 horas dentro de la zona/.test(c.observaciones));
+    cierto('el detalle día por día va en el itinerario', /09:00 a 19:00/.test(c.servicio.itinerario));
+    /* `conMovimientos` NO se manda ni con movimientos ni sin ellos: en
+       EuroSystem, `false` libera la unidad para otro servicio, y esa decisión
+       no la toma un formulario de internet. */
+    igual('conMovimientos se le deja a la oficina', c.servicio.conMovimientos, undefined);
+
+    const sinExtras = logica.contratoDesde({
+      folio: 'F', nombre: 'N', telefono: '33', total: '21700', anticipo: '4340', saldo: '17360',
+      salida: '2026-09-03T08:00', regreso: '2026-09-06T18:00', unidad: 'Sprinter',
+      origen: 'A', destino: 'B'
+    }, { id: 'cs_3' });
+    igual('sin extras, no se inventa el renglón',
+      /El total incluye/.test(sinExtras.observaciones), false);
+    igual('y sin movimientos no hay itinerario', sinExtras.servicio.itinerario, undefined);
+  })();
 
   /* Y la regla del kilómetro hasta el final: el contrato lleva montos, pero
      NO el kilometraje. La metadata sí lo guarda —del lado del servidor—, y no

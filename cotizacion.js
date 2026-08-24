@@ -71,15 +71,41 @@
   /* La lista blanca de la respuesta del cotizador. Kilómetros y tarifa NO
      están y no deben estar: con el total y los kilómetros juntos, el precio
      por kilómetro se saca dividiendo. */
-  var CAMPOS_COTIZACION = ['dias', 'redondo', 'total', 'ivaIncluido', 'porcentajeAnticipo', 'anticipo', 'saldo'];
+  var CAMPOS_COTIZACION = ['dias', 'redondo', 'total', 'ivaIncluido', 'porcentajeAnticipo', 'anticipo', 'saldo', 'desglose'];
 
-  function soloCamposPermitidos(d) {
+  /* El desglose lleva su propia lista, aparte. Es un objeto anidado: copiarlo
+     entero dejaría entrar cualquier campo que el servidor le agregue mañana,
+     que es justo lo que esta lista existe para impedir. */
+  var CAMPOS_DESGLOSE = ['traslado', 'nochesIncluidas', 'noches', 'nochesExtra',
+    'importeNoches', 'diasMovimiento', 'importeMovimientos'];
+
+  function porLista(d, lista) {
     var limpio = {};
-    for (var i = 0; i < CAMPOS_COTIZACION.length; i++) {
-      var k = CAMPOS_COTIZACION[i];
+    for (var i = 0; i < lista.length; i++) {
+      var k = lista[i];
       if (d && Object.prototype.hasOwnProperty.call(d, k)) limpio[k] = d[k];
     }
     return limpio;
+  }
+
+  function soloCamposPermitidos(d) {
+    var limpio = porLista(d, CAMPOS_COTIZACION);
+    if (limpio.desglose) limpio.desglose = porLista(limpio.desglose, CAMPOS_DESGLOSE);
+    return limpio;
+  }
+
+  /* De los días con movimiento, al cotizador solo le sirven las horas: son lo
+     único que mueve el precio. Las direcciones y los puntos a visitar van al
+     contrato, por /api/pagar, no por aquí.
+
+     La LISTA NO SE FILTRA, solo se mapea. El precio se cobra por día, así que
+     si aquí se cayera un renglón, se cotizaría un día menos del que se cobra.
+     Eso es exactamente el defecto que no puede existir. */
+  function horasDe(movimientos) {
+    if (!movimientos || !movimientos.length) return [];
+    return [].map.call(movimientos, function (d) {
+      return { horaInicio: (d && d.horaInicio) || '', horaFin: (d && d.horaFin) || '' };
+    });
   }
 
   /* ------------------------------ la máquina --------------------------- */
@@ -94,6 +120,7 @@
       origen: null, destino: null,
       salida: '', regreso: '',
       unidad: null, redondo: true,
+      movimientos: [],
       cotizacion: null
     };
 
@@ -129,6 +156,20 @@
         estado.regreso = viaje.regreso || '';
         estado.unidad = viaje.unidad || null;
         estado.redondo = viaje.redondo !== false;
+        /* Los movimientos se sueltan a propósito: si cambiaron las fechas,
+           los días capturados pueden haber quedado fuera del viaje. Se
+           vuelven a poner cuando el cliente los confirme. */
+        estado.movimientos = [];
+        estado.cotizacion = null;
+        serie++;
+        avisa();
+      },
+
+      /* Los movimientos se capturan una pantalla después del viaje, y cambian
+         el precio. Se ponen aquí y se vuelve a cotizar: el número que ve el
+         cliente en el resumen ya los trae. */
+      ponMovimientos: function (dias) {
+        estado.movimientos = horasDe(dias);
         estado.cotizacion = null;
         serie++;
         avisa();
@@ -155,7 +196,8 @@
             destino: puntoDe(estado.destino),
             salida: estado.salida,
             regreso: estado.regreso,
-            redondo: estado.redondo
+            redondo: estado.redondo,
+            movimientos: estado.movimientos
           })
         }).then(function (r) {
           return r.json().then(function (d) { return { ok: r.ok, d: d }; },
@@ -178,7 +220,9 @@
     puntoDe: puntoDe,
     puntoExacto: puntoExacto,
     faltantes: faltantes,
-    CAMPOS_COTIZACION: CAMPOS_COTIZACION
+    horasDe: horasDe,
+    CAMPOS_COTIZACION: CAMPOS_COTIZACION,
+    CAMPOS_DESGLOSE: CAMPOS_DESGLOSE
   };
 
   raiz.COTIZACION = COTIZACION;

@@ -79,6 +79,27 @@ function contratoDesde(m, sesion) {
   const nombre = String(m.nombre || '').trim();
   const partes = nombre.split(/\s+/);
 
+  /* Lo que se cobró de más, dicho en palabras. La oficina tiene que poder
+     cuadrar el total con el cliente sin abrir Stripe. */
+  const movDias = Number(m.movDias) || 0;
+  const nochesExtra = Number(m.nochesExtra) || 0;
+  const extras = [];
+  if (nochesExtra) {
+    extras.push(nochesExtra + (nochesExtra === 1 ? ' noche extra' : ' noches extra') +
+      ' ($' + (Number(m.importeNoches) || 0).toLocaleString('es-MX') + ')');
+  }
+  if (movDias) {
+    extras.push(movDias + (movDias === 1 ? ' día' : ' días') + ' con movimientos en destino ' +
+      '($' + (Number(m.movImporte) || 0).toLocaleString('es-MX') + ')');
+  }
+  const extrasTexto = extras.length
+    ? ' El total incluye ' + extras.join(' y ') + '.' +
+      (movDias
+        ? ' Cada día con movimientos cubre 8 horas dentro de la zona metropolitana ' +
+          'del destino, o 40 km a la redonda del centro.'
+        : '')
+    : '';
+
   return {
     /* La misma reserva nunca genera dos contratos, y los folios de EuroSystem
        son consecutivos: un gemelo deja un hueco que ya no se cierra. El id de
@@ -93,7 +114,8 @@ function contratoDesde(m, sesion) {
          precio sale de los kilómetros, no de las cabezas. Así que el «1» de
          abajo es el valor por omisión de la puerta, no un dato del cliente, y
          hay que decirlo o la oficina se lo cree. */
-      'PASAJEROS: no se capturan en línea, confirmar con el cliente.',
+      'PASAJEROS: no se capturan en línea, confirmar con el cliente.' +
+      extrasTexto,
     cliente: {
       nombre: partes[0] || nombre || 'Sin nombre',
       apellidos: partes.slice(1).join(' ') || undefined,
@@ -106,6 +128,17 @@ function contratoDesde(m, sesion) {
       origen: String(m.origen || '').trim() || 'Por confirmar',
       destino: String(m.destino || '').trim() || 'Por confirmar',
       tipoViaje: 'REDONDO',
+      /* Los días con movimiento, uno por renglón, tal como los capturó el
+         cliente. Es exactamente para lo que existe este campo. */
+      itinerario: String(m.movDetalle || '').trim() || undefined,
+      /* `conMovimientos` NO se manda, ni siquiera cuando el cliente contestó
+         que no habrá. En EuroSystem, `false` libera la unidad para otro
+         servicio los días de en medio, y esa decisión no la puede tomar un
+         formulario de internet: el cliente que dice "sin movimientos" muchas
+         veces igual espera el camión estacionado en el hotel. Sin el campo,
+         EuroSystem se queda en `true`, que es el lado seguro, y la oficina lo
+         cambia si está segura. Lo que sí viaja es el dato completo: cuántos
+         días con movimiento se pagaron y qué se capturó en cada uno. */
       tipoUnidad: claseDeUnidad(m.unidad) || undefined,
       tipoUnidadDetalle: String(m.unidad || '').trim() || undefined,
       pasajeros: 1

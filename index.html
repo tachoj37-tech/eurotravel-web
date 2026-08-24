@@ -2011,8 +2011,8 @@ window.IMGS = {
 
           <p class="aviso-mov" id="aviso-mov" style="display: none">
             <svg aria-hidden="true"><use href="#i-shield" /></svg>
-            <span>Los movimientos en destino se cotizan por separado. Un asesor de Eurotravel
-            confirmará el costo final antes de cerrar tu reserva.</span>
+            <span>Cada día con movimientos cubre 8 horas dentro de la zona metropolitana
+            del destino, o 40 km a la redonda del centro. Ya está sumado al total de arriba.</span>
           </p>
           <div class="send-row">
             <a class="btn btn-red" id="send-wa" href="#" target="_blank" rel="noopener"><svg aria-hidden="true"><use href="#i-wa" /></svg> Enviar por WhatsApp</a>
@@ -2981,6 +2981,10 @@ window.IMGS = {
             telefono: (byId('f-tel').value || '').trim(),
             canal: canal,
             unidad: VIAJE.unidad ? VIAJE.unidad.name : '',
+            /* Los días completos, no solo las horas: /api/pagar saca el precio
+               de las horas —igual que /api/cotizar— y el resto lo escribe en
+               el itinerario del contrato. */
+            movimientos: MOV.incluye ? MOV.dias : [],
             rutaTexto: (VIAJE.origen ? VIAJE.origen.place[0] : '') + ' → ' + (VIAJE.destino ? VIAJE.destino.place[0] : '')
           })
         }).then(function (r) {
@@ -3267,16 +3271,32 @@ window.IMGS = {
       /* Aquí NO se pinta ni el kilometraje ni la tarifa por kilómetro.
          Con los kilómetros y el total a la vista, cualquiera saca el precio
          por kilómetro dividiendo. El servidor tampoco los manda. */
+      var d = c.desglose || {};
+
       var celdas = [
         ['Días de servicio', dias(c.dias)],
-        ['Viaje', c.redondo ? 'Redondo' : 'Solo ida'],
-        ['Impuestos', 'IVA incluido'],
-        ['Vigencia', 'Se confirma al apartar']
+        ['Viaje', c.redondo ? 'Redondo' : 'Solo ida']
       ];
+
+      /* Las noches extra se dicen en su renglón. Si el precio sube mil pesos
+         por dormir una noche más, el cliente tiene que poder verlo antes de
+         llamar a preguntar. */
+      if (d.nochesExtra) {
+        celdas.push(['Noches adicionales',
+          d.nochesExtra + (d.nochesExtra === 1 ? ' noche · ' : ' noches · ') +
+          pesos.format(d.importeNoches)]);
+      }
+      if (d.importeMovimientos) {
+        celdas.push(['Movimientos en destino', pesos.format(d.importeMovimientos)]);
+      }
+
+      celdas.push(['Impuestos', 'IVA incluido']);
+      celdas.push(['Vigencia', 'Se confirma al apartar']);
 
       var notas = [];
 
-      /* si alguna punta es solo el nombre de la ciudad, la cifra puede moverse */
+      /* si alguna punta es solo el nombre de la ciudad, la cifra puede moverse.
+         Va primero: habla de la cifra que se acaba de enseñar. */
       var faltaOrigen = !puntoExacto(VIAJE.origen);
       var faltaDestino = !puntoExacto(VIAJE.destino);
       if (faltaOrigen || faltaDestino) {
@@ -3286,6 +3306,16 @@ window.IMGS = {
           '<b>Esta cifra puede afinarse.</b> Tomamos el centro ' + cual +
           ' para calcular el trayecto. Si marcas la dirección exacta —hotel, salón, domicilio— ' +
           'el precio queda más apegado a tu viaje real.</div>');
+      }
+
+      /* Los movimientos se capturan una pantalla más adelante, así que en el
+         paso 1 el precio todavía no los trae. Se avisa para que la cifra no
+         cambie sin explicación. */
+      if (!d.importeMovimientos && d.noches) {
+        notas.push('<div class="precio-afinar">' +
+          '<b>¿La unidad se va a mover en el destino?</b> Los recorridos locales ' +
+          'se cobran por día y se agregan a esta cifra. Los capturas en el ' +
+          'siguiente paso y el total se actualiza ahí mismo.</div>');
       }
 
       pintaPrecio(
@@ -3315,20 +3345,25 @@ window.IMGS = {
     /* Adaptador puro: la máquina decide, aquí solo se pinta el veredicto.
        La carrera de "gana la última búsqueda" y la lista blanca de campos
        viven allá, no aquí. */
+    /* Devuelve una promesa a propósito: los movimientos se capturan después,
+       y antes de enseñar el resumen hay que volver a cotizar Y ESPERAR. Si no
+       se esperara, el resumen se armaría con el precio viejo y el cliente
+       vería una cifra distinta de la que se le cobra. */
     function cotizaViaje() {
       if (!maquina.cotizaEnAutomatico()) {
         /* las unidades que no cotizan en línea no muestran caja: ya lo dice la tarjeta */
         byId('precio').className = 'precio';
         byId('precio').innerHTML = '';
-        return;
+        return Promise.resolve({ tipo: 'manual' });
       }
 
       pintaPrecio('<div class="precio-cargando"><i></i> Calculando kilómetros…</div>');
 
-      maquina.cotiza().then(function (v) {
-        if (v.tipo === 'tarde') return;           // llegó después de otra búsqueda
-        if (v.tipo === 'listo') { pintaPrecioListo(v.cotizacion); return; }
+      return maquina.cotiza().then(function (v) {
+        if (v.tipo === 'tarde') return v;         // llegó después de otra búsqueda
+        if (v.tipo === 'listo') { pintaPrecioListo(v.cotizacion); return v; }
         precioNoDisponible(v.aviso);
+        return v;
       });
     }
 
@@ -3464,11 +3499,9 @@ window.IMGS = {
       return Number(p[2]) + ' ' + m[Number(p[1]) - 1];
     }
 
-    /* Hueco listo para cuando se defina la tarifa de movimientos.
-       Hoy devuelve null a propósito: el precio lo confirma un asesor. */
-    function calculaMovimientos() {
-      return null;
-    }
+    /* El precio de los movimientos NO se calcula aquí. Sale de /api/cotizar,
+       igual que el resto: ninguna tarifa vive en el navegador. Lo que hace
+       esta pantalla es mandar los días capturados y pintar lo que conteste. */
 
     var movBloque = byId('mov-bloque');
     var movDetalle = byId('mov-detalle');
@@ -3484,10 +3517,13 @@ window.IMGS = {
         pintaInterruptor();
         return;
       }
+      /* Son NOCHES, no días: del 3 al 6 son cuatro días de servicio y tres
+         noches en destino. Decía «días» y por ahí se cuelan mil pesos. */
       byId('mov-info').textContent =
-        'La unidad permanecerá ' + dias + (dias === 1 ? ' día' : ' días') +
+        'La unidad permanecerá ' + dias + (dias === 1 ? ' noche' : ' noches') +
         ' en destino, del ' + fechaLegible(soloFecha(VIAJE.salida)) +
-        ' al ' + fechaLegible(soloFecha(VIAJE.regreso)) + '.';
+        ' al ' + fechaLegible(soloFecha(VIAJE.regreso)) + '. ' +
+        'Cada día con movimientos se cobra aparte y se suma a tu total.';
       byId('mov-dias').max = dias;
       pintaInterruptor();
     }
@@ -3653,7 +3689,7 @@ window.IMGS = {
 
     byId('mov-agregar').addEventListener('click', function () {
       if (MOV.dias.length >= diasEstadia()) {
-        avisaMov('No puedes tener más días con movimiento que días de estadía (' + diasEstadia() + ').');
+        avisaMov('No puedes tener más días con movimiento que noches en destino (' + diasEstadia() + ').');
         return;
       }
       agregaDia();
@@ -3684,7 +3720,10 @@ window.IMGS = {
       if (!MOV.incluye) return true;
 
       var tope = diasEstadia();
-      if (MOV.dias.length > tope) { avisaMov('Los días con movimiento no pueden exceder los ' + tope + ' de estadía.'); return false; }
+      /* Es el MISMO tope que aplica el servidor (movimientosDe en _tarifa.js).
+         Si aquí se dejaran pasar más días de los que allá se cuentan, el
+         cliente vería un precio y se le cobraría otro. */
+      if (MOV.dias.length > tope) { avisaMov('Los días con movimiento no pueden exceder las ' + tope + ' noches en destino.'); return false; }
 
       var ok = true;
       var vistas = {};
@@ -3749,7 +3788,10 @@ window.IMGS = {
       });
 
       if (MOV.notas) filas.push(['Notas de movimientos', MOV.notas]);
-      filas.push(['Revisión', 'Requiere cotización de un asesor (MOVIMIENTOS_EN_DESTINO)']);
+      /* Antes aquí iba «Requiere cotización de un asesor». Ya no: los
+         movimientos se cobran solos y el total del resumen los trae. */
+      filas.push(['Incluye por día', '8 horas dentro de la zona metropolitana del destino, ' +
+        'o 40 km a la redonda del centro']);
       return filas;
     }
 
@@ -3779,13 +3821,24 @@ window.IMGS = {
          kilómetro, ni el mínimo por día. Solo el total y qué cubre. */
       var c = VIAJE.cotizacion;
       if (c) {
+        var d = c.desglose || {};
         filas.push(['Días de servicio', String(c.dias)]);
+        /* El traslado se separa solo cuando hay algo más sumado. En un viaje
+           sencillo, «Traslado» y «Total» serían el mismo número dos veces. */
+        if (d.importeNoches || d.importeMovimientos) {
+          filas.push(['Traslado', pesos.format(d.traslado)]);
+        }
+        if (d.importeNoches) {
+          filas.push(['Noches adicionales (' + d.nochesExtra + ' de ' + d.noches +
+            '; ' + d.nochesIncluidas + ' incluidas)', pesos.format(d.importeNoches)]);
+        }
+        if (d.importeMovimientos) {
+          filas.push(['Movimientos en destino (' + d.diasMovimiento +
+            (d.diasMovimiento === 1 ? ' día' : ' días') + ')', pesos.format(d.importeMovimientos)]);
+        }
         filas.push(['Total estimado', pesos.format(c.total) + ' IVA incluido']);
         filas.push(['Para apartar (' + c.porcentajeAnticipo + '%)', pesos.format(c.anticipo)]);
         filas.push(['Queda por abonar', pesos.format(c.saldo)]);
-        if (MOV.incluye) {
-          filas.push(['Ojo', 'El total cubre el traslado. Los movimientos en destino se cotizan aparte.']);
-        }
       }
 
       /* los movimientos se agregan al final, con su detalle dia por dia */
@@ -3796,6 +3849,28 @@ window.IMGS = {
     byId('f-review').addEventListener('click', function () {
       if (!validaDatos()) return;
       if (!validaMovimientos()) return;
+
+      /* Los movimientos cambian el precio, y hasta aquí no se conocían. Se le
+         pasan a la máquina y SE ESPERA la nueva cotización antes de pintar
+         nada: el resumen y la caja de pago tienen que enseñar el número que
+         /api/pagar va a volver a calcular, no el del paso 1. */
+      var boton = this;
+      var etiqueta = boton.innerHTML;
+      boton.disabled = true;
+      boton.textContent = 'Calculando…';
+
+      maquina.ponMovimientos(MOV.incluye ? MOV.dias : []);
+
+      cotizaViaje().then(pintaListo, pintaListo);
+
+      function pintaListo() {
+        boton.disabled = false;
+        boton.innerHTML = etiqueta;
+        muestraResumen();
+      }
+    });
+
+    function muestraResumen() {
       var filas = armaResumen();
 
       if (window.pintaPago) window.pintaPago();
@@ -3814,7 +3889,7 @@ window.IMGS = {
       byId('copied').classList.remove('on');
 
       verPantalla('paso-listo');
-    });
+    }
 
     byId('copy-sum').addEventListener('click', function () {
       var texto = this.getAttribute('data-text') || '';
