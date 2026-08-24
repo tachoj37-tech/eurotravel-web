@@ -15,7 +15,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link
-  href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap"
+  href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=Inter:wght@300;400;500;600&family=Space+Mono:wght@400;700&display=swap"
   rel="stylesheet"
 />
 
@@ -889,8 +889,482 @@
     html { scroll-behavior: auto; }
   }
 </style>
+<!-- INICIO-NUEVO:CSS -->
+<style>
+#v-inicio {
+  --lienzo: #ffffff;      
+  --papel:  #faf6ef;      
+  --tinta:  #1d1d1b;
+  --gris:   #6e6e6a;
+  --filete: #e2ded7;
+  --rojo:   #db0d0d;
+  --rojo-alto: #ef1616;
+
+  --archivo: Archivo, "Helvetica Neue", Arial, sans-serif;
+  --inter: Inter, "Helvetica Neue", Arial, sans-serif;
+  --mono: "Space Mono", ui-monospace, "Courier New", monospace;
+  --salida: cubic-bezier(0.16, 1, 0.3, 1);
+  --suave: cubic-bezier(0.4, 0, 0.2, 1);
+  --ancho: 1560px;
+  --hueco: clamp(72px, 8vw, 118px);
+}
+#v-inicio * { box-sizing: border-box; }
+#v-inicio { overflow-x: hidden; }
+#v-inicio {
+  margin: 0; background: var(--lienzo); color: var(--tinta);
+  font-family: var(--inter); font-size: 16px; line-height: 1.6;
+  -webkit-font-smoothing: antialiased; caret-color: var(--rojo);
+}
+#v-inicio ::selection { background: var(--rojo); color: #fff; }
+#v-inicio img { display: block; max-width: 100%; }
+#v-inicio button { font: inherit; color: inherit; }
+#v-inicio :focus-visible { outline: 2px solid var(--rojo); outline-offset: 3px; }
+#v-inicio svg { display: block; flex: none; }
+#v-inicio .caja { max-width: var(--ancho); margin: 0 auto; padding: 0 clamp(22px, 3.4vw, 64px); }
+#v-inicio .banda { padding: var(--hueco) 0; }
+#v-inicio .banda-papel { background: var(--papel); }
+#v-inicio h1,
+#v-inicio h2,
+#v-inicio h3 { font-family: var(--archivo); font-weight: 700; margin: 0; }
+#v-inicio h1 { letter-spacing: -.04em; }
+#v-inicio h2 { font-size: clamp(30px, 4vw, 50px); line-height: 1.02; letter-spacing: -.032em; text-wrap: balance; }
+#v-inicio h3 { letter-spacing: -.026em; }
+#v-inicio p { margin: 0; }
+#v-inicio .parrafo { color: var(--gris); font-size: 17px; max-width: 62ch; }
+#v-inicio .boton {
+  display: inline-flex; align-items: center; gap: 10px; cursor: pointer;
+  font-family: var(--inter); font-size: 15px; font-weight: 500;
+  padding: 16px 30px; border: 0; text-decoration: none; border-radius: 0;
+  transition: background .24s var(--suave), color .24s var(--suave), transform .18s var(--salida);
+}
+#v-inicio .boton:active { transform: translateY(1px); }
+#v-inicio .boton svg { transition: transform .3s var(--salida); }
+#v-inicio .boton:hover svg { transform: translateX(4px); }
+#v-inicio .boton-tinta { background: var(--tinta); color: #fff; }
+#v-inicio .boton-tinta:hover { background: #000; }
+#v-inicio .boton-claro { background: #fff; color: var(--tinta); }
+#v-inicio .boton-claro:hover { background: var(--papel); }
+#v-inicio .boton-rojo { background: var(--rojo); color: #fff; }
+#v-inicio .boton-rojo:hover { background: var(--rojo-alto); }
+#v-inicio.dormido .asoma { opacity: 0; transition: opacity .7s var(--suave); }
+#v-inicio.dormido .viva .asoma,
+#v-inicio.dormido .viva.asoma { opacity: 1; }
+@media (max-width: 1100px) {
+
+}
+#v-inicio .cartel {
+  position: relative; min-height: calc(100vh - var(--nav-h)); overflow: hidden; isolation: isolate;
+  display: flex; flex-direction: column; justify-content: center;
+  background: #0b0a0b;
+}
+#v-inicio .cartel-foto {
+  position: absolute; inset: -2%; z-index: 1;
+  background-size: cover; background-position: 62% 58%;
+  transform: scale(1.04);
+  animation: acercar 38s ease-in-out infinite alternate;
+}
+@keyframes acercar {
+  from { transform: scale(1.04) translate3d(0, 0, 0); }
+  to   { transform: scale(1.13) translate3d(-1.6%, -1%, 0); }
+}
+#v-inicio .cartel-velo {
+  position: absolute; inset: 0; z-index: 2;
+  background:
+    linear-gradient(100deg, rgba(8,7,9,.95) 0%, rgba(8,7,9,.9) 26%, rgba(8,7,9,.6) 52%, rgba(8,7,9,.34) 74%, rgba(8,7,9,.62) 100%),
+    linear-gradient(to top, rgba(8,7,9,.9) 0%, rgba(8,7,9,0) 38%);
+}
+#v-inicio .cartel-brasa {
+  position: absolute; z-index: 3; right: 11%; top: 22%;
+  width: 300px; height: 300px; border-radius: 50%; pointer-events: none;
+  background: radial-gradient(circle, rgba(219,13,13,.26) 0%, rgba(219,13,13,0) 68%);
+  animation: brasa 5.5s ease-in-out infinite;
+}
+@keyframes brasa {
+  0%, 100% { opacity: .4; transform: scale(1); }
+  50%      { opacity: 1; transform: scale(1.14); }
+}
+@media (max-width: 900px) {
+#v-inicio .cartel-brasa { display: none; }
+}
+#v-inicio .cartel-caja { position: relative; z-index: 10; width: 100%; }
+#v-inicio .cartel-texto { max-width: min(60%, 780px); }
+@media (max-width: 1150px) {
+#v-inicio .cartel-texto { max-width: min(76%, 620px); }
+}
+@media (max-width: 900px) {
+#v-inicio .cartel-texto { max-width: 100%; }
+}
+#v-inicio .cartel h1 { font-size: clamp(38px, 5.2vw, 82px); line-height: .94; color: #fff; margin: 0 0 26px; }
+#v-inicio .cartel h1 u { display: block; overflow: hidden; text-decoration: none; padding-bottom: .06em; }
+#v-inicio .cartel h1 u b { display: block; font-weight: 700; transform: translateY(110%); transition: transform 1s var(--salida); }
+#v-inicio .cartel.viva h1 u b { transform: none; }
+#v-inicio .cartel.viva h1 u:nth-child(2) b { transition-delay: .09s; }
+#v-inicio .cartel.viva h1 u:nth-child(3) b { transition-delay: .18s; }
+#v-inicio .cartel-bajada { color: rgba(255,255,255,.94); font-size: 17px; max-width: 52ch; margin: 0 0 32px; }
+#v-inicio .cartel-acciones { display: flex; flex-wrap: wrap; gap: 12px; }
+#v-inicio .boton-humo {
+  background: rgba(255,255,255,.12); color: #fff;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.26);
+  backdrop-filter: blur(6px);
+}
+#v-inicio .boton-humo:hover { background: rgba(255,255,255,.2); }
+#v-inicio .sellos {
+  position: absolute; z-index: 10; left: 0; right: 0; bottom: 0;
+  border-top: 1px solid rgba(255,255,255,.24);
+  background: rgba(8,7,9,.44); backdrop-filter: blur(10px);
+}
+#v-inicio .sellos-rejilla { display: grid; grid-template-columns: repeat(3, 1fr); }
+#v-inicio .sellos span {
+  padding: 17px 26px;
+  border-right: 1px solid rgba(255,255,255,.24);
+  font-family: var(--mono); font-size: 11px; letter-spacing: .16em;
+  text-transform: uppercase; color: #fff;
+  display: flex; align-items: center; gap: 12px;
+}
+#v-inicio .sellos span:first-child { padding-left: 0; }
+#v-inicio .sellos span:last-child { border-right: 0; padding-right: 0; }
+@media (max-width: 760px) {
+#v-inicio .sellos-rejilla { grid-template-columns: 1fr; }
+#v-inicio .sellos span { border-right: 0; border-bottom: 1px solid rgba(255,255,255,.24); padding-block: 12px; }
+#v-inicio .sellos span:last-child { border-bottom: 0; }
+}
+#v-inicio .garantias { border-bottom: 1px solid var(--filete); }
+#v-inicio .garantias-rejilla { display: grid; grid-template-columns: repeat(4, 1fr); }
+@media (max-width: 900px) {
+#v-inicio .garantias-rejilla { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 540px) {
+#v-inicio .garantias-rejilla { grid-template-columns: 1fr; }
+}
+#v-inicio .garantia { padding: 36px clamp(20px, 2.4vw, 30px) 40px; border-right: 1px solid var(--filete); }
+#v-inicio .garantia:first-child { padding-left: 0; }
+#v-inicio .garantia:last-child { border-right: 0; padding-right: 0; }
+#v-inicio .garantia h3 { font-size: 17px; margin-bottom: 10px; display: flex; align-items: center; gap: 10px; }
+#v-inicio .garantia h3 svg { color: var(--rojo); }
+#v-inicio .garantia p { color: var(--gris); font-size: 14px; line-height: 1.6; }
+#v-inicio .lineas { margin-top: clamp(40px, 5vw, 62px); border-top: 1px solid var(--filete); }
+#v-inicio .linea {
+  display: grid; grid-template-columns: minmax(0, .82fr) minmax(0, 1.18fr);
+  gap: clamp(24px, 4vw, 58px); align-items: center;
+  padding: clamp(28px, 3.4vw, 42px) 0; border-bottom: 1px solid var(--filete);
+}
+#v-inicio .linea:nth-child(even) .linea-foto { order: 2; }
+@media (max-width: 820px) {
+#v-inicio .linea { grid-template-columns: 1fr; gap: 18px; }
+#v-inicio .linea:nth-child(even) .linea-foto { order: 0; }
+}
+#v-inicio .linea-foto {
+  aspect-ratio: 16 / 10; background-size: cover; background-position: 50% 55%;
+  filter: saturate(.94) contrast(1.04);
+}
+#v-inicio .linea h3 { font-size: clamp(24px, 3vw, 34px); margin-bottom: 8px; }
+#v-inicio .linea-lema { color: var(--tinta); font-size: 16.5px; font-weight: 500; margin-bottom: 14px; }
+#v-inicio .linea p { color: var(--gris); font-size: 15px; line-height: 1.7; max-width: 60ch; }
+#v-inicio .linea-datos { margin: 18px 0 0; padding: 0; list-style: none; display: flex; flex-wrap: wrap; gap: 8px; }
+#v-inicio .linea p.linea-nota {
+  margin-top: 12px; font-size: 12.5px; line-height: 1.5;
+  color: var(--gris); font-style: italic;
+}
+#v-inicio .linea-datos li {
+  font-family: var(--mono); font-size: 10.5px; letter-spacing: .12em; text-transform: uppercase;
+  color: var(--tinta); border: 1px solid var(--filete); padding: 7px 13px;
+}
+#v-inicio .viajes {
+  display: grid; grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: clamp(14px, 1.4vw, 22px); margin-top: clamp(34px, 4vw, 52px);
+}
+@media (max-width: 1180px) {
+#v-inicio .viajes { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (max-width: 760px) {
+#v-inicio .viajes { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 460px) {
+#v-inicio .viajes { grid-template-columns: 1fr; }
+}
+#v-inicio .viaje { display: flex; flex-direction: column; }
+#v-inicio .viaje-foto {
+  aspect-ratio: 4 / 3; background-size: cover; background-position: 50% 52%;
+  filter: saturate(.95) contrast(1.03);
+  margin-bottom: 16px; overflow: hidden;
+  transition: filter .4s var(--suave);
+}
+#v-inicio .viaje:hover .viaje-foto { filter: saturate(1.06) contrast(1.06); }
+#v-inicio .viaje h3 { font-size: clamp(17px, 1.5vw, 21px); margin-bottom: 7px; letter-spacing: -.024em; }
+#v-inicio .viaje p { color: var(--gris); font-size: 13.5px; line-height: 1.6; }
+@media (max-width: 460px) {
+#v-inicio .viaje-foto { aspect-ratio: 16 / 9; }
+}
+#v-inicio .destinos { padding: var(--hueco) 0; }
+#v-inicio .destinos h2 { max-width: 16ch; }
+#v-inicio .destinos-cuerpo {
+  display: grid; grid-template-columns: minmax(0, .82fr) minmax(0, 1.18fr);
+  gap: clamp(24px, 3vw, 44px); margin-top: clamp(34px, 4vw, 52px); align-items: stretch;
+}
+@media (max-width: 860px) {
+#v-inicio .destinos-cuerpo { grid-template-columns: 1fr; }
+}
+#v-inicio .destinos-fichas { position: relative; display: grid; align-content: center; }
+#v-inicio .ficha {
+  grid-area: 1 / 1;
+  opacity: 0; visibility: hidden;
+  transition: opacity .5s var(--suave), visibility .5s var(--suave);
+}
+#v-inicio .ficha.en-turno { opacity: 1; visibility: visible; }
+#v-inicio .ficha-tipo {
+  font-family: var(--mono); font-size: 10px; letter-spacing: .16em;
+  text-transform: uppercase; color: var(--rojo); margin: 0 0 14px;
+}
+#v-inicio .ficha h3 {
+  font-size: clamp(28px, 3.4vw, 44px); letter-spacing: -.032em;
+  line-height: 1.02; margin: 0 0 18px;
+}
+#v-inicio .ficha p { color: var(--gris); font-size: 15.5px; line-height: 1.75; max-width: 46ch; margin: 0; }
+#v-inicio .destinos-otros {
+  margin: clamp(26px, 3vw, 38px) 0 0; padding-top: 18px;
+  border-top: 1px solid var(--filete);
+  font-family: var(--mono); font-size: 11px; letter-spacing: .12em;
+  text-transform: uppercase; color: var(--gris); line-height: 2;
+}
+#v-inicio .destinos-otros b { color: var(--tinta); font-weight: 400; }
+#v-inicio .carrusel { position: relative; overflow: hidden; min-height: 400px; }
+#v-inicio .carrusel-pista {
+  display: flex; height: 100%; min-height: 400px;
+  transition: transform .78s var(--salida);
+  touch-action: pan-y;            
+  cursor: grab;
+}
+#v-inicio .carrusel-pista.agarrada { cursor: grabbing; transition: none; }
+#v-inicio .carrusel.quieto .carrusel-pista { transition: none; }
+#v-inicio .lamina { position: relative; flex: 0 0 100%; margin: 0; overflow: hidden; }
+#v-inicio .lamina-foto {
+  position: absolute; inset: 0;
+  background-size: cover; background-position: 50% 52%;
+  filter: saturate(.94) contrast(1.04);
+  transform: scale(1.03);
+}
+#v-inicio .lamina::after {
+  content: ''; position: absolute; inset: 0;
+  background: linear-gradient(to top, rgba(8,7,9,.88) 0%, rgba(8,7,9,.3) 48%, rgba(8,7,9,.08) 100%);
+}
+#v-inicio .lamina-rotulo { position: absolute; left: 0; right: 0; bottom: 0; z-index: 2; padding: 26px 28px 30px; }
+#v-inicio .lamina-rotulo b {
+  display: block; font-family: var(--archivo); font-weight: 700; color: #fff;
+  font-size: clamp(24px, 2.6vw, 34px); letter-spacing: -.03em; line-height: 1.04;
+}
+#v-inicio .lamina-rotulo span {
+  display: block; margin-top: 8px;
+  font-family: var(--mono); font-size: 10px; letter-spacing: .16em;
+  text-transform: uppercase; color: rgba(255,255,255,.82);
+}
+#v-inicio .lamina-aviso {
+  position: absolute; top: 16px; left: 16px; z-index: 2;
+  font-family: var(--mono); font-size: 9px; letter-spacing: .15em;
+  text-transform: uppercase; color: #fff;
+  background: var(--rojo); padding: 5px 9px;
+}
+#v-inicio .carrusel-cuenta {
+  position: absolute; top: 20px; left: 24px; z-index: 3;
+  font-family: var(--mono); font-size: 10px; letter-spacing: .2em;
+  color: rgba(255,255,255,.9); text-shadow: 0 1px 6px rgba(8,7,9,.7);
+}
+#v-inicio .carrusel-cuenta b { font-weight: 400; }
+#v-inicio .carrusel-cuenta i { font-style: normal; color: rgba(255,255,255,.55); }
+#v-inicio .carrusel-puntos { position: absolute; right: 22px; bottom: 26px; z-index: 3; display: flex; gap: 7px; }
+#v-inicio .punto {
+  position: relative;
+  width: 26px; height: 3px; padding: 0; border: 0; cursor: pointer;
+  background: rgba(255,255,255,.38);
+  transition: background .3s var(--suave);
+}
+#v-inicio .punto::before {
+  content: ''; position: absolute;
+  left: -3px; right: -3px; top: -14px; bottom: -14px;
+}
+#v-inicio .punto:hover { background: rgba(255,255,255,.7); }
+#v-inicio .punto[aria-current="true"] { background: #fff; }
+@media (max-width: 520px) {
+#v-inicio .carrusel-puntos { right: 18px; bottom: 20px; }
+}
+@media (prefers-reduced-motion: reduce) {
+#v-inicio .carrusel-pista { transition: none; }
+#v-inicio .lamina-foto { transform: none; }
+}
+#v-inicio .celular-banda {
+  display: grid; grid-template-columns: minmax(0, .94fr) minmax(0, 1.06fr);
+  background: var(--tinta); color: #fff; overflow: hidden;
+  min-height: clamp(560px, 48vw, 820px);
+}
+@media (max-width: 900px) {
+#v-inicio .celular-banda { grid-template-columns: 1fr; min-height: 0; }
+}
+#v-inicio .celular-escena {
+  position: relative;
+  display: flex; align-items: flex-end; justify-content: center;
+  padding: clamp(46px, 4.6vw, 86px) clamp(24px, 3vw, 40px) 0;
+  background: radial-gradient(78% 62% at 50% 88%, rgba(219,13,13,.20) 0%, rgba(219,13,13,0) 70%);
+}
+#v-inicio .celular-mano {
+  display: block; width: auto; height: auto;
+  max-width: 100%; max-height: clamp(430px, 44vw, 760px);
+  margin: 0 auto;
+}
+#v-inicio .celular-escena.con-foto {
+  align-items: flex-end; justify-content: center;
+  padding: clamp(24px, 2.6vw, 46px) clamp(16px, 2vw, 38px) 0;
+}
+#v-inicio .celular-texto {
+  padding: clamp(40px, 4.4vw, 76px);
+  display: flex; flex-direction: column; justify-content: space-between; gap: 40px;
+}
+#v-inicio .celular-texto h2 { color: #fff; font-size: clamp(32px, 4.4vw, 62px); }
+#v-inicio .celular-cuerpo p { color: rgba(255,255,255,.86); font-size: 16.5px; line-height: 1.7; max-width: 56ch; }
+#v-inicio .celular-lista { margin: 28px 0 0; padding: 0; list-style: none; max-width: 52ch; }
+#v-inicio .celular-lista li {
+  display: flex; align-items: center; gap: 14px; padding: 14px 0;
+  border-top: 1px solid rgba(255,255,255,.2); font-size: 16px;
+}
+#v-inicio .celular-lista li:last-child { border-bottom: 1px solid rgba(255,255,255,.2); }
+#v-inicio .celular-lista svg { color: var(--rojo); }
+#v-inicio .explora {
+  display: grid; grid-template-columns: minmax(0, .92fr) minmax(0, 1.05fr) minmax(0, 1.15fr);
+  min-height: clamp(420px, 52vw, 560px);
+}
+@media (max-width: 980px) {
+#v-inicio .explora { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 620px) {
+#v-inicio .explora { grid-template-columns: 1fr; }
+}
+#v-inicio .explora-titulo {
+  background: var(--tinta); color: #fff;
+  padding: clamp(32px, 3.6vw, 52px);
+  display: flex; flex-direction: column; justify-content: space-between; gap: 30px;
+}
+@media (max-width: 980px) {
+#v-inicio .explora-titulo { grid-column: 1 / -1; }
+}
+#v-inicio .explora-titulo h2 { color: #fff; font-size: clamp(28px, 3.4vw, 44px); }
+#v-inicio .explora-titulo p { color: rgba(255,255,255,.82); font-size: 14.5px; line-height: 1.6; max-width: 34ch; }
+#v-inicio .pastilla {
+  align-self: flex-start; margin-top: 18px;
+  background: none; color: #fff; border: 1px solid rgba(255,255,255,.55);
+  border-radius: 999px; padding: 11px 22px; font-size: 13.5px; cursor: pointer;
+  transition: background .24s var(--suave), color .24s var(--suave);
+}
+#v-inicio .pastilla:hover { background: #fff; color: var(--tinta); }
+#v-inicio .mundo { position: relative; overflow: hidden; display: flex; align-items: flex-end; }
+#v-inicio .mundo-foto { background-size: cover; background-position: 50% 50%; }
+#v-inicio .mundo-noche { background-position: 72% 55%; }
+#v-inicio .mundo-foto::after {
+  content: ""; position: absolute; inset: 0;
+  background: linear-gradient(to top, rgba(13,12,13,.72) 0%, rgba(13,12,13,0) 46%);
+}
+#v-inicio .mundo-rotulo { color: var(--tinta); }
+#v-inicio .mundo-rotulo {
+  position: relative; z-index: 3; width: 100%;
+  padding: clamp(24px, 2.6vw, 36px);
+  font-family: var(--archivo); font-weight: 700; letter-spacing: -.028em;
+  font-size: clamp(20px, 2.4vw, 30px); color: #fff;
+}
+@media (max-width: 620px) {
+#v-inicio .mundo { min-height: 240px; }
+}
+#v-inicio .atencion {
+  display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  background: var(--tinta); color: #fff; min-height: clamp(420px, 50vw, 540px);
+}
+@media (max-width: 860px) {
+#v-inicio .atencion { grid-template-columns: 1fr; }
+}
+#v-inicio .atencion-foto { background-size: cover; background-position: 50% 50%; min-height: 300px; }
+#v-inicio .atencion-texto {
+  padding: clamp(34px, 4vw, 62px);
+  display: flex; flex-direction: column; justify-content: space-between; gap: 34px;
+}
+#v-inicio .atencion-texto h2 { color: #fff; }
+#v-inicio .atencion-cuerpo p { color: rgba(255,255,255,.84); font-size: 15.5px; line-height: 1.7; max-width: 50ch; }
+#v-inicio .atencion-cuerpo p + p { margin-top: 16px; }
+#v-inicio .canales { margin: 22px 0 0; padding: 0; list-style: none; display: grid; gap: 0; max-width: 42ch; }
+#v-inicio .canales li {
+  display: flex; align-items: center; gap: 13px; padding: 12px 0;
+  border-top: 1px solid rgba(255,255,255,.2); font-size: 15px;
+}
+#v-inicio .canales li:last-child { border-bottom: 1px solid rgba(255,255,255,.2); }
+#v-inicio .canales svg { color: var(--rojo); }
+#v-inicio .canales a { color: #fff; text-decoration: none; font-variant-numeric: tabular-nums; }
+#v-inicio .canales a:hover { text-decoration: underline; text-underline-offset: 4px; }
+#v-inicio .puertas { margin-top: clamp(38px, 5vw, 60px); border-top: 1px solid var(--filete); }
+#v-inicio .puerta {
+  width: 100%; text-align: left; background: none; border: 0; cursor: pointer;
+  border-bottom: 1px solid var(--filete); padding: 0; display: block; color: inherit;
+  transition: background .35s var(--suave), color .35s var(--suave);
+}
+#v-inicio .puerta-fila {
+  display: grid; grid-template-columns: minmax(0, .9fr) minmax(0, 1.4fr) auto;
+  gap: clamp(20px, 4vw, 60px); align-items: center;
+  padding: clamp(26px, 3vw, 38px) 0;
+  transition: transform .4s var(--salida);
+}
+@media (max-width: 820px) {
+#v-inicio .puerta-fila { grid-template-columns: 1fr auto; gap: 14px 20px; }
+#v-inicio .puerta-fila h3 { grid-column: 1 / -1; }
+}
+#v-inicio .puerta h3 { font-size: clamp(24px, 3.2vw, 38px); line-height: 1.05; }
+#v-inicio .puerta p { color: var(--gris); font-size: 15.5px; line-height: 1.65; max-width: 52ch; transition: color .35s var(--suave); }
+#v-inicio .puerta-ir {
+  font-family: var(--mono); font-size: 10.5px; letter-spacing: .16em;
+  text-transform: uppercase; color: var(--rojo);
+  display: inline-flex; align-items: center; gap: 11px; white-space: nowrap;
+  transition: color .35s var(--suave);
+}
+#v-inicio .puerta-ir svg { transition: transform .4s var(--salida); }
+#v-inicio .puerta:hover { background: var(--rojo); color: #fff; }
+#v-inicio .puerta:hover p,
+#v-inicio .puerta:hover .puerta-ir { color: #fff; }
+#v-inicio .puerta:hover .puerta-ir svg { transform: translateX(7px); }
+#v-inicio .puerta:hover .puerta-fila { transform: translateX(clamp(12px, 1.6vw, 22px)); }
+@media (max-width: 900px) {
+
+}
+@media (prefers-reduced-motion: reduce) {
+#v-inicio.dormido .asoma { opacity: 1 !important; transition: none !important; }
+#v-inicio .cartel-foto,
+#v-inicio .cartel-brasa { animation: none !important; }
+#v-inicio *,
+#v-inicio *::before,
+#v-inicio *::after { transition-duration: .001s !important; }
+}
+#v-inicio .foto-i6s {background-image:url(img/i6s.jpg)}
+#v-inicio .foto-sprinter {background-image:url(img/sprinter.jpg)}
+#v-inicio .foto-suburban {background-image:url(img/suburban.jpg)}
+#v-inicio .foto-i6am {background-image:url(img/hero2.jpg)}
+#v-inicio .foto-interior {background-image:url(img/interior.jpg)}
+#v-inicio .foto-noche {background-image:url(img/noche.webp)}
+#v-inicio .foto-patio {background-image:url(img/hero1.jpg)}
+#v-inicio .foto-flota {background-image:url(img/hero3.jpg)}
+#v-inicio .foto-destino-vallarta {background-image:url(img/dest-vallarta.jpg)}
+#v-inicio .foto-destino-mazatlan {background-image:url(img/dest-mazatlan.jpg)}
+#v-inicio .foto-destino-cdmx {background-image:url(img/dest-cdmx.jpg)}
+#v-inicio .foto-destino-tequila {background-image:url(img/dest-tequila.jpg)}
+</style>
+<!-- /INICIO-NUEVO:CSS -->
 </head>
 <body>
+<!-- INICIO-NUEVO:ICONOS -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <g id="ei-flecha" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M1 6h11M8 2l4 4-4 4"/></g>
+    <g id="ei-escudo" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 1.5l5.5 2.2v4.1c0 3.3-2.3 5.6-5.5 6.7-3.2-1.1-5.5-3.4-5.5-6.7V3.7z"/><path d="M5.7 8.1l1.7 1.7 3-3.3"/></g>
+    <g id="ei-gente" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="5" r="2.6"/><path d="M1.6 13.6c0-2.4 2-4 4.4-4s4.4 1.6 4.4 4"/><path d="M11 3.1a2.6 2.6 0 010 4.6M12.4 13.6c0-1.5-.5-2.6-1.4-3.3"/></g>
+    <g id="ei-pin" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 14.4s5-4.3 5-8a5 5 0 10-10 0c0 3.7 5 8 5 8z"/><circle cx="8" cy="6.3" r="1.9"/></g>
+    <g id="ei-gota" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 14h6.5V3.4A1.4 1.4 0 008.1 2H4.4A1.4 1.4 0 003 3.4z"/><path d="M9.5 6.4h1.9a1.5 1.5 0 011.5 1.5v3.4a1.3 1.3 0 002.1 1"/><path d="M4.6 6.6h3.3"/></g>
+    <g id="ei-wasap" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2.2 14l.9-3.2A5.9 5.9 0 012.4 7.7a5.9 5.9 0 015.9-5.9 5.9 5.9 0 015.9 5.9 5.9 5.9 0 01-5.9 5.9c-1 0-2-.3-2.9-.8z"/><path d="M6.2 5.7c.2-.4.4-.4.6-.4h.5c.2 0 .4 0 .5.4l.6 1.4c.1.2 0 .4-.1.5l-.4.4c-.1.2-.2.3-.1.5.3.6.9 1.2 1.6 1.5.2.1.4 0 .5-.1l.4-.4c.2-.2.3-.2.5-.1l1.3.7c.2.1.3.3.3.5 0 .5-.3 1-.8 1.2-.4.2-.9.2-1.4 0A6.5 6.5 0 016 8.3c-.2-.5-.2-1 0-1.4z"/></g>
+    <g id="ei-sobre" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="1.6" y="3.2" width="12.8" height="9.6" rx="1.4"/><path d="M2.2 4.2L8 8.6l5.8-4.4"/></g>
+    <g id="ei-tel" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M13.9 11.3v2a1.3 1.3 0 01-1.5 1.3 13 13 0 01-5.6-2A12.8 12.8 0 013 8.6a13 13 0 01-2-5.6 1.3 1.3 0 011.3-1.5h2a1.3 1.3 0 011.3 1.2c.1.6.2 1.3.5 1.9a1.3 1.3 0 01-.3 1.4l-.8.9a10.7 10.7 0 004 4l.9-.9a1.3 1.3 0 011.4-.3c.6.2 1.2.4 1.9.5a1.3 1.3 0 011.1 1.1z"/></g>
+  </defs>
+</svg>
+<!-- /INICIO-NUEVO:ICONOS -->
 <script>
 window.IMGS = {
   "logo": "img/logo.png",
@@ -906,7 +1380,12 @@ window.IMGS = {
   "suburban": "img/suburban.jpg",
   "interior": "img/interior.jpg",
   "seat_i6s": "img/seat-i6s.jpg",
-  "seat_neobus": "img/seat-neobus.jpg"
+  "seat_neobus": "img/seat-neobus.jpg",
+  "noche": "img/noche.webp",
+  "dest_vallarta": "img/dest-vallarta.jpg",
+  "dest_mazatlan": "img/dest-mazatlan.jpg",
+  "dest_cdmx": "img/dest-cdmx.jpg",
+  "dest_tequila": "img/dest-tequila.jpg"
 };
 </script>
 
@@ -1021,66 +1500,231 @@ window.IMGS = {
 <main>
   <!-- ============ INICIO ============ -->
   <section class="view on" id="v-inicio">
-    <div class="hero">
-      <div class="slides" id="slides"></div>
-      <div class="scrim"></div>
-      <div class="wrap hero-in">
-        <span class="eyebrow" style="color: #fff; opacity: 0.75">Tlaquepaque, Jalisco · Cobertura nacional</span>
-        <h1>Viaja seguro y cómodo<span>.</span></h1>
-        <p class="hero-p">
-          Renta de autobuses, Sprinters y Suburbans para turismo, empresas y eventos. Operador
-          profesional, seguro de viajero, monitoreo GPS, combustible y casetas incluidos.
-        </p>
-        <div class="hero-cta">
-          <button class="btn btn-red" data-go="cotizar">Cotizar viaje <svg class="arw" aria-hidden="true"><use href="#i-arrow" /></svg></button>
-          <button class="btn btn-white" data-go="unidades">Ver unidades</button>
-        </div>
-        <div class="hero-meta">
-          <span><svg aria-hidden="true"><use href="#i-shield" /></svg> Seguro de viajero</span>
-          <span><svg aria-hidden="true"><use href="#i-pin" /></svg> Monitoreo GPS 24/7</span>
-          <span><svg aria-hidden="true"><use href="#i-fuel" /></svg> Combustible y casetas</span>
-        </div>
-      </div>
-      <div class="hero-dots" id="dots"></div>
-    </div>
+<section class="cartel" id="inicio">
+  <div class="cartel-foto foto-noche"></div>
+  <div class="cartel-velo"></div>
+  <div class="cartel-brasa"></div>
 
-    <div class="trust">
-      <div class="wrap">
-        <div class="trust-grid">
-          <div class="trust-item"><svg aria-hidden="true"><use href="#i-shield" /></svg><h4>Seguro de viajero</h4><p>Todas las unidades salen con póliza vigente para cada pasajero.</p></div>
-          <div class="trust-item"><svg aria-hidden="true"><use href="#i-users" /></svg><h4>Operadores profesionales</h4><p>Choferes con experiencia en rutas urbanas y foráneas.</p></div>
-          <div class="trust-item"><svg aria-hidden="true"><use href="#i-pin" /></svg><h4>Monitoreo GPS</h4><p>Seguimiento del recorrido de principio a fin, las 24 horas.</p></div>
-          <div class="trust-item"><svg aria-hidden="true"><use href="#i-fuel" /></svg><h4>Todo incluido</h4><p>Combustible, casetas y viáticos del operador dentro de la tarifa.</p></div>
-        </div>
+  <div class="cartel-caja caja">
+   <div class="cartel-texto">
+    <h1><u><b>Viaja seguro</b></u><u><b>y cómodo con</b></u><u><b>Eurotravel.</b></u></h1>
+    <p class="cartel-bajada">Renta de autobuses, Sprinters y Suburbans para turismo, empresas y eventos. Operador profesional, seguro de viajero, monitoreo GPS, combustible y casetas incluidos.</p>
+    <div class="cartel-acciones">
+      <button type="button" class="boton boton-rojo" data-go="cotizar">Cotizar viaje <svg width="13" height="12" viewBox="0 0 13 12" aria-hidden="true"><use href="#ei-flecha"/></svg></button>
+      <button type="button" class="boton boton-humo" data-go="unidades">Ver unidades</button>
+    </div>
+   </div>
+  </div>
+
+  <div class="sellos">
+   <div class="caja"><div class="sellos-rejilla">
+    <span><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><use href="#ei-escudo"/></svg>Seguro de viajero</span>
+    <span><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><use href="#ei-pin"/></svg>Monitoreo GPS 24/7</span>
+    <span><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><use href="#ei-gota"/></svg>Combustible y casetas</span>
+   </div></div>
+  </div>
+</section>
+
+<section class="garantias asoma">
+  <div class="caja">
+    <div class="garantias-rejilla">
+      <div class="garantia">
+        <h3><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><use href="#ei-escudo"/></svg>Seguro de viajero</h3>
+        <p>Todas las unidades salen con póliza vigente para cada pasajero.</p>
+      </div>
+      <div class="garantia">
+        <h3><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><use href="#ei-gente"/></svg>Operadores profesionales</h3>
+        <p>Choferes con experiencia en rutas urbanas y foráneas.</p>
+      </div>
+      <div class="garantia">
+        <h3><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><use href="#ei-pin"/></svg>Monitoreo GPS</h3>
+        <p>Seguimiento del recorrido de principio a fin, las 24 horas.</p>
+      </div>
+      <div class="garantia">
+        <h3><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><use href="#ei-gota"/></svg>Todo incluido</h3>
+        <p>Combustible, casetas y viáticos del operador dentro de la tarifa.</p>
       </div>
     </div>
+  </div>
+</section>
 
-    <div class="wrap pad">
-      <div class="sec-head">
-        <span class="eyebrow">¿Por dónde empiezo?</span>
-        <h2>Tres caminos, la misma respuesta el mismo día</h2>
+<section class="banda banda-papel asoma" id="servicios">
+  <div class="caja">
+    <h2>Tres maneras de mover a tu grupo</h2>
+    <div class="lineas">
+      <article class="linea">
+        <div class="linea-foto foto-i6s"></div>
+        <div>
+          <h3>Renta de autobuses</h3>
+          <p class="linea-lema">La mejor solución para viajes grupales largos y cómodos</p>
+          <p>Con EuroTravel puedes contratar autobuses de turismo equipados y modernos, ideales para viajes escolares, traslados empresariales, excursiones, eventos masivos o recorridos por todo México. Nuestra flota cuenta con autobuses de gran capacidad, conductores certificados y todos los servicios para que el viaje sea seguro y placentero.</p>
+          <ul class="linea-datos">
+            <li>Baño a bordo</li>
+            <li>Aire acondicionado</li>
+            <li>Asientos reclinables</li>
+            <li>USB individual</li>
+            <li>Pantallas de entretenimiento</li>
+            <li>Amplio espacio para equipaje</li>
+          </ul>
+          <p class="linea-nota">Baño, USB y pantallas según la unidad.</p>
+        </div>
+      </article>
+      <article class="linea">
+        <div class="linea-foto foto-sprinter"></div>
+        <div>
+          <h3>Renta de Sprinters</h3>
+          <p class="linea-lema">La mejor opción para grupos pequeños o medianos</p>
+          <p>Nuestra Sprinter Mercedes-Benz es ideal para traslados ejecutivos, eventos, excursiones familiares o grupos pequeños que buscan comodidad y eficiencia. Gracias a su diseño compacto y elegante, permite moverse con facilidad por la ciudad o carretera, sin sacrificar espacio ni confort.</p>
+          <ul class="linea-datos">
+            <li>Aire acondicionado</li>
+            <li>Asientos reclinables</li>
+            <li>Amplio espacio para equipaje</li>
+            <li>Chofer capacitado</li>
+          </ul>
+        </div>
+      </article>
+      <article class="linea">
+        <div class="linea-foto foto-suburban"></div>
+        <div>
+          <h3>Renta de Suburbans</h3>
+          <p class="linea-lema">Elegancia, confort y espacio para tus traslados VIP</p>
+          <p>Ofrecemos renta de Suburbans con chofer para ejecutivos, delegaciones, traslados familiares o servicios privados que requieren un alto nivel de confort y distinción. Nuestras unidades cuentan con interiores espaciosos, climatización y acabados premium.</p>
+          <ul class="linea-datos">
+            <li>Wifi ilimitado</li>
+            <li>Pantallas táctiles</li>
+            <li>Aire acondicionado</li>
+            <li>Amplio espacio para equipaje</li>
+          </ul>
+        </div>
+      </article>
+    </div>
+  </div>
+</section>
+
+<section class="celular-banda asoma" id="celular">
+  <div class="celular-escena con-foto">
+    <img class="celular-mano" src="img/mano-celular.webp" alt="La pantalla Mis viajes en un celular">
+  </div>
+
+  <div class="celular-texto">
+    <h2>Tus viajes, en tu celular.</h2>
+    <div class="celular-cuerpo">
+      <p>Cuando apartas tu viaje te llega un folio por correo o WhatsApp. Con ese folio entras desde el celular y ves todo lo tuyo: no hay que abrir cuenta ni recordar contraseñas.</p>
+      <ul class="celular-lista">
+        <li><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><use href="#ei-escudo"/></svg>Cuánto llevas abonado y cuánto falta</li>
+        <li><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><use href="#ei-gente"/></svg>Tu contrato y tus datos a la mano</li>
+        <li><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><use href="#ei-pin"/></svg>Dónde viene la unidad el día de la salida</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section class="banda asoma" id="viajes">
+  <div class="caja">
+    <h2>Nuestros Viajes</h2>
+    <div class="viajes">
+      <article class="viaje">
+        <div class="viaje-foto foto-patio"></div>
+        <h3>Descanso</h3><p>Disfruta tus vacaciones.</p>
+      </article>
+      <article class="viaje">
+        <div class="viaje-foto foto-flota"></div>
+        <h3>Cultural y religioso</h3><p>Conoce los mejores lugares y eventos religiosos.</p>
+      </article>
+      <article class="viaje">
+        <div class="viaje-foto foto-i6am"></div>
+        <h3>Eventos sociales</h3><p>Graduaciones, bodas, conciertos.</p>
+      </article>
+      <article class="viaje">
+        <div class="viaje-foto foto-suburban"></div>
+        <h3>Ejecutivo</h3><p>Congresos, exposiciones, negocios.</p>
+      </article>
+      <article class="viaje">
+        <div class="viaje-foto foto-interior"></div>
+        <h3>Turismo</h3><p>Explora el país acompañado de tus amigos.</p>
+      </article>
+    </div>
+  </div>
+</section>
+
+<section class="banda destinos asoma" id="destinos">
+  <div class="caja">
+    <h2>A dónde salen más grupos.</h2>
+    <div class="destinos-cuerpo">
+      <div class="carrusel" id="carrusel-destinos"
+           role="group" aria-roledescription="carrusel" aria-label="Los destinos más visitados">
+        <div class="carrusel-pista"><figure class="lamina" data-destino="Puerto Vallarta"><div class="lamina-foto foto-destino-vallarta" role="img" style="background-position:50% 38%" aria-label="Puerto Vallarta"></div><figcaption class="lamina-rotulo"><b>Puerto Vallarta</b><span>Jalisco</span></figcaption></figure><figure class="lamina" data-destino="Mazatlán"><div class="lamina-foto foto-destino-mazatlan" role="img" style="background-position:50% 46%" aria-label="Mazatlán"></div><figcaption class="lamina-rotulo"><b>Mazatlán</b><span>Sinaloa</span></figcaption></figure><figure class="lamina" data-destino="Ciudad de México"><div class="lamina-foto foto-destino-cdmx" role="img" style="background-position:62% 52%" aria-label="Ciudad de México"></div><figcaption class="lamina-rotulo"><b>Ciudad de México</b><span>CDMX</span></figcaption></figure><figure class="lamina" data-destino="Tequila"><div class="lamina-foto foto-destino-tequila" role="img" style="background-position:50% 44%" aria-label="Tequila"></div><figcaption class="lamina-rotulo"><b>Tequila</b><span>Jalisco</span></figcaption></figure></div>
+        <p class="carrusel-cuenta"><b>01</b> <i>/ 04</i></p>
+        <div class="carrusel-puntos"><button type="button" class="punto" aria-label="Ver Puerto Vallarta" aria-current="true"></button><button type="button" class="punto" aria-label="Ver Mazatlán" aria-current="false"></button><button type="button" class="punto" aria-label="Ver Ciudad de México" aria-current="false"></button><button type="button" class="punto" aria-label="Ver Tequila" aria-current="false"></button></div>
       </div>
-      <div class="qa-grid">
-        <button class="qa-card" data-go="cotizar">
-          <svg class="ic" aria-hidden="true"><use href="#i-search" /></svg>
+      <div class="destinos-fichas"><article class="ficha" data-destino="Puerto Vallarta"><p class="ficha-tipo">Playa · Jalisco</p><h3>Puerto Vallarta</h3><p>Está sobre la Bahía de Banderas, en la costa de Jalisco. El centro conserva calles empedradas y la parroquia de Nuestra Señora de Guadalupe, con su corona de hierro. El malecón corre junto al mar y reúne esculturas al aire libre.</p></article><article class="ficha" data-destino="Mazatlán"><p class="ficha-tipo">Playa · Sinaloa</p><h3>Mazatlán</h3><p>Es el puerto más grande de Sinaloa, sobre el Pacífico. Su malecón es uno de los más largos de México y recorre varios kilómetros frente al mar. En el Centro Histórico están el Teatro Ángela Peralta y la arquitectura del siglo XIX.</p></article><article class="ficha" data-destino="Ciudad de México"><p class="ficha-tipo">Ciudad · CDMX</p><h3>Ciudad de México</h3><p>La capital reúne el Centro Histórico y Xochimilco, los dos Patrimonio de la Humanidad. Paseo de la Reforma la cruza de punta a punta, y sobre esa avenida están el Ángel de la Independencia y el Bosque de Chapultepec.</p></article><article class="ficha" data-destino="Tequila"><p class="ficha-tipo">Pueblo Mágico · Jalisco</p><h3>Tequila</h3><p>Pueblo Mágico al pie de su volcán, entre campos de agave azul. El Paisaje Agavero es Patrimonio de la Humanidad desde 2006. En el pueblo se visitan las destilerías y el Museo Nacional del Tequila.</p></article></div>
+    </div>
+    <p class="destinos-otros">También salen grupos a <b>San Miguel de Allende</b> y <b>Manzanillo</b>.</p>
+  </div>
+</section>
+
+<section class="explora asoma" id="explora">
+  <div class="explora-titulo">
+    <h2>Explora Eurotravel</h2>
+    <div>
+      <p>Soluciones integrales de transporte turístico y viajes personalizados. Ya sea para eventos, excursiones o recorridos nacionales, tenemos la opción ideal para ti.</p>
+      <button type="button" class="pastilla" data-go="unidades">Todos los servicios</button>
+    </div>
+  </div>
+
+  <div class="mundo mundo-foto foto-i6am">
+    <div class="mundo-rotulo">Turismo</div>
+  </div>
+
+  <div class="mundo mundo-foto foto-flota">
+    <div class="mundo-rotulo">Empresariales</div>
+  </div>
+</section>
+
+<section class="atencion asoma" id="atencion">
+  <div class="atencion-foto foto-interior"></div>
+  <div class="atencion-texto">
+    <h2>Atención personalizada</h2>
+    <div class="atencion-cuerpo">
+      <p>Desde la cotización hasta el regreso a casa, acompañamos a nuestros clientes con un trato profesional, cercano y 100% confiable.</p>
+      <p>En EuroTravel nos encanta ayudarte a resolver tus traslados turísticos y empresariales. Ya sea que necesites cotizar un servicio, resolver dudas o agendar tu transporte, nuestro equipo está disponible para atenderte de forma rápida y personalizada.</p>
+      <ul class="canales">
+        <li><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><use href="#ei-tel"/></svg><a href="tel:+523324002285">33 2400 2285</a></li>
+        <li><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><use href="#ei-wasap"/></svg><a href="https://wa.me/523321832993">WhatsApp 33 2183 2993</a></li>
+        <li><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><use href="#ei-sobre"/></svg><a href="mailto:ventas@eurotravel.com.mx">ventas@eurotravel.com.mx</a></li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section class="banda asoma" id="caminos">
+  <div class="caja">
+    <h2>Tres caminos, la misma respuesta el mismo día</h2>
+    <div class="puertas">
+      <button type="button" class="puerta" data-go="cotizar">
+        <div class="puerta-fila">
           <h3>Cotizar un viaje</h3>
           <p>Busca por ruta y fechas como si reservaras un vuelo: te decimos qué unidad conviene.</p>
-          <span class="go">Ir a cotizaciones <svg aria-hidden="true"><use href="#i-arrow" /></svg></span>
-        </button>
-        <button class="qa-card" data-go="unidades">
-          <svg class="ic" aria-hidden="true"><use href="#i-bus" /></svg>
+          <span class="puerta-ir">Ir a cotizaciones <svg width="13" height="12" viewBox="0 0 13 12" aria-hidden="true"><use href="#ei-flecha"/></svg></span>
+        </div>
+      </button>
+      <button type="button" class="puerta" data-go="unidades">
+        <div class="puerta-fila">
           <h3>Ver las unidades</h3>
           <p>Fotos reales, capacidades, equipamiento y mapas de asientos de cada modelo.</p>
-          <span class="go">Ver flota <svg aria-hidden="true"><use href="#i-arrow" /></svg></span>
-        </button>
-        <button class="qa-card" data-go="contacto">
-          <svg class="ic" aria-hidden="true"><use href="#i-wa" /></svg>
+          <span class="puerta-ir">Ver flota <svg width="13" height="12" viewBox="0 0 13 12" aria-hidden="true"><use href="#ei-flecha"/></svg></span>
+        </div>
+      </button>
+      <button type="button" class="puerta" data-go="contacto">
+        <div class="puerta-fila">
           <h3>Hablar con un asesor</h3>
           <p>WhatsApp, teléfono o correo directo con la persona que arma tu servicio.</p>
-          <span class="go">Contacto <svg aria-hidden="true"><use href="#i-arrow" /></svg></span>
-        </button>
-      </div>
+          <span class="puerta-ir">Contacto <svg width="13" height="12" viewBox="0 0 13 12" aria-hidden="true"><use href="#ei-flecha"/></svg></span>
+        </div>
+      </button>
     </div>
+  </div>
+</section>
   </section>
 
   <!-- ============ UNIDADES ============ -->
@@ -1672,7 +2316,10 @@ window.IMGS = {
     var dotsEl = byId('dots');
     var slides = [], dots = [];
 
-    HERO.forEach(function (src, i) {
+    /* El inicio nuevo no trae carrusel de fotos, así que #slides y
+       #dots ya no existen. Sin este candado, appendChild sobre null
+       tumbaba TODO el guion: cotizador, flota y contacto incluidos. */
+    if (slidesEl && dotsEl) HERO.forEach(function (src, i) {
       var d = document.createElement('div');
       d.className = 'slide' + (i === 0 ? ' on' : '');
       d.style.backgroundImage = 'url("' + src + '")';
@@ -1705,7 +2352,7 @@ window.IMGS = {
     }
 
     function restart() { clearInterval(timer); timer = setInterval(function () { show((cur + 1) % slides.length); }, 6500); }
-    if (!reduce) restart();
+    if (!reduce && slides.length) restart();
 
     /* ================= flota ================= */
     var UNITS = window.UNIDADES || [];
@@ -3176,5 +3823,156 @@ window.IMGS = {
        días pasados ni invertir salida y regreso. */
   })();
 </script>
+<!-- INICIO-NUEVO:GUION -->
+<script>
+/* Una entrada por bloque, nada más. Sin requestAnimationFrame: en una
+   pestaña en segundo plano no corre y la portada se quedaría invisible. */
+(function () {
+  'use strict';
+  var raiz = document.getElementById('v-inicio');
+  raiz.classList.add('dormido');
+  var bloques = [].slice.call(document.querySelectorAll('#v-inicio > section'));
+  var visto = false;
+
+  function revisa() {
+    var alto = window.innerHeight || 700;
+    for (var i = 0; i < bloques.length; i++) {
+      var b = bloques[i], r = b.getBoundingClientRect();
+      if (r.top < alto * 0.9 && r.bottom > alto * 0.04) { visto = true; b.classList.add('viva'); }
+      else { b.classList.remove('viva'); }
+    }
+  }
+  var ultima = 0, encolado = null;
+  function pide() {
+    var ahora = Date.now();
+    if (ahora - ultima > 60) { ultima = ahora; revisa(); return; }
+    if (encolado) { return; }
+    encolado = setTimeout(function () { encolado = null; ultima = Date.now(); revisa(); }, 60);
+  }
+  window.addEventListener('scroll', pide, { passive: true });
+  window.addEventListener('resize', pide);
+  revisa();
+  setTimeout(revisa, 90);
+  setTimeout(revisa, 420);
+  setTimeout(function () { if (!visto) { raiz.classList.remove('dormido'); } }, 2600);
+})();
+
+/* ------------------------- CARRUSEL DE DESTINOS -----------------------
+   Pasa solo, se arrastra con el dedo y se salta con los puntos. Se para
+   cuando la sección no está a la vista, cuando el puntero está encima y
+   cuando la pestaña se va al fondo: nadie gana nada con una animación
+   corriendo donde no la ve nadie. */
+(function () {
+  'use strict';
+  var caja = document.getElementById('carrusel-destinos');
+  if (!caja) { return; }
+
+  var pista = caja.querySelector('.carrusel-pista');
+  var laminas = [].slice.call(caja.querySelectorAll('.lamina'));
+  var puntos = [].slice.call(caja.querySelectorAll('.punto'));
+  var celdas = [].slice.call(document.querySelectorAll('.ficha[data-destino]'));
+  var cuenta = caja.querySelector('.carrusel-cuenta b');
+  if (laminas.length < 2) { return; }
+
+  var quieto = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var ESPERA = 4600;
+  var i = 0, reloj = null, encima = false;
+
+  function pinta() {
+    pista.style.transform = 'translateX(' + (-i * 100) + '%)';
+    for (var k = 0; k < laminas.length; k++) {
+      laminas[k].setAttribute('aria-hidden', k === i ? 'false' : 'true');
+    }
+    for (var p = 0; p < puntos.length; p++) {
+      puntos[p].setAttribute('aria-current', p === i ? 'true' : 'false');
+    }
+    if (cuenta) { cuenta.textContent = (i + 1 < 10 ? '0' : '') + (i + 1); }
+    // La ficha del mismo destino se enciende al lado de la fotografía.
+    var nombre = laminas[i].getAttribute('data-destino');
+    for (var c = 0; c < celdas.length; c++) {
+      celdas[c].classList.toggle('en-turno', celdas[c].getAttribute('data-destino') === nombre);
+    }
+  }
+
+  function vaA(n) {
+    i = (n + laminas.length) % laminas.length;
+    pinta();
+  }
+  function siguiente() { vaA(i + 1); }
+
+  function aLaVista() {
+    var r = caja.getBoundingClientRect();
+    var alto = window.innerHeight || 700;
+    return r.top < alto && r.bottom > 0;
+  }
+  function late() {
+    if (quieto || encima || document.hidden || !aLaVista()) { return; }
+    siguiente();
+  }
+  function arranca() {
+    if (reloj || quieto) { return; }
+    reloj = setInterval(late, ESPERA);
+  }
+  function para() { if (reloj) { clearInterval(reloj); reloj = null; } }
+
+  puntos.forEach(function (b, n) {
+    b.addEventListener('click', function () { vaA(n); });
+  });
+
+  caja.addEventListener('mouseenter', function () { encima = true; });
+  caja.addEventListener('mouseleave', function () { encima = false; });
+  document.addEventListener('visibilitychange', function () {
+    if (document.hidden) { para(); } else { arranca(); }
+  });
+
+  /* Arrastre con el dedo o con el ratón. El umbral es una cuarta parte del
+     ancho: menos que eso se devuelve, porque un roce al hacer scroll no
+     debe cambiar de destino. */
+  var x0 = null, dx = 0, ancho = 1;
+  pista.addEventListener('pointerdown', function (e) {
+    if (e.pointerType === 'mouse' && e.button !== 0) { return; }
+    x0 = e.clientX; dx = 0;
+    ancho = caja.getBoundingClientRect().width || 1;
+    pista.classList.add('agarrada');
+    // Capturar el puntero es lo que hace que el arrastre siga funcionando
+    // aunque el dedo se salga de la lámina. Truena si el puntero ya se
+    // soltó —pasa con eventos sueltos— y ahí no hay nada que hacer.
+    try { pista.setPointerCapture(e.pointerId); } catch (_) {}
+  });
+  pista.addEventListener('pointermove', function (e) {
+    if (x0 === null) { return; }
+    dx = e.clientX - x0;
+    pista.style.transform = 'translateX(calc(' + (-i * 100) + '% + ' + dx + 'px))';
+  });
+  function suelta() {
+    if (x0 === null) { return; }
+    pista.classList.remove('agarrada');
+    var umbral = ancho / 4;
+    if (dx <= -umbral) { vaA(i + 1); }
+    else if (dx >= umbral) { vaA(i - 1); }
+    else { pinta(); }
+    x0 = null; dx = 0;
+  }
+  pista.addEventListener('pointerup', suelta);
+  pista.addEventListener('pointercancel', suelta);
+  pista.addEventListener('lostpointercapture', suelta);
+  // Arrastrar una fotografía es lo que hace el navegador por su cuenta; aquí
+  // estorba, porque se lleva la imagen en vez de mover la pista.
+  pista.addEventListener('dragstart', function (e) { e.preventDefault(); });
+
+  // Flechas del teclado cuando el foco está en los puntos.
+  caja.addEventListener('keydown', function (e) {
+    if (e.key === 'ArrowRight') { vaA(i + 1); e.preventDefault(); }
+    if (e.key === 'ArrowLeft') { vaA(i - 1); e.preventDefault(); }
+  });
+
+  // Puerta para moverlo desde fuera; es la misma que usa el reloj.
+  caja.addEventListener('carrusel:siguiente', siguiente);
+
+  pinta();
+  arranca();
+})();
+</script>
+<!-- /INICIO-NUEVO:GUION -->
 </body>
 </html>
