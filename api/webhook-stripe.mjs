@@ -37,7 +37,13 @@ import logica from './_webhook-logica.js';
 
 const TIPO_JSON = { 'content-type': 'application/json; charset=utf-8' };
 
-async function atiende(a, b) {
+/* UN SOLO parametro declarado, a proposito: Vercel decide que firma usar
+   mirando cuantos declara la funcion. Con dos, la trata como la de Node y
+   parsea el cuerpo —comprobado—. Con uno, la trata como Web y el cuerpo
+   llega crudo. El segundo argumento, cuando lo hay, se recoge de `arguments`. */
+async function atiende(a) {
+  const b = arguments[1];
+
   /* ---- firma Web: (Request) -> Response ---- */
   if (a && typeof a.arrayBuffer === 'function' && a.headers && typeof a.headers.get === 'function') {
     if (a.method !== 'POST') {
@@ -63,7 +69,19 @@ async function atiende(a, b) {
     crudo = await crudoDeNode(req);
   } catch (e) {
     console.error('[webhook] no se pudo leer el cuerpo crudo: ' + e.message);
-    res.status(500).json({ error: 'cuerpo ilegible' });
+    /* `forma` describe el ENTORNO, no la peticion: que trae el req y de que
+       tipo. Sirve para saber por que no se pudo leer crudo sin tener que
+       mirar los registros de Vercel. No lleva ni un dato del cliente. */
+    res.status(500).json({
+      error: 'cuerpo ilegible',
+      forma: {
+        rawBody: typeof req.rawBody,
+        body: Array.isArray(req.body) ? 'array' : (req.body === null ? 'null' : typeof req.body),
+        esBuffer: Buffer.isBuffer(req.body),
+        legible: typeof req[Symbol.asyncIterator] === 'function',
+        motivo: e.message
+      }
+    });
     return;
   }
   const r = await logica.procesa(crudo, req.headers['stripe-signature']);
