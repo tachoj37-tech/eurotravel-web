@@ -76,9 +76,9 @@ module.exports = async function handler(req, res) {
       }
     }
 
-    const kmIda = ida.metros / 1000;
-    const kmVuelta = vuelta ? vuelta.metros / 1000 : 0;
-    const kmTotal = kmIda + kmVuelta;
+    /* La conversión vive en _tarifa, no aquí: cotizar y cobrar TIENEN que
+       sacar el mismo número del mismo lugar. */
+    const kmTotal = tarifa.kmDe(ida.metros, vuelta ? vuelta.metros : 0);
 
     const p = tarifa.calcula(kmTotal, dias);
 

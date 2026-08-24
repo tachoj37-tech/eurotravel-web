@@ -88,7 +88,12 @@ function contratoDesde(m, sesion) {
     observaciones: 'Reservado en línea. Folio de la página: ' + (m.folio || '—') +
       '. Anticipo pagado con Stripe' +
       (sesion.payment_method_types && sesion.payment_method_types.length
-        ? ' (' + sesion.payment_method_types.join(', ') + ')' : '') + '.',
+        ? ' (' + sesion.payment_method_types.join(', ') + ')' : '') + '. ' +
+      /* El cotizador en línea pregunta TIPO DE UNIDAD, no cuántos van: el
+         precio sale de los kilómetros, no de las cabezas. Así que el «1» de
+         abajo es el valor por omisión de la puerta, no un dato del cliente, y
+         hay que decirlo o la oficina se lo cree. */
+      'PASAJEROS: no se capturan en línea, confirmar con el cliente.',
     cliente: {
       nombre: partes[0] || nombre || 'Sin nombre',
       apellidos: partes.slice(1).join(' ') || undefined,
