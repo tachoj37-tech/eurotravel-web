@@ -10,62 +10,26 @@
    mismo archivo, y no hay forma de que el cliente mande un
    precio inventado.
 
-   Reglas de negocio (confirmadas por el dueño):
-     · $36 por kilómetro, IVA YA INCLUIDO
-     · Mínimo $3,000 POR DÍA de servicio
+   Reglas de negocio (confirmadas por el dueño, en _tarifa.js):
      · Ida y vuelta se miden por separado y se suman
      · No se cobra la estadía ni el traslado desde la base
+   El precio por kilómetro y el mínimo por día NO se escriben
+   aquí a propósito: viven solo en _tarifa.js, del lado del
+   servidor, para que el cliente nunca los vea.
 
-   Defensas: mismas que /api/places. Si cambias la lista de
-   orígenes permitidos, cámbiala en los dos archivos.
+   Defensas: en _defensas.js, compartidas con places, pagar y
+   diagnostico. Ya no hay lista que sincronizar a mano.
    ============================================================ */
 
 const tarifa = require('./_tarifa');   // las reglas del dinero viven ahi, no aqui
 const rutas  = require('./_rutas');    // y medir kilometros, alla
-
-const PERMITIDOS = [
-  'https://eurotravel-web.vercel.app',
-  'http://localhost:5175'
-];
+const defensas = require('./_defensas'); // origen, freno e IP, en un lugar
 
 // La Routes API cuesta más que el autocompletado, así que los topes son más bajos
-const LIMITE_POR_VISITANTE = 30;      // llamadas por minuto
-const LIMITE_DIARIO = 500;            // llamadas al día por instancia
-
-
-const visitantes = new Map();
-let contadorDia = { fecha: '', total: 0 };
-
-function permiteVisitante(ip) {
-  const ahora = Date.now();
-  const reg = visitantes.get(ip) || { desde: ahora, n: 0 };
-  if (ahora - reg.desde > 60000) { reg.desde = ahora; reg.n = 0; }
-  reg.n += 1;
-  visitantes.set(ip, reg);
-  if (visitantes.size > 5000) visitantes.clear();
-  return reg.n <= LIMITE_POR_VISITANTE;
-}
-
-function permiteDia() {
-  const hoy = new Date().toISOString().slice(0, 10);
-  if (contadorDia.fecha !== hoy) contadorDia = { fecha: hoy, total: 0 };
-  contadorDia.total += 1;
-  return contadorDia.total <= LIMITE_DIARIO;
-}
-
-function origenValido(req) {
-  const origen = req.headers.origin || '';
-  const referer = req.headers.referer || '';
-  return PERMITIDOS.some(function (p) {
-    return origen === p || referer.indexOf(p) === 0;
-  });
-}
+const freno = defensas.creaFreno({ porMinuto: 30, porDia: 500 });
 
 module.exports = async function handler(req, res) {
-  if (req.method === 'OPTIONS') { res.status(204).end(); return; }
-  if (req.method !== 'POST') { res.status(405).json({ error: 'Método no permitido' }); return; }
-
-  if (!origenValido(req)) { res.status(403).json({ error: 'Origen no autorizado' }); return; }
+  if (defensas.puerta(req, res)) return;
 
   const clave = process.env.GOOGLE_ROUTES_KEY;
   if (!clave) {
@@ -74,15 +38,10 @@ module.exports = async function handler(req, res) {
     return;
   }
 
-  const ip = (req.headers['x-forwarded-for'] || '').split(',')[0].trim() || 'sin-ip';
-  if (!permiteVisitante(ip)) { res.status(429).json({ error: 'Demasiadas solicitudes' }); return; }
-  if (!permiteDia()) { res.status(429).json({ error: 'Límite diario alcanzado' }); return; }
+  const frenado = freno(req);
+  if (frenado) { res.status(frenado.status).json({ error: frenado.error }); return; }
 
-  let cuerpo = req.body;
-  if (typeof cuerpo === 'string') {
-    try { cuerpo = JSON.parse(cuerpo); } catch (e) { cuerpo = {}; }
-  }
-  cuerpo = cuerpo || {};
+  const cuerpo = defensas.cuerpoJSON(req);
 
   const origen = rutas.formasDe(cuerpo.origen);
   const destino = rutas.formasDe(cuerpo.destino);

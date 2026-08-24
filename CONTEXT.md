@@ -11,6 +11,8 @@ concepto que no está aquí, se agrega aquí primero.
 | **Cotización** | La respuesta guardada del cotizador: días, total, anticipo, saldo. Pasa por **lista blanca** al guardarse. |
 | **La regla del kilómetro** | El cliente nunca ve la tarifa por kilómetro ni los kilómetros — con total y kilómetros juntos, la tarifa se saca dividiendo. Del lado del servidor la aplica `_tarifa.js` (separación `interno`/externo); del lado del navegador, la lista blanca de la máquina. |
 | **Unidad** | Una entrada de `unidades.js` (fuente única del catálogo). `cotizadorAutomatico` decide si enseña precio en línea o se **cotiza a la medida**. |
+| **Las defensas** | `api/_defensas.js`. El guardián común de los cuatro endpoints: origen permitido, freno por visitante, tope diario y —lo importante— la **IP de confianza**. Se prueba en Node (`node pruebas/probar-defensas.cjs`). |
+| **La IP de confianza** | La IP con la que se cuenta para frenar. Nunca el primer `x-forwarded-for` (ese lo escribe quien llama): se usa `x-vercel-forwarded-for`, y si falta, el último de la cadena. Frenar por el primero es no tener freno. |
 | **Solicitud** | Lo que sale al final del paso 3: el resumen que se manda por WhatsApp o correo, o el pago del anticipo por `/api/pagar` — que **recalcula** con `_tarifa.js` y jamás confía en un total del navegador. |
 | **Movimientos** | Los traslados dentro del destino, por día, capturados en el paso 2. |
 | **Folio** | Lo asigna EuroSystem al crear el contrato; la página solo lo enseña. La única puerta entre página y sistema es `POST /api/contratos/externo`. |

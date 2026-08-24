@@ -8,18 +8,12 @@
    Uso: POST /api/diagnostico desde el propio dominio.
    ============================================================ */
 
-const PERMITIDOS = [
-  'https://eurotravel-web.vercel.app',
-  'http://localhost:5175'
-];
+const defensas = require('./_defensas');   // origen y freno, en un lugar
 
-function origenValido(req) {
-  const origen = req.headers.origin || '';
-  const referer = req.headers.referer || '';
-  return PERMITIDOS.some(function (p) {
-    return origen === p || referer.indexOf(p) === 0;
-  });
-}
+/* Este endpoint prueba las claves contra Google, así que cada llamada gasta
+   cuota real. El freno es apretado a propósito: es una herramienta de
+   revisión, no algo que se llame en bucle. */
+const freno = defensas.creaFreno({ porMinuto: 6, porDia: 60 });
 
 async function pruebaPlaces(clave) {
   try {
@@ -62,7 +56,12 @@ async function pruebaRoutes(clave) {
 }
 
 module.exports = async function handler(req, res) {
-  if (!origenValido(req)) { res.status(403).json({ error: 'Origen no autorizado' }); return; }
+  // Acepta POST y GET: es cómodo abrirlo en el navegador para revisar. La
+  // puerta resuelve OPTIONS, el método y el origen en un lugar.
+  if (defensas.puerta(req, res, { metodos: ['POST', 'GET'] })) return;
+
+  const frenado = freno(req);
+  if (frenado) { res.status(frenado.status).json({ error: frenado.error }); return; }
 
   const places = process.env.GOOGLE_PLACES_KEY || '';
   const routes = process.env.GOOGLE_ROUTES_KEY || '';
