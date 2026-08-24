@@ -50,9 +50,37 @@ Se configuran en Vercel → Settings → Environment Variables. Ver `.env.exampl
 |---|---|---|
 | `GOOGLE_PLACES_KEY` | Autocompletado de direcciones | Places API (New), sin restricción de sitio |
 | `GOOGLE_ROUTES_KEY` | Cálculo de kilómetros (Fase 2) | Routes API, sin restricción de sitio |
+| `STRIPE_SECRET_KEY` | Cobro del anticipo | — |
+| `STRIPE_WEBHOOK_SECRET` | Firma de los avisos de Stripe | — |
+| `CONTRATOS_API_KEY` | Registrar el contrato en EuroSystem | — |
 
-Ambas se restringen **por API**, no por sitio web: las llama el servidor, que no
-envía cabecera `Referer`.
+Las de Google se restringen **por API**, no por sitio web: las llama el
+servidor, que no envía cabecera `Referer`.
+
+`CONTRATOS_API_KEY` es de servidor a servidor y la genera quien administra
+EuroSystem. Nunca va en código que llegue al navegador: quien la vea puede
+registrar contratos a nombre de la empresa.
+
+### Dar de alta el webhook de Stripe
+
+El webhook es lo que hace que un pago se entere **aunque el cliente cierre la
+pestaña** — y es indispensable con OXXO, donde el cliente paga días después en
+la tienda.
+
+1. En Stripe → Developers → Webhooks → **Add endpoint**
+   (prueba: `dashboard.stripe.com/test/webhooks`).
+2. URL: `https://eurotravel-web.vercel.app/api/webhook-stripe`
+3. Eventos:
+   - `checkout.session.completed` — tarjeta, paga al momento
+   - `checkout.session.async_payment_succeeded` — OXXO, paga después
+4. Stripe da un **signing secret** (`whsec_…`). Va en Vercel como
+   `STRIPE_WEBHOOK_SECRET`.
+
+Sin ese secreto el endpoint **rechaza todo**, y hace bien: la firma es lo único
+que distingue a Stripe de cualquiera que quiera inventar un «ya pagó».
+
+**El orden importa:** primero la variable en Vercel, luego el alta en Stripe. Al
+revés, los primeros avisos se rechazan y Stripe marca el endpoint como fallido.
 
 ### Defensas del proxy
 
