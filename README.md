@@ -39,8 +39,7 @@ Cada push a `main` publica automáticamente en Vercel.
 
 El autocompletado de direcciones no llama a Google desde el cliente: pide a
 `/api/places`, una función serverless que corre en Vercel y es la única que
-conoce la clave. Lo mismo hará `/api/cotizar` en la Fase 2 con el cálculo de
-kilómetros.
+conoce la clave. `/api/cotizar` hace lo mismo con el cálculo de kilómetros.
 
 ### Variables de entorno
 
@@ -49,10 +48,15 @@ Se configuran en Vercel → Settings → Environment Variables. Ver `.env.exampl
 | Variable | Para qué | Restricción en Google Cloud |
 |---|---|---|
 | `GOOGLE_PLACES_KEY` | Autocompletado de direcciones | Places API (New), sin restricción de sitio |
-| `GOOGLE_ROUTES_KEY` | Cálculo de kilómetros (Fase 2) | Routes API, sin restricción de sitio |
+| `GOOGLE_ROUTES_KEY` | Cálculo de kilómetros | Routes API, sin restricción de sitio |
 | `STRIPE_SECRET_KEY` | Cobro del anticipo | — |
 | `STRIPE_WEBHOOK_SECRET` | Firma de los avisos de Stripe | — |
 | `CONTRATOS_API_KEY` | Registrar el contrato en EuroSystem | — |
+| `EUROSYSTEM_URL` | A dónde se manda el contrato. Opcional | — |
+
+**Vercel solo aplica las variables a los despliegues nuevos.** Después de
+agregar o cambiar una hay que volver a desplegar, o el sitio sigue corriendo
+con las de antes.
 
 Las de Google se restringen **por API**, no por sitio web: las llama el
 servidor, que no envía cabecera `Referer`.
@@ -75,12 +79,25 @@ la tienda.
    - `checkout.session.async_payment_succeeded` — OXXO, paga después
 4. Stripe da un **signing secret** (`whsec_…`). Va en Vercel como
    `STRIPE_WEBHOOK_SECRET`.
+5. **Volver a desplegar.** Vercel solo aplica las variables a los despliegues
+   nuevos: sin este paso el sitio sigue corriendo sin el secreto y parece que
+   la variable no sirvió.
+6. En Stripe, **Send test webhook** con `checkout.session.completed`. Tiene que
+   contestar `200`.
 
 Sin ese secreto el endpoint **rechaza todo**, y hace bien: la firma es lo único
 que distingue a Stripe de cualquiera que quiera inventar un «ya pagó».
 
-**El orden importa:** primero la variable en Vercel, luego el alta en Stripe. Al
-revés, los primeros avisos se rechazan y Stripe marca el endpoint como fallido.
+**Este orden y no otro.** Antes decía aquí «primero la variable en Vercel, luego
+el alta en Stripe», y eso no se puede hacer: el `whsec_` lo genera Stripe **al
+crear el endpoint**, así que antes no existe. Y no pasa nada por hacerlo en este
+orden: mientras falte el secreto, el endpoint contesta 500, y un 500 es
+justamente lo que Stripe reintenta —hasta tres días—. El pago no se pierde.
+
+Lo que sí conviene tener listo **antes** es `CONTRATOS_API_KEY`, en los dos
+proyectos y con el mismo valor: en `eurosystem`, para que su puerta abra, y en
+`eurotravel-web`, para poder tocarla. Si falta de un lado, EuroSystem contesta
+`503` y el contrato no se registra.
 
 ### Defensas del proxy
 
