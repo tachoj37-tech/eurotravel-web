@@ -88,7 +88,8 @@ module.exports = async function handler(req, res) {
        tienen que serlo. */
     const p = tarifa.calcula(kmTotal, dias, {
       noches: noches,
-      movimientos: cuerpo.movimientos
+      movimientos: cuerpo.movimientos,
+      destino: cuerpo.destino
     });
 
     /* Se enumera a mano lo que sale, en vez de mandar el objeto completo.

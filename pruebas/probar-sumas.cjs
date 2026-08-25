@@ -61,9 +61,12 @@ function cierto(nombre, v) { igual(nombre, !!v, true); }
         if (p.anticipo > p.total || p.anticipo < 0) rotos.anticipo.push({ km, dias, p });
         // el total nunca queda por debajo del minimo por dia
         if (p.total < dias * t.MINIMO_POR_DIA && p.interno.aplicoMinimo) rotos.minimo.push({ km, dias, p });
-        // el desglose de tramos suma lo que dice el bruto por kilometro
-        const sumaTramos = p.interno.tramos.reduce(function (s, d) { return s + d.importe; }, 0);
-        if (Math.abs(sumaTramos - p.interno.porKilometro) > 0.5) rotos.tramos.push({ km, dias, p });
+        /* El bruto por kilometro es exactamente km x la tarifa que aplico.
+           Antes aqui se sumaban los tramos; desde que hay una sola tarifa por
+           viaje, la comprobacion es una multiplicacion. */
+        if (Math.abs(p.interno.km * p.interno.tarifaKm - p.interno.porKilometro) > 0.5) {
+          rotos.tramos.push({ km, dias, p });
+        }
         /* Las partes que ve el cliente TIENEN que reconstruir el total. Si no,
            el resumen enseña un reparto que no suma lo que se cobra, y eso
            parece un error de cuentas. */
@@ -84,7 +87,7 @@ function cierto(nombre, v) { igual(nombre, !!v, true); }
   igual('subtotal + IVA = total, sin excepción', rotos.iva.length, 0);
   igual('el anticipo nunca pasa del total', rotos.anticipo.length, 0);
   igual('el total nunca queda bajo el mínimo por día', rotos.minimo.length, 0);
-  igual('el desglose por tramos suma el bruto', rotos.tramos.length, 0);
+  igual('el bruto es km x la tarifa que aplico', rotos.tramos.length, 0);
   igual('el redondeo nunca sube el precio', rotos.redondeo.length, 0);
   igual('lo que ve el cliente suma el total exacto', rotos.partes.length, 0);
 })();

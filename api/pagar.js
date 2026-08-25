@@ -220,7 +220,8 @@ module.exports = async function handler(req, res) {
        le enseñó al cliente. */
     const p = tarifa.calcula(kmTotal, dias, {
       noches: noches,
-      movimientos: cuerpo.movimientos
+      movimientos: cuerpo.movimientos,
+      destino: cuerpo.destino
     });
 
     const folio = nuevoFolio();
@@ -282,6 +283,7 @@ module.exports = async function handler(req, res) {
            oficina sí las necesita separadas. */
         nochesExtra: String(p.interno.nochesExtra),
         importeNoches: String(p.interno.importeNoches),
+        reglaDestino: p.interno.reglaDestino || '',
         movDias: String(p.desglose.diasMovimiento),
         movImporte: String(p.desglose.importeMovimientos),
         movDetalle: detalleMovimientos(cuerpo.movimientos, p.desglose.diasMovimiento),

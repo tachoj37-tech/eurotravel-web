@@ -92,11 +92,16 @@ function contratoDesde(m, sesion) {
     extras.push(movDias + (movDias === 1 ? ' día' : ' días') + ' con movimientos en destino ' +
       '($' + (Number(m.movImporte) || 0).toLocaleString('es-MX') + ')');
   }
+  /* Hay destinos donde el día de movimientos cuesta lo mismo sin importar las
+     horas. Si la oficina no lo lee aquí, va a creer que el precio salió mal. */
+  const regla = String(m.reglaDestino || '').trim();
   const extrasTexto = extras.length
     ? ' El total incluye ' + extras.join(' y ') + '.' +
       (movDias
-        ? ' Cada día con movimientos cubre 8 horas dentro de la zona metropolitana ' +
-          'del destino, o 40 km a la redonda del centro.'
+        ? (regla
+            ? ' En ' + regla + ' el día con movimientos es tarifa fija, sin importar las horas.'
+            : ' Cada día con movimientos cubre 8 horas dentro de la zona metropolitana ' +
+              'del destino, o 40 km a la redonda del centro.')
         : '')
     : '';
 

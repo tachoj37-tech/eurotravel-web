@@ -1947,22 +1947,20 @@ window.IMGS = {
               <button class="chip" type="button" id="mov-no" aria-pressed="true">No</button>
             </div>
 
+            <!-- Antes había aquí un «¿en cuántos de esos días?» con un número.
+                 Hacía lo mismo que «+ Agregar día», y dos controles para una
+                 sola cosa es de lo que más confunde. -->
             <div class="mov-detalle" id="mov-detalle">
               <div>
-                <div class="field" style="max-width: 320px; margin-top: 22px">
-                  <label for="mov-dias">¿En cuántos de esos días habrá movimientos?</label>
-                  <input id="mov-dias" type="number" min="1" value="1" />
-                </div>
-
-                <div id="mov-lista"></div>
+                <div id="mov-lista" style="margin-top: 22px"></div>
 
                 <button class="btn btn-line btn-sm" type="button" id="mov-agregar" style="margin-top: 14px">
                   + Agregar día
                 </button>
 
-                <div class="field" style="margin-top: 20px">
-                  <label for="mov-notas">Notas o indicaciones</label>
-                  <textarea id="mov-notas" placeholder="Horarios preferidos, número de personas por recorrido, requerimientos especiales…"></textarea>
+                <div class="field" style="margin-top: 22px">
+                  <label for="mov-notas">¿A dónde van esos días? (opcional)</label>
+                  <textarea id="mov-notas" placeholder="Salimos del Hotel Sheraton, queremos ir al Malecón y un día a Sayulita. Somos 18 personas…"></textarea>
                 </div>
 
                 <p class="mov-error" id="mov-error"></p>
@@ -2079,8 +2077,7 @@ window.IMGS = {
 
           <p class="aviso-mov" id="aviso-mov" style="display: none">
             <svg aria-hidden="true"><use href="#i-shield" /></svg>
-            <span>Cada día con movimientos cubre 8 horas dentro de la zona metropolitana
-            del destino, o 40 km a la redonda del centro. Ya está sumado al total de arriba.</span>
+            <span id="aviso-mov-texto"></span>
           </p>
           <div class="send-row">
             <a class="btn btn-red" id="send-wa" href="#" target="_blank" rel="noopener"><svg aria-hidden="true"><use href="#i-wa" /></svg> Enviar por WhatsApp</a>
@@ -3638,7 +3635,6 @@ window.IMGS = {
         ' en destino, del ' + fechaLegible(soloFecha(VIAJE.salida)) +
         ' al ' + fechaLegible(soloFecha(VIAJE.regreso)) + '. ' +
         'Cada día con movimientos se cobra aparte y se suma a tu total.';
-      byId('mov-dias').max = dias;
       pintaInterruptor();
     }
 
@@ -3648,12 +3644,22 @@ window.IMGS = {
       });
       movDetalle.classList.toggle('on', MOV.incluye);
       byId('aviso-mov').style.display = MOV.incluye ? '' : 'none';
+
+      /* Hay destinos donde el día es tarifa fija y las horas no cambian el
+         precio. El nombre lo dice el servidor —aquí no se reconoce ningún
+         destino, para que la pantalla y el cobro no puedan discrepar—. */
+      var reg = VIAJE.cotizacion && VIAJE.cotizacion.desglose &&
+                VIAJE.cotizacion.desglose.reglaDestino;
+      byId('aviso-mov-texto').textContent = reg
+        ? 'En ' + reg + ' el día con movimientos es tarifa fija: cueste 4 horas o 12, ' +
+          'se cobra igual. Ya está sumado al total de arriba.'
+        : 'Cada día con movimientos cubre 8 horas dentro de la zona metropolitana del ' +
+          'destino, o 40 km a la redonda del centro. Ya está sumado al total de arriba.';
     }
 
     byId('mov-si').addEventListener('click', function () {
       MOV.incluye = true;
       if (!MOV.dias.length) agregaDia();
-      if (!byId('mov-dias').value) byId('mov-dias').value = 1;
       pintaInterruptor();
     });
 
@@ -3664,8 +3670,7 @@ window.IMGS = {
 
     function agregaDia() {
       MOV.dias.push({
-        fecha: '', recorridos: '', horaInicio: '', horaFin: '',
-        partida: null, visitas: []
+        fecha: '', horaInicio: '', horaFin: ''
       });
       pintaDias();
     }
@@ -3707,69 +3712,15 @@ window.IMGS = {
         inpFecha.max = soloFecha(VIAJE.regreso);
         rej.appendChild(fFecha);
 
-        rej.appendChild(campo('Recorridos ese día', 'number', dia.recorridos, function (v) { dia.recorridos = v; }, '2'));
+        /* Solo fecha y horas. Antes se pedían además los recorridos del día, el
+           punto de partida y los puntos a visitar: dieciocho campos para tres
+           días. De todo eso, únicamente las horas mueven el precio y la fecha
+           sirve para agendar; lo demás se escribe mucho mejor de corrido en la
+           caja de notas de abajo, y así el cliente no tiene que saber su
+           itinerario completo para poder reservar. */
         rej.appendChild(campo('Hora de inicio', 'time', dia.horaInicio, function (v) { dia.horaInicio = v; }));
         rej.appendChild(campo('Hora de fin', 'time', dia.horaFin, function (v) { dia.horaFin = v; }));
         caja.appendChild(rej);
-
-        // Punto de partida, con autocompletado
-        var fPart = campo('Punto de partida', 'text', dia.partida ? dia.partida.texto : '', function (v) {
-          dia.partida = { texto: v, placeId: dia.partida ? dia.partida.placeId : null, lat: null, lng: null };
-        }, 'Hotel, plaza, domicilio…');
-        caja.appendChild(fPart);
-        conectaAutocompletado(fPart.querySelector('input'), function (d) {
-          var inp = fPart.querySelector('input');
-          inp.value = d.direccion || d.calle || inp.value;
-          dia.partida = { texto: inp.value, placeId: d.id, lat: d.lat, lng: d.lng };
-        }, null, cercoDestino);
-
-        // Puntos a visitar, uno o varios
-        var visitas = document.createElement('div');
-        visitas.className = 'mov-visitas';
-        caja.appendChild(visitas);
-
-        function pintaVisitas() {
-          visitas.innerHTML = '';
-          dia.visitas.forEach(function (v, j) {
-            var f = campo(j === 0 ? 'Puntos a visitar' : '', 'text', v.texto, function (val) { v.texto = val; }, 'Restaurante, playa, tour…');
-            f.classList.add('mov-visita');
-
-            var quita = document.createElement('button');
-            quita.type = 'button';
-            quita.className = 'mov-quitar-punto';
-            quita.innerHTML = '<svg aria-hidden="true"><use href="#i-x"/></svg>';
-            quita.setAttribute('aria-label', 'Quitar punto');
-            quita.addEventListener('click', function () {
-              dia.visitas.splice(j, 1);
-              if (!dia.visitas.length) dia.visitas.push({ texto: '', placeId: null });
-              pintaVisitas();
-            });
-            f.appendChild(quita);
-            visitas.appendChild(f);
-
-            conectaAutocompletado(f.querySelector('input'), function (d) {
-              var inp = f.querySelector('input');
-              inp.value = d.direccion || d.calle || inp.value;
-              v.texto = inp.value;
-              v.placeId = d.id;
-              v.lat = d.lat;
-              v.lng = d.lng;
-            }, null, cercoDestino);
-          });
-
-          var mas = document.createElement('button');
-          mas.type = 'button';
-          mas.className = 'btn btn-line btn-sm';
-          mas.textContent = '+ Agregar punto';
-          mas.addEventListener('click', function () {
-            dia.visitas.push({ texto: '', placeId: null });
-            pintaVisitas();
-          });
-          visitas.appendChild(mas);
-        }
-
-        if (!dia.visitas.length) dia.visitas.push({ texto: '', placeId: null });
-        pintaVisitas();
 
         movLista.appendChild(caja);
       });
@@ -3807,17 +3758,6 @@ window.IMGS = {
         return;
       }
       agregaDia();
-      byId('mov-dias').value = MOV.dias.length;
-    });
-
-    byId('mov-dias').addEventListener('input', function () {
-      var n = Number(this.value || 0);
-      var tope = diasEstadia();
-      if (n > tope) { this.value = tope; n = tope; }
-      if (n < 1) return;
-      while (MOV.dias.length < n) MOV.dias.push({ fecha: '', recorridos: '', horaInicio: '', horaFin: '', partida: null, visitas: [] });
-      while (MOV.dias.length > n) MOV.dias.pop();
-      pintaDias();
     });
 
     byId('mov-notas').addEventListener('input', function () { MOV.notas = this.value; });
@@ -3852,11 +3792,11 @@ window.IMGS = {
           if (mal) ok = false;
         }
 
+        /* Tres campos, tres revisiones. Los índices siguen el orden en que
+           pintaDias() los mete en la caja: fecha, inicio, fin. */
         marca(0, !dia.fecha);
-        marca(1, !dia.recorridos || Number(dia.recorridos) < 1);
-        marca(2, !dia.horaInicio);
-        marca(3, !dia.horaFin);
-        marca(4, !(dia.partida && dia.partida.texto));
+        marca(1, !dia.horaInicio);
+        marca(2, !dia.horaFin);
 
         if (dia.fecha) {
           if (dia.fecha < soloFecha(VIAJE.salida) || dia.fecha > soloFecha(VIAJE.regreso)) {
@@ -3870,13 +3810,8 @@ window.IMGS = {
         }
 
         if (dia.horaInicio && dia.horaFin && dia.horaFin <= dia.horaInicio) {
-          marca(3, true);
+          marca(2, true);
           avisaMov('En el día ' + (i + 1) + ' la hora de fin debe ser posterior a la de inicio.');
-        }
-
-        if (!dia.visitas.filter(function (v) { return v.texto; }).length) {
-          ok = false;
-          avisaMov('Indica al menos un punto a visitar en el día ' + (i + 1) + '.');
         }
       });
 
@@ -3892,20 +3827,18 @@ window.IMGS = {
       var filas = [['Movimientos en destino', 'Sí · ' + MOV.dias.length + (MOV.dias.length === 1 ? ' día' : ' días')]];
 
       MOV.dias.forEach(function (dia, i) {
-        var partes = [];
-        if (dia.recorridos) partes.push(dia.recorridos + ' recorridos');
-        if (dia.horaInicio || dia.horaFin) partes.push((dia.horaInicio || '?') + ' a ' + (dia.horaFin || '?'));
-        if (dia.partida && dia.partida.texto) partes.push('Sale de ' + dia.partida.texto);
-        var visitas = dia.visitas.filter(function (v) { return v.texto; }).map(function (v) { return v.texto; });
-        if (visitas.length) partes.push('Visita: ' + visitas.join(' / '));
-        filas.push(['Día ' + (i + 1) + (dia.fecha ? ' (' + fechaLegible(dia.fecha) + ')' : ''), partes.join(' · ')]);
+        filas.push(['Día ' + (i + 1) + (dia.fecha ? ' (' + fechaLegible(dia.fecha) + ')' : ''),
+          (dia.horaInicio || '?') + ' a ' + (dia.horaFin || '?')]);
       });
 
       if (MOV.notas) filas.push(['Notas de movimientos', MOV.notas]);
       /* Antes aquí iba «Requiere cotización de un asesor». Ya no: los
          movimientos se cobran solos y el total del resumen los trae. */
-      filas.push(['Incluye por día', '8 horas dentro de la zona metropolitana del destino, ' +
-        'o 40 km a la redonda del centro']);
+      var reg = VIAJE.cotizacion && VIAJE.cotizacion.desglose &&
+                VIAJE.cotizacion.desglose.reglaDestino;
+      filas.push(['Incluye por día', reg
+        ? 'Tarifa fija en ' + reg + ', sin importar las horas'
+        : '8 horas dentro de la zona metropolitana del destino, o 40 km a la redonda del centro']);
       return filas;
     }
 

@@ -20,7 +20,7 @@
 
    EL ORDEN DE LA SUMA IMPORTA, y es el que dictó el dueño:
 
-       1. los kilómetros por tramos
+       1. los kilómetros a su tarifa
        2. ¿gana el mínimo por día? -> se corta a la centena
                                       = EL PRECIO DEL TRASLADO
        3. + las noches extra
@@ -33,62 +33,66 @@
    ============================================================ */
 
 /* ------------------------------------------------------------
-   EL KILÓMETRO SE COBRA POR TRAMOS, COMO LOS IMPUESTOS
+   UNA SOLA TARIFA, ELEGIDA POR EL TOTAL DEL VIAJE
    ------------------------------------------------------------
-   No es que un viaje largo entero se cobre más barato: es que
-   los kilómetros QUE PASAN de cada marca se cobran más baratos.
+   No es por tramos. Se mira cuántos kilómetros mide el viaje
+   completo y TODOS se cobran a la misma tarifa:
 
-       los primeros    800 km  ->  $35
-       de 800 a      1,000 km  ->  $28
-       de 1,000 en adelante    ->  $26
+       hasta      800 km  ->  los 800 a $34
+       de 801 a 1,000 km  ->  TODOS a $25
+       de 1,001 en adelante  ->  TODOS a $23
 
-   Un viaje de 1,200 km, entonces:
-       800 × 35  =  28,000
-       200 × 28  =   5,600
-       200 × 26  =   5,200
-                    ------
-                    38,800
+   Un viaje de 900 km, entonces, son 900 × 25 = 22,500. No 800 a
+   una tarifa y 100 a otra: los novecientos a veinticinco.
 
    La cuenta es sobre el kilometraje del VIAJE COMPLETO —ida más
    vuelta sumadas—, no por tramo del recorrido.
 
-   Cobrarlo de la otra forma (una sola tarifa según el total)
-   tendría un escalón absurdo: a 799 km costaría más que a 801.
-   Así crece siempre, nada más que cada vez más despacio.
+   ------------------------------------------------------------
+   EL ESCALÓN DE LOS 801 KM ES A PROPÓSITO. NO LO "ARREGLES".
+   ------------------------------------------------------------
+   Esto tiene una consecuencia que se midió antes de escribirlo y
+   que el dueño aprobó con los números enfrente:
+
+       800 km  ->  $27,200
+       801 km  ->  $20,000     un kilómetro más, $7,200 menos
+
+   Y no es solo el escalón: de 801 a 1,182 km, TODOS los viajes
+   cobran menos que uno de 800 km. Son 382 kilómetros donde el
+   viaje cuesta más gasolina, más casetas y más horas de operador,
+   y deja menos dinero. Un cliente con un viaje de 780 km que
+   agregue una parada y llegue a 810 paga $7,200 menos, y con esta
+   regla eso es legítimo.
+
+   Se le propuso la alternativa —las mismas tarifas 34/25/23 pero
+   por tramos, que sube siempre y no tiene escalón— y eligió ésta.
+   Si algún día se quiere cambiar, se cambia con él, no aquí.
    ------------------------------------------------------------ */
-const TRAMOS = [
-  { hasta: 800, porKm: 35 },
-  { hasta: 1000, porKm: 28 },
-  { hasta: Infinity, porKm: 26 }
+const BANDAS_KM = [
+  { hasta: 800, porKm: 34 },
+  { hasta: 1000, porKm: 25 },
+  { hasta: Infinity, porKm: 23 }
 ];
 
 /* Se conserva por claridad: es lo que cuesta el kilómetro de un viaje que no
-   pasa del primer tramo, que son casi todos. */
-const TARIFA_KM = TRAMOS[0].porKm;
+   pasa de la primera banda, que son casi todos. */
+const TARIFA_KM = BANDAS_KM[0].porKm;
 
-/* Recorre los tramos y va cobrando lo que cae en cada uno. Devuelve además el
-   desglose, que se queda del lado del servidor: al cliente NUNCA se le
-   enseña ni el kilometraje ni lo que cuesta el kilómetro. */
-function porTramos(kmTotal) {
+function bandaKm(kmTotal) {
   const km = Math.max(0, Number(kmTotal) || 0);
-  let restan = km;
-  let piso = 0;
-  let total = 0;
-  const desglose = [];
-
-  for (let i = 0; i < TRAMOS.length && restan > 0; i++) {
-    const t = TRAMOS[i];
-    const cabenAqui = Math.min(restan, t.hasta - piso);
-    if (cabenAqui > 0) {
-      const importe = cabenAqui * t.porKm;
-      total += importe;
-      desglose.push({ desde: piso, hasta: piso + cabenAqui, km: cabenAqui, porKm: t.porKm, importe: importe });
-      restan -= cabenAqui;
-    }
-    piso = t.hasta;
+  for (let i = 0; i < BANDAS_KM.length; i++) {
+    if (km <= BANDAS_KM[i].hasta) return BANDAS_KM[i];
   }
+  return BANDAS_KM[BANDAS_KM.length - 1];
+}
 
-  return { total: total, desglose: desglose };
+/* Cuánto cuesta el kilometraje. Devuelve además a qué tarifa salió, que se
+   queda del lado del servidor: al cliente NUNCA se le enseña ni el
+   kilometraje ni lo que cuesta el kilómetro. */
+function porKilometro(kmTotal) {
+  const km = Math.max(0, Number(kmTotal) || 0);
+  const banda = bandaKm(km);
+  return { total: km * banda.porKm, porKm: banda.porKm, km: km };
 }
 const MINIMO_POR_DIA = 3000;          // piso por día de servicio, IVA incluido
 const REDONDEO = 100;                 // el total se corta a la centena de abajo
@@ -149,6 +153,49 @@ const BANDAS_MOVIMIENTO = [
    verdad son las noches de estadía, y lo pone movimientosDe(). */
 const TOPE_DIAS_MOVIMIENTO = 60;
 
+/* ------------------------------------------------------------
+   DESTINOS CON REGLA PROPIA
+   ------------------------------------------------------------
+   Hay destinos donde las bandas de horas no aplican y el día de
+   movimientos vale lo mismo sin importar cuántas horas sea.
+
+   La Huasteca Potosina es el primero: allá los recorridos son
+   entre cascadas y pueblos, y medir las horas no refleja lo que
+   cuesta. Son $3,000 el día, punto.
+
+   Es una TABLA y no un `if` a propósito: el día que otro destino
+   necesite lo mismo, es un renglón más y no un parche.
+
+   Se reconoce por el `placeId` del catálogo —que es exacto— y de
+   rebote por el texto de la dirección, para cuando el cliente
+   marca un hotel de allá en vez de elegir la región.
+   ------------------------------------------------------------ */
+const DESTINOS_CON_REGLA = [
+  {
+    nombre: 'Huasteca Potosina',
+    placeId: 'ChIJv8IdsTSP1oURPsKDyokOts4',   // el de lugares.js
+    enTexto: /huasteca/i,
+    movimientoPorDia: 3000
+  }
+];
+
+/* ¿Este destino trae regla propia? Devuelve la regla o null.
+
+   Vive aquí y no en cada endpoint por lo mismo de siempre: si cotizar y
+   pagar reconocieran la Huasteca cada uno por su cuenta, un día uno la
+   reconoce y el otro no, y el cliente ve un precio y se le cobra otro. */
+function reglaDeDestino(destino) {
+  if (!destino) return null;
+  const id = String(destino.placeId || '').trim();
+  const texto = String(destino.direccion || destino.texto || destino.nombre || '');
+  for (let i = 0; i < DESTINOS_CON_REGLA.length; i++) {
+    const r = DESTINOS_CON_REGLA[i];
+    if (id && r.placeId === id) return r;
+    if (texto && r.enTexto.test(texto)) return r;
+  }
+  return null;
+}
+
 /* "08:00" y "17:30" -> 9.5. Devuelve 0 si algo no cuadra, y 0 cae en la banda
    más barata, que es el piso: nadie puede pagar menos mandando basura. */
 function horasDe(horaInicio, horaFin) {
@@ -186,14 +233,17 @@ function bandaDe(horas) {
    Devuelve solo horas y precio. Las direcciones y los puntos a
    visitar no cambian el dinero, así que no entran aquí.
    ------------------------------------------------------------ */
-function movimientosDe(lista, nochesDeEstadia) {
+function movimientosDe(lista, nochesDeEstadia, regla) {
   if (!Array.isArray(lista)) return [];
   const tope = Math.min(TOPE_DIAS_MOVIMIENTO, Math.max(0, Math.floor(Number(nochesDeEstadia) || 0)));
+  const fijo = regla && regla.movimientoPorDia;
   const salida = [];
   for (let i = 0; i < lista.length && salida.length < tope; i++) {
     const d = lista[i] || {};
     const horas = horasDe(d.horaInicio, d.horaFin);
-    salida.push({ horas: horas, precio: bandaDe(horas).precio });
+    /* Con regla propia las horas no cambian el precio, pero SÍ se guardan:
+       el operador necesita saber a qué hora, aunque cueste lo mismo. */
+    salida.push({ horas: horas, precio: fijo || bandaDe(horas).precio });
   }
   return salida;
 }
@@ -262,18 +312,19 @@ function nochesDe(salida, regreso) {
      · noches       — noches de estadía (nochesDe), para las que se pasan de 3
      · movimientos  — lista de días con movimiento, tal como llega del
                       navegador: [{ horaInicio, horaFin }, …]
+     · destino      — el punto de destino, para los que traen regla propia
+                      (la Huasteca y los que vengan)
 
-   Que la lista cruda entre AQUÍ, y no ya contada desde cada endpoint, es lo
-   mismo que se hizo con kmDe: si cotizar y cobrar pudieran acotarla cada uno
-   por su cuenta, un día se acotan distinto. */
+   Que la lista cruda y el destino entren AQUÍ, y no ya resueltos desde cada
+   endpoint, es lo mismo que se hizo con kmDe: si cotizar y cobrar pudieran
+   interpretarlos cada uno por su cuenta, un día lo hacen distinto. */
 function calcula(kmTotal, dias, extras) {
   extras = extras || {};
 
-  const tramos = porTramos(kmTotal);
-  const porKilometro = tramos.total;
+  const km = porKilometro(kmTotal);
   const minimo = dias * MINIMO_POR_DIA;
-  const aplicoMinimo = minimo > porKilometro;
-  const bruto = aplicoMinimo ? minimo : porKilometro;
+  const aplicoMinimo = minimo > km.total;
+  const bruto = aplicoMinimo ? minimo : km.total;
 
   // Hacia abajo, siempre a favor del cliente. Nunca queda por debajo del
   // mínimo, porque el mínimo ya es múltiplo de cien.
@@ -285,7 +336,8 @@ function calcula(kmTotal, dias, extras) {
   const importeNoches = nochesExtra * EXTRA_POR_NOCHE;
 
   // --- los días con movimiento, ya acotados ---
-  const movimientos = movimientosDe(extras.movimientos, noches);
+  const regla = reglaDeDestino(extras.destino);
+  const movimientos = movimientosDe(extras.movimientos, noches, regla);
   const importeMovimientos = precioMovimientos(movimientos);
 
   const total = traslado + importeNoches + importeMovimientos;
@@ -307,10 +359,10 @@ function calcula(kmTotal, dias, extras) {
      `interno`, que se queda en el servidor, y el resto, que sí puede salir. */
   return {
     interno: {
-      tarifaKm: TARIFA_KM,
-      tramos: tramos.desglose,       // cuánto cayó en cada tramo y a qué precio
+      tarifaKm: km.porKm,            // a qué salió el kilómetro en ESTE viaje
+      km: km.km,
       minimoPorDia: MINIMO_POR_DIA,
-      porKilometro: Math.round(porKilometro),
+      porKilometro: Math.round(km.total),
       minimo: minimo,
       aplicoMinimo: aplicoMinimo,
       sinRedondear: Math.round(bruto),
@@ -327,7 +379,11 @@ function calcula(kmTotal, dias, extras) {
       noches: noches,
       nochesIncluidas: NOCHES_INCLUIDAS,
       nochesExtra: nochesExtra,
-      importeNoches: importeNoches
+      importeNoches: importeNoches,
+      /* Qué destino con regla propia aplicó, si alguno. La oficina lo lee en
+         el contrato para saber por qué un día de movimientos costó lo que
+         costó cuando las horas dirían otra cosa. */
+      reglaDestino: regla ? regla.nombre : null
     },
     total: total,
     ivaIncluido: true,
@@ -348,15 +404,20 @@ function calcula(kmTotal, dias, extras) {
     desglose: {
       servicio: traslado + importeNoches,
       diasMovimiento: movimientos.length,
-      importeMovimientos: importeMovimientos
+      importeMovimientos: importeMovimientos,
+      /* El NOMBRE del destino con regla propia, no su tarifa. Sale para que la
+         pantalla no le prometa al cliente «8 horas incluidas» donde el día es
+         tarifa fija sin importar las horas. */
+      reglaDestino: regla ? regla.nombre : null
     }
   };
 }
 
 module.exports = {
-  TARIFA_KM, TRAMOS, MINIMO_POR_DIA, REDONDEO, TASA_IVA, ANTICIPO,
+  TARIFA_KM, BANDAS_KM, MINIMO_POR_DIA, REDONDEO, TASA_IVA, ANTICIPO,
   NOCHES_INCLUIDAS, EXTRA_POR_NOCHE, BANDAS_MOVIMIENTO, TOPE_DIAS_MOVIMIENTO,
-  kmDe, diasDeServicio, nochesDe, porTramos,
+  DESTINOS_CON_REGLA,
+  kmDe, diasDeServicio, nochesDe, bandaKm, porKilometro, reglaDeDestino,
   horasDe, bandaDe, movimientosDe, precioMovimientos,
   calcula
 };

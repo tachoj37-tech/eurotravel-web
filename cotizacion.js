@@ -78,7 +78,7 @@
      que es justo lo que esta lista existe para impedir. */
   /* Ni `nochesExtra` ni `importeNoches`: juntos dicen cuánto cuesta la noche.
      El servidor los manda ya sumados dentro de `servicio`. */
-  var CAMPOS_DESGLOSE = ['servicio', 'diasMovimiento', 'importeMovimientos'];
+  var CAMPOS_DESGLOSE = ['servicio', 'diasMovimiento', 'importeMovimientos', 'reglaDestino'];
 
   function porLista(d, lista) {
     var limpio = {};

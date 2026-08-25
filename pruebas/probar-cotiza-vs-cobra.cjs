@@ -196,23 +196,69 @@ function dia(fecha, inicio, fin) {
     JSON.stringify(rm.cotiza).match(/km|tarifa|tramo|1210|610/i), null);
 
   /* Las cuentas del caso completo, a mano:
-       1,210 km -> 800×35 + 200×28 + 210×26 = 28,000 + 5,600 + 5,460 = 39,060
+       1,210 km pasan de 1,000, asi que TODOS van a 23
+       1,210 × 23 = 27,830
        minimo 8 dias × 3,000 = 24,000, no gana
-       corte a la centena ................................. traslado 39,000
+       corte a la centena ................................. traslado 27,800
        7 noches -> 4 extra × 1,000 ........................... +  4,000
        10 h -> 4,000 y 13 h -> 5,000 ......................... +  9,000
                                                                --------
-                                                                 52,000 */
-  igual('el caso completo da 52,000', rm.cotiza.total, 52000);
-  /* Al cliente le llegan DOS numeros: traslado y noches juntos (39,000 +
-     4,000 = 43,000) y los movimientos aparte. Partir las noches diria cuanto
+                                                                 40,800 */
+  igual('el caso completo da 40,800', rm.cotiza.total, 40800);
+  /* Al cliente le llegan DOS numeros: traslado y noches juntos (27,800 +
+     4,000 = 31,800) y los movimientos aparte. Partir las noches diria cuanto
      cuesta la noche. */
   igual('y su desglose lo explica sin delatar la tarifa por noche',
     [rm.cotiza.desglose.servicio, rm.cotiza.desglose.importeMovimientos],
-    [43000, 9000]);
+    [31800, 9000]);
   igual('los dos numeros suman el total',
     rm.cotiza.desglose.servicio + rm.cotiza.desglose.importeMovimientos, rm.cotiza.total);
-  igual('el anticipo es el 20% de los 52,000', rm.cotiza.anticipo, 10400);
+  igual('el anticipo es el 20% de los 40,800', rm.cotiza.anticipo, 8160);
+
+  /* LA HUASTECA, POR LOS DOS ENDPOINTS.
+     Es el caso donde mas facil se separarian: si uno reconociera el destino y
+     el otro no, el cliente veria un precio y se le cobraria otro. Aqui se
+     manda el MISMO destino a los dos y se exige el mismo numero. */
+  {
+    const HUASTECA = { placeId: 'ChIJv8IdsTSP1oURPsKDyokOts4', lat: 21.474687, lng: -98.957083,
+                       direccion: 'Huasteca Potosina, San Luis Potosí' };
+    const largos = [dia('2026-09-04', '07:00', '21:00'), dia('2026-09-05', '06:00', '20:30')];
+
+    METROS_IDA = 500000; METROS_VUELTA = 500000;   // 1,000 km -> segunda banda
+    const marca = 'huasteca' + (++corrida);
+    const cab = cabecerasDe(corrida);
+    const cuerpo = {
+      origen: Object.assign({}, ORIGEN, { placeId: ORIGEN.placeId + marca }),
+      destino: Object.assign({}, HUASTECA, { placeId: HUASTECA.placeId }),
+      salida: '2026-09-03T08:00', regreso: '2026-09-08T18:00', redondo: true
+    };
+
+    const c1 = res();
+    await cotizar({ method: 'POST', headers: cab, body: Object.assign({}, cuerpo, {
+      movimientos: largos.map(function (m) { return { horaInicio: m.horaInicio, horaFin: m.horaFin }; })
+    }) }, c1);
+
+    const c2 = res();
+    await pagar({ method: 'POST', headers: cab, body: Object.assign({}, cuerpo, {
+      nombre: 'Quien Sea', correo: 'x@y.mx', telefono: '3300000000',
+      canal: 'correo', unidad: 'Sprinter', rutaTexto: 'A a B', movimientos: largos
+    }) }, c2);
+
+    /*  1,000 km × 25 = 25,000  ·  minimo 6 dias × 3,000 = 18,000, no gana
+        5 noches -> 2 extra ................................ +  2,000
+        dos dias de 14 h y 14.5 h: en la Huasteca, 3,000 c/u  +  6,000
+                                                               --------
+                                                                 33,000
+        En cualquier otro destino esos dos dias serian 5,000 c/u = 10,000,
+        y el total 37,000. */
+    igual('Huasteca: cotizar da 33,000', c1._json && c1._json.total, 33000);
+    igual('y cobrar da lo mismo', c2._json && c2._json.total, 33000);
+    igual('los dos reconocen el destino',
+      [c1._json.desglose.reglaDestino, c2._json.desglose.reglaDestino],
+      ['Huasteca Potosina', 'Huasteca Potosina']);
+    igual('las horas largas NO subieron el dia',
+      c1._json.desglose.importeMovimientos, 6000);
+  }
 
   igual('sin fallas', fallas, []);
 
