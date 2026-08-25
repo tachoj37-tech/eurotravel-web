@@ -177,6 +177,25 @@ module.exports = async function handler(req, res) {
       destino: cuerpo.destino
     });
 
+    /* ------------------------------------------------------------
+       LOS VIAJES QUE NO SE COTIZAN SOLOS TAMPOCO SE COBRAN SOLOS
+
+       Arriba del tope de kilómetros el precio viene en cero. Sin este
+       freno, Stripe recibiría un cobro de $0 —que rechaza— o peor, un
+       anticipo de cero sobre un viaje de cien mil pesos que quedaría
+       apartado gratis y con folio.
+
+       Se comprueba AQUÍ y no solo en la pantalla: el navegador puede
+       mandar lo que quiera, y quien decide si hay cobro es el servidor.
+       ------------------------------------------------------------ */
+    if (p.requiereAsesor || p.anticipo <= 0) {
+      res.status(422).json({
+        error: 'requiere asesor',
+        aviso: 'Este viaje lo cotiza uno de nuestros asesores. Escríbenos y te pasamos el precio hoy mismo.'
+      });
+      return;
+    }
+
     const folio = nuevoFolio();
     const sitio = defensas.sitioDe(req);
     const ruta = limpia(cuerpo.rutaTexto, 90) || 'Servicio de transporte';

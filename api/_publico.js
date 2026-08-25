@@ -47,7 +47,13 @@ const CAMPOS_PRECIO = [
   'ivaIncluido',
   'porcentajeAnticipo',
   'anticipo',
-  'saldo'
+  'saldo',
+  /* Un SÍ o un NO, no una cantidad: dice que el viaje es tan largo que lo
+     cotiza una persona. Se agregó a sabiendas —la pregunta de arriba se
+     contestó: con esto y el total en la mano no sale ninguna tarifa, porque
+     cuando vale `true` todos los montos vienen en cero. Sin él, la pantalla
+     enseñaría «$0» y el cliente creería que el viaje es gratis. */
+  'requiereAsesor'
 ];
 
 /* El desglose lleva su propia lista porque es objeto anidado: copiarlo entero

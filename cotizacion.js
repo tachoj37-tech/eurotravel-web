@@ -71,7 +71,11 @@
   /* La lista blanca de la respuesta del cotizador. Kilómetros y tarifa NO
      están y no deben estar: con el total y los kilómetros juntos, el precio
      por kilómetro se saca dividiendo. */
-  var CAMPOS_COTIZACION = ['dias', 'redondo', 'total', 'ivaIncluido', 'porcentajeAnticipo', 'anticipo', 'saldo', 'desglose'];
+  /* `requiereAsesor` es un sí o un no, no una cantidad: dice que el viaje es
+     tan largo que lo cotiza una persona, y entonces todos los montos vienen
+     en cero. Si no estuviera en esta lista, el navegador lo tiraría en
+     silencio y la pantalla enseñaría «$0» como si el viaje fuera gratis. */
+  var CAMPOS_COTIZACION = ['dias', 'redondo', 'total', 'ivaIncluido', 'porcentajeAnticipo', 'anticipo', 'saldo', 'desglose', 'requiereAsesor'];
 
   /* El desglose lleva su propia lista, aparte. Es un objeto anidado: copiarlo
      entero dejaría entrar cualquier campo que el servidor le agregue mañana,

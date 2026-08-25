@@ -34,66 +34,84 @@
    ============================================================ */
 
 /* ------------------------------------------------------------
-   UNA SOLA TARIFA, ELEGIDA POR EL TOTAL DEL VIAJE
+   AQUÍ ESTABAN LAS BANDAS DE $34 / $25 / $23, Y SE FUERON
    ------------------------------------------------------------
-   No es por tramos. Se mira cuántos kilómetros mide el viaje
-   completo y TODOS se cobran a la misma tarifa:
+   Durante un día el kilómetro se cobró a una sola tarifa elegida
+   por el total, con un escalón de -$7,200 a los 801 km que el
+   dueño aprobó a sabiendas.
 
-       hasta      800 km  ->  los 800 a $34
-       de 801 a 1,000 km  ->  TODOS a $25
-       de 1,001 en adelante  ->  TODOS a $23
+   Se fue cuando llegó su LISTA DE PRECIOS 2027 con 40 precios
+   reales. Contra ella, aquellas bandas se equivocaban $5,395 en
+   promedio: cobraban $2,000 de más en Vallarta —su destino más
+   vendido— y regalaban $4,000 en Mazatlán.
 
-   Un viaje de 900 km, entonces, son 900 × 25 = 22,500. No 800 a
-   una tarifa y 100 a otra: los novecientos a veinticinco.
-
-   La cuenta es sobre el kilometraje del VIAJE COMPLETO —ida más
-   vuelta sumadas—, no por tramo del recorrido.
-
-   ------------------------------------------------------------
-   EL ESCALÓN DE LOS 801 KM ES A PROPÓSITO. NO LO "ARREGLES".
-   ------------------------------------------------------------
-   Esto tiene una consecuencia que se midió antes de escribirlo y
-   que el dueño aprobó con los números enfrente:
-
-       800 km  ->  $27,200
-       801 km  ->  $20,000     un kilómetro más, $7,200 menos
-
-   Y no es solo el escalón: de 801 a 1,182 km, TODOS los viajes
-   cobran menos que uno de 800 km. Son 382 kilómetros donde el
-   viaje cuesta más gasolina, más casetas y más horas de operador,
-   y deja menos dinero. Un cliente con un viaje de 780 km que
-   agregue una parada y llegue a 810 paga $7,200 menos, y con esta
-   regla eso es legítimo.
-
-   Se le propuso la alternativa —las mismas tarifas 34/25/23 pero
-   por tramos, que sube siempre y no tiene escalón— y eligió ésta.
-   Si algún día se quiere cambiar, se cambia con él, no aquí.
+   Con precios de verdad enfrente, adivinar el precio con una
+   curva dejó de tener sentido. Manda la lista.
    ------------------------------------------------------------ */
-const BANDAS_KM = [
-  { hasta: 800, porKm: 34 },
-  { hasta: 1000, porKm: 25 },
-  { hasta: Infinity, porKm: 23 }
-];
 
-/* Se conserva por claridad: es lo que cuesta el kilómetro de un viaje que no
-   pasa de la primera banda, que son casi todos. */
-const TARIFA_KM = BANDAS_KM[0].porKm;
+/* ------------------------------------------------------------
+   LA FORMULA DE RESPALDO, Y CUANDO SE USA
+   ------------------------------------------------------------
+   Primero manda la LISTA DE PRECIOS (_destinos.js). Esta formula
+   solo contesta por los destinos que no estan en ella.
 
-function bandaKm(kmTotal) {
+   Salio de ajustarla contra los 40 precios reales de 2027:
+
+       precio = $6,500 + $22 por kilometro redondo
+
+   El $6,500 es lo que cuesta sacar la unidad —sale igual sea
+   cerca o lejos— y el $22 es el kilometro puro. De ahi sale sola
+   la devaluacion que se ve en los precios reales: el kilometro
+   vale $87 a los 100 km y $28 a los 1,000, sin bandas ni
+   escalones.
+
+   Error promedio contra los precios reales: $2,069. Se probaron
+   bandas planas ($2,004, pero con escalones de hasta -$5,074) y
+   por tramos ($9,039). Esta gana por no tener escalon.
+
+   ARRIBA DE 1,400 KM NO SE COTIZA SOLA. Ahi la curva deja de
+   bajar y vuelve a subir —Cancun sale a $33.9 el kilometro,
+   MAS caro que Vallarta— porque el viaje deja de ser ir y volver
+   y se vuelve expedicion: hotel de operador, relevos, viaticos.
+   La formula regalaria $48,000 en Cancun. Esos los cotiza una
+   persona.
+   ------------------------------------------------------------ */
+const BASE_TRASLADO = 6500;
+const POR_KM = 22;
+const TOPE_FORMULA_KM = 1400;
+
+/* La LISTA DE PRECIOS. Manda ella; lo de arriba solo contesta por los
+   destinos que no estén en ella. */
+const destinos = require('./_destinos');
+
+/* ------------------------------------------------------------
+   EL PRECIO DEL TRASLADO
+   ------------------------------------------------------------
+   Tres respuestas posibles, y en este orden:
+
+     { deLista }        el destino esta en la lista de precios
+     { porFormula }     no esta, pero cae dentro del tope
+     { requiereAsesor } no esta y esta demasiado lejos
+
+   Todo esto se queda del lado del servidor: al cliente NUNCA se
+   le enseña el kilometraje ni lo que cuesta el kilometro.
+   ------------------------------------------------------------ */
+function trasladoDe(kmTotal, destino, unidad) {
   const km = Math.max(0, Number(kmTotal) || 0);
-  for (let i = 0; i < BANDAS_KM.length; i++) {
-    if (km <= BANDAS_KM[i].hasta) return BANDAS_KM[i];
+
+  const enLista = destinos.precioDeLista(destino, unidad || 'sprinter');
+  if (enLista) {
+    /* `porKm` va en null a propósito y no ausente: un precio de lista NO sale
+       de una tarifa por kilómetro, y quien lea `interno.tarifaKm` tiene que
+       ver eso y no un `undefined` que se pueda confundir con un cero. */
+    return { total: enLista.precio, deLista: enLista.nombre, porKm: null, km: km };
   }
-  return BANDAS_KM[BANDAS_KM.length - 1];
-}
 
-/* Cuánto cuesta el kilometraje. Devuelve además a qué tarifa salió, que se
-   queda del lado del servidor: al cliente NUNCA se le enseña ni el
-   kilometraje ni lo que cuesta el kilómetro. */
-function porKilometro(kmTotal) {
-  const km = Math.max(0, Number(kmTotal) || 0);
-  const banda = bandaKm(km);
-  return { total: km * banda.porKm, porKm: banda.porKm, km: km };
+  if (km > TOPE_FORMULA_KM) {
+    return { total: 0, requiereAsesor: true, porKm: null, km: km };
+  }
+
+  return { total: BASE_TRASLADO + POR_KM * km, porFormula: true, porKm: POR_KM, km: km };
 }
 const MINIMO_POR_DIA = 3000;          // piso por día de servicio, IVA incluido
 const REDONDEO = 100;                 // el total se corta a la centena de abajo
@@ -224,19 +242,21 @@ function bandaDe(horas) {
    Los movimientos los declara el cliente, como las fechas. Aquí
    se acotan antes de que toquen un peso:
 
-     · no puede haber más días con movimiento que noches de
-       estadía —es la misma regla que aplica la pantalla, y tiene
-       que ser la misma o lo que se cotiza deja de ser lo que se
-       cobra—
+     · no puede haber más días con movimiento que DÍAS DE
+       SERVICIO. Antes el tope eran las noches, y estaba mal: un
+       viaje de tres días puede moverse los tres, y amarrarlo a
+       las noches dejaba fuera el último y cobraba $3,000 de
+       menos. Lo cazó la prueba que reconstruye «CDMX 3 días» de
+       la lista real.
      · las horas se recortan a la banda; lo ilegible vale 0, que
        es el piso de $3,000
 
    Devuelve solo horas y precio. Las direcciones y los puntos a
    visitar no cambian el dinero, así que no entran aquí.
    ------------------------------------------------------------ */
-function movimientosDe(lista, nochesDeEstadia, regla) {
+function movimientosDe(lista, diasDeServicio, regla) {
   if (!Array.isArray(lista)) return [];
-  const tope = Math.min(TOPE_DIAS_MOVIMIENTO, Math.max(0, Math.floor(Number(nochesDeEstadia) || 0)));
+  const tope = Math.min(TOPE_DIAS_MOVIMIENTO, Math.max(0, Math.floor(Number(diasDeServicio) || 0)));
   const fijo = regla && regla.movimientoPorDia;
   const salida = [];
   for (let i = 0; i < lista.length && salida.length < tope; i++) {
@@ -307,6 +327,60 @@ function nochesDe(salida, regreso) {
   return Math.max(0, Math.round((b - a) / 86400000));
 }
 
+/* ------------------------------------------------------------
+   EL VIAJE QUE NO SE COTIZA SOLO
+   ------------------------------------------------------------
+   Devuelve la MISMA forma que `calcula`, con todo el dinero en
+   cero. Que la forma sea idéntica no es adorno: quien llama pasa
+   esto por `_publico.precio()` y lo manda igual que cualquier
+   otro precio, sin un camino aparte que mantener.
+
+   Del viaje sí se conserva lo que la oficina necesita para
+   cotizarlo a mano —los kilómetros, los días, las horas que se
+   pidieron—, y todo eso vive en `interno`, que no sale.
+   ------------------------------------------------------------ */
+function sinPrecio(km, dias, extras) {
+  const regla = reglaDeDestino(extras.destino);
+  const movimientos = movimientosDe(extras.movimientos, dias, regla);
+  return {
+    interno: {
+      tarifaKm: null,
+      km: km.km,
+      minimoPorDia: MINIMO_POR_DIA,
+      porKilometro: 0,
+      minimo: 0,
+      aplicoMinimo: false,
+      sinRedondear: 0,
+      redondeo: REDONDEO,
+      horasMovimiento: movimientos.map(function (m) { return m.horas; }),
+      traslado: 0,
+      noches: Math.max(0, Math.floor(Number(extras.noches) || 0)),
+      nochesIncluidas: NOCHES_INCLUIDAS,
+      nochesExtra: 0,
+      importeNoches: 0,
+      destinoDeLista: null,
+      porFormula: false,
+      conMovimientos: movimientos.length > 0,
+      diasParados: 0,
+      reglaDestino: regla ? regla.nombre : null
+    },
+    requiereAsesor: true,
+    total: 0,
+    ivaIncluido: true,
+    subtotal: 0,
+    iva: 0,
+    porcentajeAnticipo: Math.round(ANTICIPO * 100),
+    anticipo: 0,
+    saldo: 0,
+    desglose: {
+      servicio: 0,
+      diasMovimiento: movimientos.length,
+      importeMovimientos: 0,
+      reglaDestino: regla ? regla.nombre : null
+    }
+  };
+}
+
 /* Del kilometraje, los días y lo que se declaró sale todo lo demás.
 
    `extras` es opcional y trae lo que el cliente declara:
@@ -322,24 +396,77 @@ function nochesDe(salida, regreso) {
 function calcula(kmTotal, dias, extras) {
   extras = extras || {};
 
-  const km = porKilometro(kmTotal);
+  const km = trasladoDe(kmTotal, extras.destino, extras.unidad);
+
+  /* ----------------------------------------------------------
+     ARRIBA DEL TOPE NO HAY PRECIO — Y NO ES LO MISMO QUE UNO BAJO
+
+     Si aquí se dejara seguir la suma, el traslado valdría cero pero las
+     noches y los movimientos se cobrarían igual: un Cancún de cuatro días
+     con movimientos saldría en $16,000 y ese número llegaría a la pantalla
+     como si fuera el precio del viaje.
+
+     Cero es la única respuesta honesta. Quien llama lee `requiereAsesor` y
+     enseña «te cotizamos hoy mismo» en vez de un número.
+     ---------------------------------------------------------- */
+  if (km.requiereAsesor) return sinPrecio(km, dias, extras);
+
+  /* ----------------------------------------------------------
+     EL MINIMO DEFIENDE TAMBIEN A LOS PRECIOS DE LA LISTA
+
+     Primero se escribió al revés —el precio de la lista mandaba y no se le
+     ponía piso— y dejaba un hueco: Chapala son $6,500 porque es un viaje de
+     MISMO DÍA. Pedida a siete días, la unidad se iba una semana por esos
+     mismos $6,500 más las noches.
+
+     El piso de $3,000 por día no contradice ni un renglón de la lista: en
+     su duración normal, todos los precios lo pasan de sobra —Vallarta son
+     4 días y $19,000 contra un piso de $12,000— así que solo se levanta en
+     el caso que existe para atajar, que es el destino cercano apartado
+     muchos días.
+     ---------------------------------------------------------- */
   const minimo = dias * MINIMO_POR_DIA;
   const aplicoMinimo = minimo > km.total;
   const bruto = aplicoMinimo ? minimo : km.total;
 
-  // Hacia abajo, siempre a favor del cliente. Nunca queda por debajo del
-  // mínimo, porque el mínimo ya es múltiplo de cien.
+  /* Hacia abajo, siempre a favor del cliente. Los precios de la lista ya son
+     múltiplos de cien, así que a ésos el corte no les hace nada. */
   const traslado = Math.floor(bruto / REDONDEO) * REDONDEO;
 
-  // --- las noches que se pasan de las incluidas ---
   const noches = Math.max(0, Math.floor(Number(extras.noches) || 0));
-  const nochesExtra = Math.max(0, noches - NOCHES_INCLUIDAS);
-  const importeNoches = nochesExtra * EXTRA_POR_NOCHE;
 
-  // --- los días con movimiento, ya acotados ---
+  /* ----------------------------------------------------------
+     DOS FORMAS DE COBRAR LA ESTADIA, Y LA DIFERENCIA IMPORTA
+
+     SIN MOVIMIENTOS — es un paquete. La unidad se queda
+     estacionada y las 3 primeras noches van incluidas; de ahí en
+     adelante, $1,000 cada una. Es como se venden los viajes de
+     playa: Vallarta de jueves a domingo son $19,000, sin cargo
+     aparte por las noches.
+
+     CON MOVIMIENTOS — se cobra día por día, y no hay noches
+     incluidas. Cada día de estadía vale $1,000 porque la unidad
+     está apartada allá y no puede trabajar en otra cosa; el día
+     que además se mueve, se le suma su banda de horas.
+
+     Un día de 8 horas sale entonces en $4,000, que es exactamente
+     el escalón por día de CDMX y de la Huasteca en la lista real.
+     ---------------------------------------------------------- */
+  /* El tope de días con movimiento son los DÍAS DE SERVICIO, no las noches.
+     Un viaje de tres días puede moverse los tres; amarrarlo a las noches
+     dejaba fuera el último día y cobraba $3,000 de menos. Lo cazó la prueba
+     que reconstruye «CDMX 3 días» de la lista real. */
   const regla = reglaDeDestino(extras.destino);
-  const movimientos = movimientosDe(extras.movimientos, noches, regla);
+  const movimientos = movimientosDe(extras.movimientos, dias, regla);
   const importeMovimientos = precioMovimientos(movimientos);
+  const conMovimientos = movimientos.length > 0;
+
+  const nochesExtra = conMovimientos ? 0 : Math.max(0, noches - NOCHES_INCLUIDAS);
+  const diasParados = conMovimientos ? Math.max(0, dias - movimientos.length) : 0;
+
+  const importeNoches = conMovimientos
+    ? dias * EXTRA_POR_NOCHE               // cada día de estadía, movido o no
+    : nochesExtra * EXTRA_POR_NOCHE;
 
   const total = traslado + importeNoches + importeMovimientos;
 
@@ -381,11 +508,20 @@ function calcula(kmTotal, dias, extras) {
       nochesIncluidas: NOCHES_INCLUIDAS,
       nochesExtra: nochesExtra,
       importeNoches: importeNoches,
+      /* De dónde salió el traslado, para que la oficina lo pueda cuadrar:
+         el nombre del destino si vino de la lista, o la marca de la fórmula. */
+      destinoDeLista: km.deLista || null,
+      porFormula: !!km.porFormula,
+      conMovimientos: conMovimientos,
+      diasParados: diasParados,
       /* Qué destino con regla propia aplicó, si alguno. La oficina lo lee en
          el contrato para saber por qué un día de movimientos costó lo que
          costó cuando las horas dirían otra cosa. */
       reglaDestino: regla ? regla.nombre : null
     },
+    /* Los viajes muy largos no se cotizan solos: la fórmula regalaría miles.
+       Quien llama lo lee y enseña «te cotizamos hoy mismo». */
+    requiereAsesor: !!km.requiereAsesor,
     total: total,
     ivaIncluido: true,
     subtotal: subtotal,
@@ -415,10 +551,11 @@ function calcula(kmTotal, dias, extras) {
 }
 
 module.exports = {
-  TARIFA_KM, BANDAS_KM, MINIMO_POR_DIA, REDONDEO, TASA_IVA, ANTICIPO,
+  BASE_TRASLADO, POR_KM, TOPE_FORMULA_KM,
+  MINIMO_POR_DIA, REDONDEO, TASA_IVA, ANTICIPO,
   NOCHES_INCLUIDAS, EXTRA_POR_NOCHE, BANDAS_MOVIMIENTO, TOPE_DIAS_MOVIMIENTO,
   DESTINOS_CON_REGLA,
-  kmDe, diasDeServicio, nochesDe, bandaKm, porKilometro, reglaDeDestino,
+  kmDe, diasDeServicio, nochesDe, trasladoDe, reglaDeDestino,
   horasDe, bandaDe, movimientosDe, precioMovimientos,
   calcula
 };

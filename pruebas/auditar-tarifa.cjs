@@ -4,13 +4,22 @@
        node pruebas/auditar-tarifa.cjs
 
    Las otras pruebas comprueban casos. Esta comprueba la REGLA, y
-   lo hace calculando por su cuenta: las tarifas de abajo estan
-   escritas a mano, no leidas de _tarifa.js. Si el archivo del
-   dinero tuviera un error, una prueba que use sus propias
-   constantes lo repetiria y no lo veria. Esta no.
+   lo hace calculando por su cuenta: las tarifas y los precios de
+   abajo estan escritos A MANO, no leidos de _tarifa.js ni de
+   _destinos.js. Si el archivo del dinero tuviera un error, una
+   prueba que use sus propias constantes lo repetiria y no lo
+   veria. Esta no.
 
-   Barre cada kilometro de 0 a 3,000 y cada combinacion de dias,
-   noches y movimientos.
+   ------------------------------------------------------------
+   AQUI SE AUDITABAN LAS BANDAS DE $34 / $25 / $23
+
+   Y una seccion entera comprobaba que la tarifa nueva abaratara
+   TODOS los viajes contra la anterior. Las dos se fueron el
+   25-ago-2026 con la llegada de la LISTA DE PRECIOS 2027: ya no
+   hay curva que auditar contra otra curva, hay 40 precios reales.
+
+   Lo que las sustituye es mejor: se audita la lista contra los
+   numeros del Excel, escritos a mano aqui abajo.
    ============================================================ */
 'use strict';
 const t = require('../api/_tarifa.js');
@@ -22,24 +31,29 @@ function igual(nombre, dio, esperado) {
   else { malas++; console.log('MAL  ' + nombre + '\n     dio      ' + a + '\n     esperaba ' + b); }
 }
 
-/* ---- LAS REGLAS, ESCRITAS A MANO ----
-   Esto es lo que el dueño dicto, en palabras, vuelto formula. Si algun dia
-   cambia una tarifa hay que cambiarla EN LOS DOS LADOS, y que haya que
-   hacerlo dos veces es justamente lo que hace util esta prueba. */
+/* ============================================================
+   LAS REGLAS, ESCRITAS A MANO
+   ------------------------------------------------------------
+   Esto es lo que el dueño dicto, en palabras, vuelto formula. Si
+   algun dia cambia una tarifa hay que cambiarla EN LOS DOS
+   LADOS, y que haya que hacerlo dos veces es justamente lo que
+   hace util esta prueba.
+   ============================================================ */
 const corta = n => Math.floor(n / 100) * 100;
 
-function tarifaDelViaje(km) {
-  if (km <= 800) return 34;
-  if (km <= 1000) return 25;
-  return 23;
+/* El traslado de un destino que NO esta en la lista */
+function formulaAMano(km) {
+  if (km > 1400) return null;                 // null = lo cotiza un asesor
+  return 6500 + 22 * km;
 }
-function trasladoAMano(km, dias) {
-  const porKm = km * tarifaDelViaje(km);
-  const minimo = dias * 3000;
-  return corta(Math.max(porKm, minimo));
+/* El piso por dia defiende a la formula Y a la lista */
+function trasladoAMano(precioBase, dias) {
+  return corta(Math.max(precioBase, dias * 3000));
 }
-function nochesAMano(noches) {
-  return Math.max(0, noches - 3) * 1000;
+/* La estadia se cobra de dos formas, y cual depende de si hay movimientos */
+function estadiaAMano(dias, noches, cuantosMovimientos) {
+  if (cuantosMovimientos > 0) return dias * 1000;      // dia por dia
+  return Math.max(0, noches - 3) * 1000;               // paquete de 3 noches
 }
 function diaDeMovimientoAMano(horas, esHuasteca) {
   if (esHuasteca) return 3000;
@@ -50,38 +64,220 @@ function diaDeMovimientoAMano(horas, esHuasteca) {
   return 5000;
 }
 
-/* ============ 1. CADA KILOMETRO, DE 0 A 3,000 ============ */
+/* ============================================================
+   LOS PRECIOS DE SU LISTA, COPIADOS DEL EXCEL A MANO
+   ------------------------------------------------------------
+   Columna sprinter de LISTA DE PRECIOS 2027.xlsx. Son los que el
+   dueño tiene escritos, no los que calcula el codigo.
+
+   Leon y Tepic no venian en el Excel: el dueño los dicto aparte
+   («leon y tepic subele 1300 pesos nomas»).
+
+   La CDMX y la Huasteca no estan aqui: su precio del Excel
+   incluye dias y movimientos, asi que se auditan en su propia
+   seccion, reconstruyendolos.
+   ============================================================ */
+const SU_LISTA = [
+  ['Chapala, Jalisco, México', 6500],
+  ['Tequila, Jalisco, México', 8500],
+  ['Tapalpa, Jalisco, México', 14500],
+  ['Mazamitla, Jalisco, México', 14500],
+  ['San Juan de los Lagos, Jalisco, México', 14000],
+  ['Zamora, Michoacán, México', 14500],
+  ['El Manto, Jalisco, México', 14000],
+  ['Talpa de Allende, Jalisco, México', 15000],
+  ['Tepic, Nayarit, México', 16900],
+  ['León, Guanajuato, México', 17600],
+  ['Rincón de Guayabitos, Nayarit, México', 18500],
+  ['Chacala, Nayarit, México', 16500],
+  ['Sayulita, Nayarit, México', 18000],
+  ['Guanajuato, Guanajuato, México', 19000],
+  ['Manzanillo, Colima, México', 18500],
+  ['Morelia, Michoacán, México', 19000],
+  ['Puerto Vallarta, Jalisco, México', 19000],
+  ['Punta Perula, Jalisco, México', 20500],
+  ['Mismaloya, Puerto Vallarta, Jalisco, México', 20000],
+  ['Pátzcuaro, Michoacán, México', 25000],
+  ['San Miguel de Allende, Guanajuato, México', 26500],
+  ['Barra de Navidad, Jalisco, México', 20500],
+  ['Zacatecas, Zacatecas, México', 25000],
+  ['Tlalpujahua, Michoacán, México', 23500],
+  ['Tenacatita, Jalisco, México', 20000],
+  ['Mayto, Jalisco, México', 26500],
+  ['Mazatlán, Sinaloa, México', 28000],
+  ['Valle de Bravo, Estado de México, México', 32000],
+  ['Ixtapa Zihuatanejo, Guerrero, México', 29500],
+  ['Grutas Tolantongo, Hidalgo, México', 29500],
+  ['Real de Catorce, San Luis Potosí, México', 34500],
+  ['Puebla, Puebla, México', 36500],
+  ['Zacatlán, Puebla, México', 39500],
+  ['Acapulco, Guerrero, México', 60000],
+  ['Oaxaca de Juárez, Oaxaca, México', 75000],
+  ['San Cristóbal de las Casas, Chiapas, México', 85000],
+  ['Barrancas del Cobre, Chihuahua, México', 75000],
+  ['Cancún, Quintana Roo, México', 145000]
+];
+
+/* ============ 1. LA LISTA DA EXACTAMENTE LO QUE DICE EL EXCEL ============
+   Un dia de servicio, sin noches ni movimientos: el precio pelado. */
+(function () {
+  const rotos = [];
+  SU_LISTA.forEach(function (fila) {
+    const dio = t.calcula(1, 1, { destino: { direccion: fila[0] } }).total;
+    /* un dia de servicio pone un piso de 3,000, que ninguno de estos alcanza */
+    const esperado = trasladoAMano(fila[1], 1);
+    if (dio !== esperado) rotos.push({ destino: fila[0], dio: dio, esperaba: esperado });
+  });
+  console.log('(' + SU_LISTA.length + ' destinos de su lista, copiados del Excel a mano)');
+  igual('los ' + SU_LISTA.length + ' dan su precio del Excel, al peso', rotos.length, 0);
+  if (rotos.length) console.log('   ' + JSON.stringify(rotos.slice(0, 4), null, 1));
+})();
+
+/* ============ 2. NINGUN PRECIO ES ABSURDO ============
+   El Excel traia el Marcopolo de Barrancas en $1,300,000: un cero de mas.
+   Esta prueba caza el siguiente. Un traslado de sprinter no puede salirse de
+   este rango sin que alguien lo mire. */
+(function () {
+  const fuera = SU_LISTA.filter(function (f) { return f[1] < 5000 || f[1] > 200000; });
+  igual('ningun precio de sprinter se sale del rango razonable', fuera, []);
+
+  /* y el mismo rango, contra lo que de verdad devuelve el codigo */
+  const raros = [];
+  SU_LISTA.forEach(function (f) {
+    const p = t.calcula(1, 1, { destino: { direccion: f[0] } }).total;
+    if (p < 5000 || p > 200000) raros.push({ destino: f[0], precio: p });
+  });
+  igual('ni lo que devuelve el codigo', raros, []);
+})();
+
+/* ============ 3. LA CDMX Y LA HUASTECA, RECONSTRUIDAS ============
+   Sus precios del Excel vienen CON dias y movimientos incluidos. Aqui se
+   comprueba que las reglas, sumadas, den esos mismos numeros.
+
+   Los cinco renglones del Excel, copiados a mano:
+       CDMX 1 DIA ......... 26,000
+       CDMX X 2 dias ...... 30,000
+       CDMX 3 días ........ 34,000
+       HUASTECA 3 DIAS .... 38,500
+       HUASTECA 4 dias .... 42,500                                        */
+(function () {
+  const OCHO_HORAS = { horaInicio: '08:00', horaFin: '16:00' };
+  function movDe(n) { const l = []; for (let i = 0; i < n; i++) l.push(OCHO_HORAS); return l; }
+
+  const DEL_EXCEL = [
+    ['Ciudad de México, Ciudad de México, México', 1, 26000],
+    ['Ciudad de México, Ciudad de México, México', 2, 30000],
+    ['Ciudad de México, Ciudad de México, México', 3, 34000],
+    ['Huasteca Potosina, San Luis Potosí, México', 3, 38500],
+    ['Huasteca Potosina, San Luis Potosí, México', 4, 42500]
+  ];
+
+  const rotos = [];
+  DEL_EXCEL.forEach(function (f) {
+    const dias = f[1];
+    const p = t.calcula(1200, dias, {
+      destino: { direccion: f[0] },
+      noches: dias - 1,
+      movimientos: movDe(dias)                  // se mueve TODOS los dias
+    });
+    if (p.total !== f[2]) rotos.push({ destino: f[0], dias: dias, dio: p.total, excel: f[2] });
+  });
+  igual('los cinco renglones con dias del Excel cuadran al peso', rotos, []);
+
+  /* Y el caso que el dueño dicto con sus palabras: 4 dias, movimientos en 2.
+     Los dos dias parados valen $1,000 cada uno «porque se queda la sprinter
+     inutil ahi».
+         22,000 de base + 4 dias × 1,000 + 2 movimientos × 3,000 = 32,000    */
+  const cuatroConDos = t.calcula(1102, 4, {
+    destino: { direccion: 'Ciudad de México, Ciudad de México, México' },
+    noches: 3, movimientos: movDe(2)
+  });
+  igual('CDMX 4 dias con movimientos en 2: 32,000', cuatroConDos.total, 32000);
+})();
+
+/* ============ 4. LA FORMULA DE RESPALDO, KILOMETRO POR KILOMETRO ============ */
 (function () {
   let malos = 0, primero = null;
-  for (let km = 0; km <= 3000; km++) {
-    const esperado = km * tarifaDelViaje(km);
-    if (Math.abs(t.porKilometro(km).total - esperado) > 0.000001) {
+  for (let km = 0; km <= 1400; km++) {
+    const esperado = 6500 + 22 * km;
+    if (Math.abs(t.trasladoDe(km, null).total - esperado) > 0.000001) {
       malos++;
       if (primero === null) primero = km;
     }
   }
-  igual('los 3,001 kilometros enteros dan lo que dice la regla', [malos, primero], [0, null]);
+  igual('los 1,401 kilometros enteros dan 6,500 + 22 el km', [malos, primero], [0, null]);
 
   /* y con decimales, que es como llegan de Google */
   let malosDec = 0;
-  for (let km = 0.1; km <= 3000; km += 7.3) {
-    const esperado = km * tarifaDelViaje(km);
-    if (Math.abs(t.porKilometro(km).total - esperado) > 0.000001) malosDec++;
+  for (let km = 0.1; km <= 1400; km += 7.3) {
+    if (Math.abs(t.trasladoDe(km, null).total - (6500 + 22 * km)) > 0.000001) malosDec++;
   }
   igual('y con decimales tambien', malosDec, 0);
+
+  /* el borde exacto del tope */
+  igual('1,400 km justos todavia se cotizan solos', t.trasladoDe(1400, null).total, 6500 + 22 * 1400);
+  igual('1,400.001 ya no', !!t.trasladoDe(1400.001, null).requiereAsesor, true);
+
+  /* Un viaje sin precio no cobra NADA, ni noches ni movimientos */
+  let conCobro = 0;
+  for (let km = 1401; km <= 5000; km += 37) {
+    const p = t.calcula(km, 5, {
+      noches: 4,
+      movimientos: [{ horaInicio: '08:00', horaFin: '16:00' }, { horaInicio: '08:00', horaFin: '21:00' }]
+    });
+    if (p.total !== 0 || p.anticipo !== 0 || p.desglose.servicio !== 0) conCobro++;
+  }
+  igual('arriba del tope NUNCA se cobra un peso', conCobro, 0);
 })();
 
-/* ============ 2. LOS BORDES EXACTOS DE CADA BANDA ============ */
-igual('799 km a 34', t.porKilometro(799).total, 799 * 34);
-igual('800 km a 34 (el borde es INCLUSIVE)', t.porKilometro(800).total, 800 * 34);
-igual('800.001 km ya a 25', t.porKilometro(800.001).total, 800.001 * 25);
-igual('1,000 km a 25 (el borde es INCLUSIVE)', t.porKilometro(1000).total, 1000 * 25);
-igual('1,000.001 km ya a 23', t.porKilometro(1000.001).total, 1000.001 * 23);
-
-/* ============ 3. EL VIAJE COMPLETO, MILES DE COMBINACIONES ============ */
+/* ============ 5. QUE TAN LEJOS QUEDA LA FORMULA DE SUS PRECIOS ============
+   La formula solo contesta por los destinos que NO estan en la lista, asi que
+   nunca cambia un precio suyo. Pero si se le va la mano con un destino nuevo,
+   se le va a ir con todos. Esto mide el desvio contra sus 38 precios reales y
+   lo deja anclado: si alguien toca la formula, aqui se ve cuanto la movio. */
 (function () {
-  const HUASTECA = { placeId: 'ChIJv8IdsTSP1oURPsKDyokOts4' };
-  const OTRO = { placeId: 'ChIJ_cualquier_otro', direccion: 'Puerto Vallarta, Jalisco' };
+  const KM = {           /* ida y vuelta, medidos con la Routes API */
+    'Chapala, Jalisco, México': 100, 'Tequila, Jalisco, México': 136,
+    'Tapalpa, Jalisco, México': 262, 'Mazamitla, Jalisco, México': 268,
+    'San Juan de los Lagos, Jalisco, México': 286, 'Zamora, Michoacán, México': 314,
+    'El Manto, Jalisco, México': 314, 'Talpa de Allende, Jalisco, México': 402,
+    'Tepic, Nayarit, México': 414, 'León, Guanajuato, México': 444,
+    'Rincón de Guayabitos, Nayarit, México': 474, 'Chacala, Nayarit, México': 502,
+    'Sayulita, Nayarit, México': 532, 'Guanajuato, Guanajuato, México': 550,
+    'Manzanillo, Colima, México': 574, 'Morelia, Michoacán, México': 574,
+    'Puerto Vallarta, Jalisco, México': 620, 'Punta Perula, Jalisco, México': 620,
+    'Mismaloya, Puerto Vallarta, Jalisco, México': 656, 'Pátzcuaro, Michoacán, México': 656,
+    'San Miguel de Allende, Guanajuato, México': 674, 'Barra de Navidad, Jalisco, México': 692,
+    'Zacatecas, Zacatecas, México': 708, 'Tlalpujahua, Michoacán, México': 762,
+    'Tenacatita, Jalisco, México': 762, 'Mayto, Jalisco, México': 798,
+    'Mazatlán, Sinaloa, México': 962, 'Valle de Bravo, Estado de México, México': 1032,
+    'Ixtapa Zihuatanejo, Guerrero, México': 1056, 'Grutas Tolantongo, Hidalgo, México': 1102,
+    'Real de Catorce, San Luis Potosí, México': 1186, 'Puebla, Puebla, México': 1338,
+    'Zacatlán, Puebla, México': 1368
+  };
+
+  let suma = 0, cuantos = 0, peor = 0, peorNombre = '';
+  SU_LISTA.forEach(function (f) {
+    const km = KM[f[0]];
+    if (km === undefined) return;                 // los de arriba del tope no aplican
+    const err = Math.abs(formulaAMano(km) - f[1]);
+    suma += err; cuantos++;
+    if (err > peor) { peor = err; peorNombre = f[0]; }
+  });
+  const promedio = Math.round(suma / cuantos);
+  console.log('(la formula contra ' + cuantos + ' precios reales: $' + promedio.toLocaleString('es-MX') +
+    ' de error promedio; el peor es ' + peorNombre.split(',')[0] + ' con $' + peor.toLocaleString('es-MX') + ')');
+
+  igual('la formula no se desvia mas de $2,500 en promedio', promedio <= 2500, true);
+  igual('y de ningun destino se aleja mas de $6,000', peor <= 6000, true);
+})();
+
+/* ============ 6. EL VIAJE COMPLETO, MILES DE COMBINACIONES ============
+   Destinos FUERA de la lista, para auditar la formula, el piso, la estadia y
+   los movimientos todos juntos contra el modelo escrito a mano. */
+(function () {
+  const HUASTECA = { placeId: 'ChIJv8IdsTSP1oURPsKDyokOts4' };   // solo el id: la lista no lo ve
+  const OTRO = { placeId: 'ChIJ_cualquier_otro' };
 
   const JUEGOS_DE_MOVIMIENTOS = [
     [],
@@ -94,7 +290,7 @@ igual('1,000.001 km ya a 23', t.porKilometro(1000.001).total, 1000.001 * 23);
   let casos = 0;
   const rotos = { total: [], anticipo: [], desglose: [], huasteca: [] };
 
-  for (let km = 0; km <= 2600; km += 13) {
+  for (let km = 0; km <= 1400; km += 13) {
     for (const dias of [1, 3, 4, 6, 9, 15]) {
       const noches = Math.max(0, dias - 1);
       for (let j = 0; j < JUEGOS_DE_MOVIMIENTOS.length; j++) {
@@ -104,12 +300,13 @@ igual('1,000.001 km ya a 23', t.porKilometro(1000.001).total, 1000.001 * 23);
           casos++;
 
           // --- a mano ---
-          const cuantos = Math.min(movs.length, noches);
+          const cuantos = Math.min(movs.length, dias);      // el tope son los DIAS
           let movAMano = 0;
           for (let i = 0; i < cuantos; i++) {
             movAMano += diaDeMovimientoAMano(movs[i].horas, esHuasteca);
           }
-          const esperado = trasladoAMano(km, dias) + nochesAMano(noches) + movAMano;
+          const esperado = trasladoAMano(formulaAMano(km), dias) +
+            estadiaAMano(dias, noches, cuantos) + movAMano;
 
           // --- lo que hace la pagina ---
           const p = t.calcula(km, dias, { noches: noches, movimientos: movs, destino: destino });
@@ -133,39 +330,46 @@ igual('1,000.001 km ya a 23', t.porKilometro(1000.001).total, 1000.001 * 23);
   if (rotos.total.length) console.log('   primeros fallos: ' + JSON.stringify(rotos.total.slice(0, 3)));
 })();
 
-/* ============ 4. ¿DE VERDAD BAJARON TODOS LOS VIAJES? ============
-   El dueño pidio que las tarifas nuevas abarataran TODOS los viajes, no solo
-   los largos. Aqui se comprueba contra la regla vieja, escrita a mano. */
+/* ============ 7. LO MISMO, PERO CON DESTINOS DE SU LISTA ============
+   Aqui el traslado sale de la tabla y no de la formula, y hay que comprobar
+   que el resto de las reglas se le suman igual. */
 (function () {
-  function viejoPorTramos(km) {
-    let restan = km, piso = 0, total = 0;
-    for (const b of [{ hasta: 800, p: 35 }, { hasta: 1000, p: 28 }, { hasta: Infinity, p: 26 }]) {
-      const caben = Math.min(restan, b.hasta - piso);
-      if (caben > 0) { total += caben * b.p; restan -= caben; }
-      piso = b.hasta;
-      if (restan <= 0) break;
-    }
-    return total;
-  }
+  const MOVS = [
+    [],
+    [{ horaInicio: '08:00', horaFin: '16:00', horas: 8 }],
+    [{ horaInicio: '06:00', horaFin: '20:30', horas: 14.5 }, { horaInicio: '08:00', horaFin: '17:00', horas: 9 }]
+  ];
 
-  let subieron = 0, primeroQueSube = null, iguales = 0, bajaron = 0;
-  for (let km = 1; km <= 3000; km++) {
-    const antes = corta(viejoPorTramos(km));
-    const ahora = corta(t.porKilometro(km).total);
-    if (ahora > antes) { subieron++; if (primeroQueSube === null) primeroQueSube = km; }
-    else if (ahora === antes) iguales++;
-    else bajaron++;
-  }
-  console.log('(de 3,000 kilometrajes: ' + bajaron.toLocaleString('es-MX') + ' bajaron, ' +
-    iguales + ' quedaron igual, ' + subieron + ' subieron)');
-  igual('NINGUN viaje cuesta mas que con la tarifa vieja',
-    [subieron, primeroQueSube], [0, null]);
+  let casos = 0;
+  const rotos = [];
+  SU_LISTA.forEach(function (fila) {
+    for (const dias of [1, 4, 7, 12]) {
+      const noches = Math.max(0, dias - 1);
+      for (const movs of MOVS) {
+        casos++;
+        const cuantos = Math.min(movs.length, dias);
+        let movAMano = 0;
+        for (let i = 0; i < cuantos; i++) movAMano += diaDeMovimientoAMano(movs[i].horas, false);
+        const esperado = trasladoAMano(fila[1], dias) + estadiaAMano(dias, noches, cuantos) + movAMano;
+
+        const p = t.calcula(999, dias, {
+          destino: { direccion: fila[0] }, noches: noches, movimientos: movs
+        });
+        if (p.total !== esperado) {
+          rotos.push({ destino: fila[0], dias: dias, movs: movs.length, dio: p.total, esperaba: esperado });
+        }
+      }
+    }
+  });
+  console.log('(' + casos.toLocaleString('es-MX') + ' viajes a destinos de su lista)');
+  igual('con precio de lista, las demas reglas se suman igual', rotos.length, 0);
+  if (rotos.length) console.log('   primeros fallos: ' + JSON.stringify(rotos.slice(0, 3), null, 1));
 })();
 
-/* ============ 5. LO QUE EL CLIENTE NO PUEDE VER ============ */
+/* ============ 8. LO QUE EL CLIENTE NO PUEDE VER ============ */
 (function () {
   let fugas = 0;
-  for (let km = 100; km <= 2600; km += 97) {
+  for (let km = 100; km <= 1400; km += 97) {
     const p = t.calcula(km, 5, {
       noches: 6,
       movimientos: [{ horaInicio: '08:00', horaFin: '18:00' }],
@@ -180,6 +384,16 @@ igual('1,000.001 km ya a 23', t.porKilometro(1000.001).total, 1000.001 * 23);
     if (texto.indexOf(':' + km + ',') >= 0 || texto.indexOf(':' + km + '}') >= 0) fugas++;
   }
   igual('nunca se filtra el kilometraje ni ninguna tarifa', fugas, 0);
+
+  /* y con un destino de la lista tampoco sale el NOMBRE del renglon, que
+     diria «este precio salio de una tabla» */
+  const conLista = t.calcula(620, 4, {
+    destino: { direccion: 'Puerto Vallarta, Jalisco, México' }, noches: 3
+  });
+  const afuera = Object.assign({}, conLista);
+  delete afuera.interno;
+  igual('ni de que renglon de la lista salio',
+    JSON.stringify(afuera).indexOf('Vallarta'), -1);
 })();
 
 console.log('\n' + buenas + ' buenas, ' + malas + ' malas');

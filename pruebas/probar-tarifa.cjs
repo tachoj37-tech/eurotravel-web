@@ -18,85 +18,174 @@ function igual(nombre, dio, esperado) {
 }
 function cierto(nombre, v) { igual(nombre, !!v, true); }
 
-/* ============ UNA SOLA TARIFA, ELEGIDA POR EL TOTAL ============
-   TODOS los kilometros del viaje se cobran a la misma tarifa, y cual sea
-   depende de cuanto mide el viaje completo:
-       hasta 800 km ....... $34
-       de 801 a 1,000 ..... $25
-       de 1,001 en adelante $23 */
+/* Un destino tal como lo arma el navegador: texto y placeId. */
+function en(direccion, placeId) { return { direccion: direccion, placeId: placeId || '' }; }
 
-igual('0 km: nada', t.porKilometro(0).total, 0);
+/* ============================================================
+   EL PRECIO DEL TRASLADO
+   ------------------------------------------------------------
+   AQUI ESTABAN LAS BANDAS DE $34 / $25 / $23, Y CAMBIARON DE LADO
 
-//   100 × 34 = 3,400
-igual('100 km, en la primera banda', t.porKilometro(100).total, 3400);
+   Durante un dia el kilometro se cobro a una sola tarifa elegida
+   por el total del viaje, con un escalon de -$7,200 a los 801 km
+   que el dueño aprobo a sabiendas. Esta prueba lo exigia: no que
+   no hubiera escalon, sino que fuera EXACTAMENTE el aprobado.
 
-//   800 × 34 = 27,200
-igual('800 km justos: todavia la primera banda', t.porKilometro(800).total, 27200);
+   Se fue el 25-ago-2026, cuando llego su LISTA DE PRECIOS 2027
+   con 40 precios reales. Contra ella aquellas bandas erraban
+   $5,395 en promedio. Adivinar un precio con una curva dejo de
+   tener sentido teniendo los precios de verdad enfrente.
 
-//   801 × 25 = 20,025   <- los 801, no solo el que se paso
-igual('801 km: los OCHOCIENTOS UNO a 25', t.porKilometro(801).total, 20025);
+   Ahora hay tres respuestas, y en este orden:
+       1. el destino esta en la LISTA  -> su precio cerrado
+       2. no esta y son <= 1,400 km    -> $6,500 + $22 el km
+       3. no esta y esta mas lejos     -> lo cotiza un asesor
+   ============================================================ */
 
-//   1,000 × 25 = 25,000
-igual('1,000 km justos: todavia la segunda banda', t.porKilometro(1000).total, 25000);
-
-//   1,001 × 23 = 23,023   <- otra vez, TODOS
-igual('1,001 km: los mil uno a 23', t.porKilometro(1001).total, 23023);
-
-//   2,000 × 23 = 46,000
-igual('2,000 km: viaje largo', t.porKilometro(2000).total, 46000);
-
-igual('la tarifa que aplico se puede consultar', t.porKilometro(900).porKm, 25);
-
-/* ------------------------------------------------------------------
-   AQUI ESTABA LA PRUEBA CONTRARIA, Y CAMBIO DE LADO A PROPOSITO
-   ------------------------------------------------------------------
-   Antes esta prueba exigia que "mas kilometros SIEMPRE cuesten mas", y su
-   comentario decia que cobrar una sola tarifa segun el total tendria un
-   escalon absurdo. Con la regla vieja —por tramos— eso era cierto.
-
-   El dueño cambio la regla el 24-ago-2026, con la comparacion enfrente:
-   se le enseño que a 801 km se cobrarian $7,200 MENOS que a 800, y que de
-   801 a 1,182 km todos los viajes cobrarian menos que uno de 800. Se le
-   ofrecio la alternativa sin escalon (las mismas tarifas 34/25/23 pero por
-   tramos) y eligio esta.
-
-   Asi que la prueba ya no exige que no haya escalon: exige que el escalon
-   sea EXACTAMENTE el que se aprobo. Si un dia alguien lo "arregla" creyendo
-   que es un defecto, esto se lo dice.
-   ------------------------------------------------------------------ */
+/* ---- 1. LA LISTA MANDA ---- */
 (function () {
-  const corta = n => Math.floor(n / 100) * 100;
-  const traslado = km => corta(t.porKilometro(km).total);
+  function precio(dir) { return t.trasladoDe(999, en(dir)).total; }
 
-  igual('a 800 km se cobra 27,200', traslado(800), 27200);
-  igual('a 801 km se cobra 20,000', traslado(801), 20000);
-  igual('o sea que un kilometro mas baja el precio 7,200',
-    traslado(800) - traslado(801), 7200);
-  igual('y a 1,001 baja otros 2,000 contra los 1,000',
-    traslado(1000) - traslado(1001), 2000);
+  igual('Chapala son 6,500', precio('Chapala, Jalisco, México'), 6500);
+  igual('Vallarta son 19,000', precio('Puerto Vallarta, Jalisco, México'), 19000);
+  igual('Mazatlan son 28,000', precio('Mazatlán, Sinaloa, México'), 28000);
+  igual('la CDMX son 22,000 de base', precio('Ciudad de México, Ciudad de México, México'), 22000);
+  igual('la Huasteca, 26,500 de base', precio('Huasteca Potosina, San Luis Potosí, México'), 26500);
+  igual('Leon, los 17,600 que corrigio el dueño', precio('León, Guanajuato, México'), 17600);
+  igual('Tepic, los 16,900 que corrigio el dueño', precio('Tepic, Nayarit, México'), 16900);
 
-  /* Hasta donde llega el hoyo: cuantos kilometros cobran menos que 800 km */
-  let desde = 801, hasta = 801;
-  while (traslado(hasta) < traslado(800) && hasta < 6000) hasta++;
-  igual('el hoyo va de 801 a 1,182 km', [desde, hasta - 1], [801, 1182]);
+  /* Los kilometros que se le pasen dan IGUAL: un precio de lista es cerrado */
+  igual('a un precio de lista no le mueven los kilometros',
+    [t.trasladoDe(0, en('Chapala, Jalisco, México')).total,
+     t.trasladoDe(5000, en('Chapala, Jalisco, México')).total], [6500, 6500]);
 
-  /* Dentro de cada banda, eso si, mas kilometros siempre cuestan mas. */
-  let rompe = null;
-  [[0, 800], [801, 1000], [1001, 2500]].forEach(function (b) {
-    let ant = -1;
-    for (let km = b[0]; km <= b[1]; km++) {
-      const v = t.porKilometro(km).total;
-      if (v < ant) { rompe = km; break; }
-      ant = v;
-    }
-  });
-  igual('dentro de una banda el precio nunca baja', rompe, null);
+  /* Y se sabe DE DONDE salio, para que la oficina lo pueda cuadrar */
+  igual('se acusa de que renglon salio',
+    t.trasladoDe(620, en('Puerto Vallarta, Jalisco, México')).deLista,
+    'Puerto Vallarta y alrededores');
+  igual('un precio de lista no tiene tarifa por kilometro',
+    t.trasladoDe(620, en('Puerto Vallarta, Jalisco, México')).porKm, null);
+
+  /* Cancun mide 4,282 km —muy arriba del tope de la formula— pero esta en la
+     lista, y la lista contesta primero. El tope solo aplica a la formula. */
+  igual('Cancun esta en la lista aunque pase el tope',
+    t.trasladoDe(4282, en('Cancún, Quintana Roo, México')).total, 145000);
+  igual('y por eso NO pide asesor',
+    !!t.trasladoDe(4282, en('Cancún, Quintana Roo, México')).requiereAsesor, false);
 })();
 
-/* basura de entrada: no revienta ni cobra de mas */
-igual('km negativos: 0', t.porKilometro(-100).total, 0);
-igual('km que no es numero: 0', t.porKilometro('mucho').total, 0);
-igual('km nulo: 0', t.porKilometro(null).total, 0);
+/* ---- 2. TRES DESTINOS QUE VIVEN DENTRO DE OTRO ----
+   La direccion del chico trae el nombre del grande. Sin cuidado, los tres
+   caian en el precio del grande y se cobraba de menos. */
+(function () {
+  function precio(dir) { return t.trasladoDe(999, en(dir)).total; }
+
+  igual('Mismaloya son 20,000, no los 19,000 de Vallarta',
+    precio('Mismaloya, Puerto Vallarta, Jalisco, México'), 20000);
+  igual('San Miguel son 26,500, no los 19,000 de Guanajuato',
+    precio('San Miguel de Allende, Guanajuato, México'), 26500);
+  igual('Zacatlan son 39,500, no los 36,500 de Puebla',
+    precio('Zacatlán, Puebla, México'), 39500);
+
+  /* y los grandes siguen dando lo suyo */
+  igual('Vallarta sigue en 19,000', precio('Puerto Vallarta, Jalisco, México'), 19000);
+  igual('Guanajuato sigue en 19,000', precio('Guanajuato, Guanajuato, México'), 19000);
+  igual('Puebla sigue en 36,500', precio('Puebla, Puebla, México'), 36500);
+})();
+
+/* ---- 3. TRES QUE CAIAN EN EL PRECIO DE SU ESTADO ----
+   Mismo defecto que arriba, pero al reves: el nombre del ESTADO estaba en la
+   regla del destino, asi que todo el estado caia en el precio de su capital.
+   Los tres pasaron a la formula o al asesor el 25-ago-2026. */
+(function () {
+  igual('Dolores Hidalgo ya NO es Guanajuato',
+    t.trasladoDe(740, en('Dolores Hidalgo, Guanajuato, México')).deLista, undefined);
+  cierto('y se cotiza por formula',
+    t.trasladoDe(740, en('Dolores Hidalgo, Guanajuato, México')).porFormula === true);
+
+  /* Puerto Escondido esta 500 km MAS ALLA de Oaxaca: cobrarle el precio de
+     Oaxaca era regalar el viaje. Ahora pasa del tope y lo ve un asesor. */
+  cierto('Puerto Escondido ya NO es Oaxaca',
+    t.trasladoDe(2400, en('Puerto Escondido, Oaxaca, México')).requiereAsesor === true);
+  cierto('Huatulco tampoco',
+    t.trasladoDe(2500, en('Huatulco, Oaxaca, México')).requiereAsesor === true);
+  igual('pero la capital sigue en su precio',
+    t.trasladoDe(1988, en('Oaxaca de Juárez, Oaxaca, México')).total, 75000);
+
+  /* La ciudad de Chihuahua esta 450 km ANTES de las Barrancas: cobrarle el
+     precio de Barrancas era cobrarle de mas. */
+  cierto('la ciudad de Chihuahua ya NO es Barrancas',
+    t.trasladoDe(2400, en('Chihuahua, Chihuahua, México')).requiereAsesor === true);
+  igual('pero las Barrancas siguen en su precio',
+    t.trasladoDe(2882, en('Barrancas del Cobre, Chihuahua, México')).total, 75000);
+  igual('y Creel tambien', t.trasladoDe(2800, en('Creel, Chihuahua, México')).total, 75000);
+})();
+
+/* ---- 4. LA FORMULA DE RESPALDO: $6,500 + $22 EL KILOMETRO ----
+   Solo contesta por los destinos que NO estan en la lista. */
+(function () {
+  function f(km) { return t.trasladoDe(km, null).total; }
+
+  //   6,500 + 0        = 6,500   <- sacar la unidad cuesta igual de cerca
+  igual('0 km: el costo de sacar la unidad', f(0), 6500);
+  //   6,500 + 100×22   = 8,700
+  igual('100 km', f(100), 8700);
+  //   6,500 + 500×22   = 17,500
+  igual('500 km', f(500), 17500);
+  //   6,500 + 1,000×22 = 28,500
+  igual('1,000 km', f(1000), 28500);
+  //   6,500 + 1,400×22 = 37,300   <- el borde es INCLUSIVE
+  igual('1,400 km justos: el ultimo que se cotiza solo', f(1400), 37300);
+
+  igual('la tarifa se puede consultar del lado del servidor',
+    t.trasladoDe(500, null).porKm, 22);
+  cierto('y se acusa que fue por formula', t.trasladoDe(500, null).porFormula === true);
+
+  /* basura de entrada: no revienta ni cobra de mas */
+  igual('km negativos: como si fueran cero', f(-100), 6500);
+  igual('km que no es numero: como si fueran cero', f('mucho'), 6500);
+  igual('km nulo: como si fueran cero', f(null), 6500);
+})();
+
+/* ---- 5. LA ASERCION QUE VUELVE: MAS KILOMETROS, MAS CARO ----
+   Con las bandas esto era FALSO a proposito: a 801 km se cobraban $7,200
+   menos que a 800. La formula no tiene escalones, asi que la prueba que se
+   habia retirado vuelve a exigirse. */
+(function () {
+  let rompe = null, ant = -1;
+  for (let km = 0; km <= t.TOPE_FORMULA_KM; km++) {
+    const v = t.trasladoDe(km, null).total;
+    if (v <= ant) { rompe = km; break; }
+    ant = v;
+  }
+  igual('de 0 a 1,400 km el precio nunca baja ni se queda igual', rompe, null);
+})();
+
+/* ---- 6. ARRIBA DEL TOPE NO HAY PRECIO ----
+   Y cero no es un precio bajo: es la señal de que lo cotiza una persona. */
+(function () {
+  cierto('1,400.001 km ya pide asesor',
+    t.trasladoDe(1400.001, null).requiereAsesor === true);
+  cierto('2,000 km tambien', t.trasladoDe(2000, null).requiereAsesor === true);
+  igual('y el traslado viene en cero', t.trasladoDe(2000, null).total, 0);
+
+  /* Lo que mas importa: que la suma NO siga corriendo. Sin este freno, un
+     viaje de 4 dias con movimientos saldria en $16,000 —solo noches y
+     movimientos— y ese numero llegaria a la pantalla como si fuera el precio. */
+  const p = t.calcula(4282, 4, {
+    noches: 3,
+    movimientos: [{ horaInicio: '08:00', horaFin: '16:00' },
+                  { horaInicio: '08:00', horaFin: '18:00' }]
+  });
+  igual('un viaje sin precio no cobra las noches ni los movimientos', p.total, 0);
+  igual('ni anticipo', p.anticipo, 0);
+  igual('ni saldo', p.saldo, 0);
+  igual('ni el desglose enseña un servicio', p.desglose.servicio, 0);
+  cierto('y lo dice claro', p.requiereAsesor === true);
+  /* pero la oficina si necesita saber que se pidio, para cotizarlo a mano */
+  igual('la oficina si ve los kilometros', p.interno.km, 4282);
+  igual('y los dias que se pidieron con movimiento', p.desglose.diasMovimiento, 2);
+})();
 
 /* ============ DIAS DE SERVICIO ============ */
 
@@ -111,39 +200,54 @@ igual('cruzando de mes: 3 días', t.diasDeServicio('2026-10-31', '2026-11-02'), 
 
 /* ============ EL CALCULO COMPLETO ============ */
 
-/* Guadalajara–Vallarta redondo, 4 días: 621.2 km, primera banda.
-   621.2 × 34 = 21,120.8  ·  mínimo 4 × 3,000 = 12,000  ·  gana el kilometraje
-   21,120.8 cortado a la centena de abajo = 21,100 */
+/* Un destino que NO esta en la lista: 621.2 km redondos, 4 dias.
+   6,500 + 621.2 × 22 = 20,166.4  ·  minimo 4 × 3,000 = 12,000  ·  gana la formula
+   20,166.4 cortado a la centena de abajo = 20,100 */
 (function () {
   const p = t.calcula(621.2, 4);
-  igual('Vallarta redondo: total 21,100', p.total, 21100);
+  igual('un destino fuera de la lista: total 20,100', p.total, 20100);
   igual('no aplicó el mínimo', p.interno.aplicoMinimo, false);
-  igual('anticipo 20% redondeado al peso', p.anticipo, 4220);
+  igual('anticipo 20% redondeado al peso', p.anticipo, 4020);
   igual('saldo = total − anticipo, exacto', p.saldo, p.total - p.anticipo);
   igual('subtotal + IVA = total', Math.round((p.subtotal + p.iva) * 100) / 100, p.total);
 })();
 
-/* Un viaje de 1,200 km en 5 días: cae en la tercera banda, TODOS a 23.
-   1,200 × 23 = 27,600  ·  mínimo 5 × 3,000 = 15,000  ·  gana el kilometraje */
+/* Un viaje de 1,200 km en 5 días, fuera de la lista.
+   6,500 + 1,200 × 22 = 32,900  ·  mínimo 5 × 3,000 = 15,000  ·  gana la fórmula */
 (function () {
   const p = t.calcula(1200, 5);
-  igual('1,200 km en 5 días: 27,600', p.total, 27600);
-  igual('la tarifa que aplicó se queda del lado del servidor', p.interno.tarifaKm, 23);
+  igual('1,200 km en 5 días: 32,900', p.total, 32900);
+  igual('la tarifa que aplicó se queda del lado del servidor', p.interno.tarifaKm, 22);
   igual('y el kilometraje también', p.interno.km, 1200);
 })();
 
 /* Un viaje corto pero de muchos días: manda el mínimo.
-   80 km × 35 = 2,800  ·  mínimo 3 × 3,000 = 9,000  ·  gana el mínimo */
+   6,500 + 80 × 22 = 8,260  ·  mínimo 3 × 3,000 = 9,000  ·  gana el mínimo */
 (function () {
   const p = t.calcula(80, 3);
   igual('viaje corto de 3 días: manda el mínimo, 9,000', p.total, 9000);
   igual('y se acusa que aplicó', p.interno.aplicoMinimo, true);
 })();
 
+/* El mínimo defiende TAMBIEN a los precios de la lista.
+   Primero se escribio al reves y dejaba un hueco: Chapala son $6,500 porque
+   es un viaje de MISMO DIA; pedida a cinco dias, la unidad se iba una semana
+   por esos mismos $6,500. */
+(function () {
+  igual('Chapala un día: su precio de lista, 6,500',
+    t.calcula(100, 1, { destino: en('Chapala, Jalisco, México') }).total, 6500);
+  //  minimo 5 × 3,000 = 15,000 gana a los 6,500  ·  4 noches -> 1 extra = 1,000
+  igual('Chapala cinco días: manda el mínimo, 15,000 + 1,000',
+    t.calcula(100, 5, { destino: en('Chapala, Jalisco, México'), noches: 4 }).total, 16000);
+  /* y a un precio de lista que ya pasa el piso, el piso no le hace nada */
+  igual('Vallarta cuatro días: sus 19,000, el piso ni se asoma',
+    t.calcula(620, 4, { destino: en('Puerto Vallarta, Jalisco, México'), noches: 3 }).total, 19000);
+})();
+
 /* El redondeo SIEMPRE es hacia abajo, a favor del cliente */
 (function () {
-  //  700 × 34 = 23,800 exacto; 700.5 × 34 = 23,817 -> corta a 23,800
-  igual('23,817 se corta a 23,800', t.calcula(700.5, 1).total, 23800);
+  //  6,500 + 700.5 × 22 = 21,911 -> corta a 21,900
+  igual('21,911 se corta a 21,900', t.calcula(700.5, 1).total, 21900);
   cierto('el total nunca queda por encima del bruto',
     t.calcula(933.7, 2).total <= t.calcula(933.7, 2).interno.sinRedondear);
 })();
@@ -163,12 +267,16 @@ igual('cruzando de mes: 3 días', t.diasDeServicio('2026-10-31', '2026-11-02'), 
      movimientos. La asercion cambio de lado a proposito: sin el, el precio le
      subia al cliente nueve mil pesos al capturar movimientos y nada en
      pantalla decia por que. Se revisa abajo que el desglose NO delate la
-     regla del kilometro. */
+     regla del kilometro.
+
+     `requiereAsesor` se agrego el 25-ago-2026. Es un SI o un NO, no una
+     cantidad, y cuando vale `true` todos los montos vienen en cero: no hay
+     nada de donde dividir. Sin el, la pantalla enseñaria «$0». */
   igual('las llaves que salen son solo estas',
     Object.keys(afuera).sort(),
-    ['anticipo', 'desglose', 'iva', 'ivaIncluido', 'porcentajeAnticipo', 'saldo', 'subtotal', 'total']);
-  /* 1,200 km caen en la tercera banda: todos a 23 */
-  cierto('y `interno` sí trae la tarifa, para el servidor', p.interno.tarifaKm === 23);
+    ['anticipo', 'desglose', 'iva', 'ivaIncluido', 'porcentajeAnticipo',
+     'requiereAsesor', 'saldo', 'subtotal', 'total']);
+  igual('y `interno` sí trae la tarifa, para el servidor', p.interno.tarifaKm, 22);
 })();
 
 /* Con noches extra y movimientos encima, lo que sale sigue sin delatar nada. */
@@ -197,7 +305,8 @@ igual('cruzando el año: 3 noches', t.nochesDe('2026-12-30', '2027-01-02'), 3);
 igual('febrero bisiesto: 2 noches', t.nochesDe('2028-02-28', '2028-03-01'), 2);
 
 /* El borde exacto: tres noches todavia no cuestan; la cuarta si.
-   Viaje de 400 km, 6 dias de servicio -> manda el minimo, 6 × 3,000 = 18,000 */
+   Viaje de 400 km, 6 dias de servicio:
+       6,500 + 400 × 22 = 15,300  ·  minimo 6 × 3,000 = 18,000 -> gana el minimo */
 (function () {
   igual('3 noches: nada extra', t.calcula(400, 6, { noches: 3 }).total, 18000);
   igual('4 noches: mil pesos', t.calcula(400, 6, { noches: 4 }).total, 19000);
@@ -258,13 +367,21 @@ igual('sin nada no vale', t.horasDe(null, undefined), 0);
   igual('tres dias con movimiento: 12,000',
     t.precioMovimientos(t.movimientosDe(tres, 5)), 12000);
 
-  /* No puede haber mas dias con movimiento que noches de estadia. Es la misma
-     regla que aplica la pantalla, y TIENE que ser la misma: si el servidor
-     contara mas dias que los que el cliente vio, se le cobraria de mas. */
-  igual('con 2 noches, solo cuentan 2 dias',
-    t.movimientosDe(tres, 2).length, 2);
-  igual('con 0 noches, ninguno', t.movimientosDe(tres, 0).length, 0);
-  igual('sin noches declaradas, ninguno', t.movimientosDe(tres).length, 0);
+  /* ----------------------------------------------------------------
+     EL TOPE SON LOS DIAS DE SERVICIO, Y ANTES ERAN LAS NOCHES
+
+     Esta asercion cambio de lado el 25-ago-2026. Decia «con 2 noches, solo
+     cuentan 2 dias», y estaba mal: un viaje de tres dias puede moverse los
+     tres —sale, se mueve, y el ultimo dia se mueve y regresa— pero solo
+     tiene dos noches. Amarrado a las noches se cobraban $3,000 de menos.
+
+     Lo cazo la prueba que reconstruye «CDMX 3 dias» de la lista real: daba
+     $31,000 y su lista dice $34,000. El tope de verdad son los dias.
+     ---------------------------------------------------------------- */
+  igual('con 3 dias de servicio, caben los 3', t.movimientosDe(tres, 3).length, 3);
+  igual('con 2 dias, solo caben 2', t.movimientosDe(tres, 2).length, 2);
+  igual('con 0 dias, ninguno', t.movimientosDe(tres, 0).length, 0);
+  igual('sin dias declarados, ninguno', t.movimientosDe(tres).length, 0);
   igual('una lista que no es lista: ninguno', t.movimientosDe('muchos', 5).length, 0);
   igual('renglones vacios: caen en el piso',
     t.precioMovimientos(t.movimientosDe([{}, {}], 3)), 6000);
@@ -272,9 +389,77 @@ igual('sin nada no vale', t.horasDe(null, undefined), 0);
   /* Y el tope duro, contra una lista inventada */
   const milesDeDias = [];
   for (let i = 0; i < 5000; i++) milesDeDias.push({ horaInicio: '08:00', horaFin: '22:00' });
-  igual('cinco mil dias con 3 noches: solo 3', t.movimientosDe(milesDeDias, 3).length, 3);
-  igual('cinco mil dias con mil noches: el tope duro',
+  igual('cinco mil dias con 3 de servicio: solo 3', t.movimientosDe(milesDeDias, 3).length, 3);
+  igual('cinco mil dias con mil de servicio: el tope duro',
     t.movimientosDe(milesDeDias, 1000).length, t.TOPE_DIAS_MOVIMIENTO);
+})();
+
+/* ============ LAS DOS FORMAS DE COBRAR LA ESTADIA ============
+   SIN movimientos es un PAQUETE: 3 noches incluidas, +$1,000 cada extra.
+   CON movimientos se cobra DIA POR DIA: cada dia de estadia $1,000 —la
+   unidad esta apartada alla y no puede trabajar en otra cosa— y el dia que
+   ademas se mueve, se le suma su banda de horas. */
+(function () {
+  const vallarta = en('Puerto Vallarta, Jalisco, México');
+  const ochoHoras = { horaInicio: '08:00', horaFin: '16:00' };
+
+  //  paquete: 19,000 de lista, 3 noches incluidas
+  igual('Vallarta 3 noches, sin movimientos: 19,000',
+    t.calcula(620, 4, { destino: vallarta, noches: 3 }).total, 19000);
+  //  5 noches -> 2 extra × 1,000
+  igual('Vallarta 5 noches: 21,000',
+    t.calcula(620, 6, { destino: vallarta, noches: 5 }).total, 21000);
+
+  /* Con UN dia de movimiento el trato cambia entero: se paga cada dia. */
+  //  19,000 + 4 dias × 1,000 + 1 dia de 8 h × 3,000 = 26,000
+  igual('Vallarta 4 días con un movimiento: 26,000',
+    t.calcula(620, 4, { destino: vallarta, noches: 3, movimientos: [ochoHoras] }).total, 26000);
+  igual('y ya no hay noches incluidas que valgan',
+    t.calcula(620, 4, { destino: vallarta, noches: 3, movimientos: [ochoHoras] })
+      .interno.nochesExtra, 0);
+  /* Los dias que la unidad se queda parada la oficina los ve, para explicarlo */
+  igual('la oficina ve los días que la unidad se quedó parada',
+    t.calcula(620, 4, { destino: vallarta, noches: 3, movimientos: [ochoHoras] })
+      .interno.diasParados, 3);
+})();
+
+/* ============ SE RECONSTRUYE LA LISTA REAL? ============
+   Esta es la prueba que de verdad importa: que las reglas de arriba, sumadas,
+   den EXACTAMENTE los precios que el dueño tiene escritos en su lista de 2027
+   para los dos destinos que alla vienen con dias y movimientos incluidos.
+
+   Si algun dia alguien cambia una regla, esto se lo dice con su propia lista
+   en la mano. */
+(function () {
+  const CDMX = en('Ciudad de México, Ciudad de México, México');
+  const HUASTECA = en('Huasteca Potosina, San Luis Potosí, México');
+  const ochoHoras = { horaInicio: '08:00', horaFin: '16:00' };
+  function dias(n) { const l = []; for (let i = 0; i < n; i++) l.push(ochoHoras); return l; }
+
+  //  22,000 + 1 dia × 1,000 + 1 movimiento × 3,000 = 26,000
+  igual('CDMX 1 día, su lista dice 26,000',
+    t.calcula(1102, 1, { destino: CDMX, noches: 0, movimientos: dias(1) }).total, 26000);
+  //  22,000 + 2 × 1,000 + 2 × 3,000 = 30,000
+  igual('CDMX 2 días, su lista dice 30,000',
+    t.calcula(1102, 2, { destino: CDMX, noches: 1, movimientos: dias(2) }).total, 30000);
+  //  22,000 + 3 × 1,000 + 3 × 3,000 = 34,000
+  igual('CDMX 3 días, su lista dice 34,000',
+    t.calcula(1102, 3, { destino: CDMX, noches: 2, movimientos: dias(3) }).total, 34000);
+
+  //  26,500 + 3 × 1,000 + 3 × 3,000 = 38,500
+  igual('Huasteca 3 días, su lista dice 38,500',
+    t.calcula(1262, 3, { destino: HUASTECA, noches: 2, movimientos: dias(3) }).total, 38500);
+  //  26,500 + 4 × 1,000 + 4 × 3,000 = 42,500
+  igual('Huasteca 4 días, su lista dice 42,500',
+    t.calcula(1262, 4, { destino: HUASTECA, noches: 3, movimientos: dias(4) }).total, 42500);
+
+  /* Y el caso que dicto el dueño con sus palabras: «si el viaje dura 4 dias y
+     solo hay movimientos en 2, los dias sin movimientos cobras solamente
+     1,000, porque se queda la sprinter inutil ahi».
+         22,000 + 4 dias × 1,000 + 2 movimientos × 3,000 = 32,000            */
+  const cuatroConDos = t.calcula(1102, 4, { destino: CDMX, noches: 3, movimientos: dias(2) });
+  igual('CDMX 4 días con movimientos solo en 2: 32,000', cuatroConDos.total, 32000);
+  igual('y la oficina ve que 2 días se quedó parada', cuatroConDos.interno.diasParados, 2);
 })();
 
 /* ============ DESTINOS CON REGLA PROPIA ============
@@ -296,14 +481,14 @@ igual('sin nada no vale', t.horasDe(null, undefined), 0);
   igual('sin destino, ninguna regla', t.reglaDeDestino(null), null);
 
   /* Cuatro dias con horas MUY distintas: en la Huasteca todos valen 3,000 */
-  const dias = [
+  const cuatroDias = [
     { horaInicio: '08:00', horaFin: '12:00' },   // 4 h   -> banda normal 3,000
     { horaInicio: '08:00', horaFin: '18:00' },   // 10 h  -> banda normal 4,000
     { horaInicio: '07:00', horaFin: '21:00' },   // 14 h  -> banda normal 5,000
     { horaInicio: '06:00', horaFin: '20:30' }    // 14.5h -> banda normal 5,000
   ];
 
-  const enLaHuasteca = t.movimientosDe(dias, 5, t.reglaDeDestino({ placeId: HUASTECA_ID }));
+  const enLaHuasteca = t.movimientosDe(cuatroDias, 5, t.reglaDeDestino({ placeId: HUASTECA_ID }));
   igual('en la Huasteca los cuatro dias valen 3,000',
     enLaHuasteca.map(function (m) { return m.precio; }), [3000, 3000, 3000, 3000]);
   igual('o sea 12,000 por los cuatro', t.precioMovimientos(enLaHuasteca), 12000);
@@ -313,33 +498,36 @@ igual('sin nada no vale', t.horasDe(null, undefined), 0);
     enLaHuasteca.map(function (m) { return m.horas; }), [4, 10, 14, 14.5]);
 
   /* En cualquier otro destino, las mismas horas cuestan lo de siempre */
-  const enVallarta = t.movimientosDe(dias, 5, null);
+  const enVallarta = t.movimientosDe(cuatroDias, 5, null);
   igual('en otro destino mandan las bandas',
     enVallarta.map(function (m) { return m.precio; }), [3000, 4000, 5000, 5000]);
   igual('que son 17,000', t.precioMovimientos(enVallarta), 17000);
 
-  /* Y el viaje completo, por la puerta de calcula() */
-  const viaje = { noches: 4, movimientos: dias };
+  /* Y el viaje completo, por la puerta de calcula(). Los dos destinos van por
+     FORMULA a proposito —solo con placeId, sin direccion, la lista no los
+     reconoce— para que la unica diferencia entre los dos sea la regla.
+         6,500 + 900 × 22 = 26,300  ·  minimo 5 × 3,000 = 15,000
+         5 dias de estadia × 1,000 = 5,000
+         movimientos: 12,000 en la Huasteca contra 17,000 en otro lado       */
+  const viaje = { noches: 4, movimientos: cuatroDias };
   const huasteca = t.calcula(900, 5, Object.assign({ destino: { placeId: HUASTECA_ID } }, viaje));
   const otro = t.calcula(900, 5, Object.assign({ destino: { placeId: 'ChIJ_otro' } }, viaje));
 
-  //  900 km caen en la segunda banda: 900 × 25 = 22,500  ·  minimo 15,000
-  //  4 noches -> 1 extra = 1,000     ·  movimientos 12,000 contra 17,000
-  igual('Huasteca: 22,500 + 1,000 + 12,000', huasteca.total, 35500);
-  igual('otro destino: 22,500 + 1,000 + 17,000', otro.total, 40500);
+  igual('Huasteca: 26,300 + 5,000 + 12,000', huasteca.total, 43300);
+  igual('otro destino: 26,300 + 5,000 + 17,000', otro.total, 48300);
   igual('la diferencia son los 5,000 de las bandas', otro.total - huasteca.total, 5000);
   igual('y el contrato sabra por que', huasteca.interno.reglaDestino, 'Huasteca Potosina');
   igual('en otro destino no hay regla que explicar', otro.interno.reglaDestino, null);
 })();
 
 /* ============ EL VIAJE COMPLETO, EN EL ORDEN QUE DICTO EL DUEÑO ============
-   Primero los kilometros, luego las noches, al final los movimientos.
+   Primero los kilometros, luego la estadia, al final los movimientos.
 
-     400 km × 35 = 14,000  ·  minimo 6 dias × 3,000 = 18,000 -> gana el minimo
-     5 noches -> 2 extra × 1,000 ................................ + 2,000
-     movimientos de 8 h, 10 h y 13 h = 3,000 + 4,000 + 5,000 .... + 12,000
-                                                                  --------
-                                                                    32,000 */
+     6,500 + 400 × 22 = 15,300  ·  minimo 6 dias × 3,000 = 18,000 -> gana el minimo
+     con movimientos se paga DIA POR DIA: 6 dias × 1,000 ............ + 6,000
+     movimientos de 8 h, 10 h y 13 h = 3,000 + 4,000 + 5,000 ........ + 12,000
+                                                                      --------
+                                                                        36,000 */
 (function () {
   const p = t.calcula(400, 6, {
     noches: 5,
@@ -351,16 +539,16 @@ igual('sin nada no vale', t.horasDe(null, undefined), 0);
   });
 
   igual('el traslado, solo', p.interno.traslado, 18000);
-  igual('las noches extra', p.interno.importeNoches, 2000);
+  igual('la estadía, día por día', p.interno.importeNoches, 6000);
   igual('los movimientos', p.desglose.importeMovimientos, 12000);
-  igual('el total', p.total, 32000);
+  igual('el total', p.total, 36000);
   igual('las tres partes suman el total',
     p.interno.traslado + p.interno.importeNoches + p.desglose.importeMovimientos, p.total);
 
   /* Y lo que ve el cliente son DOS numeros que tambien suman el total. Si el
      desglose no cuadrara con el total pareceria un error de cuentas, y eso es
      peor que no dar desglose. */
-  igual('el cliente ve traslado y noches juntos', p.desglose.servicio, 20000);
+  igual('el cliente ve traslado y estadía juntos', p.desglose.servicio, 24000);
   igual('y sus dos numeros suman el total',
     p.desglose.servicio + p.desglose.importeMovimientos, p.total);
   /* `reglaDestino` es un NOMBRE, no una tarifa: la pantalla lo necesita para
@@ -370,14 +558,14 @@ igual('sin nada no vale', t.horasDe(null, undefined), 0);
     ['diasMovimiento', 'importeMovimientos', 'reglaDestino', 'servicio']);
 
   /* El anticipo sale del total FINAL, no del traslado. Si saliera del
-     traslado, se apartaria un viaje de 32,000 con el anticipo de uno de
-     18,000: 3,600 en vez de 6,400. */
-  igual('el anticipo es el 20% del total final', p.anticipo, 6400);
-  igual('y el saldo, lo que queda', p.saldo, 25600);
+     traslado, se apartaria un viaje de 36,000 con el anticipo de uno de
+     18,000: 3,600 en vez de 7,200. */
+  igual('el anticipo es el 20% del total final', p.anticipo, 7200);
+  igual('y el saldo, lo que queda', p.saldo, 28800);
   igual('anticipo + saldo = total', p.anticipo + p.saldo, p.total);
 })();
 
-/* El corte a la centena cae SOLO sobre el traslado. Como las noches y los
+/* El corte a la centena cae SOLO sobre el traslado. Como la estadia y los
    movimientos ya son multiplos de cien, el total sigue siendo redondo. */
 (function () {
   let noRedondos = 0, casos = 0;

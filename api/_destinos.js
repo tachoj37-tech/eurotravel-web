@@ -94,8 +94,11 @@ const DESTINOS = [
   { nombre: "Sayulita / San Pancho", km: 532,
     busca: /sayulita|san pancho/i,
     precio: { busNC47: 30000, bus4849: 29000, neobusI6: 32000, pbI6: 32000, marcopolo: 36000, irizar: 34000, sprinter: 18000 } },
+  /* «guanajuato» a secas se llevaba a Dolores Hidalgo, que esta 90 km mas
+     alla, al precio de la capital. Se pide la CIUDAD: o abre la direccion, o
+     viene repetida como ciudad y estado. */
   { nombre: "Guanajuato", km: 550,
-    busca: /guanajuato/i,
+    busca: /^guanajuato\b|guanajuato, *(gto|guanajuato)\b/i,
     precio: { busNC47: 30000, bus4849: 31000, sprinter: 19000 } },
   { nombre: "Manzanillo", km: 574,
     busca: /manzanillo/i,
@@ -166,15 +169,27 @@ const DESTINOS = [
   { nombre: "Acapulco", km: 1796,
     busca: /acapulco/i,
     precio: { busNC47: 80000, bus4849: 85000, neobusI6: 90000, pbI6: 95000, marcopolo: 100000, irizar: 96500, sprinter: 60000 } },
+  /* «oaxaca» a secas se llevaba a Puerto Escondido y a Huatulco —que estan en
+     el estado, pero 500 km MAS ALLA de la capital— al precio de la capital.
+     Ahora esos dos caen en «lo cotiza un asesor», que es lo correcto. */
   { nombre: "Oaxaca", km: 1988,
-    busca: /oaxaca/i,
+    busca: /^oaxaca\b|oaxaca de ju[aá]rez/i,
     precio: { busNC47: 100000, bus4849: 110000, neobusI6: 120000, pbI6: 115000, marcopolo: 130000, irizar: 125000, sprinter: 75000 } },
   { nombre: "Chiapas", km: 2848,
     busca: /chiapas|san crist|palenque|tuxtla/i,
     precio: { busNC47: 130000, bus4849: 135000, neobusI6: 145000, pbI6: 140000, marcopolo: 160000, irizar: 155000, sprinter: 85000 } },
+  /* El Excel trae el Marcopolo de Barrancas en 1,300,000: un cero de mas.
+     En los 40 destinos el Marcopolo nunca pasa del Irizar por mas de 5,000, y
+     aqui lo pasaria por 1,175,000. Se corrigio a 130,000 —el escalon que
+     guarda contra el Irizar en Chiapas, el otro viaje de esa distancia— y se
+     le aviso al dueño el 25-ago-2026. Si el numero bueno es otro, se cambia
+     aqui. Hay una prueba que caza el proximo cero de mas. */
+  /* Sin «chihuahua»: el estado entero caia aqui, y la ciudad de Chihuahua
+     esta 450 km ANTES de las Barrancas. Cobrarle el precio de Barrancas es
+     cobrarle de mas. Quien escriba «Chihuahua» va con un asesor. */
   { nombre: "Barrancas del Cobre", km: 2882,
-    busca: /barranca|creel|chihuahua/i,
-    precio: { busNC47: 105000, bus4849: 110000, neobusI6: 120000, pbI6: 115000, marcopolo: 1300000, irizar: 125000, sprinter: 75000 } },
+    busca: /barranca|creel/i,
+    precio: { busNC47: 105000, bus4849: 110000, neobusI6: 120000, pbI6: 115000, marcopolo: 130000, irizar: 125000, sprinter: 75000 } },
   { nombre: "Cancún", km: 4282,
     busca: /canc|riviera maya|playa del carmen|tulum/i,
     precio: { busNC47: 180000, bus4849: 185000, neobusI6: 195000, pbI6: 190000, marcopolo: 215000, irizar: 205000, sprinter: 145000 } }

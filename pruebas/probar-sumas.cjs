@@ -61,10 +61,27 @@ function cierto(nombre, v) { igual(nombre, !!v, true); }
         if (p.anticipo > p.total || p.anticipo < 0) rotos.anticipo.push({ km, dias, p });
         // el total nunca queda por debajo del minimo por dia
         if (p.total < dias * t.MINIMO_POR_DIA && p.interno.aplicoMinimo) rotos.minimo.push({ km, dias, p });
-        /* El bruto por kilometro es exactamente km x la tarifa que aplico.
-           Antes aqui se sumaban los tramos; desde que hay una sola tarifa por
-           viaje, la comprobacion es una multiplicacion. */
-        if (Math.abs(p.interno.km * p.interno.tarifaKm - p.interno.porKilometro) > 0.5) {
+        /* ------------------------------------------------------------
+           EL BRUTO DEL TRASLADO SALE DE LA FORMULA DE RESPALDO
+
+           Esta comprobacion cambio de lado dos veces, y las dos por una
+           regla nueva del dueño, no por un defecto:
+
+             · era la suma de los tramos, cuando el kilometro se cobraba
+               por tramos
+             · paso a ser km × tarifa, cuando fue una sola tarifa elegida
+               por el total del viaje
+             · y ahora es 6,500 + 22 × km, desde que llego su LISTA DE
+               PRECIOS 2027 y la curva se cambio por una recta
+
+           Aqui el barrido no manda destino, asi que TODOS van por formula.
+           Arriba del tope no hay precio y no hay nada que comprobar.
+           ------------------------------------------------------------ */
+        if (!p.requiereAsesor) {
+          const bruto = t.BASE_TRASLADO + t.POR_KM * p.interno.km;
+          if (Math.abs(bruto - p.interno.porKilometro) > 0.5) rotos.tramos.push({ km, dias, p });
+        } else if (p.total !== 0) {
+          /* y si pide asesor, no se cobra un peso: ni noches ni movimientos */
           rotos.tramos.push({ km, dias, p });
         }
         /* Las partes que ve el cliente TIENEN que reconstruir el total. Si no,

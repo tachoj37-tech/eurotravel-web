@@ -3341,6 +3341,24 @@ window.IMGS = {
     var puntoExacto = COTIZACION.puntoExacto;
 
     function pintaPrecioListo(c) {
+      /* ------------------------------------------------------------
+         LOS VIAJES MUY LARGOS NO SE COTIZAN SOLOS
+
+         Arriba de cierta distancia el viaje deja de ser ir y volver y se
+         vuelve expedición: hotel del operador, relevos, viáticos. Ahí el
+         servidor no da precio y manda `requiereAsesor`, con todos los
+         montos en cero.
+
+         Sin esta rama, la pantalla pintaría «$0» y el cliente creería que
+         el viaje es gratis. `precioNoDisponible` ya existe para esto —se
+         usa cuando falla la medición— y dice lo correcto: te la enviamos
+         hoy mismo.
+         ------------------------------------------------------------ */
+      if (c.requiereAsesor) {
+        precioNoDisponible('Este viaje lo cotiza uno de nuestros asesores.');
+        return;
+      }
+
       /* Aquí NO se pinta ni el kilometraje ni la tarifa por kilómetro.
          Con los kilómetros y el total a la vista, cualquiera saca el precio
          por kilómetro dividiendo. El servidor tampoco los manda. */
@@ -3838,7 +3856,14 @@ window.IMGS = {
       /* La tarifa, sin nada de lo que la delate: ni kilómetros, ni precio por
          kilómetro, ni el mínimo por día. Solo el total y qué cubre. */
       var c = VIAJE.cotizacion;
-      if (c) {
+      /* Un viaje que lo cotiza un asesor viene con todos los montos en cero.
+         Enseñar «Total estimado $0» en el resumen sería peor que no enseñar
+         nada: el cliente firmaría creyendo que el viaje es gratis. Se dicen
+         los días —que sí sabe— y de precio, la verdad. */
+      if (c && c.requiereAsesor) {
+        filas.push(['Días de servicio', String(c.dias)]);
+        filas.push(['Tarifa', 'Te la enviamos hoy mismo']);
+      } else if (c) {
         var d = c.desglose || {};
         filas.push(['Días de servicio', String(c.dias)]);
         /* El servicio se separa solo cuando hay movimientos que sumarle. En un
