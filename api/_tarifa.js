@@ -11,7 +11,8 @@
    como una dirección más del sitio.
 
    Reglas confirmadas por el dueño:
-     · el kilómetro se cobra POR TRAMOS (ver abajo), IVA YA INCLUIDO
+     · el kilómetro se cobra a UNA SOLA TARIFA elegida por el total
+       del viaje (ver abajo), IVA YA INCLUIDO
      · mínimo $3,000 POR DÍA de servicio
      · el total se corta HACIA ABAJO a la centena
      · 3 noches incluidas; cada noche de más, $1,000
