@@ -28,28 +28,78 @@
    cercano a nosotros. El primero jamas.
    ============================================================ */
 
-const PERMITIDOS = [
-  'https://eurotravel-web.vercel.app',
-  'http://localhost:5175'
-];
+const PERMITIDOS = ['https://eurotravel-web.vercel.app'];
 
+/* El origen de desarrollo NO viaja a producción. Antes estaba fijo en la lista
+   y se publicaba con el sitio: una entrada más que defender a cambio de nada,
+   porque en producción nadie legítimo llega desde localhost. */
+if (process.env.VERCEL_ENV !== 'production') {
+  PERMITIDOS.push('http://localhost:5175');
+}
+
+/* ------------------------------------------------------------
+   COMPARAR ORÍGENES ENTEROS, NUNCA POR PREFIJO
+   ------------------------------------------------------------
+   Aquí había un hueco, y se comprobó contra el sitio publicado antes de
+   taparlo. La comparación era:
+
+       referer.indexOf(permitido) === 0
+
+   O sea, por PREFIJO. Y un dominio ajeno puede empezar con el nuestro:
+
+       https://eurotravel-web.vercel.app.malicioso.example/
+
+   empieza con `https://eurotravel-web.vercel.app`, así que pasaba. Se probó
+   en producción y la puerta abrió. Igual con el de localhost.
+
+   Qué se podía hacer con eso: no leer datos —no mandamos cabeceras de CORS,
+   así que el navegador ajeno no ve la respuesta— pero SÍ disparar nuestras
+   puertas caras desde el navegador de un visitante suyo, gastando cuota de
+   Google que se paga, y con el freno contando contra la IP de la VÍCTIMA en
+   vez de la del atacante.
+
+   Ahora se compara el origen COMPLETO, sacado con el analizador de URL. Un
+   dominio que empiece igual ya no cuela, porque su origen es otro.
+
+   Y OJO CON LO QUE ESTA PUERTA NO ES: no protege contra quien llame
+   directo. Cualquiera con curl pone `Origin` a mano y entra —se comprobó—.
+   Esto es defensa contra el navegador de un tercero, nada más. Lo que de
+   verdad protege es el freno y que el precio se vuelva a calcular aquí.
+   ------------------------------------------------------------ */
 function origenValido(req) {
-  const origen = req.headers.origin || '';
-  const referer = req.headers.referer || '';
-  return PERMITIDOS.some(function (p) {
-    return origen === p || referer.indexOf(p) === 0;
-  });
+  const h = req.headers || {};
+
+  /* Si viene `origin`, manda y se compara exacto. */
+  const origen = String(h.origin || '').trim();
+  if (origen) return PERMITIDOS.indexOf(origen) >= 0;
+
+  /* Si no, el `referer`, pero quedándose solo con su origen. */
+  const referer = String(h.referer || '').trim();
+  if (!referer) return false;
+  return PERMITIDOS.indexOf(origenDe(referer)) >= 0;
+}
+
+/* El origen de una URL, o cadena vacía si no se puede leer. */
+function origenDe(url) {
+  try { return new URL(url).origin; } catch (e) { return ''; }
 }
 
 /* El origen concreto desde el que vino, para armar las URLs de retorno del
    pago. Cae al primero de la lista si no reconoce ninguno. */
 function sitioDe(req) {
-  const origen = req.headers.origin || '';
+  const h = req.headers || {};
+  const origen = String(h.origin || '').trim();
   if (PERMITIDOS.indexOf(origen) >= 0) return origen;
-  const referer = req.headers.referer || '';
-  for (let i = 0; i < PERMITIDOS.length; i++) {
-    if (referer.indexOf(PERMITIDOS[i]) === 0) return PERMITIDOS[i];
-  }
+
+  /* El mismo arreglo que en origenValido: por origen completo, no por prefijo.
+     Aquí importa el doble, porque de esto sale la dirección a la que Stripe
+     regresa al cliente después de pagar. */
+  const suyo = origenDe(String(h.referer || '').trim());
+  if (PERMITIDOS.indexOf(suyo) >= 0) return suyo;
+
+  /* Si no se reconoce nada, el sitio de verdad. Nunca lo que mandó quien
+     llamó: así esta función no puede devolver una dirección ajena, y la
+     pantalla de pago no se puede usar para mandar a nadie a otro lado. */
   return PERMITIDOS[0];
 }
 

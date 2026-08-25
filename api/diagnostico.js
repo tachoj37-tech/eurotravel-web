@@ -58,7 +58,13 @@ async function pruebaRoutes(clave) {
 module.exports = async function handler(req, res) {
   // Acepta POST y GET: es cómodo abrirlo en el navegador para revisar. La
   // puerta resuelve OPTIONS, el método y el origen en un lugar.
-  if (defensas.puerta(req, res, { metodos: ['POST', 'GET'] })) return;
+  /* Solo POST. Antes aceptaba GET «porque es cómodo abrirlo en el navegador»,
+     y esa comodidad salía cara: un GET lo dispara cualquier etiqueta suelta
+     —<img src="…/api/diagnostico">— desde una página ajena, sin que el
+     navegador pida permiso primero. Y cada llamada de aquí gasta una consulta
+     de Places y una de Routes, que se pagan.
+     Para revisarlo hay el guion de pruebas; abrirlo en la barra ya no. */
+  if (defensas.puerta(req, res)) return;
 
   const frenado = freno(req);
   if (frenado) { res.status(frenado.status).json({ error: frenado.error }); return; }

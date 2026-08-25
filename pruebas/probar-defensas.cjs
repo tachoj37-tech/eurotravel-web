@@ -121,6 +121,73 @@ igual('sitioDe reconoce localhost',
 igual('sitioDe cae al primero si no reconoce',
   D.sitioDe(req({ origin: 'https://otro.example' })), 'https://eurotravel-web.vercel.app');
 
+/* ============================================================
+   UN DOMINIO QUE EMPIEZA IGUAL NO ES EL MISMO DOMINIO
+   ------------------------------------------------------------
+   Esto fue un hueco DE VERDAD, comprobado contra el sitio publicado el
+   25-ago-2026 antes de taparlo: la puerta comparaba el referer por PREFIJO
+
+       referer.indexOf(permitido) === 0
+
+   y un dominio ajeno puede empezar con el nuestro. Se sondeo produccion y
+   ABRIO con `https://eurotravel-web.vercel.app.malicioso.example/`.
+
+   No se podian leer datos -no mandamos cabeceras de CORS-, pero si disparar
+   nuestras puertas caras desde el navegador de un visitante ajeno, gastando
+   cuota de Google que se paga, y con el freno contando contra la IP de la
+   victima en vez de la del atacante.
+   ============================================================ */
+(function () {
+  const DISFRACES = [
+    'https://eurotravel-web.vercel.app.malicioso.example/',
+    'https://eurotravel-web.vercel.app.evil.mx/pagina',
+    'https://eurotravel-web.vercel.appmalicioso.example/',
+    'http://localhost:5175.malicioso.example/',
+    'https://eurotravel-web.vercel.app@malicioso.example/',
+    'https://malicioso.example/?x=https://eurotravel-web.vercel.app'
+  ];
+
+  let colados = [];
+  DISFRACES.forEach(function (d) {
+    if (D.origenValido(req({ referer: d }))) colados.push(d);
+  });
+  igual('ningun dominio disfrazado pasa la puerta', colados, []);
+
+  /* Y que `sitioDe` tampoco los devuelva: de ahi sale la direccion a la que
+     Stripe regresa al cliente. Si devolviera un dominio ajeno, la pantalla de
+     pago se volveria una liga para mandar gente a otro lado. */
+  let redirecciones = [];
+  DISFRACES.forEach(function (d) {
+    const s = D.sitioDe(req({ referer: d }));
+    if (D.PERMITIDOS.indexOf(s) < 0) redirecciones.push([d, s]);
+  });
+  igual('sitioDe nunca devuelve un dominio ajeno', redirecciones, []);
+
+  /* Lo legitimo sigue entrando, que es la otra mitad de un arreglo bueno */
+  cierto('el sitio de verdad sigue entrando por origin',
+    D.origenValido(req({ origin: 'https://eurotravel-web.vercel.app' })));
+  cierto('y por referer con su ruta y su ancla',
+    D.origenValido(req({ referer: 'https://eurotravel-web.vercel.app/?pago=listo#/cotizar' })));
+
+  /* Basura de entrada: ni revienta ni abre */
+  igual('un referer que no es URL no abre',
+    D.origenValido(req({ referer: 'no soy una url' })), false);
+  igual('sin cabeceras no abre', D.origenValido(req({})), false);
+  igual('el origen "null" del iframe con sandbox no abre',
+    D.origenValido(req({ origin: 'null' })), false);
+
+  /* Si viene `origin`, MANDA: un referer bueno no puede rescatar un origin malo */
+  igual('un origin ajeno no se salva con un referer bueno',
+    D.origenValido(req({
+      origin: 'https://malicioso.example',
+      referer: 'https://eurotravel-web.vercel.app/'
+    })), false);
+})();
+
+/* El de desarrollo no se publica: en produccion, localhost no esta en la lista */
+igual('hoy localhost esta permitido (no es produccion)',
+  D.PERMITIDOS.indexOf('http://localhost:5175') >= 0, true);
+
 /* ---------------- cuerpoJSON ------------------------------------------ */
 igual('cuerpoJSON con objeto', D.cuerpoJSON({ body: { a: 1 } }), { a: 1 });
 igual('cuerpoJSON con texto', D.cuerpoJSON({ body: '{"a":2}' }), { a: 2 });
