@@ -181,7 +181,9 @@ igual('febrero bisiesto: 2 noches', t.nochesDe('2028-02-28', '2028-03-01'), 2);
   igual('10 noches: siete mil', t.calcula(400, 6, { noches: 10 }).total, 25000);
   igual('0 noches: nada extra', t.calcula(400, 6, { noches: 0 }).total, 18000);
   igual('sin decir nada de noches: nada extra', t.calcula(400, 6).total, 18000);
-  igual('y el desglose lo cuenta bien', t.calcula(400, 6, { noches: 5 }).desglose.nochesExtra, 2);
+  /* Las noches se cuentan en `interno`, no en `desglose`: al cliente se le
+     enseñan ya sumadas al traslado para no delatar la tarifa por noche. */
+  igual('y el servidor las cuenta bien', t.calcula(400, 6, { noches: 5 }).interno.nochesExtra, 2);
 })();
 
 /* ============ LAS HORAS DE UN DIA CON MOVIMIENTO ============ */
@@ -269,12 +271,21 @@ igual('sin nada no vale', t.horasDe(null, undefined), 0);
     ]
   });
 
-  igual('el traslado, solo', p.desglose.traslado, 18000);
-  igual('las noches extra', p.desglose.importeNoches, 2000);
+  igual('el traslado, solo', p.interno.traslado, 18000);
+  igual('las noches extra', p.interno.importeNoches, 2000);
   igual('los movimientos', p.desglose.importeMovimientos, 12000);
   igual('el total', p.total, 32000);
   igual('las tres partes suman el total',
-    p.desglose.traslado + p.desglose.importeNoches + p.desglose.importeMovimientos, p.total);
+    p.interno.traslado + p.interno.importeNoches + p.desglose.importeMovimientos, p.total);
+
+  /* Y lo que ve el cliente son DOS numeros que tambien suman el total. Si el
+     desglose no cuadrara con el total pareceria un error de cuentas, y eso es
+     peor que no dar desglose. */
+  igual('el cliente ve traslado y noches juntos', p.desglose.servicio, 20000);
+  igual('y sus dos numeros suman el total',
+    p.desglose.servicio + p.desglose.importeMovimientos, p.total);
+  igual('la tarifa por noche NO sale del desglose',
+    Object.keys(p.desglose).sort(), ['diasMovimiento', 'importeMovimientos', 'servicio']);
 
   /* El anticipo sale del total FINAL, no del traslado. Si saliera del
      traslado, se apartaria un viaje de 32,000 con el anticipo de uno de

@@ -3353,14 +3353,9 @@ window.IMGS = {
         ['Viaje', c.redondo ? 'Redondo' : 'Solo ida']
       ];
 
-      /* Las noches extra se dicen en su renglón. Si el precio sube mil pesos
-         por dormir una noche más, el cliente tiene que poder verlo antes de
-         llamar a preguntar. */
-      if (d.nochesExtra) {
-        celdas.push(['Noches adicionales',
-          d.nochesExtra + (d.nochesExtra === 1 ? ' noche · ' : ' noches · ') +
-          pesos.format(d.importeNoches)]);
-      }
+      /* Las noches extra NO llevan renglón propio: ya vienen sumadas dentro
+         de `servicio`. Partirlas diría cuánto cuesta la noche, y esa tarifa
+         es del negocio, no del cliente. */
       if (d.importeMovimientos) {
         celdas.push(['Movimientos en destino', pesos.format(d.importeMovimientos)]);
       }
@@ -3385,8 +3380,12 @@ window.IMGS = {
 
       /* Los movimientos se capturan una pantalla más adelante, así que en el
          paso 1 el precio todavía no los trae. Se avisa para que la cifra no
-         cambie sin explicación. */
-      if (!d.importeMovimientos && d.noches) {
+         cambie sin explicación.
+
+         Se mira `c.dias`, no las noches: las noches dejaron de viajar al
+         navegador para no delatar su tarifa, y más de un día de servicio ya
+         quiere decir que hay al menos una noche en destino. */
+      if (!d.importeMovimientos && c.dias > 1) {
         notas.push('<div class="precio-afinar">' +
           '<b>¿La unidad se va a mover en el destino?</b> Los recorridos locales ' +
           'se cobran por día y se agregan a esta cifra. Los capturas en el ' +
@@ -3939,16 +3938,12 @@ window.IMGS = {
       if (c) {
         var d = c.desglose || {};
         filas.push(['Días de servicio', String(c.dias)]);
-        /* El traslado se separa solo cuando hay algo más sumado. En un viaje
-           sencillo, «Traslado» y «Total» serían el mismo número dos veces. */
-        if (d.importeNoches || d.importeMovimientos) {
-          filas.push(['Traslado', pesos.format(d.traslado)]);
-        }
-        if (d.importeNoches) {
-          filas.push(['Noches adicionales (' + d.nochesExtra + ' de ' + d.noches +
-            '; ' + d.nochesIncluidas + ' incluidas)', pesos.format(d.importeNoches)]);
-        }
+        /* El servicio se separa solo cuando hay movimientos que sumarle. En un
+           viaje sencillo, «Servicio» y «Total» serían el mismo número dos
+           veces. Las noches extra ya vienen dentro de `servicio`: partirlas
+           delataría la tarifa por noche. */
         if (d.importeMovimientos) {
+          filas.push(['Traslado y estadía', pesos.format(d.servicio)]);
           filas.push(['Movimientos en destino (' + d.diasMovimiento +
             (d.diasMovimiento === 1 ? ' día' : ' días') + ')', pesos.format(d.importeMovimientos)]);
         }

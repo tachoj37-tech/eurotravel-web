@@ -204,10 +204,14 @@ function dia(fecha, inicio, fin) {
                                                                --------
                                                                  52,000 */
   igual('el caso completo da 52,000', rm.cotiza.total, 52000);
-  igual('y su desglose lo explica',
-    [rm.cotiza.desglose.traslado, rm.cotiza.desglose.importeNoches,
-     rm.cotiza.desglose.importeMovimientos],
-    [39000, 4000, 9000]);
+  /* Al cliente le llegan DOS numeros: traslado y noches juntos (39,000 +
+     4,000 = 43,000) y los movimientos aparte. Partir las noches diria cuanto
+     cuesta la noche. */
+  igual('y su desglose lo explica sin delatar la tarifa por noche',
+    [rm.cotiza.desglose.servicio, rm.cotiza.desglose.importeMovimientos],
+    [43000, 9000]);
+  igual('los dos numeros suman el total',
+    rm.cotiza.desglose.servicio + rm.cotiza.desglose.importeMovimientos, rm.cotiza.total);
   igual('el anticipo es el 20% de los 52,000', rm.cotiza.anticipo, 10400);
 
   igual('sin fallas', fallas, []);

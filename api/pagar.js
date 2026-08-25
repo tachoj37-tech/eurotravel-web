@@ -275,9 +275,13 @@ module.exports = async function handler(req, res) {
         paradas: limpia(cuerpo.paradas, 300),
         /* Lo que se cobró de más, partido en sus dos motivos. El webhook lo
            necesita para que el contrato diga POR QUÉ el total es ese; si solo
-           viajara la suma, la oficina no podría cuadrarlo con el cliente. */
-        nochesExtra: String(p.desglose.nochesExtra),
-        importeNoches: String(p.desglose.importeNoches),
+           viajara la suma, la oficina no podría cuadrarlo con el cliente.
+
+           Sale de `interno`, no de `desglose`: al cliente el desglose le junta
+           traslado y noches para no delatar la tarifa por noche, pero la
+           oficina sí las necesita separadas. */
+        nochesExtra: String(p.interno.nochesExtra),
+        importeNoches: String(p.interno.importeNoches),
         movDias: String(p.desglose.diasMovimiento),
         movImporte: String(p.desglose.importeMovimientos),
         movDetalle: detalleMovimientos(cuerpo.movimientos, p.desglose.diasMovimiento),

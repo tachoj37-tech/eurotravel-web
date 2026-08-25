@@ -318,7 +318,16 @@ function calcula(kmTotal, dias, extras) {
       /* Las horas de cada día con movimiento. Del lado del servidor por la
          misma razón que los tramos: el detalle de cómo se armó un precio no
          se le enseña a quien lo paga. */
-      horasMovimiento: movimientos.map(function (m) { return m.horas; })
+      horasMovimiento: movimientos.map(function (m) { return m.horas; }),
+      /* Y aquí las noches, por la MISMA razón que el kilómetro: «2 noches ·
+         $2,000» le dice al cliente cuánto cuesta la noche. El servidor sí las
+         necesita partidas —el contrato explica de dónde salió el total—, así
+         que viven aquí y no en `desglose`. */
+      traslado: traslado,
+      noches: noches,
+      nochesIncluidas: NOCHES_INCLUIDAS,
+      nochesExtra: nochesExtra,
+      importeNoches: importeNoches
     },
     total: total,
     ivaIncluido: true,
@@ -327,16 +336,17 @@ function calcula(kmTotal, dias, extras) {
     porcentajeAnticipo: Math.round(ANTICIPO * 100),
     anticipo: anticipo,
     saldo: saldo,
-    /* Qué sí puede ver el cliente. NO delata la regla del kilómetro: el
-       traslado es un número, igual que hoy es el total, y sin el kilometraje
-       no se saca nada dividiendo. Y hace falta: sin esto el precio le sube
-       nueve mil pesos al agregar movimientos y nadie le explica por qué. */
+    /* Qué sí puede ver el cliente.
+
+       Son DOS números, no cuatro. El traslado y las noches extra van juntos a
+       propósito: partidos, «2 noches · $2,000» delata la tarifa por noche
+       igual que el total con los kilómetros delata la del kilómetro.
+
+       Juntos siguen sumando el total exacto, y eso importa tanto como
+       esconder la tarifa: un desglose que no cuadra con el total parece un
+       error de cuentas, y el cliente llama a preguntar. */
     desglose: {
-      traslado: traslado,
-      nochesIncluidas: NOCHES_INCLUIDAS,
-      noches: noches,
-      nochesExtra: nochesExtra,
-      importeNoches: importeNoches,
+      servicio: traslado + importeNoches,
       diasMovimiento: movimientos.length,
       importeMovimientos: importeMovimientos
     }

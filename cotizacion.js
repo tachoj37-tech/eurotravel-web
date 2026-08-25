@@ -76,8 +76,9 @@
   /* El desglose lleva su propia lista, aparte. Es un objeto anidado: copiarlo
      entero dejaría entrar cualquier campo que el servidor le agregue mañana,
      que es justo lo que esta lista existe para impedir. */
-  var CAMPOS_DESGLOSE = ['traslado', 'nochesIncluidas', 'noches', 'nochesExtra',
-    'importeNoches', 'diasMovimiento', 'importeMovimientos'];
+  /* Ni `nochesExtra` ni `importeNoches`: juntos dicen cuánto cuesta la noche.
+     El servidor los manda ya sumados dentro de `servicio`. */
+  var CAMPOS_DESGLOSE = ['servicio', 'diasMovimiento', 'importeMovimientos'];
 
   function porLista(d, lista) {
     var limpio = {};

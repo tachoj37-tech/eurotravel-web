@@ -86,9 +86,12 @@ const AUTOBUS = { id: 'irizar-i6s', name: 'Irizar i6S', cotizadorAutomatico: fal
        ADENTRO pasaría la lista blanca de afuera sin que nadie lo note. Por eso
        aquí van kilómetros escondidos un nivel abajo. */
     desglose: {
-      traslado: 21700, nochesIncluidas: 3, noches: 3, nochesExtra: 0,
-      importeNoches: 0, diasMovimiento: 0, importeMovimientos: 0,
-      km: 621.2, tarifaKm: 35
+      servicio: 21700, diasMovimiento: 0, importeMovimientos: 0,
+      km: 621.2, tarifaKm: 35,
+      /* Y los de las noches, que el servidor de hoy ya NO manda. Si mañana
+         alguien los volviera a poner, la lista blanca tiene que tirarlos:
+         `2 noches · $2,000` dice cuánto cuesta la noche. */
+      nochesExtra: 2, importeNoches: 2000, traslado: 19700
     }
   };
   const m2 = COTIZACION.crea({ pide: pideFalso(RESPUESTA_SUCIA) });
@@ -100,8 +103,9 @@ const AUTOBUS = { id: 'irizar-i6s', name: 'Irizar i6S', cotizadorAutomatico: fal
     ['anticipo', 'desglose', 'dias', 'ivaIncluido', 'porcentajeAnticipo', 'redondo', 'saldo', 'total']);
   igual('y el desglose también se filtra, campo por campo',
     Object.keys(m2.estadoVivo().cotizacion.desglose).sort(),
-    ['diasMovimiento', 'importeMovimientos', 'importeNoches', 'noches',
-     'nochesExtra', 'nochesIncluidas', 'traslado']);
+    ['diasMovimiento', 'importeMovimientos', 'servicio']);
+  igual('la tarifa por noche no sobrevive al filtro',
+    JSON.stringify(m2.estadoVivo().cotizacion).match(/noche/i), null);
   igual('ni un kilómetro ni tarifa en el estado',
     JSON.stringify(m2.estadoVivo()).match(/km|tarifa|interno/i), null);
   igual('el total sobrevive entero', m2.estadoVivo().cotizacion.total, 21700);

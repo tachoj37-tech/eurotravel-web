@@ -64,16 +64,17 @@ function cierto(nombre, v) { igual(nombre, !!v, true); }
         // el desglose de tramos suma lo que dice el bruto por kilometro
         const sumaTramos = p.interno.tramos.reduce(function (s, d) { return s + d.importe; }, 0);
         if (Math.abs(sumaTramos - p.interno.porKilometro) > 0.5) rotos.tramos.push({ km, dias, p });
-        /* Las tres partes que ve el cliente TIENEN que reconstruir el total.
-           Si no, el resumen enseña un reparto que no suma lo que se cobra. */
+        /* Las partes que ve el cliente TIENEN que reconstruir el total. Si no,
+           el resumen enseña un reparto que no suma lo que se cobra, y eso
+           parece un error de cuentas. */
         const d = p.desglose;
-        if (d.traslado + d.importeNoches + d.importeMovimientos !== p.total) {
+        if (d.servicio + d.importeMovimientos !== p.total) {
           rotos.partes.push({ km, dias, p });
         }
         /* El corte a la centena nunca sube el precio. Se mira contra el
            TRASLADO, no contra el total: desde que hay noches y movimientos, el
            total pasa del bruto por kilómetro con toda razón. */
-        if (d.traslado > p.interno.sinRedondear) rotos.redondeo.push({ km, dias, p });
+        if (p.interno.traslado > p.interno.sinRedondear) rotos.redondeo.push({ km, dias, p });
       }
     }
   }
@@ -85,7 +86,7 @@ function cierto(nombre, v) { igual(nombre, !!v, true); }
   igual('el total nunca queda bajo el mínimo por día', rotos.minimo.length, 0);
   igual('el desglose por tramos suma el bruto', rotos.tramos.length, 0);
   igual('el redondeo nunca sube el precio', rotos.redondeo.length, 0);
-  igual('traslado + noches + movimientos = total', rotos.partes.length, 0);
+  igual('lo que ve el cliente suma el total exacto', rotos.partes.length, 0);
 })();
 
 /* ============ 2. COTIZAR Y COBRAR NO PUEDEN SEPARARSE ============
@@ -152,8 +153,8 @@ function cierto(nombre, v) { igual(nombre, !!v, true); }
       origen: 'A', destino: 'B', unidad: 'Sprinter',
       salida: '2026-09-03T08:00', regreso: '2026-09-06T18:00',
       dias: String(v.dias), km: String(Math.round(km * 10) / 10),
-      nochesExtra: String(p.desglose.nochesExtra),
-      importeNoches: String(p.desglose.importeNoches),
+      nochesExtra: String(p.interno.nochesExtra),
+      importeNoches: String(p.interno.importeNoches),
       movDias: String(p.desglose.diasMovimiento),
       movImporte: String(p.desglose.importeMovimientos),
       total: String(p.total), anticipo: String(p.anticipo), saldo: String(p.saldo)
