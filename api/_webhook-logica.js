@@ -132,9 +132,14 @@ function contratoDesde(m, sesion) {
          a las seis de la mañana, «afuera del Tec, puerta 3» sí. */
       direccionSalida: String(m.puntoSalida || '').trim() || undefined,
       tipoViaje: 'REDONDO',
-      /* Los días con movimiento, uno por renglón, tal como los capturó el
-         cliente. Es exactamente para lo que existe este campo. */
-      itinerario: String(m.movDetalle || '').trim() || undefined,
+      /* Las paradas y los días con movimiento, que es exactamente para lo que
+         existe este campo: «paradas, horarios, lo que se acordó». Van juntos
+         porque el contrato tiene un solo itinerario, y separados por renglón
+         para que se lean como dos cosas distintas. */
+      itinerario: [
+        String(m.paradas || '').trim() ? 'Paradas o escalas: ' + String(m.paradas).trim() : '',
+        String(m.movDetalle || '').trim() ? 'Movimientos: ' + String(m.movDetalle).trim() : ''
+      ].filter(Boolean).join('\n') || undefined,
       /* `conMovimientos` NO se manda, ni siquiera cuando el cliente contestó
          que no habrá. En EuroSystem, `false` libera la unidad para otro
          servicio los días de en medio, y esa decisión no la puede tomar un

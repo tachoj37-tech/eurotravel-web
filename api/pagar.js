@@ -272,6 +272,7 @@ module.exports = async function handler(req, res) {
         km: String(Math.round(kmTotal * 10) / 10),
         /* Dónde se recoge al grupo, con referencias. El contrato lo imprime. */
         puntoSalida: limpia(cuerpo.puntoSalida, 300),
+        paradas: limpia(cuerpo.paradas, 300),
         /* Lo que se cobró de más, partido en sus dos motivos. El webhook lo
            necesita para que el contrato diga POR QUÉ el total es ese; si solo
            viajara la suma, la oficina no podría cuadrarlo con el cliente. */

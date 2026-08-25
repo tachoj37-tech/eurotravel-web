@@ -2026,7 +2026,14 @@ window.IMGS = {
                 <option>Traslado aeropuerto u hotel</option>
               </select>
             </div>
-            <div class="field" data-req>
+            <div class="field">
+              <label for="f-paradas">Paradas o escalas</label>
+              <!-- Sin texto de ejemplo: sugerir "Tequila, Chapala" empuja a
+                   inventar paradas que nadie pidió. Y autocomplete off para que
+                   el navegador tampoco proponga lo que se escribió otro día. -->
+              <input id="f-paradas" type="text" autocomplete="off" />
+            </div>
+            <div class="field full" data-req>
               <label for="f-punto">Punto exacto de salida *</label>
               <input id="f-punto" type="text" placeholder="Afuera del Tec, por la puerta 3" autocomplete="off" />
               <span class="msg">Dinos dónde recogemos al grupo.</span>
@@ -3045,6 +3052,10 @@ window.IMGS = {
             /* Dónde se recoge al grupo, con referencias. Va al contrato: el
                operador necesita un punto, no una ciudad. */
             puntoSalida: (byId('f-punto').value || '').trim(),
+            /* Las paradas van al itinerario del contrato. Antes se quedaban
+               solo en el texto del resumen, así que quien pagaba con paradas
+               capturadas recibía un contrato que no las mencionaba. */
+            paradas: (byId('f-paradas').value || '').trim(),
             /* Los días completos, no solo las horas: /api/pagar saca el precio
                de las horas —igual que /api/cotizar— y el resto lo escribe en
                el itinerario del contrato. */
@@ -3902,7 +3913,8 @@ window.IMGS = {
     /* ================= resumen ================= */
     var CAMPOS_DATOS = [
       ['Nombre', 'f-nombre'], ['Teléfono', 'f-tel'], ['Correo', 'f-mail'], ['Empresa', 'f-empresa'],
-      ['Motivo', 'f-uso'], ['Punto exacto de salida', 'f-punto'], ['Comentarios', 'f-notas']
+      ['Motivo', 'f-uso'], ['Paradas', 'f-paradas'],
+      ['Punto exacto de salida', 'f-punto'], ['Comentarios', 'f-notas']
     ];
 
     function armaResumen() {

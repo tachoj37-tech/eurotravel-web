@@ -188,6 +188,32 @@ function cierto(nombre, v) { igual(nombre, !!v, true); }
     cierto('los movimientos también', /2 días con movimientos/.test(c.observaciones));
     cierto('y qué cubre cada día con movimientos', /8 horas dentro de la zona/.test(c.observaciones));
     cierto('el detalle día por día va en el itinerario', /09:00 a 19:00/.test(c.servicio.itinerario));
+    cierto('y va rotulado como movimientos', /Movimientos: /.test(c.servicio.itinerario));
+
+    /* Las paradas se capturan desde siempre y hasta hoy no llegaban al
+       contrato: se quedaban en el texto del resumen. Quien pagaba con paradas
+       capturadas recibía un contrato que no las mencionaba. */
+    (function () {
+      const conParadas = logica.contratoDesde({
+        folio: 'F', nombre: 'N', telefono: '33', total: '21700', anticipo: '4340',
+        salida: '2026-09-03T08:00', regreso: '2026-09-06T18:00', unidad: 'Sprinter',
+        origen: 'A', destino: 'B',
+        paradas: 'Tequila y Chapala',
+        movDetalle: '2026-09-04: 09:00 a 19:00'
+      }, { id: 'cs_4' });
+
+      cierto('las paradas llegan al itinerario', /Paradas o escalas: Tequila y Chapala/.test(conParadas.servicio.itinerario));
+      cierto('y no se revuelven con los movimientos',
+        conParadas.servicio.itinerario.split('\n').length === 2);
+
+      const soloParadas = logica.contratoDesde({
+        folio: 'F', nombre: 'N', telefono: '33', total: '21700', anticipo: '4340',
+        salida: '2026-09-03T08:00', regreso: '2026-09-06T18:00', unidad: 'Sprinter',
+        origen: 'A', destino: 'B', paradas: 'Tequila'
+      }, { id: 'cs_5' });
+      igual('paradas sin movimientos: un solo renglón',
+        soloParadas.servicio.itinerario, 'Paradas o escalas: Tequila');
+    })();
     /* El punto de recogida va en su propio campo, no revuelto con el origen:
        «Guadalajara» no le sirve al operador a las seis de la mañana. */
     igual('el punto exacto de salida llega al contrato',
