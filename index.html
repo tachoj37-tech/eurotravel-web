@@ -2324,6 +2324,7 @@ window.IMGS = {
 <script src="unidades.js"></script>
 <script src="lugares.js"></script>
 <script src="cotizacion.js"></script>
+<script src="movimientos.js"></script>
 <script>
   (function () {
     'use strict';
@@ -3056,7 +3057,7 @@ window.IMGS = {
             /* Los días completos, no solo las horas: /api/pagar saca el precio
                de las horas —igual que /api/cotizar— y el resto lo escribe en
                el itinerario del contrato. */
-            movimientos: MOV.incluye ? MOV.dias : [],
+            movimientos: movimientos.paraCobrar(),
             rutaTexto: (VIAJE.origen ? VIAJE.origen.place[0] : '') + ' → ' + (VIAJE.destino ? VIAJE.destino.place[0] : '')
           })
         }).then(function (r) {
@@ -3587,20 +3588,16 @@ window.IMGS = {
        "Movimientos" significa que sí hará recorridos locales durante la
        estadía, algo que el cálculo por kilómetros no contempla. */
 
-    var MOV = { incluye: false, dias: [], notas: '' };
+    /* Las reglas viven en movimientos.js —cuántas noches hay, cuántos días
+       caben, si un día está completo, y qué se le manda al servidor—. Aquí
+       queda la pantalla: juntar de los campos y pintar. */
+    var movimientos = MOVIMIENTOS.crea();
+    var MOV = movimientos.estadoVivo();
 
     /* Noches en destino: solo con eso aparece el bloque. */
-    function diasEstadia() {
-      if (!VIAJE.salida || !VIAJE.regreso) return 0;
-      var s = new Date(VIAJE.salida);
-      var r = new Date(VIAJE.regreso);
-      if (isNaN(s) || isNaN(r)) return 0;
-      var a = new Date(s.getFullYear(), s.getMonth(), s.getDate());
-      var b = new Date(r.getFullYear(), r.getMonth(), r.getDate());
-      return Math.max(0, Math.round((b - a) / 86400000));
-    }
+    function diasEstadia() { return movimientos.noches(VIAJE.salida, VIAJE.regreso); }
 
-    function soloFecha(v) { return (v || '').split('T')[0]; }
+    var soloFecha = MOVIMIENTOS.soloFecha;
 
     function fechaLegible(iso) {
       if (!iso) return '';
@@ -3623,8 +3620,7 @@ window.IMGS = {
       // Solo viajes redondos con noches en destino
       movBloque.style.display = dias > 0 ? '' : 'none';
       if (dias === 0) {
-        MOV.incluye = false;
-        MOV.dias = [];
+        movimientos.alCambiarElViaje(VIAJE.salida, VIAJE.regreso);
         pintaInterruptor();
         return;
       }
@@ -3658,27 +3654,19 @@ window.IMGS = {
     }
 
     byId('mov-si').addEventListener('click', function () {
-      MOV.incluye = true;
-      if (!MOV.dias.length) agregaDia();
+      movimientos.enciende(VIAJE.salida, VIAJE.regreso);
+      pintaDias();
       pintaInterruptor();
     });
 
     byId('mov-no').addEventListener('click', function () {
-      MOV.incluye = false;
+      movimientos.apaga();
       pintaInterruptor();
     });
 
-    function agregaDia() {
-      MOV.dias.push({
-        fecha: '', horaInicio: '', horaFin: ''
-      });
-      pintaDias();
-    }
-
     function quitaDia(i) {
-      MOV.dias.splice(i, 1);
-      if (!MOV.dias.length) agregaDia();
-      else pintaDias();
+      movimientos.quitaDia(i);
+      pintaDias();
     }
 
     /* Cada renglón se arma en DOM (no con innerHTML) para poder enganchar
@@ -3753,14 +3741,16 @@ window.IMGS = {
     }
 
     byId('mov-agregar').addEventListener('click', function () {
-      if (MOV.dias.length >= diasEstadia()) {
+      /* El tope lo decide movimientos.js, que es el mismo número que aplica
+         el servidor. Aquí solo se escribe el aviso. */
+      if (!movimientos.agregaDia(VIAJE.salida, VIAJE.regreso)) {
         avisaMov('No puedes tener más días con movimiento que noches en destino (' + diasEstadia() + ').');
         return;
       }
-      agregaDia();
+      pintaDias();
     });
 
-    byId('mov-notas').addEventListener('input', function () { MOV.notas = this.value; });
+    byId('mov-notas').addEventListener('input', function () { movimientos.ponNotas(this.value); });
 
     function avisaMov(texto) {
       var el = byId('mov-error');
@@ -3770,55 +3760,35 @@ window.IMGS = {
     }
 
     /* Validación: no se continúa con el bloque incompleto */
+    /* Las reglas las revisa movimientos.js y devuelve una lista de problemas
+       —qué día, qué campo y por qué—. Aquí solo se pinta el veredicto: marcar
+       el campo en rojo y escribir el aviso. */
     function validaMovimientos() {
-      if (!MOV.incluye) return true;
+      var v = movimientos.revisa(VIAJE.salida, VIAJE.regreso);
+      if (v.ok) return true;
 
-      var tope = diasEstadia();
-      /* Es el MISMO tope que aplica el servidor (movimientosDe en _tarifa.js).
-         Si aquí se dejaran pasar más días de los que allá se cuentan, el
-         cliente vería un precio y se le cobraría otro. */
-      if (MOV.dias.length > tope) { avisaMov('Los días con movimiento no pueden exceder las ' + tope + ' noches en destino.'); return false; }
+      var aviso = '';
 
-      var ok = true;
-      var vistas = {};
+      v.problemas.forEach(function (p) {
+        if (p.tipo === 'tope') { aviso = aviso || p.aviso; return; }
 
-      MOV.dias.forEach(function (dia, i) {
-        var caja = movLista.children[i];
-        if (!caja) return;
-        var campos = caja.querySelectorAll('.field');
-
-        function marca(idx, mal) {
-          if (campos[idx]) campos[idx].classList.toggle('err', mal);
-          if (mal) ok = false;
+        var caja = movLista.children[p.dia];
+        if (caja) {
+          var campos = caja.querySelectorAll('.field');
+          if (campos[p.campo]) campos[p.campo].classList.add('err');
         }
 
-        /* Tres campos, tres revisiones. Los índices siguen el orden en que
-           pintaDias() los mete en la caja: fecha, inicio, fin. */
-        marca(0, !dia.fecha);
-        marca(1, !dia.horaInicio);
-        marca(2, !dia.horaFin);
-
-        if (dia.fecha) {
-          if (dia.fecha < soloFecha(VIAJE.salida) || dia.fecha > soloFecha(VIAJE.regreso)) {
-            marca(0, true);
-            avisaMov('La fecha del día ' + (i + 1) + ' está fuera del rango del viaje.');
-          } else if (vistas[dia.fecha]) {
-            marca(0, true);
-            avisaMov('La fecha ' + fechaLegible(dia.fecha) + ' está repetida en dos días.');
-          }
-          vistas[dia.fecha] = true;
-        }
-
-        if (dia.horaInicio && dia.horaFin && dia.horaFin <= dia.horaInicio) {
-          marca(2, true);
-          avisaMov('En el día ' + (i + 1) + ' la hora de fin debe ser posterior a la de inicio.');
+        /* La fecha repetida se redacta aquí porque necesita el formato
+           legible, que es cosa de la pantalla. */
+        if (p.tipo === 'repetida') {
+          aviso = aviso || 'La fecha ' + fechaLegible(p.fecha) + ' está repetida en dos días.';
+        } else if (p.aviso) {
+          aviso = aviso || p.aviso;
         }
       });
 
-      if (!ok && !byId('mov-error').classList.contains('on')) {
-        avisaMov('Completa los datos de los días con movimiento.');
-      }
-      return ok;
+      avisaMov(aviso || 'Completa los datos de los días con movimiento.');
+      return false;
     }
 
     /* Renglones que se agregan al resumen y al mensaje que se envía */
@@ -3903,7 +3873,7 @@ window.IMGS = {
       boton.disabled = true;
       boton.textContent = 'Calculando…';
 
-      maquina.ponMovimientos(MOV.incluye ? MOV.dias : []);
+      maquina.ponMovimientos(movimientos.paraCobrar());
 
       cotizaViaje().then(pintaListo, pintaListo);
 
