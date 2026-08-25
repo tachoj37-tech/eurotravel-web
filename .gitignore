@@ -12,3 +12,8 @@
 .DS_Store
 Thumbs.db
 node_modules
+
+# Skills de agentes (herramienta, no producto). El lock si se versiona:
+# con el se vuelven a instalar iguales en otra maquina.
+.agents/
+.claude/
