@@ -127,6 +127,10 @@ function contratoDesde(m, sesion) {
       fechaRegreso: conZona(m.regreso),
       origen: String(m.origen || '').trim() || 'Por confirmar',
       destino: String(m.destino || '').trim() || 'Por confirmar',
+      /* El punto exacto donde se recoge al grupo, con referencias. Es un campo
+         aparte del origen a propósito: «Guadalajara» no le sirve al operador
+         a las seis de la mañana, «afuera del Tec, puerta 3» sí. */
+      direccionSalida: String(m.puntoSalida || '').trim() || undefined,
       tipoViaje: 'REDONDO',
       /* Los días con movimiento, uno por renglón, tal como los capturó el
          cliente. Es exactamente para lo que existe este campo. */

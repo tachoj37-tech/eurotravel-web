@@ -180,13 +180,19 @@ function cierto(nombre, v) { igual(nombre, !!v, true); }
       salida: '2026-09-03T08:00', regreso: '2026-09-10T18:00', unidad: 'Sprinter',
       origen: 'A', destino: 'B',
       nochesExtra: '4', importeNoches: '4000', movDias: '2', movImporte: '9000',
-      movDetalle: '2026-09-04: 09:00 a 19:00, 3 recorridos | 2026-09-06: 08:00 a 22:00'
+      movDetalle: '2026-09-04: 09:00 a 19:00, 3 recorridos | 2026-09-06: 08:00 a 22:00',
+      puntoSalida: 'Afuera del Tec, por la puerta 3'
     }, { id: 'cs_2' });
 
     cierto('las noches extra se explican en el contrato', /4 noches extra/.test(c.observaciones));
     cierto('los movimientos también', /2 días con movimientos/.test(c.observaciones));
     cierto('y qué cubre cada día con movimientos', /8 horas dentro de la zona/.test(c.observaciones));
     cierto('el detalle día por día va en el itinerario', /09:00 a 19:00/.test(c.servicio.itinerario));
+    /* El punto de recogida va en su propio campo, no revuelto con el origen:
+       «Guadalajara» no le sirve al operador a las seis de la mañana. */
+    igual('el punto exacto de salida llega al contrato',
+      c.servicio.direccionSalida, 'Afuera del Tec, por la puerta 3');
+    igual('y el origen sigue siendo la ciudad', c.servicio.origen, 'A');
     /* `conMovimientos` NO se manda ni con movimientos ni sin ellos: en
        EuroSystem, `false` libera la unidad para otro servicio, y esa decisión
        no la toma un formulario de internet. */
@@ -200,6 +206,8 @@ function cierto(nombre, v) { igual(nombre, !!v, true); }
     igual('sin extras, no se inventa el renglón',
       /El total incluye/.test(sinExtras.observaciones), false);
     igual('y sin movimientos no hay itinerario', sinExtras.servicio.itinerario, undefined);
+    igual('sin punto de salida, el campo no viaja vacío',
+      sinExtras.servicio.direccionSalida, undefined);
   })();
 
   /* Y la regla del kilómetro hasta el final: el contrato lleva montos, pero

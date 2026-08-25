@@ -737,6 +737,41 @@
   @media (min-width: 640px) { .grid-2 { grid-template-columns: 1fr 1fr; } }
   .panel-actions { display: flex; justify-content: space-between; gap: 12px; margin-top: 24px; flex-wrap: wrap; }
 
+  /* Regresar, arriba a la izquierda. Va antes del indicador de pasos para que
+     sea lo primero que se toca al entrar, y en el celular queda al alcance del
+     pulgar sin tener que bajar hasta el final del formulario. */
+  .volver-arriba {
+    display: inline-flex; align-items: center; gap: 7px;
+    background: none; border: 0; padding: 6px 10px 6px 0;
+    margin: 0 0 14px -2px;
+    color: var(--muted); font: inherit; font-size: 15px; font-weight: 500;
+    cursor: pointer; border-radius: var(--radius-sm);
+  }
+  .volver-arriba svg { width: 19px; height: 19px; flex: 0 0 auto; }
+  .volver-arriba:hover { color: var(--ink); }
+  .volver-arriba:focus-visible { outline: 2px solid var(--red); outline-offset: 2px; }
+
+  /* Lo que capture aqui es lo que va a decir su contrato. */
+  .aviso-contrato {
+    display: flex; gap: 12px; align-items: flex-start;
+    border: 1px solid var(--line); border-left: 3px solid var(--red);
+    border-radius: var(--radius-sm); background: var(--soft);
+    padding: 14px 16px; margin: 0 0 22px;
+  }
+  .aviso-contrato svg { width: 20px; height: 20px; color: var(--red); flex: 0 0 auto; margin-top: 2px; }
+  .aviso-contrato p { margin: 0; font-size: 14.5px; line-height: 1.55; color: var(--ink-2); }
+  .aviso-contrato b { color: var(--ink); }
+
+  /* Cuando el origen o el destino son nomas el centro de la ciudad. */
+  .pide-exacto {
+    display: flex; gap: 12px; align-items: flex-start; flex-wrap: wrap;
+    border: 1px dashed var(--red); border-radius: var(--radius-sm);
+    background: #fff8f8; padding: 14px 16px; margin: 0 0 22px;
+  }
+  .pide-exacto svg.pin { width: 20px; height: 20px; color: var(--red); flex: 0 0 auto; margin-top: 2px; }
+  .pide-exacto p { margin: 0; flex: 1 1 260px; font-size: 14.5px; line-height: 1.55; color: var(--ink-2); }
+  .pide-exacto b { color: var(--ink); }
+
   .summary { border: 1px solid var(--line); border-radius: var(--radius); background: var(--soft); padding: 20px; }
   .summary dl { margin: 14px 0 0; }
   .summary .row { display: flex; justify-content: space-between; gap: 16px; padding: 9px 0; border-bottom: 1px dashed #dededa; font-size: 14px; }
@@ -1400,6 +1435,7 @@ window.IMGS = {
 <svg width="0" height="0" style="position: absolute" aria-hidden="true">
   <defs>
     <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-back" viewBox="0 0 24 24"><path d="M19 12H5M11 6l-6 6 6 6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
     <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3l7 3v5c0 4.4-3 8.4-7 10-4-1.6-7-5.6-7-10V6l7-3z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M9 12l2 2 4-4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></symbol>
     <symbol id="i-pin" viewBox="0 0 24 24"><path d="M12 21s7-5.6 7-11a7 7 0 10-14 0c0 5.4 7 11 7 11z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><circle cx="12" cy="10" r="2.6" fill="none" stroke="currentColor" stroke-width="1.6"/></symbol>
     <symbol id="i-users" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.2" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M3.5 19a5.5 5.5 0 0111 0M16 5.2a3.2 3.2 0 010 5.9M17.5 19a5.6 5.6 0 00-2-4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></symbol>
@@ -1877,6 +1913,10 @@ window.IMGS = {
     <!-- ===== PASO 2 · TUS DATOS ===== -->
     <div id="paso-datos" style="display: none">
       <div class="wrap pad">
+        <button class="volver-arriba" type="button" id="atras-datos">
+          <svg aria-hidden="true"><use href="#i-back" /></svg> Regresar al viaje
+        </button>
+
         <div class="steps steps-top">
           <div class="step done"><b>&#10003;</b> Viaje <span></span></div>
           <div class="step on"><b>2</b> Tus datos <span></span></div>
@@ -1938,6 +1978,22 @@ window.IMGS = {
         </div>
 
         <div class="datos-card">
+          <div class="aviso-contrato">
+            <svg aria-hidden="true"><use href="#i-shield" /></svg>
+            <p>
+              <b>Revisa bien estos datos.</b> Con ellos se genera tu contrato: el nombre va
+              impreso tal como lo escribas, y al teléfono y al correo te llegan el folio y las
+              instrucciones para abonar. Un dígito de más y no te encontramos.
+            </p>
+          </div>
+
+          <!-- Aparece solo si el origen o el destino son el centro de la ciudad -->
+          <div class="pide-exacto" id="pide-exacto" style="display: none">
+            <svg class="pin" aria-hidden="true"><use href="#i-pin" /></svg>
+            <p id="pide-exacto-texto"></p>
+            <button class="btn btn-line btn-sm" type="button" id="ir-marcar">Marcar la dirección</button>
+          </div>
+
           <div class="grid-2">
             <div class="field" data-req>
               <label for="f-nombre">Nombre completo *</label>
@@ -1970,9 +2026,10 @@ window.IMGS = {
                 <option>Traslado aeropuerto u hotel</option>
               </select>
             </div>
-            <div class="field">
-              <label for="f-paradas">Paradas o escalas</label>
-              <input id="f-paradas" type="text" placeholder="Tequila, Chapala…" />
+            <div class="field" data-req>
+              <label for="f-punto">Punto exacto de salida *</label>
+              <input id="f-punto" type="text" placeholder="Afuera del Tec, por la puerta 3" autocomplete="off" />
+              <span class="msg">Dinos dónde recogemos al grupo.</span>
             </div>
             <div class="field full">
               <label for="f-notas">Comentarios</label>
@@ -1991,6 +2048,10 @@ window.IMGS = {
     <!-- ===== PASO 3 · LISTO ===== -->
     <div id="paso-listo" style="display: none">
       <div class="wrap pad">
+        <button class="volver-arriba" type="button" id="atras-listo">
+          <svg aria-hidden="true"><use href="#i-back" /></svg> Regresar a tus datos
+        </button>
+
         <div class="steps steps-top">
           <div class="step done"><b>&#10003;</b> Viaje <span></span></div>
           <div class="step done"><b>&#10003;</b> Tus datos <span></span></div>
@@ -2981,6 +3042,9 @@ window.IMGS = {
             telefono: (byId('f-tel').value || '').trim(),
             canal: canal,
             unidad: VIAJE.unidad ? VIAJE.unidad.name : '',
+            /* Dónde se recoge al grupo, con referencias. Va al contrato: el
+               operador necesita un punto, no una ciudad. */
+            puntoSalida: (byId('f-punto').value || '').trim(),
             /* Los días completos, no solo las horas: /api/pagar saca el precio
                de las horas —igual que /api/cotizar— y el resto lo escribe en
                el itinerario del contrato. */
@@ -3447,12 +3511,52 @@ window.IMGS = {
       if (!b) return;
       pintaResumenViaje();
       refrescaBloqueMovimientos();
+      pideDireccionExacta();
       verPantalla('paso-datos');
     });
 
     byId('editar-viaje').addEventListener('click', function () { verPantalla('paso-viaje'); });
     byId('volver-viaje').addEventListener('click', function () { verPantalla('paso-viaje'); });
     byId('volver-datos').addEventListener('click', function () { verPantalla('paso-datos'); });
+
+    /* Los mismos saltos, pero desde arriba. Abajo ya había un «Atrás» al final
+       del formulario; en el celular eso obliga a recorrer toda la pantalla
+       para retroceder. */
+    byId('atras-datos').addEventListener('click', function () { verPantalla('paso-viaje'); });
+    byId('atras-listo').addEventListener('click', function () { verPantalla('paso-datos'); });
+
+    /* ---- la dirección exacta ----
+       El precio sale de los kilómetros, así que si una punta es nomás el
+       centro de la ciudad, la cifra se mueve cuando se afina. Y el día del
+       viaje el operador necesita un punto, no una ciudad. Aquí se pide, con
+       el botón que lleva justo al campo que hay que corregir. */
+    var puntoAMarcar = 'origen';
+
+    function pideDireccionExacta() {
+      var faltaOrigen = !puntoExacto(VIAJE.origen);
+      var faltaDestino = !puntoExacto(VIAJE.destino);
+      var caja = byId('pide-exacto');
+
+      if (!faltaOrigen && !faltaDestino) { caja.style.display = 'none'; return; }
+
+      puntoAMarcar = faltaOrigen ? 'origen' : 'destino';
+      var cual = (faltaOrigen && faltaDestino)
+        ? 'del origen y del destino'
+        : (faltaOrigen ? 'del origen' : 'del destino');
+
+      byId('pide-exacto-texto').innerHTML =
+        '<b>Nos falta la dirección exacta ' + cual + '.</b> Por ahora tomamos el centro de ' +
+        'la ciudad, así que el precio todavía se puede mover. Marca el hotel, el salón o el ' +
+        'domicilio y la tarifa queda firme.';
+      caja.style.display = '';
+    }
+
+    byId('ir-marcar').addEventListener('click', function () {
+      verPantalla('paso-viaje');
+      /* Se abre el buscador de la punta que falta, no el genérico: el cliente
+         ya dijo qué ciudad, lo que falta es la calle. */
+      byId(puntoAMarcar === 'origen' ? 'btn-origen' : 'btn-destino').click();
+    });
 
     function validaDatos() {
       var ok = true;
@@ -3798,7 +3902,7 @@ window.IMGS = {
     /* ================= resumen ================= */
     var CAMPOS_DATOS = [
       ['Nombre', 'f-nombre'], ['Teléfono', 'f-tel'], ['Correo', 'f-mail'], ['Empresa', 'f-empresa'],
-      ['Motivo', 'f-uso'], ['Paradas', 'f-paradas'], ['Comentarios', 'f-notas']
+      ['Motivo', 'f-uso'], ['Punto exacto de salida', 'f-punto'], ['Comentarios', 'f-notas']
     ];
 
     function armaResumen() {
