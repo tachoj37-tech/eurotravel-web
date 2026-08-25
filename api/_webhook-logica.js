@@ -168,24 +168,11 @@ function contratoDesde(m, sesion) {
   };
 }
 
-/* Le pregunta a Stripe como esta de verdad una sesion. Es la fuente de
-   verdad de todo esto: lo que llega en el aviso solo sirve para saber POR
-   CUAL preguntar. */
-async function traeSesion(id) {
-  const clave = (process.env.STRIPE_SECRET_KEY || '').trim();
-  if (!clave) return { error: 'sin clave de Stripe' };
-  if (!/^cs_[A-Za-z0-9_]{1,100}$/.test(String(id || ''))) return { error: 'id de sesión con mala forma' };
-  try {
-    const r = await fetch('https://api.stripe.com/v1/checkout/sessions/' + encodeURIComponent(id), {
-      headers: { Authorization: 'Bearer ' + clave }
-    });
-    const d = await r.json();
-    if (!r.ok || d.error) return { error: 'Stripe no reconoce la sesión' };
-    return { sesion: d };
-  } catch (e) {
-    return { error: 'no se pudo consultar a Stripe', reintentar: true };
-  }
-}
+/* Preguntarle a Stripe como esta de verdad una sesion es la fuente de verdad
+   de todo esto: lo que llega en el aviso solo sirve para saber POR CUAL
+   preguntar. Vive en `_stripe.js`, junto con la regla de si esta pagada —que
+   antes estaba escrita aqui y otra vez en confirmar.js—. */
+const stripe = require('./_stripe');
 
 /* `crudo` puede ser el cuerpo tal cual (Buffer/texto) o el objeto ya
    parseado, segun lo que deje pasar el entorno. */
@@ -244,7 +231,7 @@ async function procesa(crudo, cabeceraFirma) {
      Es mas fuerte que creerle a un aviso firmado, porque ni siquiera un
      aviso legitimo pero viejo puede afirmar algo que ya cambio. */
   const idAviso = (evento.data && evento.data.object && evento.data.object.id) || '';
-  const consulta = await traeSesion(idAviso);
+  const consulta = await stripe.traeSesion(idAviso);
   if (consulta.error) {
     console.error('[webhook] ' + consulta.error + ' (' + idAviso + ')');
     // Si Stripe no contesto, que se reintente. Si no reconoce la sesion, no.
@@ -257,7 +244,7 @@ async function procesa(crudo, cabeceraFirma) {
   /* No basta el nombre del evento: `completed` tambien llega con OXXO, con el
      voucher generado y el dinero SIN entrar. Se registra contrato solo cuando
      el pago de verdad esta hecho. */
-  const pagado = sesion.payment_status === 'paid' || sesion.payment_status === 'no_payment_required';
+  const pagado = consulta.estado === 'pagado';
   if (!pagado) {
     console.log('[webhook] ' + tipo + ' sin pago aún (' + sesion.payment_status + '), no se registra');
     return { status: 200, cuerpo: { recibido: true, pendiente: true } };

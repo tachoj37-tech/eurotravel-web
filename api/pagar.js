@@ -26,14 +26,11 @@
 const tarifa = require('./_tarifa');
 const rutas = require('./_rutas');
 const defensas = require('./_defensas');   // origen, freno, sitio e IP, en un lugar
+const stripe = require('./_stripe');       // y todo lo de Stripe, en otro
 
-const STRIPE = 'https://api.stripe.com/v1';
-
-/* Seguro contra cobrar de verdad antes de tiempo.
-   Mientras esto sea false, una clave sk_live_ no cobra nada: la pantalla avisa
-   y el viaje se cierra por telefono. Se pone en true cuando el recorrido ya se
-   probo completo con la clave de prueba y el dueño da el visto bueno. */
-const PERMITIR_COBRO_REAL = false;
+/* El seguro contra cobrar de verdad antes de tiempo —PERMITIR_COBRO_REAL—
+   ya no vive aqui: se mudo a `_stripe.js`. Asi cualquier cobro que se agregue
+   mañana pasa por el candado sin que nadie tenga que acordarse de ponerlo. */
 
 /* OXXO no recibe cualquier cantidad: el voucher tiene tope. Si se le pide a
    Stripe un pago en efectivo por encima del limite, rechaza la sesion entera
@@ -60,18 +57,9 @@ function limpia(v, largo) {
   return String(v == null ? '' : v).replace(/[\r\n\t]+/g, ' ').trim().slice(0, largo || 120);
 }
 
-/* Stripe cambia por "?" lo que se sale del latino basico. Los acentos y el
-   punto medio pasan bien; la flecha no, y en la pantalla de cobro se veia
-   "Guadalajara ? Puerto Vallarta". */
-function paraStripe(t) {
-  return String(t == null ? '' : t)
-    .replace(/[→➡➔]/g, 'a')
-    .replace(/[‐-―]/g, '-')
-    .replace(/[“”‘’]/g, "'")
-    .replace(/[^\x00-ÿ]/g, '')
-    .replace(/\s{2,}/g, ' ')
-    .trim();
-}
+/* `paraStripe` —el saneado del texto que Stripe imprime en la pantalla de
+   cobro— se mudo a `_stripe.js`: es cosa de Stripe, no de este endpoint. */
+const paraStripe = stripe.paraStripe;
 
 function correoValido(c) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(c);
@@ -104,63 +92,27 @@ function detalleMovimientos(lista, cuantosCuentan) {
   return filas.join(' | ').slice(0, 450);
 }
 
-/* Stripe recibe formularios, no JSON. Los objetos anidados van como
-   metadata[folio], line_items[0][price_data][currency], y así. */
-function aFormulario(obj, prefijo, salida) {
-  salida = salida || [];
-  Object.keys(obj).forEach(function (k) {
-    const v = obj[k];
-    if (v === undefined || v === null) return;
-    const llave = prefijo ? prefijo + '[' + k + ']' : k;
-    if (typeof v === 'object' && !Array.isArray(v)) {
-      aFormulario(v, llave, salida);
-    } else if (Array.isArray(v)) {
-      v.forEach(function (item, i) {
-        if (typeof item === 'object') aFormulario(item, llave + '[' + i + ']', salida);
-        else salida.push(encodeURIComponent(llave + '[' + i + ']') + '=' + encodeURIComponent(item));
-      });
-    } else {
-      salida.push(encodeURIComponent(llave) + '=' + encodeURIComponent(v));
-    }
-  });
-  return salida;
-}
-
-async function aStripe(ruta, cuerpo, clave) {
-  const r = await fetch(STRIPE + ruta, {
-    method: 'POST',
-    headers: {
-      'Authorization': 'Bearer ' + clave,
-      'Content-Type': 'application/x-www-form-urlencoded'
-    },
-    body: aFormulario(cuerpo).join('&')
-  });
-  return { ok: r.ok, datos: await r.json() };
-}
+/* La codificacion de formularios que pide Stripe y la llamada en si tambien se
+   mudaron a `_stripe.js`: son de Stripe, no de este endpoint. Aqui quedo lo
+   que si es de aqui —el folio, el correo, los montos, la metadata—. */
 
 module.exports = async function handler(req, res) {
   if (defensas.puerta(req, res)) return;
 
-  // se recorta: al copiar del panel es facil que se cuele un espacio o un salto
-  // de linea, y con eso hasta la cabecera de autorizacion sale mal
-  const claveStripe = (process.env.STRIPE_SECRET_KEY || '').trim();
   const claveRutas = process.env.GOOGLE_ROUTES_KEY;
 
-  if (!claveStripe) {
+  /* Dos motivos para no poder cobrar —sin clave, o clave de produccion con el
+     candado cerrado— y los dos los decide `_stripe.js`. El mensaje que ve el
+     cliente es el mismo en los dos casos: no tiene por que enterarse de cual. */
+  const noSePuede = stripe.porQueNoSePuedeCobrar();
+  if (noSePuede) {
     res.status(503).json({
-      error: 'stripe sin configurar',
+      error: noSePuede,
       aviso: 'El pago en línea todavía no está activo.'
     });
     return;
   }
 
-  if (claveStripe.indexOf('sk_live_') === 0 && !PERMITIR_COBRO_REAL) {
-    res.status(503).json({
-      error: 'clave de produccion con el cobro real todavia cerrado',
-      aviso: 'El pago en línea todavía no está activo.'
-    });
-    return;
-  }
   if (!claveRutas) {
     res.status(503).json({
       error: 'routes sin configurar',
@@ -229,7 +181,7 @@ module.exports = async function handler(req, res) {
     const ruta = limpia(cuerpo.rutaTexto, 90) || 'Servicio de transporte';
     const unidad = limpia(cuerpo.unidad, 60);
 
-    const sesion = await aStripe('/checkout/sessions', {
+    const sesion = await stripe.creaSesionDeCobro({
       mode: 'payment',
       locale: 'es-419',   // español de America: los montos salen $4,420.00 y no 4420,00
       customer_email: correo,
@@ -291,7 +243,7 @@ module.exports = async function handler(req, res) {
         anticipo: String(p.anticipo),
         saldo: String(p.saldo)
       }
-    }, claveStripe);
+    });
 
     if (!sesion.ok || !sesion.datos.url) {
       res.status(502).json({
