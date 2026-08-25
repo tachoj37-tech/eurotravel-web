@@ -27,6 +27,7 @@
 
 const defensas = require('./_defensas');
 const stripe = require('./_stripe');
+const publico = require('./_publico');
 
 /* Consultar una sesion es barato, pero es una puerta que habla con Stripe:
    se frena igual. Alto para que quien pago pueda recargar sin topar. */
@@ -71,15 +72,9 @@ module.exports = async function handler(req, res) {
      crearia. */
   const estado = consulta.estado;
 
-  /* Lista blanca. El folio y los montos salen de la METADATA DE STRIPE, no de
-     lo que mando el navegador. `km` esta en la metadata y se queda aqui. */
-  res.status(200).json({
-    estado: estado,
-    folio: typeof m.folio === 'string' ? m.folio.slice(0, 20) : '',
-    anticipo: Number(m.anticipo) || 0,
-    saldo: Number(m.saldo) || 0,
-    total: Number(m.total) || 0,
-    ruta: typeof m.ruta === 'string' ? m.ruta.slice(0, 90) : '',
-    canal: m.canal === 'whatsapp' ? 'whatsapp' : 'correo'
-  });
+  /* La lista blanca ya no se escribe aqui: vive en `_publico.js`, junto con
+     la de la cotizacion y la del cobro. El folio y los montos salen de la
+     METADATA DE STRIPE, no de lo que mando el navegador — y en esa metadata
+     tambien esta `km`, que de ahi no pasa. */
+  res.status(200).json(publico.confirmacion(m, estado));
 };

@@ -27,6 +27,7 @@ const tarifa = require('./_tarifa');
 const rutas = require('./_rutas');
 const defensas = require('./_defensas');   // origen, freno, sitio e IP, en un lugar
 const stripe = require('./_stripe');       // y todo lo de Stripe, en otro
+const publico = require('./_publico');     // y qué puede ver el cliente, en otro
 
 /* El seguro contra cobrar de verdad antes de tiempo —PERMITIR_COBRO_REAL—
    ya no vive aqui: se mudo a `_stripe.js`. Asi cualquier cobro que se agregue
@@ -253,15 +254,12 @@ module.exports = async function handler(req, res) {
       return;
     }
 
-    res.status(200).json({
-      url: sesion.datos.url,
-      folio: folio,
-      total: p.total,
-      anticipo: p.anticipo,
-      saldo: p.saldo,
-      porcentajeAnticipo: p.porcentajeAnticipo,
-      desglose: p.desglose
-    });
+    /* Las mismas reglas que /api/cotizar, del mismo lugar. Antes cada uno
+       enumeraba sus campos a mano y podían separarse. */
+    res.status(200).json(Object.assign(
+      { url: sesion.datos.url, folio: folio },
+      publico.precio(p)
+    ));
   } catch (e) {
     res.status(502).json({ error: String(e && e.message), aviso: 'No pudimos abrir el pago en este momento.' });
   }

@@ -24,6 +24,7 @@
 const tarifa = require('./_tarifa');   // las reglas del dinero viven ahi, no aqui
 const rutas  = require('./_rutas');    // y medir kilometros, alla
 const defensas = require('./_defensas'); // origen, freno e IP, en un lugar
+const publico = require('./_publico');   // y que puede ver el cliente, alla
 
 // La Routes API cuesta más que el autocompletado, así que los topes son más bajos
 const freno = defensas.creaFreno({ porMinuto: 30, porDia: 500 });
@@ -92,22 +93,14 @@ module.exports = async function handler(req, res) {
       destino: cuerpo.destino
     });
 
-    /* Se enumera a mano lo que sale, en vez de mandar el objeto completo.
-       Los kilometros NO salen: con el total, la tarifa por kilometro se saca
-       dividiendo, y el dueño pidio que el cliente nunca la vea. Lo demas
-       —tarifa, minimo, calculo sin redondear— se queda en el servidor. */
-    res.status(200).json({
-      dias: dias,
-      redondo: redondo,
-      total: p.total,
-      ivaIncluido: p.ivaIncluido,
-      porcentajeAnticipo: p.porcentajeAnticipo,
-      anticipo: p.anticipo,
-      saldo: p.saldo,
-      /* El desglose sí sale: dice cuánto pesan las noches extra y los
-         movimientos, sin decir de dónde salió el traslado. */
-      desglose: p.desglose
-    });
+    /* Qué del precio puede salir NO se decide aquí: lo decide `_publico.js`,
+       que es el único dueño de la regla del kilómetro. Antes se enumeraba a
+       mano en este archivo y otra vez en `pagar.js`, y las dos listas podían
+       separarse. Aquí solo se agrega lo que no es dinero. */
+    res.status(200).json(Object.assign(
+      { dias: dias, redondo: redondo },
+      publico.precio(p)
+    ));
   } catch (e) {
     res.status(502).json({ error: 'No se pudo calcular la distancia' });
   }
