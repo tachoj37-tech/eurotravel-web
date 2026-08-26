@@ -108,6 +108,20 @@ module.exports = async function handler(req, res) {
       : 'Sin esta clave el contrato se registra igual, pero al cliente NO le llega nada.'
   };
 
+  /* La llave que firma las ligas y las sesiones. NUNCA su valor: solo si
+     está y si mide lo suficiente. Una llave corta se puede adivinar a
+     fuerza bruta, y con ella se fabrican ligas y sesiones de cualquiera. */
+  const ligas = (process.env.LIGAS_SECRETO || '').trim();
+  salida.LIGAS_SECRETO = {
+    configurada: !!ligas,
+    largo: ligas.length,
+    ojo: !ligas
+      ? 'Sin esta llave el correo sale sin botón y nadie puede entrar a ver su viaje.'
+      : ligas.length < 32
+        ? 'CORTA. Genera una de 32 caracteres o más: con randomBytes(32).toString("base64url").'
+        : 'Bien. Cambiarla invalida TODAS las ligas ya mandadas.'
+  };
+
   if (places) salida.GOOGLE_PLACES_KEY.prueba = await pruebaPlaces(places);
   if (routes) salida.GOOGLE_ROUTES_KEY.prueba = await pruebaRoutes(routes);
 

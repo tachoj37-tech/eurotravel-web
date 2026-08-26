@@ -193,6 +193,24 @@ const HORA = 3600000;
   igual('ni una que la contenga', acceso.sesionDe(req('preven=trampa')), '');
   igual('sin cookie, vacío', acceso.sesionDe(req('')), '');
   igual('sin cabeceras tampoco revienta', acceso.sesionDe({}), '');
+
+  /* --------------------------------------------------------------
+     DOS COOKIES CON EL MISMO NOMBRE: NO SE ELIGE, NO SE ABRE
+
+     Se encontro atacando la propia liga. Antes se quedaba con LA ULTIMA,
+     que es una decision arbitraria: metiendo una segunda cookie `ev`
+     despues de la buena, la buena se anulaba. Nadie entra a nada ajeno con
+     eso —tendria que firmarla— pero deja fuera al cliente legitimo, o lo
+     mete a una sesion que no es la suya.
+
+     Un navegador normal manda UNA. Dos es una anomalia, y ante una
+     anomalia en un candado la respuesta es no abrir.
+     -------------------------------------------------------------- */
+  igual('dos cookies con el mismo nombre: ninguna vale',
+    acceso.sesionDe(req('ev=buena; ev=mala')), '');
+  igual('ni al reves', acceso.sesionDe(req('ev=mala; ev=buena')), '');
+  igual('ni tres', acceso.sesionDe(req('ev=a; otra=x; ev=b; ev=c')), '');
+  igual('una sola sigue valiendo', acceso.sesionDe(req('otra=x; ev=buena; mas=y')), 'buena');
 })();
 
 /* ============ 9. LA PISTA DEL CORREO ============

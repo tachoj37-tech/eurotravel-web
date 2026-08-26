@@ -169,6 +169,23 @@
     var pagado = d.estado === 'pagado';
     var partes = [];
 
+    /* ------------------------------------------------------------
+       LA LIGA SALE DE LA BARRA DE DIRECCIONES
+
+       Ya se usó: de aquí en adelante quien manda es la cookie. Dejarla a
+       la vista es dejarla para que alguien la lea por encima del hombro,
+       o para que el cliente copie la dirección y se la mande a alguien
+       sin darse cuenta de lo que está compartiendo.
+
+       Del historial ya no se puede sacar —el clic ya ocurrió— pero de la
+       pantalla sí, y es gratis.
+       ------------------------------------------------------------ */
+    try {
+      if (window.history && history.replaceState) {
+        history.replaceState(null, '', location.pathname);
+      }
+    } catch (e) { /* si el navegador no deja, no pasa nada */ }
+
     partes.push(
       '<div class="folio-caja">' +
         '<div class="eyebrow">Tu folio</div>' +
@@ -220,7 +237,28 @@
           (d.folio || '')) + '">Cambiar algo de mi viaje</a>' +
       '</div>');
 
+    /* Ocho horas en una computadora prestada es mucho tiempo. */
+    partes.push(
+      '<p style="text-align:center;margin:20px 0 0">' +
+        '<button class="enlace" id="salir">Cerrar sesión en este dispositivo</button></p>');
+
     cuerpo.innerHTML = partes.join('');
+
+    document.getElementById('salir').addEventListener('click', function () {
+      fetch('/api/cerrar-sesion', { method: 'POST' }).then(function () {
+        cuerpo.innerHTML =
+          '<div class="tarjeta" style="text-align:center">' +
+            '<h1 style="font-size:19px;margin:0 0 8px">Cerraste tu sesión</h1>' +
+            '<p class="nota" style="margin:0">Para volver a entrar, abre otra vez la liga ' +
+            'de tu correo. Te pediremos un código nuevo.</p>' +
+          '</div>';
+      }).catch(function () {
+        /* Aunque falle la red, la cookie se borra del navegador: vale más
+           cerrar de este lado que dejarla abierta por un error de red. */
+        document.cookie = 'ev=; Path=/; Max-Age=0';
+        location.replace(location.pathname);
+      });
+    });
   }
 
   /* ============================================================

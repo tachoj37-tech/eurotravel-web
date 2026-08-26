@@ -211,17 +211,34 @@ function cookieBorrada() {
   return COOKIE + '=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=Lax';
 }
 
-/* Lee la cookie de la cabecera. No usa una expresión sobre toda la cadena:
-   una cookie que se llame `xev` no puede hacerse pasar por `ev`. */
+/* ------------------------------------------------------------
+   LEER LA COOKIE, SIN ADIVINAR
+   ------------------------------------------------------------
+   No se usa una expresión sobre toda la cadena: una cookie que se
+   llame `xev` no puede hacerse pasar por `ev`.
+
+   Y SI VIENE MAS DE UNA CON EL MISMO NOMBRE, NO SE ELIGE: se
+   devuelve vacío.
+
+   Antes se quedaba con la última, que es una decisión arbitraria
+   y se comprobó atacándola: metiendo una segunda cookie `ev`
+   después de la buena, la buena se anulaba. Nadie entra a nada
+   ajeno con eso —tendría que firmarla— pero deja fuera al cliente
+   legítimo, o lo mete a una sesión que no es la suya.
+
+   Un navegador normal manda UNA. Dos es una anomalía, y ante una
+   anomalía en un candado la respuesta es no abrir.
+   ------------------------------------------------------------ */
 function sesionDe(req) {
   const crudo = String(((req && req.headers) || {}).cookie || '');
-  let valor = '';
+  const encontradas = [];
   crudo.split(';').forEach(function (trozo) {
     const i = trozo.indexOf('=');
     if (i < 0) return;
-    if (trozo.slice(0, i).trim() === COOKIE) valor = trozo.slice(i + 1).trim();
+    if (trozo.slice(0, i).trim() === COOKIE) encontradas.push(trozo.slice(i + 1).trim());
   });
-  return valor;
+  if (encontradas.length !== 1) return '';
+  return encontradas[0];
 }
 
 /* ------------------------------------------------------------
