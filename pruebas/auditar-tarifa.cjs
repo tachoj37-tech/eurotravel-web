@@ -114,7 +114,9 @@ const SU_LISTA = [
   ['Rincón de Guayabitos, Nayarit, México', 18500],
   ['Chacala, Nayarit, México', 16500],
   ['Sayulita, Nayarit, México', 18000],
-  ['Guanajuato, Guanajuato, México', 19000, { porDias: { 1: 19000, 3: 24500 }, diaExtra: 2750 }],
+  /* El dia extra bajo de 2,750 (deducido de los escalones) a 1,500 por
+     correccion del dueño el 26-ago-2026: «si queda muy caro». */
+  ['Guanajuato, Guanajuato, México', 19000, { porDias: { 1: 19000, 3: 24500 }, diaExtra: 1500 }],
   ['Manzanillo, Colima, México', 18500],
   ['Morelia, Michoacán, México', 19000],
   ['Puerto Vallarta, Jalisco, México', 19000],
@@ -237,6 +239,10 @@ const SU_LISTA = [
   /* los precios por duracion del Excel, tal cual */
   igual('Guanajuato MISMO DIA: 19,000', sinMov('Guanajuato, Guanajuato, México', 1), 19000);
   igual('Guanajuato 3 DIAS SIN MOV: 24,500 (cobraba 19,000)', sinMov('Guanajuato, Guanajuato, México', 3), 24500);
+  /* el dia extra que dicto el dueño: «mil quinientos» (26-ago-2026);
+     el primer calculo, 2,750 deducido de los escalones, le parecio caro */
+  igual('Guanajuato 4 dias: 24,500 + 1,500', sinMov('Guanajuato, Guanajuato, México', 4), 26000);
+  igual('Guanajuato 5 dias: 24,500 + 3,000', sinMov('Guanajuato, Guanajuato, México', 5), 27500);
   igual('El Manto 1 DIA: 14,000', sinMov('El Manto, Jalisco, México', 1), 14000);
   igual('El Manto 3 DIAS: 19,000 (cobraba 14,000)', sinMov('El Manto, Jalisco, México', 3), 19000);
   igual('Tlalpujahua 1 DIA: 23,500', sinMov('Tlalpujahua, Michoacán, México', 1), 23500);

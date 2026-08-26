@@ -113,14 +113,22 @@ dalo de acuerdo al Excel»*. Va como `conMovimientos` en el catálogo.
 Lección detrás: si el Excel trae una columna para un caso, esa columna manda
 sobre cualquier suma de reglas.
 
-### R6 · Entre duraciones, se interpola desde la duración GRANDE (26-ago-2026)
+### R6 · El paso entre escalones NO es la tarifa del día extra (26-ago-2026)
 
-Para Guanajuato 2 días el dueño dijo: *«evalúa cuánto cuesta Guanajuato tres
-días, y de acuerdo a eso saca cuánto cuesta dos»*. El precio intermedio se
-deduce del escalón mayor hacia abajo, no del menor hacia arriba (con
-escalones lineales da lo mismo, pero el ancla conceptual es el precio grande,
-que es el que está escrito). Y los movimientos suman sus $3,000 por día
-encima, como siempre.
+Deduje el día extra de Guanajuato del paso entre sus escalones —(24,500 −
+19,000) / 2 = $2,750— y el dueño lo tumbó el mismo día: *«Guanajuato sí queda
+muy caro. Ponlo en mil quinientos el día extra.»*
+
+**Lección:** el salto de una duración del Excel a otra trae adentro más que
+días (movimientos previstos, el peso del fin de semana, lo que sea). Sirve
+para ubicar los precios ESCRITOS, no para extrapolar. La tarifa del día
+extra se le pregunta al dueño siempre que no esté en la fila 10 — un número
+deducido se presenta como propuesta, nunca se da por bueno.
+
+Días extra dictados por él hasta hoy: Talpa $1,500 (fila 10), Puebla y
+Zacatlán $2,000, Guanajuato $1,500. Deducidos y AÚN NO confirmados:
+El Manto $2,500, Tlalpujahua $3,000. Y los movimientos suman sus $3,000 por
+día encima, como siempre.
 
 ### R7 · Guayabitos, confirmado (26-ago-2026)
 
@@ -151,9 +159,9 @@ lanzamiento.**
 
 ## Esperando autorización del dueño
 
-- **Guanajuato 4 días = $27,250** (24,500 + 2,750) y **5 días = $30,000**
-  (24,500 + 5,500). Los pidió calculados para autorizarlos. El redondeo de
-  la página cobra $27,200 en el de 4 (siempre a favor del cliente).
+- **El Manto** día extra $2,500 y **Tlalpujahua** día extra $3,000: deducidos
+  de sus escalones, igual que el de Guanajuato que resultó caro. Proponerle
+  confirmarlos o bajarlos.
 
 ## Preguntas abiertas (lanzarlas al dueño en la siguiente ronda)
 

@@ -120,13 +120,17 @@ const DESTINOS = [
      viene repetida como ciudad y estado. */
   { nombre: "Guanajuato", km: 550,
     busca: /^guanajuato\b|guanajuato, *(gto|guanajuato)\b/i,
-    /* Del Excel: «MISMO DIA $19,000» y «3 DIAS SIN MOV $24,500». El día
-       extra de $2,750 sale de esos escalones: (24,500−19,000)/2. Este fue
+    /* Del Excel: «MISMO DIA $19,000» y «3 DIAS SIN MOV $24,500». Este fue
        el destino que destapó el modelo inventado de noches (criterio,
-       error nº 1): cobraba $19,000 a 3 días. */
+       error nº 1): cobraba $19,000 a 3 días.
+
+       El día extra primero se dedujo de los escalones ((24,500−19,000)/2 =
+       $2,750), pero el dueño lo corrigió el 26-ago-2026: «Guanajuato sí
+       queda muy caro. Ponlo en mil quinientos el día extra.» El paso entre
+       los escalones del Excel NO es la tarifa del día extra. */
     precio: { busNC47: 30000, bus4849: 31000, sprinter: 19000 },
     porDias: { 1: 19000, 3: 24500 },
-    diaExtra: 2750 },
+    diaExtra: 1500 },
   { nombre: "Manzanillo", km: 574,
     busca: /manzanillo/i,
     precio: { busNC47: 30000, bus4849: 31000, neobusI6: 33000, pbI6: 32000, marcopolo: 37000, irizar: 35000, sprinter: 18500 } },
