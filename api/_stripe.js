@@ -164,6 +164,44 @@ function paraStripe(t) {
 }
 
 /* ------------------------------------------------------------
+   DE UN COBRO REVERTIDO, DE VUELTA A SU VIAJE
+   ------------------------------------------------------------
+   Cuando llega un reembolso o un contracargo, Stripe avisa del
+   COBRO (`ch_…`), no de la sesion. Y en el cobro no vive la
+   metadata del viaje: vive en la sesion.
+
+   Se busca por FILTRO DE LISTA, no por la busqueda de Stripe. La
+   busqueda tarda hasta un minuto en reflejar lo recien escrito y
+   la documentacion de Stripe dice expresamente que no se use para
+   leer justo despues de escribir. Los filtros no tienen retraso.
+
+   Devuelve { sesion } o { error, reintentar }. Que no se
+   encuentre NO es un error pasajero: es un cobro que no salio de
+   esta pagina —una venta por telefono capturada a mano en el
+   panel de Stripe, por ejemplo— y no hay nada que revertir aqui.
+   ------------------------------------------------------------ */
+async function sesionPorPago(idPago) {
+  const k = clave();
+  if (!k) return { error: 'sin clave de Stripe' };
+  const pi = String(idPago || '').trim();
+  if (!/^pi_[A-Za-z0-9]{4,}$/.test(pi)) return { error: 'id de pago con mala forma' };
+
+  try {
+    const r = await fetch(STRIPE + '/checkout/sessions?payment_intent=' +
+      encodeURIComponent(pi) + '&limit=1', {
+      headers: { 'Authorization': 'Bearer ' + k }
+    });
+    const d = await r.json();
+    if (!r.ok || d.error) return { error: 'Stripe rechazó la consulta', reintentar: true };
+    const lista = (d && d.data) || [];
+    if (!lista.length) return { error: 'ese cobro no salió de la página' };
+    return { sesion: lista[0] };
+  } catch (e) {
+    return { error: 'no se pudo consultar a Stripe', reintentar: true };
+  }
+}
+
+/* ------------------------------------------------------------
    LA FICHA DEL CLIENTE
    ------------------------------------------------------------
    Ahi vive el codigo de verificacion mientras dura: es el objeto
@@ -247,6 +285,7 @@ module.exports = {
   idDeSesionValido,
   idDeClienteValido,
   traeSesion,
+  sesionPorPago,
   traeCliente,
   guardaEnCliente,
   creaSesionDeCobro,

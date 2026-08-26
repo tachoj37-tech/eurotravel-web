@@ -353,6 +353,44 @@ function mensajeDeCodigo(aDonde, codigo, nombre, folio) {
   };
 }
 
+/* ------------------------------------------------------------
+   EL AVISO A LA OFICINA
+   ------------------------------------------------------------
+   Para lo que una persona tiene que atender hoy mismo: un
+   reembolso, un contracargo, un contrato que se cayó.
+
+   Va en texto plano y sin adornos: se lee en el celular, de
+   madrugada, y lo único que importa es que se entienda completo
+   sin abrir Stripe ni EuroSystem.
+
+   A DONDE LLEGA. A `AVISOS_A`, y si no está configurada, al mismo
+   remitente —que es una cuenta de la empresa—. Nunca se queda sin
+   destinatario: un aviso de reversa que no se manda es dinero que
+   se pierde en silencio, que es justo lo que esto existe para
+   impedir.
+   ------------------------------------------------------------ */
+function aDondeAvisar() {
+  const puesto = String(process.env.AVISOS_A || '').trim();
+  if (puesto) return puesto.split(',').map(function (c) { return c.trim().toLowerCase(); })
+    .filter(Boolean);
+  /* Del remitente se saca el correo de adentro de «Eurotravel <x@y.mx>». */
+  const m = /<([^>]+)>/.exec(DE);
+  return [String(m ? m[1] : DE).trim().toLowerCase()];
+}
+
+async function mandaALaOficina(asunto, texto) {
+  return manda({
+    from: DE,
+    to: aDondeAvisar(),
+    subject: String(asunto || 'Aviso de Eurotravel').slice(0, 200),
+    text: String(texto || ''),
+    /* En HTML va el mismo texto, monoespaciado: las columnas alineadas del
+       aviso se leen mucho mejor así, y no hace falta otra plantilla. */
+    html: '<pre style="font:13px/1.6 ui-monospace,Menlo,Consolas,monospace;' +
+      'white-space:pre-wrap;color:#1d1d1b">' + esc(texto) + '</pre>'
+  });
+}
+
 /* La puerta que usa el webhook: arma y manda, en un solo paso. */
 async function mandaContrato(metadata, pdfBase64, liga) {
   return manda(mensajeDeContrato(metadata, pdfBase64, liga));
@@ -361,5 +399,6 @@ async function mandaContrato(metadata, pdfBase64, liga) {
 module.exports = {
   DE, hayClave, porQueNoSePuede,
   fechaLarga, datosDelCorreo, mensajeDeContrato, mensajeDeCodigo,
+  aDondeAvisar, mandaALaOficina,
   manda, mandaContrato
 };

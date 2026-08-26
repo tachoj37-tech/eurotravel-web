@@ -47,6 +47,10 @@ const firma = require('./_firma-stripe');
 
 const EUROSYSTEM = process.env.EUROSYSTEM_URL || 'https://eurosystem-smoky.vercel.app';
 const PUERTA = '/api/contratos/externo';
+/* La puerta de reversas. TODAVIA NO EXISTE en EuroSystem: esta pedida en
+   docs/superpowers/specs/2026-08-25-abonos-en-linea-design.md. Mientras no
+   exista, la llamada falla con 404 y el aviso a la oficina hace el trabajo. */
+const PUERTA_REVERSA = '/api/contratos/reversa-externa';
 
 /* El centro de Mexico. Fijo, no calculado: Mexico dejo el horario de verano en
    2022, asi que -06:00 vale todo el año. La puerta de EuroSystem RECHAZA una
@@ -197,11 +201,120 @@ function contratoDesde(m, sesion) {
    antes estaba escrita aqui y otra vez en confirmar.js—. */
 const stripe = require('./_stripe');
 const correo = require('./_correo');   // el correo al cliente, en un solo dueño
-const ligas = require('./_ligas');     // y su liga propia, firmada
+const ligas = require('./_ligas');         // y su liga propia, firmada
+const reversas = require('./_reversas');   // cuando el dinero se regresa
 const defensas = require('./_defensas');
 
 /* `crudo` puede ser el cuerpo tal cual (Buffer/texto) o el objeto ya
    parseado, segun lo que deje pasar el entorno. */
+/* ============================================================
+   ATENDER UNA REVERSA
+   ------------------------------------------------------------
+   El dinero YA salió de la cuenta cuando esto llega. No hay nada
+   que impedir: lo único que se puede hacer es que el sistema y
+   una persona se enteren.
+
+   EL ORDEN DE LO QUE IMPORTA
+
+     1. que alguien se entere ............ el correo a la oficina
+     2. que el sistema lo registre ....... EuroSystem
+     3. que Stripe no lo reintente ....... el 200
+
+   Por eso el 200 solo se da si SE AVISO. Si el correo no salió,
+   se contesta 500 y Stripe insiste tres días: vale más que Stripe
+   siga tocando la puerta a que el dinero se pierda en silencio.
+
+   EL AVISO SE MANDA SIEMPRE, aunque EuroSystem conteste bien. Una
+   reversa no es un movimiento de rutina: es una llamada que
+   alguien tiene que hacerle al cliente antes del día del viaje.
+   ============================================================ */
+async function atiendeReversa(tipo, objeto) {
+  const pago = reversas.pagoDelAviso(objeto);
+  const motivo = reversas.motivoDe(tipo);
+  const monto = reversas.montoRevertido(tipo, objeto);
+
+  if (!pago) {
+    console.error('[reversa] ' + tipo + ' sin pago que buscar. NO SE PUDO ATENDER.');
+    return { status: 200, cuerpo: { recibido: true, error: 'aviso sin pago' } };
+  }
+
+  /* ---- ¿de qué viaje era este cobro? ---- */
+  const hallada = await stripe.sesionPorPago(pago);
+  if (hallada.error) {
+    if (hallada.reintentar) {
+      console.error('[reversa] no se pudo preguntar a Stripe por ' + pago + '; reintentará.');
+      return { status: 500, cuerpo: { error: hallada.error } };
+    }
+    /* Un cobro que no salió de esta página —capturado a mano en el panel de
+       Stripe, por ejemplo— no tiene contrato que revertir aquí. */
+    console.log('[reversa] ' + motivo + ' de ' + pago + ': ' + hallada.error + ', no aplica.');
+    return { status: 200, cuerpo: { recibido: true, ajeno: true } };
+  }
+
+  const sesion = hallada.sesion;
+  const m = sesion.metadata || {};
+  const clase = reversas.claseDePago(m);
+
+  const datos = {
+    clase: clase, motivo: motivo, monto: monto, pago: pago,
+    referenciaExterna: 'WEB-' + String(sesion.id || '').slice(0, 70),
+    folio: m.folio || '', contrato: m.contrato || '',
+    nombre: m.nombre || '', correo: m.correo || '', telefono: m.telefono || '',
+    ruta: m.ruta || '', salida: m.salida || ''
+  };
+
+  console.error('[reversa] ' + motivo + ' de ' + clase + ' — folio ' + (datos.folio || '?') +
+    ', ' + monto + ' — pago ' + pago +
+    (clase === 'ANTICIPO' ? ' — HAY QUE QUEMAR EL FOLIO' : ''));
+
+  /* ---- 1. que EuroSystem lo registre, si su puerta ya existe ---- */
+  const llave = (process.env.CONTRATOS_API_KEY || '').trim();
+  let registrada = false, porQueNo = 'sin CONTRATOS_API_KEY';
+  if (llave) {
+    try {
+      const r = await fetch(EUROSYSTEM + PUERTA_REVERSA, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-api-key': llave },
+        body: JSON.stringify(reversas.cuerpoParaEuroSystem(datos))
+      });
+      registrada = r.ok;
+      if (!r.ok) {
+        porQueNo = r.status === 404
+          ? 'esa puerta todavía no existe en EuroSystem'
+          : 'EuroSystem contestó ' + r.status;
+      }
+    } catch (e) {
+      porQueNo = 'no se pudo hablar con EuroSystem';
+    }
+  }
+  datos.eurosystem = registrada;
+  datos.eurosystemMotivo = porQueNo;
+
+  if (!registrada) {
+    console.error('[reversa] EuroSystem NO la registró: ' + porQueNo + '. Va por correo.');
+  }
+
+  /* ---- 2. que una persona se entere. ESTO es lo que no puede fallar ---- */
+  const aviso = reversas.avisoDeReversa(datos);
+  const envio = await correo.mandaALaOficina(aviso.asunto, aviso.texto);
+
+  if (!envio.ok) {
+    /* Ni EuroSystem ni el correo. Se le pide a Stripe que insista: es la
+       última red que queda para que esto no se pierda en silencio. */
+    console.error('[reversa] EL AVISO NO SALIO (' + envio.motivo + '). ' +
+      'Folio ' + (datos.folio || '?') + ', pago ' + pago + '. Stripe reintentará.');
+    return { status: 500, cuerpo: { error: 'no se pudo avisar de la reversa' } };
+  }
+
+  return {
+    status: 200,
+    cuerpo: {
+      recibido: true, reversa: true, clase: clase, motivo: motivo,
+      folio: datos.folio, registrada: registrada, avisada: true
+    }
+  };
+}
+
 async function procesa(crudo, cabeceraFirma) {
 
   /* Ojo: aqui NO va el guardia de origen de _defensas. Stripe llama de
@@ -240,6 +353,18 @@ async function procesa(crudo, cabeceraFirma) {
   }
 
   const tipo = evento.type;
+
+  /* ---------------------------------------------------------------------
+     EL DINERO QUE SE REGRESA
+
+     Va ANTES de lo demás porque es lo más caro de perder. Hasta hoy un
+     `charge.refunded` caía en el «ignorado» de abajo: se contestaba 200,
+     Stripe lo daba por entregado y NUNCA reintentaba. Nadie se enteraba,
+     y el sistema seguía diciendo que ese viaje estaba pagado.
+     --------------------------------------------------------------------- */
+  if (reversas.esReversa(tipo)) {
+    return await atiendeReversa(tipo, (evento.data && evento.data.object) || {});
+  }
 
   const NOS_IMPORTAN = ['checkout.session.completed', 'checkout.session.async_payment_succeeded'];
   if (NOS_IMPORTAN.indexOf(tipo) < 0) {
