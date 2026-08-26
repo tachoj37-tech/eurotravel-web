@@ -11,8 +11,10 @@
   Para quitarla: borrar este archivo y api/prueba-cotizador.js.
   No cuelga de ninguna liga del sitio a propósito.
 
-  Tres preguntas y nada más: a dónde va, cuántos días, y qué
-  días hay movimientos. Todo lo demás lo pone el servidor.
+  Cuatro preguntas: de dónde sale, a dónde va, cuántos días, y
+  qué días hay movimientos. Los dos lugares se ESCRIBEN: el
+  catálogo de la página aparece como atajo, pero cualquier
+  dirección que entienda Google sirve, y se mide con Google.
   ============================================================
 -->
 <style>
@@ -22,7 +24,6 @@
     --muted: #6e6e6a;
     --line: #e6e6e3;
     --soft: #f6f6f4;
-    --ok: #0a7d3c;
   }
   * { box-sizing: border-box; }
   body {
@@ -47,9 +48,7 @@
   }
   label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 5px; }
 
-  input, select, button {
-    font: inherit; color: inherit;
-  }
+  input, select, button { font: inherit; color: inherit; }
   input[type=text], input[type=password], input[type=number], select {
     width: 100%; padding: 10px 12px; border: 1px solid var(--line);
     border-radius: 8px; background: #fff;
@@ -68,6 +67,27 @@
   .btn:hover { background: #b00a0a; }
   .btn[disabled] { background: var(--muted); cursor: default; }
 
+  /* ---- el campo que se escribe, con sus sugerencias ---- */
+  .lugar { position: relative; }
+  .sug {
+    position: absolute; z-index: 20; left: 0; right: 0; top: calc(100% + 3px);
+    background: #fff; border: 1px solid var(--line); border-radius: 9px;
+    box-shadow: 0 8px 22px rgba(0,0,0,.09); overflow: hidden; display: none;
+    max-height: 290px; overflow-y: auto;
+  }
+  .sug.on { display: block; }
+  .sug button {
+    display: block; width: 100%; text-align: left; background: none;
+    border: 0; border-bottom: 1px solid var(--line); padding: 9px 13px; cursor: pointer;
+  }
+  .sug button:last-child { border-bottom: 0; }
+  .sug button:hover, .sug button.hl { background: var(--soft); }
+  .sug b { display: block; font-weight: 500; font-size: 14px; }
+  .sug small { display: block; color: var(--muted); font-size: 11.5px; }
+  .sug .fuente { float: right; font-size: 10px; letter-spacing: .07em; text-transform: uppercase; color: var(--muted); }
+  .elegido { font-size: 12.5px; color: var(--muted); margin: 6px 0 0; }
+  .elegido b { color: var(--ink); font-weight: 600; }
+
   /* ---- los días, uno por renglón ---- */
   .dias { border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
   .dia {
@@ -82,10 +102,8 @@
   .dia .horas { display: flex; gap: 6px; align-items: center; font-size: 13px; }
   .dia .horas input { width: 82px; padding: 6px 8px; }
   .dia .horas[hidden] { display: none; }
-  .dia .cuanto { font-variant-numeric: tabular-nums; font-weight: 600; font-size: 13.5px; min-width: 74px; text-align: right; }
   @media (max-width: 620px) {
     .dia { grid-template-columns: 1fr; gap: 7px; }
-    .dia .cuanto { text-align: left; }
   }
 
   /* ---- el resultado ---- */
@@ -112,7 +130,7 @@
 
   .aviso { padding: 12px 15px; border-radius: 9px; font-size: 13.5px; margin-bottom: 15px; }
   .aviso.malo { background: #fdeaea; color: #8a0a0a; }
-  .aviso.nota { background: var(--soft); color: var(--muted); }
+  .aviso.ojo { background: #fff8e6; color: #7a5200; border: 1px solid #f0dfae; }
   .pista { font-size: 12.5px; color: var(--muted); margin: 5px 0 0; }
   .cargando { color: var(--muted); font-size: 14px; }
   [hidden] { display: none !important; }
@@ -142,17 +160,30 @@
     </fieldset>
   </form>
 
-  <!-- ============ las tres preguntas ============ -->
-  <form id="f-viaje" hidden>
+  <!-- ============ las cuatro preguntas ============ -->
+  <form id="f-viaje" hidden autocomplete="off">
 
     <fieldset>
-      <legend>1 · ¿A dónde va?</legend>
-      <select id="destino"></select>
-      <p class="pista">Sale de San Pedro Tlaquepaque, ida y vuelta.</p>
+      <legend>1 · ¿De dónde sale?</legend>
+      <div class="lugar">
+        <input id="q-origen" type="text" placeholder="Escribe una ciudad, hotel o dirección…" />
+        <div class="sug" id="sug-origen"></div>
+      </div>
+      <p class="elegido" id="eli-origen"></p>
     </fieldset>
 
     <fieldset>
-      <legend>2 · ¿Cuántos días?</legend>
+      <legend>2 · ¿A dónde va?</legend>
+      <div class="lugar">
+        <input id="q-destino" type="text" placeholder="Escribe una ciudad, hotel o dirección…" />
+        <div class="sug" id="sug-destino"></div>
+      </div>
+      <p class="elegido" id="eli-destino"></p>
+      <p class="pista">Si no está en tu lista de precios, se mide con Google y se cotiza por fórmula.</p>
+    </fieldset>
+
+    <fieldset>
+      <legend>3 · ¿Cuántos días?</legend>
       <div class="fila">
         <div>
           <label for="dias">Días de servicio, contando el de salida y el de regreso</label>
@@ -163,7 +194,7 @@
     </fieldset>
 
     <fieldset>
-      <legend>3 · ¿Qué días hay movimientos?</legend>
+      <legend>4 · ¿Qué días hay movimientos?</legend>
       <div class="dias" id="dias-lista"></div>
       <p class="pista">Un día sin movimiento cobra solo la estadía. Marca el día y ajusta las horas si hace falta.</p>
     </fieldset>
@@ -193,33 +224,175 @@
   var clave = '';
   try { clave = sessionStorage.getItem('pc') || ''; } catch (e) { clave = ''; }
 
-  /* ---------------- 1. el destino ---------------- */
-  /* El catálogo es el MISMO de la página (lugares.js), para que lo que se
-     revise aquí sea lo que de verdad se puede cotizar allá. */
-  var sel = byId('destino');
-  (function llenaDestinos() {
-    var lista = (window.LUGARES || []).slice();
-    lista.sort(function (a, b) { return a.n.localeCompare(b.n, 'es'); });
-    var html = ['<option value="">— elige un destino —</option>'];
-    lista.forEach(function (l, i) {
-      html.push('<option value="' + i + '">' + esc(l.n) + ' · ' + esc(l.e) + '</option>');
-    });
-    sel.innerHTML = html.join('');
-    sel._lista = lista;
-  })();
+  /* ============================================================
+     UN CAMPO DE LUGAR
+     ------------------------------------------------------------
+     Se ESCRIBE. Mientras se escribe salen dos clases de sugerencia:
 
-  function destinoElegido() {
-    var l = sel._lista[Number(sel.value)];
-    if (!l) return null;
-    /* La dirección se arma IGUAL que en la página real (cotizacion.js →
-       puntoDe): nombre, estado, México. De ese texto depende en qué renglón
-       de la lista de precios cae, así que tiene que ser el mismo o aquí se
-       revisaría un precio que allá no se cobra. */
-    return { placeId: l.id || '', lat: l.lat || null, lng: l.lng || null,
-             direccion: [l.n, l.e, 'México'].filter(Boolean).join(', ') };
+       · las del CATÁLOGO de la página (lugares.js), al instante y sin
+         costar una llamada. Son las que tienen precio de lista.
+       · las de GOOGLE, que tardan un momento y cubren todo lo demás:
+         hoteles, salones, direcciones con número.
+
+     Y si no se elige ninguna, vale lo escrito tal cual: Google también
+     sabe geocodificar un texto suelto. Esa es la intención de esta
+     pantalla —poder cotizar CUALQUIER lugar—, así que escribir y darle
+     enter tiene que funcionar.
+     ============================================================ */
+  function campoDeLugar(idCaja, idSug, idEli) {
+    var caja = byId(idCaja), sug = byId(idSug), eli = byId(idEli);
+    var elegido = null;          // { placeId, lat, lng, direccion } o null
+    var sesion = token();
+    var pedido = 0;
+    var espera = null;
+
+    function token() {
+      /* Un identificador de sesión para que Google cobre el autocompletado
+         y el detalle como una sola búsqueda y no como dos. */
+      try { return crypto.randomUUID(); }
+      catch (e) { return 'p' + Math.random().toString(36).slice(2) + Date.now(); }
+    }
+
+    function delCatalogo(q) {
+      var t = q.toLowerCase();
+      return (window.LUGARES || []).filter(function (l) {
+        return (l.n + ' ' + l.e).toLowerCase().indexOf(t) >= 0;
+      }).slice(0, 6).map(function (l) {
+        return {
+          fuente: 'catálogo',
+          principal: l.n, secundario: l.e,
+          punto: { placeId: l.id || '', lat: l.lat || null, lng: l.lng || null,
+                   /* La dirección se arma IGUAL que en la página real
+                      (cotizacion.js → puntoDe): de ese texto depende en qué
+                      renglón de la lista de precios cae, así que tiene que
+                      ser el mismo o aquí se revisaría un precio que allá no
+                      se cobra. */
+                   direccion: [l.n, l.e, 'México'].filter(Boolean).join(', ') }
+        };
+      });
+    }
+
+    function pinta(lista) {
+      if (!lista.length) { sug.classList.remove('on'); sug.innerHTML = ''; return; }
+      sug.innerHTML = lista.map(function (s, i) {
+        return '<button type="button" data-i="' + i + '">' +
+          '<span class="fuente">' + esc(s.fuente) + '</span>' +
+          '<b>' + esc(s.principal) + '</b>' +
+          (s.secundario ? '<small>' + esc(s.secundario) + '</small>' : '') +
+        '</button>';
+      }).join('');
+      sug._lista = lista;
+      sug.classList.add('on');
+    }
+
+    function cierra() { sug.classList.remove('on'); }
+
+    caja.addEventListener('input', function () {
+      elegido = null;
+      eli.innerHTML = '';
+      var q = caja.value.trim();
+      if (q.length < 2) { cierra(); return; }
+
+      /* El catálogo pinta de inmediato; Google llega después y se le suma.
+         Así nunca hay un momento en blanco esperando la red. */
+      var locales = delCatalogo(q);
+      pinta(locales);
+
+      if (q.length < 3) return;
+      clearTimeout(espera);
+      espera = setTimeout(function () {
+        var mio = ++pedido;
+        fetch('/api/places', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ accion: 'autocomplete', input: q, pais: 'mx',
+                                 idioma: 'es', sessionToken: sesion })
+        }).then(function (r) { return r.json(); }).then(function (d) {
+          /* Gana la última búsqueda: si llegó tarde, se tira. Sin esto, el
+             usuario ve la lista de lo que escribió hace dos letras. */
+          if (mio !== pedido) return;
+          var deGoogle = (d.suggestions || []).slice(0, 6).map(function (s) {
+            return { fuente: 'Google', principal: s.principal, secundario: s.secundario,
+                     placeId: s.id };
+          });
+          pinta(locales.concat(deGoogle));
+        }).catch(function () { /* sin autocompletado se escribe a mano y ya */ });
+      }, 260);
+    });
+
+    sug.addEventListener('click', function (e) {
+      var b = e.target.closest('button');
+      if (!b) return;
+      var s = sug._lista[Number(b.dataset.i)];
+      if (!s) return;
+      caja.value = s.principal + (s.secundario ? ', ' + s.secundario : '');
+      cierra();
+
+      if (s.punto) { fija(s.punto, s.fuente); return; }
+
+      /* De Google llega solo el identificador: hay que pedir el detalle para
+         tener coordenadas y la dirección completa. */
+      eli.innerHTML = '<span style="color:var(--muted)">buscando el punto…</span>';
+      fetch('/api/places', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ accion: 'detalle', placeId: s.placeId, idioma: 'es', sessionToken: sesion })
+      }).then(function (r) { return r.json(); }).then(function (d) {
+        sesion = token();                      // se cierra la sesión de cobro
+        fija({ placeId: d.id || s.placeId, lat: d.lat, lng: d.lng,
+               direccion: d.direccion || caja.value }, 'Google');
+      }).catch(function () {
+        fija({ placeId: '', lat: null, lng: null, direccion: caja.value }, 'escrito');
+      });
+    });
+
+    caja.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') cierra();
+      /* Enter con la lista abierta elige la primera; con la lista cerrada
+         deja pasar el submit del formulario. */
+      if (e.key === 'Enter' && sug.classList.contains('on')) {
+        e.preventDefault();
+        var primero = sug.querySelector('button');
+        if (primero) primero.click();
+      }
+    });
+
+    document.addEventListener('click', function (e) {
+      if (!sug.contains(e.target) && e.target !== caja) cierra();
+    });
+
+    function fija(punto, fuente) {
+      elegido = punto;
+      var conPrecio = fuente === 'catálogo' ? '' :
+        (punto.lat ? ' · punto exacto' : '');
+      eli.innerHTML = 'Se va a medir desde: <b>' + esc(punto.direccion) + '</b>' + esc(conPrecio);
+    }
+
+    return {
+      /* Lo que se manda al servidor. Si no se eligió nada de la lista, vale
+         lo escrito: Google sabe geocodificar un texto suelto, y poder
+         cotizar cualquier lugar es justamente para lo que existe esto. */
+      punto: function () {
+        if (elegido) return elegido;
+        var t = caja.value.trim();
+        return t ? { placeId: '', lat: null, lng: null, direccion: t } : null;
+      },
+      pon: function (punto, texto) {
+        caja.value = texto;
+        fija(punto, 'catálogo');
+      },
+      caja: caja
+    };
   }
 
-  /* ---------------- 3. los días ---------------- */
+  var ORIGEN = campoDeLugar('q-origen', 'sug-origen', 'eli-origen');
+  var DESTINO = campoDeLugar('q-destino', 'sug-destino', 'eli-destino');
+
+  /* La base va puesta de entrada: es de donde sale casi todo, y así solo se
+     toca cuando de verdad se quiere probar otra salida. */
+  ORIGEN.pon({ placeId: 'ChIJA0pBpoezKIQREKq-cByLC14', lat: 20.602519, lng: -103.336158,
+               direccion: 'San Pedro Tlaquepaque, Jalisco, México' },
+             'San Pedro Tlaquepaque, Jalisco');
+
+  /* ---------------- los días ---------------- */
   var caja = byId('dias-lista');
 
   function pintaDias() {
@@ -285,19 +458,19 @@
   /* ---------------- pedir y pintar ---------------- */
   byId('f-viaje').addEventListener('submit', function (e) {
     e.preventDefault();
-    var destino = destinoElegido();
-    if (!destino) { byId('salida').innerHTML = malo('Falta decir a dónde va.'); sel.focus(); return; }
+    var destino = DESTINO.punto();
+    if (!destino) { byId('salida').innerHTML = malo('Falta decir a dónde va.'); DESTINO.caja.focus(); return; }
 
     var movimientos = leeDias().filter(function (d) { return d.mueve; })
       .map(function (d) { return { horaInicio: d.horaInicio, horaFin: d.horaFin }; });
 
-    byId('salida').innerHTML = '<p class="cargando">Calculando…</p>';
+    byId('salida').innerHTML = '<p class="cargando">Midiendo con Google y calculando…</p>';
 
     fetch('/api/prueba-cotizador', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        clave: clave, destino: destino,
+        clave: clave, origen: ORIGEN.punto(), destino: destino,
         dias: Number(byId('dias').value) || 1,
         movimientos: movimientos
       })
@@ -327,36 +500,60 @@
     var out = [];
     var t = d.traslado, e = d.estadia, m = d.movimientos;
 
+    out.push('<div class="tarjeta"><h2>El viaje</h2><div>' +
+      r('Sale de', d.viaje.desde) +
+      r('Va a', d.viaje.hasta) +
+      r('Días de servicio', d.viaje.dias + ' · ' + d.viaje.noches +
+        (d.viaje.noches === 1 ? ' noche' : ' noches')) +
+      '</div></div>');
+
     /* ---- el número grande ---- */
     if (d.requiereAsesor) {
       out.push('<div class="aviso malo"><b>Este viaje no se cotiza solo.</b> Pasa de los ' +
-        t.topeFormulaKm.toLocaleString('es-MX') + ' km y no está en la lista de precios, así que la ' +
+        t.topeFormulaKm.toLocaleString('es-MX') + ' km y no está en tu lista de precios, así que la ' +
         'página no da número: lo cotiza una persona. Al cliente le dice «te la enviamos hoy mismo».</div>');
     } else {
       out.push(
         '<div class="granTotal">' +
           '<div><div class="cifra">' + pesos.format(d.total) + '</div>' +
-            '<small>IVA incluido · ' + d.viaje.dias + (d.viaje.dias === 1 ? ' día' : ' días') +
-            ' · ' + d.viaje.noches + (d.viaje.noches === 1 ? ' noche' : ' noches') + '</small></div>' +
+            '<small>IVA incluido</small></div>' +
           '<div style="text-align:right">' +
             '<div style="font-weight:600">' + pesos.format(d.anticipo) + '</div>' +
             '<small>anticipo ' + d.porcentajeAnticipo + '% · quedan ' + pesos.format(d.saldo) + '</small></div>' +
         '</div>');
     }
 
+    /* ---- el aviso del origen ----
+       Los precios de la lista se armaron saliendo de Guadalajara. Si el
+       viaje sale de otro lado, la lista puede estar describiendo otro
+       viaje —y la página de verdad la aplica igual—. */
+    if (t.deLista && d.viaje.saleDeCasa === false) {
+      out.push('<div class="aviso ojo"><b>Ojo con el origen.</b> Este viaje no sale de la zona de ' +
+        'Guadalajara —está a unos ' + d.viaje.aCuantoDeCasa.toLocaleString('es-MX') + ' km— pero se le ' +
+        'está cobrando el precio cerrado de tu lista, que se armó saliendo de allá. ' +
+        '<b>La página de verdad hace lo mismo.</b> Abajo está lo que diría la fórmula con los ' +
+        'kilómetros reales, para que lo compares.</div>');
+    }
+
     /* ---- 1. de dónde salió el traslado ---- */
     var filas = [];
+    if (t.seMidio) {
+      filas.push(r('Kilómetros medidos con Google', t.km.toLocaleString('es-MX') + ' km, ida y vuelta'));
+    } else {
+      filas.push(r('Kilómetros', 'no se pudieron medir'));
+      if (t.porQueNoSeMidio) filas.push(r('Por qué', t.porQueNoSeMidio));
+    }
+
     if (t.deLista) {
-      filas.push(r('Precio de tu lista · ' + t.deLista, pesos.format(t.antesDelPiso)));
-      filas.push(r('Kilómetros', 'no hicieron falta: el precio es cerrado'));
+      filas.push(r('Está en tu lista · ' + t.deLista, pesos.format(t.antesDelPiso)));
+      filas.push(r('Los kilómetros', 'no mueven el precio: es cerrado'));
     } else if (t.requiereAsesor) {
-      filas.push(r('Kilómetros medidos', t.km.toLocaleString('es-MX') + ' km, ida y vuelta'));
       filas.push(r('Tope de la fórmula', t.topeFormulaKm.toLocaleString('es-MX') + ' km'));
       filas.push(r('Resultado', 'lo cotiza un asesor'));
     } else {
-      filas.push(r('Kilómetros medidos', t.km.toLocaleString('es-MX') + ' km, ida y vuelta'));
+      filas.push(r('No está en tu lista', 'se cotiza por fórmula'));
       filas.push(r('Salir con la unidad', pesos.format(t.base)));
-      filas.push(r('El kilómetro, a ' + pesos.format(t.tarifaKm),
+      filas.push(r(t.km.toLocaleString('es-MX') + ' km × ' + pesos.format(t.porKm),
         pesos.format(t.antesDelPiso - t.base)));
       filas.push(r('Suma por fórmula', pesos.format(t.antesDelPiso)));
     }
@@ -366,6 +563,24 @@
       filas.push(r('Traslado, cortado a la centena', pesos.format(t.final), 'suma'));
     }
     out.push(tarjeta('1 · El traslado', filas.join('')));
+
+    /* ---- la comparación: lista contra fórmula ---- */
+    if (d.comparativa) {
+      var c = d.comparativa;
+      filas = [r('Tu precio de lista', pesos.format(c.deLista))];
+      if (c.pasaElTope) {
+        filas.push(r('Por fórmula, con los km reales',
+          'pasa de los ' + t.topeFormulaKm.toLocaleString('es-MX') + ' km: no hay fórmula'));
+        filas.push(r('O sea', 'sin tu lista, este viaje lo cotizaría un asesor'));
+      } else {
+        filas.push(r('Por fórmula, con los km reales', pesos.format(c.porFormula)));
+        filas.push(r(c.diferencia >= 0 ? 'Tu lista cobra de MENOS' : 'Tu lista cobra de MÁS',
+          pesos.format(Math.abs(c.diferencia)), 'suma'));
+      }
+      out.push(tarjeta('Tu lista contra la fórmula', filas.join('') +
+        '<p class="pista">La lista manda siempre: esto es solo para ver si sigue describiendo ' +
+        'el viaje. Una diferencia grande y repetida es señal de que ese renglón ya se quedó corto.</p>'));
+    }
 
     /* ---- 2. la estadía ---- */
     filas = [];
@@ -413,9 +628,9 @@
 
     /* ---- lo que ve el cliente ---- */
     if (!d.requiereAsesor) {
-      var c = d.loQueVeElCliente;
-      filas = [r('Traslado y estadía, juntos', pesos.format(c.servicio))];
-      if (c.importeMovimientos) filas.push(r('Movimientos en destino', pesos.format(c.importeMovimientos)));
+      var v = d.loQueVeElCliente;
+      filas = [r('Traslado y estadía, juntos', pesos.format(v.servicio))];
+      if (v.importeMovimientos) filas.push(r('Movimientos en destino', pesos.format(v.importeMovimientos)));
       filas.push(r('Total', pesos.format(d.total), 'suma'));
       out.push(tarjeta('Lo que ve el cliente', filas.join('') +
         '<p class="pista">Son dos números, no cinco. Partirlos delataría lo que cuesta la ' +

@@ -24,6 +24,13 @@ const rutas = new Map();
    Se devuelven TODAS las formas que sirvan, no solo la mejor: si Google no
    reconoce el place_id se reintenta con las coordenadas y el visitante ni se
    entera. La página casi siempre manda las dos. */
+/* Un numero de verdad, o NaN. `Number()` a secas convierte `null`, `''`,
+   `false` y `[]` en 0, y ninguno de esos es una coordenada. */
+function numeroDe(v) {
+  if (v === null || v === undefined || v === '' || typeof v === 'boolean') return NaN;
+  return Number(v);
+}
+
 function formasDe(p) {
   if (!p || typeof p !== 'object') return [];
   const formas = [];
@@ -31,8 +38,25 @@ function formasDe(p) {
   const id = typeof p.placeId === 'string' ? p.placeId.slice(0, 200) : '';
   if (id && /^[A-Za-z0-9_-]+$/.test(id)) formas.push({ placeId: id });
 
-  const lat = Number(p.lat), lng = Number(p.lng);
-  if (isFinite(lat) && isFinite(lng) && Math.abs(lat) <= 90 && Math.abs(lng) <= 180) {
+  /* ------------------------------------------------------------
+     `null` NO ES CERO, Y AQUI LO ERA
+
+     `Number(null)` da 0, y 0 pasa `isFinite`. Asi que un punto sin
+     coordenadas —que la pagina manda como `{lat: null, lng: null}` en
+     CADA cotizacion donde el cliente no pego un link del mapa— se
+     convertia en las coordenadas 0,0: el Golfo de Guinea.
+
+     No daba un precio equivocado, porque Google no encuentra ruta desde
+     ahi y `mideTramo` seguia con la forma siguiente. Pero gastaba una
+     llamada de Routes API por tramo, en casi todos los viajes, para
+     preguntar por un punto en medio del oceano.
+
+     Lo cazó la pantalla de prueba de costos: con un Google fingido —que
+     contesta a todo— el 0,0 «funcionaba» y se llevaba la medicion.
+     ------------------------------------------------------------ */
+  const lat = numeroDe(p.lat), lng = numeroDe(p.lng);
+  if (isFinite(lat) && isFinite(lng) && Math.abs(lat) <= 90 && Math.abs(lng) <= 180 &&
+      !(lat === 0 && lng === 0)) {
     formas.push({ location: { latLng: { latitude: lat, longitude: lng } } });
   }
 

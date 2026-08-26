@@ -45,16 +45,33 @@ const freno = defensas.creaFreno({ porMinuto: 20, porDia: 300 });
 /* ------------------------------------------------------------
    DE DÓNDE SALEN LAS UNIDADES
    ------------------------------------------------------------
-   La base de Eurotravel. Va fija porque la pantalla solo pregunta
-   A DÓNDE va el viaje: el origen siempre es el mismo y preguntarlo
-   sería una respuesta de más en una herramienta que existe para
-   ser corta.
+   La base de Eurotravel. Es solo el VALOR POR OMISIÓN: la
+   pantalla deja cambiarlo, porque parte de lo que se revisa aquí
+   es justamente qué pasa cuando el viaje no sale de casa.
    ------------------------------------------------------------ */
 const BASE = {
   placeId: 'ChIJA0pBpoezKIQREKq-cByLC14',       // San Pedro Tlaquepaque
   direccion: 'San Pedro Tlaquepaque, Jalisco, México',
   lat: 20.602519, lng: -103.336158
 };
+
+/* Hasta dónde llega «la zona de casa». Los precios de la lista se armaron
+   saliendo de Guadalajara; más lejos de esto, la lista deja de describir el
+   viaje y la pantalla lo avisa. 60 km cubre toda la zona metropolitana. */
+const RADIO_DE_CASA_KM = 60;
+
+/* Distancia en línea recta entre dos puntos, para saber si el origen sigue
+   siendo la zona de casa. No es la distancia por carretera —esa la mide
+   Google— y no hace falta que lo sea: aquí solo se contesta «¿está cerca?». */
+function lineaRecta(a, b) {
+  if (!isFinite(a.lat) || !isFinite(a.lng) || !isFinite(b.lat) || !isFinite(b.lng)) return null;
+  const rad = Math.PI / 180;
+  const dLat = (b.lat - a.lat) * rad;
+  const dLng = (b.lng - a.lng) * rad;
+  const s = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(a.lat * rad) * Math.cos(b.lat * rad) * Math.sin(dLng / 2) * Math.sin(dLng / 2);
+  return 6371 * 2 * Math.atan2(Math.sqrt(s), Math.sqrt(1 - s));
+}
 
 /* ------------------------------------------------------------
    LA CLAVE, COMPARADA SIN FILTRAR EL TIEMPO
@@ -64,9 +81,8 @@ const BASE = {
    letra. `timingSafeEqual` tarda lo mismo acierte o no.
 
    Necesita dos búferes del MISMO largo o revienta, así que
-   primero se comparan los largos —que sí se pueden filtrar sin
-   consecuencia— y se resumen los dos con SHA-256 para que
-   siempre midan igual.
+   primero se resumen los dos con SHA-256 para que siempre midan
+   igual.
    ------------------------------------------------------------ */
 function claveValida(dio) {
   const buena = process.env.CLAVE_COTIZADOR;
@@ -74,6 +90,22 @@ function claveValida(dio) {
   const a = crypto.createHash('sha256').update(String(dio || '')).digest();
   const b = crypto.createHash('sha256').update(String(buena)).digest();
   return crypto.timingSafeEqual(a, b);
+}
+
+/* Un punto tal como lo manda la pantalla, acotado. Si no trae nada usable
+   devuelve null y quien llama decide qué hacer. */
+function puntoDe(p, porOmision) {
+  if (!p || typeof p !== 'object') return porOmision || null;
+  const direccion = String(p.direccion || p.texto || '').trim().slice(0, 300);
+  const placeId = String(p.placeId || '').slice(0, 200);
+  const lat = Number(p.lat), lng = Number(p.lng);
+  if (!direccion && !placeId && !isFinite(lat)) return porOmision || null;
+  return {
+    direccion: direccion,
+    placeId: /^[A-Za-z0-9_-]+$/.test(placeId) ? placeId : '',
+    lat: isFinite(lat) ? lat : null,
+    lng: isFinite(lng) ? lng : null
+  };
 }
 
 module.exports = async function handler(req, res) {
@@ -102,10 +134,21 @@ module.exports = async function handler(req, res) {
   }
 
   /* ---- lo que preguntó la pantalla ---- */
-  const destino = cuerpo.destino || {};
-  const formasDestino = rutas.formasDe(destino);
-  if (!formasDestino.length) {
+  const origen = puntoDe(cuerpo.origen, BASE);
+  const destino = puntoDe(cuerpo.destino, null);
+  if (!destino) {
     res.status(400).json({ error: 'sin destino', aviso: 'Falta decir a dónde va.' });
+    return;
+  }
+
+  const formasOrigen = rutas.formasDe(origen);
+  const formasDestino = rutas.formasDe(destino);
+  if (!formasOrigen.length) {
+    res.status(400).json({ error: 'origen ilegible', aviso: 'No entendí de dónde sale.' });
+    return;
+  }
+  if (!formasDestino.length) {
+    res.status(400).json({ error: 'destino ilegible', aviso: 'No entendí a dónde va.' });
     return;
   }
 
@@ -118,32 +161,43 @@ module.exports = async function handler(req, res) {
 
   try {
     /* ------------------------------------------------------------
-       MEDIR SOLO CUANDO HAGA FALTA
+       SIEMPRE SE MIDE CON GOOGLE
 
-       Si el destino está en la LISTA DE PRECIOS, su precio es cerrado y
-       los kilómetros no mueven un peso. Medirlos sería pagarle a Google
-       por un número que no se va a usar.
+       Antes se medía solo cuando el destino NO estaba en la lista —para
+       ahorrar llamadas— y eso apagaba justo lo que esta pantalla existe
+       para enseñar. Aquí los kilómetros valen aunque no muevan el precio:
+       son cómo se comprueba si un precio de lista sigue teniendo sentido.
+
+       Si no hay clave de rutas, o Google no encuentra camino, el destino
+       de lista SIGUE teniendo precio —el suyo es cerrado— y solo se pierde
+       la comparación. El que se cotiza por fórmula sí se cae, porque sin
+       kilómetros no hay fórmula.
        ------------------------------------------------------------ */
     const enLista = destinos.precioDeLista(destino, 'sprinter');
-    let kmTotal = 0, seMidio = false;
+    const claveRutas = process.env.GOOGLE_ROUTES_KEY;
 
-    if (!enLista) {
-      const clave = process.env.GOOGLE_ROUTES_KEY;
-      if (!clave) {
-        res.status(503).json({ error: 'sin clave de rutas',
-          aviso: 'Este destino no está en la lista y hay que medirlo, pero falta GOOGLE_ROUTES_KEY.' });
-        return;
+    let kmTotal = 0, seMidio = false, porQueNoSeMidio = '';
+
+    if (!claveRutas) {
+      porQueNoSeMidio = 'Falta GOOGLE_ROUTES_KEY en Vercel.';
+    } else {
+      const ida = await rutas.mideTramo(formasOrigen, formasDestino, claveRutas);
+      const vuelta = ida ? await rutas.mideTramo(formasDestino, formasOrigen, claveRutas) : null;
+      if (ida && vuelta) {
+        kmTotal = tarifa.kmDe(ida.metros, vuelta.metros);
+        seMidio = true;
+      } else {
+        porQueNoSeMidio = 'Google no encontró ruta por carretera entre esos dos puntos.';
       }
-      const origen = rutas.formasDe(BASE);
-      const ida = await rutas.mideTramo(origen, formasDestino, clave);
-      const vuelta = ida ? await rutas.mideTramo(formasDestino, origen, clave) : null;
-      if (!ida || !vuelta) {
-        res.status(422).json({ error: 'sin ruta',
-          aviso: 'No encontramos ruta por carretera hasta ahí.' });
-        return;
-      }
-      kmTotal = tarifa.kmDe(ida.metros, vuelta.metros);
-      seMidio = true;
+    }
+
+    if (!seMidio && !enLista) {
+      res.status(422).json({
+        error: 'sin ruta',
+        aviso: 'Ese destino no está en tu lista, así que hay que medirlo, y no se pudo. ' +
+               porQueNoSeMidio
+      });
+      return;
     }
 
     /* La MISMA función que cotiza y que cobra. Si esta pantalla calculara
@@ -155,13 +209,46 @@ module.exports = async function handler(req, res) {
       destino: destino
     });
 
+    /* ------------------------------------------------------------
+       LA COMPARACIÓN QUE SOLO SE VE AQUÍ
+
+       Cuando el destino está en la lista, su precio es cerrado y los
+       kilómetros no lo mueven. Eso es correcto para un viaje que sale de
+       Guadalajara —que es como se armó la lista— y deja de serlo si el
+       viaje sale de otro lado.
+
+       Aquí se pone al lado lo que la fórmula diría con los kilómetros de
+       VERDAD, para que el dueño vea de un golpe si un precio de lista
+       sigue describiendo el viaje o si ya se quedó corto.
+       ------------------------------------------------------------ */
+    let comparativa = null;
+    if (enLista && seMidio) {
+      const porFormula = kmTotal <= tarifa.TOPE_FORMULA_KM
+        ? tarifa.BASE_TRASLADO + tarifa.POR_KM * kmTotal
+        : null;
+      comparativa = {
+        deLista: enLista.precio,
+        porFormula: porFormula === null ? null : Math.round(porFormula),
+        pasaElTope: porFormula === null,
+        diferencia: porFormula === null ? null : Math.round(porFormula - enLista.precio)
+      };
+    }
+
+    /* ¿El viaje sale de casa? Los precios de la lista se armaron saliendo de
+       Guadalajara. Si sale de otro lado, la lista puede estar describiendo
+       otro viaje —y la página de verdad la aplicaría igual—. */
+    const lejosDeCasa = lineaRecta(BASE, origen || {});
+    const saleDeCasa = lejosDeCasa === null ? null : lejosDeCasa <= RADIO_DE_CASA_KM;
+
     /* Aquí SÍ sale todo. Es la razón de existir de esta puerta. */
     res.status(200).json({
       viaje: {
-        desde: BASE.direccion,
-        hasta: String(destino.direccion || destino.texto || ''),
+        desde: (origen && origen.direccion) || BASE.direccion,
+        hasta: destino.direccion,
         dias: dias,
-        noches: noches
+        noches: noches,
+        saleDeCasa: saleDeCasa,
+        aCuantoDeCasa: lejosDeCasa === null ? null : Math.round(lejosDeCasa)
       },
       /* De dónde salió el traslado, en palabras */
       traslado: {
@@ -170,8 +257,10 @@ module.exports = async function handler(req, res) {
         requiereAsesor: p.requiereAsesor,
         km: seMidio ? Math.round(kmTotal * 10) / 10 : null,
         seMidio: seMidio,
+        porQueNoSeMidio: porQueNoSeMidio,
         tarifaKm: p.interno.tarifaKm,
         base: tarifa.BASE_TRASLADO,
+        porKm: tarifa.POR_KM,
         topeFormulaKm: tarifa.TOPE_FORMULA_KM,
         antesDelPiso: p.interno.porKilometro,
         piso: p.interno.minimo,
@@ -180,6 +269,7 @@ module.exports = async function handler(req, res) {
         sinRedondear: p.interno.sinRedondear,
         final: p.interno.traslado
       },
+      comparativa: comparativa,
       estadia: {
         conMovimientos: p.interno.conMovimientos,
         nochesIncluidas: tarifa.NOCHES_INCLUIDAS,

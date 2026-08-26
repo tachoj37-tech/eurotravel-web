@@ -194,5 +194,45 @@ igual('cuerpoJSON con texto', D.cuerpoJSON({ body: '{"a":2}' }), { a: 2 });
 igual('cuerpoJSON con basura no revienta', D.cuerpoJSON({ body: 'no-json' }), {});
 igual('cuerpoJSON sin cuerpo', D.cuerpoJSON({}), {});
 
+/* ---------------- los puntos que se le mandan a Google ------------------
+   `formasDe` traduce un punto del navegador a las formas que entiende la
+   Routes API. Es codigo de defensa aunque no lo parezca: lo que entra lo
+   escribe el cliente, y de aqui sale lo que se le pregunta a Google.
+
+   EL DEFECTO QUE ESTO CAZA
+
+   `Number(null)` da 0, y 0 pasa `isFinite`. Un punto sin coordenadas —que
+   la pagina manda como `{lat: null, lng: null}` en CADA cotizacion donde
+   el cliente no pego un link del mapa— se convertia en las coordenadas
+   0,0: el Golfo de Guinea. Google no encuentra ruta desde ahi, asi que no
+   daba un precio malo, pero gastaba una llamada de Routes API por tramo
+   en casi todos los viajes, preguntando por un punto en el oceano.       */
+(function () {
+  const R = require('../api/_rutas.js');
+  const soloTipos = p => R.formasDe(p).map(f =>
+    f.placeId ? 'placeId' : (f.address ? 'address' : 'coords'));
+
+  igual('lat/lng nulos NO se vuelven coordenadas',
+    soloTipos({ placeId: 'ChIJ_x', lat: null, lng: null, direccion: 'Puerto Vallarta, Jalisco' }),
+    ['placeId', 'address']);
+  igual('ni cadenas vacias', soloTipos({ lat: '', lng: '', direccion: 'Chapala, Jalisco' }), ['address']);
+  igual('ni booleanos', soloTipos({ lat: false, lng: true, direccion: 'Chapala, Jalisco' }), ['address']);
+  igual('ni indefinidos', soloTipos({ direccion: 'Chapala, Jalisco' }), ['address']);
+  /* 0,0 escrito a proposito tampoco: no hay viajes al Golfo de Guinea */
+  igual('el 0,0 literal tampoco pasa', soloTipos({ lat: 0, lng: 0, direccion: 'Chapala, Jalisco' }), ['address']);
+
+  /* y las coordenadas DE VERDAD siguen pasando, incluidas las negativas
+     —toda longitud de Mexico lo es— y las que llegan como texto */
+  igual('coordenadas reales si pasan',
+    soloTipos({ placeId: 'ChIJ_x', lat: 20.6597, lng: -103.3496, direccion: 'Guadalajara' }),
+    ['placeId', 'coords', 'address']);
+  igual('y tambien si llegan como texto',
+    soloTipos({ lat: '20.6597', lng: '-103.3496' }), ['coords']);
+  igual('fuera del planeta, no', soloTipos({ lat: 200, lng: 400 }), []);
+  igual('un texto de una letra no es direccion', soloTipos({ direccion: 'x' }), []);
+  igual('un punto que no es objeto: nada', R.formasDe('Guadalajara'), []);
+  igual('sin punto: nada', R.formasDe(null), []);
+})();
+
 console.log('\n' + buenas + ' buenas, ' + malas + ' malas');
 process.exit(malas ? 1 : 0);
