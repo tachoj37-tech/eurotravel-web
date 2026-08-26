@@ -202,7 +202,14 @@
             salida: estado.salida,
             regreso: estado.regreso,
             redondo: estado.redondo,
-            movimientos: estado.movimientos
+            movimientos: estado.movimientos,
+            /* La unidad no se mandaba, y el servidor cotizaba TODO al precio
+               de la Sprinter. Aquí no pasaba nada —esta máquina ya se niega a
+               cotizar en línea las que no lo tienen— pero /api/pagar sí
+               recibía la unidad y cobraba el precio de la van por un autobús.
+               Se manda para que el servidor pueda comprobar lo mismo que
+               comprueba esta pantalla, sin fiarse de ella. */
+            unidad: (estado.unidad && estado.unidad.name) || ''
           })
         }).then(function (r) {
           return r.json().then(function (d) { return { ok: r.ok, d: d }; },

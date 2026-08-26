@@ -79,14 +79,37 @@ function contratoDesde(m, sesion) {
   const nombre = String(m.nombre || '').trim();
   const partes = nombre.split(/\s+/);
 
-  /* Lo que se cobró de más, dicho en palabras. La oficina tiene que poder
-     cuadrar el total con el cliente sin abrir Stripe. */
+  /* ------------------------------------------------------------
+     LO QUE SE COBRO DE MAS, DICHO EN PALABRAS
+
+     La oficina tiene que poder cuadrar el total con el cliente sin abrir
+     Stripe. Y durante un tiempo no pudo: esta frase solo sabía hablar de
+     `nochesExtra`, que es la cuenta del PAQUETE —3 noches incluidas, mil
+     por cada una de más—.
+
+     Cuando el viaje trae movimientos la estadía se cobra de otra forma:
+     día por día, mil pesos cada día, y entonces `nochesExtra` vale CERO y
+     el importe vive en `importeNoches`. Con la frase vieja, ese dinero no
+     se mencionaba: un viaje de cuatro días con movimientos dejaba $4,000
+     del total sin explicar, y uno de ocho, $8,000.
+
+     Se decide por `movDias`, que es el mismo dato que decide la regla en
+     `_tarifa.js`. Hay prueba que suma las cantidades que esta frase
+     menciona y exige que den todo lo que pasa del traslado.
+     ------------------------------------------------------------ */
   const movDias = Number(m.movDias) || 0;
   const nochesExtra = Number(m.nochesExtra) || 0;
+  const importeNoches = Number(m.importeNoches) || 0;
+  const diasDeViaje = Number(m.dias) || 0;
   const extras = [];
-  if (nochesExtra) {
+  if (movDias && importeNoches) {
+    /* con movimientos: la estadía es día por día, y no hay noches incluidas */
+    extras.push((diasDeViaje || Math.round(importeNoches / 1000)) +
+      (diasDeViaje === 1 ? ' día de estadía' : ' días de estadía') +
+      ' ($' + importeNoches.toLocaleString('es-MX') + ')');
+  } else if (nochesExtra) {
     extras.push(nochesExtra + (nochesExtra === 1 ? ' noche extra' : ' noches extra') +
-      ' ($' + (Number(m.importeNoches) || 0).toLocaleString('es-MX') + ')');
+      ' ($' + importeNoches.toLocaleString('es-MX') + ')');
   }
   if (movDias) {
     extras.push(movDias + (movDias === 1 ? ' día' : ' días') + ' con movimientos en destino ' +

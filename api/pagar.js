@@ -178,6 +178,31 @@ module.exports = async function handler(req, res) {
     });
 
     /* ------------------------------------------------------------
+       LA UNIDAD QUE SE COBRA ES LA QUE SE SABE COTIZAR
+
+       El precio sale SIEMPRE de la columna sprinter de la lista, porque es
+       la única que hoy se cotiza en línea. La pantalla ya lo impedía —solo
+       la Sprinter tiene cotizador automático— pero la pantalla no es la
+       puerta: aquí `unidad` llega como texto libre.
+
+       Sin este freno, una petición armada a mano con «Irizar i6S» cobraba
+       $19,000 por un autobús que en la lista vale $36,000, y el contrato
+       que llega a EuroSystem decía «Irizar i6S». Diecisiete mil pesos de
+       menos, con papel de por medio.
+
+       Va DESPUÉS de medir la ruta y no antes solo por no partir el bloque
+       del `try`; no cuesta nada más porque quien llega aquí con una unidad
+       inventada es alguien armando la petición a mano, no un cliente.
+       ------------------------------------------------------------ */
+    if (!tarifa.seSabeCotizar(cuerpo.unidad)) {
+      res.status(422).json({
+        error: 'unidad no cotizable',
+        aviso: 'Esa unidad se cotiza a la medida. Escríbenos y te pasamos el precio hoy mismo.'
+      });
+      return;
+    }
+
+    /* ------------------------------------------------------------
        LOS VIAJES QUE NO SE COTIZAN SOLOS TAMPOCO SE COBRAN SOLOS
 
        Arriba del tope de kilómetros el precio viene en cero. Sin este

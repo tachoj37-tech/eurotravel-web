@@ -375,6 +375,58 @@ function dia(fecha, inicio, fin) {
       JSON.stringify([vta.cotiza, cdmx.cotiza]).match(/Vallarta|Ciudad de M/), null);
   }
 
+  /* ============================================================
+     LA UNIDAD QUE SE COBRA TIENE QUE SER LA QUE SE SABE COTIZAR
+     ------------------------------------------------------------
+     Tu lista de precios trae SIETE columnas, una por tipo de unidad, y
+     para Puerto Vallarta van de $19,000 la Sprinter a $38,000 el
+     Marcopolo. Pero el precio que sale de `_tarifa` es siempre el de la
+     columna sprinter: ni `cotizar` ni `pagar` le pasaban `unidad`.
+
+     La PANTALLA lo tapa —solo la Sprinter tiene cotizador automático— pero
+     la pantalla no es la puerta. `/api/pagar` recibe `unidad` como texto
+     libre y no comprueba nada, así que una petición armada a mano con
+     «Irizar i6S» cobraba $19,000 por un autobús de $36,000, y el contrato
+     que llega a EuroSystem decía «Irizar i6S».
+
+     Es la regla 3 de `antes-de-escribir`: nada que mande el cliente decide,
+     y lo que impide la pantalla lo tiene que impedir el servidor.
+     ============================================================ */
+  {
+    const cuerpoBase = {
+      origen: Object.assign({}, ORIGEN, { placeId: ORIGEN.placeId + 'unidad' }),
+      destino: Object.assign({}, DESTINO, {
+        placeId: DESTINO.placeId + 'unidad', direccion: 'Puerto Vallarta, Jalisco, México' }),
+      salida: '2026-09-03T08:00', regreso: '2026-09-06T18:00', redondo: true,
+      nombre: 'Quien Sea', correo: 'x@y.mx', telefono: '3300000000',
+      canal: 'correo', rutaTexto: 'A a B'
+    };
+
+    async function cobra(unidad) {
+      METROS_IDA = 311400; METROS_VUELTA = 309800;
+      const marca = 'u' + (++corrida);
+      const r = res();
+      await pagar({ method: 'POST', headers: cabecerasDe(corrida), body: Object.assign({}, cuerpoBase, {
+        unidad: unidad,
+        origen: Object.assign({}, cuerpoBase.origen, { placeId: cuerpoBase.origen.placeId + marca }),
+        destino: Object.assign({}, cuerpoBase.destino, { placeId: cuerpoBase.destino.placeId + marca })
+      }) }, r);
+      return r;
+    }
+
+    const sprinter = await cobra('Sprinter');
+    igual('la Sprinter se cobra, como siempre', sprinter._status, 200);
+    igual('y a su precio de lista', sprinter._json.total, 19000);
+
+    /* Las que la página NO cotiza sola tampoco se pueden cobrar. Si esto
+       contestara 200, se estaría vendiendo un autobús al precio de una van. */
+    for (const unidad of ['Irizar i6S', 'Irizar i6', 'Irizar PB', 'Neobus', 'Suburban',
+                          'Marcopolo', 'lo que sea', '']) {
+      const r = await cobra(unidad);
+      igual('«' + (unidad || '(vacío)') + '» no se puede cobrar', r._status, 422);
+    }
+  }
+
   igual('sin fallas', fallas, []);
 
   console.log('\n' + buenas + ' buenas, ' + malas + ' malas');

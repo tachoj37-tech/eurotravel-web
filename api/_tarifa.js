@@ -85,6 +85,55 @@ const TOPE_FORMULA_KM = 1400;
 const destinos = require('./_destinos');
 
 /* ------------------------------------------------------------
+   QUE UNIDADES SE SABEN COTIZAR SOLAS
+   ------------------------------------------------------------
+   La LISTA DE PRECIOS trae siete columnas, una por tipo de
+   unidad: para Puerto Vallarta van de $19,000 la Sprinter a
+   $38,000 el Marcopolo.
+
+   Pero lo que sale de aquí es SIEMPRE la columna sprinter,
+   porque hoy es la única que el dueño quiso cotizar en línea
+   («de momento solo sprinters»). Y la fórmula de respaldo ni
+   siquiera mira la unidad: da el mismo número para una van que
+   para un autobús de 51 pasajeros.
+
+   Así que esto no es una lista de preferencias: es la lista de
+   lo que este archivo SABE poner precio. Todo lo demás lo tiene
+   que rechazar quien llama, no cobrarlo al precio de la van.
+
+   La pantalla ya lo impedía —solo la Sprinter tiene cotizador
+   automático— pero la pantalla no es la puerta: `/api/pagar`
+   recibe la unidad como texto libre. Una petición armada a mano
+   con «Irizar i6S» cobraba $19,000 por un autobús de $36,000, y
+   el contrato que llega a EuroSystem decía «Irizar i6S».
+
+   PARA AGREGAR UNA: hace falta su columna aquí Y comprobar que
+   la fórmula de respaldo dé un número razonable para ella, que
+   hoy no lo da. No basta con poner el renglón.
+   ------------------------------------------------------------ */
+const UNIDADES_QUE_COTIZAN = { sprinter: 'sprinter' };
+
+/* Lo que manda el navegador es el NOMBRE de pantalla —«Sprinter»,
+   «Irizar i6S · 51 pasajeros»—, no la clave. Se normaliza: sin acentos, sin
+   mayúsculas, y sin lo que venga después del punto medio. */
+function claveDeUnidad(loQueLlego) {
+  const t = String(loQueLlego || '')
+    .split('·')[0]
+    .trim()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(new RegExp('[\\u0300-\\u036f]', 'g'), '');
+  return Object.prototype.hasOwnProperty.call(UNIDADES_QUE_COTIZAN, t)
+    ? UNIDADES_QUE_COTIZAN[t]
+    : null;
+}
+
+/* ¿Esta unidad se puede cotizar y cobrar en línea? Lo preguntan `cotizar` y
+   `pagar`, y tienen que preguntarlo LOS DOS: si uno la aceptara y el otro
+   no, el cliente vería un precio y no podría pagarlo, o peor, al revés. */
+function seSabeCotizar(unidad) { return claveDeUnidad(unidad) !== null; }
+
+/* ------------------------------------------------------------
    EL PRECIO DEL TRASLADO
    ------------------------------------------------------------
    Tres respuestas posibles, y en este orden:
@@ -99,7 +148,10 @@ const destinos = require('./_destinos');
 function trasladoDe(kmTotal, destino, unidad) {
   const km = Math.max(0, Number(kmTotal) || 0);
 
-  const enLista = destinos.precioDeLista(destino, unidad || 'sprinter');
+  /* La unidad se traduce a la columna de la lista. Si no se sabe cotizar,
+     NO se adivina: cae en sprinter porque quien llama ya debió rechazarla
+     antes de llegar aquí, y hay pruebas de que la rechaza. */
+  const enLista = destinos.precioDeLista(destino, claveDeUnidad(unidad) || 'sprinter');
   if (enLista) {
     /* `porKm` va en null a propósito y no ausente: un precio de lista NO sale
        de una tarifa por kilómetro, y quien lea `interno.tarifaKm` tiene que
@@ -555,6 +607,7 @@ module.exports = {
   MINIMO_POR_DIA, REDONDEO, TASA_IVA, ANTICIPO,
   NOCHES_INCLUIDAS, EXTRA_POR_NOCHE, BANDAS_MOVIMIENTO, TOPE_DIAS_MOVIMIENTO,
   DESTINOS_CON_REGLA,
+  UNIDADES_QUE_COTIZAN, claveDeUnidad, seSabeCotizar,
   kmDe, diasDeServicio, nochesDe, trasladoDe, reglaDeDestino,
   horasDe, bandaDe, movimientosDe, precioMovimientos,
   calcula

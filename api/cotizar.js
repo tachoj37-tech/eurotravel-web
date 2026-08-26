@@ -51,6 +51,27 @@ module.exports = async function handler(req, res) {
     return;
   }
 
+  /* ------------------------------------------------------------
+     LA UNIDAD, SI LA MANDAN
+
+     El precio sale siempre de la columna sprinter de la lista, que es la
+     única que hoy se cotiza en línea. Si el navegador dice cuál es y no es
+     esa, aquí se dice que no —para que cotizar y cobrar contesten lo mismo,
+     que es la razón de que estos dos archivos compartan `_tarifa`—.
+
+     Si NO la mandan se sigue, porque durante un tiempo no se mandaba y una
+     pantalla vieja en el caché de alguien no puede quedarse sin cotizador.
+     El freno que de verdad importa está en `/api/pagar`, que es donde se
+     compromete el dinero, y ahí sí es estricto.
+     ------------------------------------------------------------ */
+  if (cuerpo.unidad && !tarifa.seSabeCotizar(cuerpo.unidad)) {
+    res.status(422).json({
+      error: 'unidad no cotizable',
+      aviso: 'Esa unidad se cotiza a la medida. Escríbenos y te pasamos el precio hoy mismo.'
+    });
+    return;
+  }
+
   const redondo = cuerpo.redondo !== false && !!cuerpo.regreso;
   const dias = tarifa.diasDeServicio(cuerpo.salida, cuerpo.regreso);
   const noches = tarifa.nochesDe(cuerpo.salida, cuerpo.regreso);
