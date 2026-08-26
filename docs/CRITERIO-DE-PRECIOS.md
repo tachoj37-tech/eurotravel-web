@@ -149,6 +149,32 @@ no una base.
 El dueño mandó crearlo («créalo»): $29,000 Sprinter, $45,000 autobús NC47.
 Antes ese texto caía en Mariposa ($23,000) o Pátzcuaro ($25,000).
 
+### R11 · El vecino de un destino de lista se ancla a la lista (26-ago-2026)
+
+De la primera tanda de 20 viajes fuera de catálogo, el dueño corrigió
+exactamente los tres que estaban pegados a un destino suyo, y en los tres lo
+ancló a su vecino:
+
+| corregido | la fórmula daba | él dijo | su vecino de lista |
+|---|---|---|---|
+| San Juan Cosalá | $9,400 | **$6,500** | Chapala $6,500 (mismo camino, antes) |
+| Magdalena | $9,800 | **$7,500** | Tequila $7,000 (+$500 por seguir de largo) |
+| Zirahuén | $18,500 | **$23,000** | Pátzcuaro $25,000 (−$2,000) |
+
+Y confirmó lo contrario: **Villa Corona a $8,800 «está bien»** — no tiene
+vecino de lista en su camino, y ahí la fórmula manda. Igual que Tepatitlán,
+Ameca, Sayula, Lagos, Aguascalientes, Colima, Autlán, Mascota, La Manzanilla,
+Dolores Hidalgo, SLP y Bernal: «de ahí en más, todo bien».
+
+**La regla:** la fórmula es para destinos sin ancla. Si el destino está en el
+camino (o pegado) a uno de la lista, el precio sale del de la lista — hacia
+arriba Y hacia abajo. Cada corrección entra al catálogo como renglón propio,
+como entraron León y Tepic.
+
+**Cómo detectarlo antes de que lo corrija:** al proponer una lista de viajes,
+señalar todo destino a menos de ~30 km de uno del catálogo y proponer el
+precio anclado, no el de la fórmula.
+
 ### R10 · El precio depende del origen — PENDIENTE, ignorar por ahora
 
 El Excel tiene una fila «SPRINTER OCOTLAN» con precios más altos saliendo de

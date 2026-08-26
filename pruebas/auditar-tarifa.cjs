@@ -97,6 +97,12 @@ function diaDeMovimientoAMano(horas, esHuasteca) {
    ============================================================ */
 const SU_LISTA = [
   ['Chapala, Jalisco, México', 6500],
+  /* Los tres que el dueño dicto el 26-ago-2026 corrigiendo a la formula
+     (criterio R11): el vecino de un destino de lista se ancla a la lista.
+     Cosala cobraba 9,400, Magdalena 9,800 y Zirahuen 18,500. */
+  ['San Juan Cosalá, Jalisco, México', 6500],
+  ['Magdalena, Jalisco, México', 7500],
+  ['Zirahuén, Michoacán, México', 23000],
   /* Cambió de 8,500 a 7,000 el 26-ago-2026. No es que la prueba estuviera
      mal: el dueño bajó el precio de lista de la Sprinter a Tequila. */
   ['Tequila, Jalisco, México', 7000],

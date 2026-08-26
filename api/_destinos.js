@@ -55,6 +55,12 @@
    ============================================================ */
 
 const DESTINOS = [
+  /* Dictado por el dueño el 26-ago-2026 (criterio R11): está en la misma
+     ribera, ANTES de Chapala, y la fórmula lo cobraba $9,400. «Déjalo en
+     seis quinientos», o sea el precio de Chapala. */
+  { nombre: "San Juan Cosalá (ribera de Chapala)", km: 96,
+    busca: /cosal[aá]/i,
+    precio: { sprinter: 6500 } },
   { nombre: "Chapala", km: 100,
     busca: /chapala|ajijic/i,
     precio: { busNC47: 10500, bus4849: 12000, neobusI6: 13000, pbI6: 12000, marcopolo: 15000, irizar: 14000, sprinter: 6500 } },
@@ -63,6 +69,12 @@ const DESTINOS = [
     /* Sprinter bajado de 8,500 a 7,000 el 26-ago-2026 por decisión del dueño.
        Solo la Sprinter: los autobuses siguen igual. */
     precio: { busNC47: 12000, bus4849: 13000, neobusI6: 15000, pbI6: 14000, marcopolo: 17000, irizar: 16000, sprinter: 7000 } },
+  /* Dictado por el dueño el 26-ago-2026 (R11): 20 minutos más allá de
+     Tequila, y la fórmula lo cobraba $9,800 contra los $7,000 de Tequila.
+     «Está muy caro, ponlo en siete quinientos.» */
+  { nombre: "Magdalena (pasando Tequila)", km: 156,
+    busca: /magdalena, *jal/i,
+    precio: { sprinter: 7500 } },
   { nombre: "Tapalpa", km: 262,
     busca: /tapalpa/i,
     precio: { busNC47: 24000, bus4849: 25000, neobusI6: 27000, pbI6: 26000, marcopolo: 29000, irizar: 28000, sprinter: 14500 } },
@@ -157,6 +169,12 @@ const DESTINOS = [
   { nombre: "Pátzcuaro / Uruapan", km: 656,
     busca: /p[aá]tzcuaro|uruapan/i,
     precio: { busNC47: 38000, bus4849: 39000, neobusI6: 43000, pbI6: 42000, marcopolo: 47000, irizar: 45000, sprinter: 25000 } },
+  /* Dictado por el dueño el 26-ago-2026 (R11): a 20 minutos de Pátzcuaro,
+     y la fórmula lo daba en $18,500 — $6,500 POR DEBAJO de su lista de al
+     lado. «¿Por qué tan barato? Déjalo en veintitrés mil.» */
+  { nombre: "Zirahuén (junto a Pátzcuaro)", km: 545,
+    busca: /zirahu[eé]n/i,
+    precio: { sprinter: 23000 } },
   { nombre: "San Miguel de Allende", km: 674,
     busca: /san miguel de allende/i,
     precio: { busNC47: 40000, bus4849: 39000, neobusI6: 44000, pbI6: 42000, marcopolo: 48000, irizar: 46000, sprinter: 26500 } },
