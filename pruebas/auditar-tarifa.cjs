@@ -313,6 +313,16 @@ const SU_LISTA = [
     sinMov('Santuario de la Mariposa Monarca, Michoacán, México', 1), 23000);
   igual('y Patzcuaro solo sigue en 25,000',
     sinMov('Pátzcuaro, Michoacán, México', 1), 25000);
+
+  /* El estado NO es la capital (mismo defecto que Guanajuato y Oaxaca,
+     cazado el 26-ago-2026): Nochistlán está a 150 km de Guadalajara y caía
+     en los 25,000 de Zacatecas capital. */
+  igual('Nochistlán NO cae en la capital de Zacatecas',
+    t.calcula(300, 1, { destino: { direccion: 'Nochistlán de Mejía, Zacatecas, México' } })
+      .interno.destinoDeLista, null);
+  igual('la capital sí sigue cayendo en su renglón',
+    t.calcula(708, 1, { destino: { direccion: 'Zacatecas, Zacatecas, México' } })
+      .interno.destinoDeLista, 'Zacatecas');
 })();
 
 /* ============ 4. LA FORMULA DE RESPALDO, KILOMETRO POR KILOMETRO ============ */

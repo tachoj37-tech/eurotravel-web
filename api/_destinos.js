@@ -181,8 +181,12 @@ const DESTINOS = [
   { nombre: "Melaque / Barra de Navidad", km: 692,
     busca: /melaque|barra de navidad|cuastecomates/i,
     precio: { busNC47: 32000, bus4849: 33000, neobusI6: 35000, pbI6: 34000, marcopolo: 40000, irizar: 37000, sprinter: 20500 } },
+  /* Se pide la CIUDAD, no el estado: con /zacatecas/ a secas, Nochistlán
+     —que está a 150 km de Guadalajara— cobraba los $25,000 de la capital.
+     Mismo defecto que ya se pagó con Guanajuato y con Oaxaca; cazado el
+     26-ago-2026 al armar la segunda tanda de viajes. */
   { nombre: "Zacatecas", km: 708,
-    busca: /zacatecas/i,
+    busca: /^zacatecas\b|zacatecas, *zac|guadalupe, *zac/i,
     precio: { busNC47: 38000, bus4849: 39000, neobusI6: 42000, pbI6: 40000, marcopolo: 46000, irizar: 44000, sprinter: 25000 } },
   { nombre: "Tlalpujahua", km: 762,
     busca: /tlalpujahua/i,
