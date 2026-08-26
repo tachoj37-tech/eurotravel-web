@@ -79,7 +79,9 @@ function diaDeMovimientoAMano(horas, esHuasteca) {
    ============================================================ */
 const SU_LISTA = [
   ['Chapala, Jalisco, México', 6500],
-  ['Tequila, Jalisco, México', 8500],
+  /* Cambió de 8,500 a 7,000 el 26-ago-2026. No es que la prueba estuviera
+     mal: el dueño bajó el precio de lista de la Sprinter a Tequila. */
+  ['Tequila, Jalisco, México', 7000],
   ['Tapalpa, Jalisco, México', 14500],
   ['Mazamitla, Jalisco, México', 14500],
   ['San Juan de los Lagos, Jalisco, México', 14000],

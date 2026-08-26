@@ -60,7 +60,9 @@ const DESTINOS = [
     precio: { busNC47: 10500, bus4849: 12000, neobusI6: 13000, pbI6: 12000, marcopolo: 15000, irizar: 14000, sprinter: 6500 } },
   { nombre: "Tequila / Guachimontones", km: 136,
     busca: /tequila|guachimont|amatit/i,
-    precio: { busNC47: 12000, bus4849: 13000, neobusI6: 15000, pbI6: 14000, marcopolo: 17000, irizar: 16000, sprinter: 8500 } },
+    /* Sprinter bajado de 8,500 a 7,000 el 26-ago-2026 por decisión del dueño.
+       Solo la Sprinter: los autobuses siguen igual. */
+    precio: { busNC47: 12000, bus4849: 13000, neobusI6: 15000, pbI6: 14000, marcopolo: 17000, irizar: 16000, sprinter: 7000 } },
   { nombre: "Tapalpa", km: 262,
     busca: /tapalpa/i,
     precio: { busNC47: 24000, bus4849: 25000, neobusI6: 27000, pbI6: 26000, marcopolo: 29000, irizar: 28000, sprinter: 14500 } },
