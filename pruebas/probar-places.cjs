@@ -85,30 +85,65 @@ async function busca(cuerpo) {
 
 (async function () {
 
-  /* ============ 1. EL CERCO NO PUEDE LLEVAR FILTRO DE PAIS ============
-     Es la parte que estaba rota. Si esto se rompe otra vez, el buscador de
-     direccion exacta se queda mudo y NADA lo grita. */
+  /* ============================================================
+     1. EL RADIO NO PUEDE PASAR DE 50 KM
+     ------------------------------------------------------------
+     ESTA es la que estaba rota. Google rechaza la busqueda ENTERA
+     si el circulo pasa de 50,000 metros —no la recorta, la
+     rechaza— y la pagina mandaba 60 km para «ciudad», 70 para
+     «playa» y 110 para «region».
+
+     O sea que el buscador de direccion exacta no devolvia una
+     sola sugerencia en Guadalajara, Puerto Vallarta, la CDMX ni
+     Mazatlan. Y fallaba en silencio: la pagina trata el error
+     igual que «no hay coincidencias».
+
+     Medido contra produccion, un radio a la vez:
+         49,999 m -> cinco sugerencias
+         50,000 m -> cinco sugerencias
+         50,001 m -> «Google rechazo la solicitud»
+
+     Si alguien vuelve a subir ese numero, esta prueba se lo dice.
+     ============================================================ */
+  {
+    await busca({ input: 'hotel', centroLat: 20.6, centroLng: -103.3, radio: 60000 });
+    igual('60 km se recortan a 50, que es el tope de Google',
+      PETICION.locationRestriction.circle.radius, 50000);
+    await busca({ input: 'hotel', centroLat: 20.6, centroLng: -103.3, radio: 110000 });
+    igual('110 km tambien', PETICION.locationRestriction.circle.radius, 50000);
+    await busca({ input: 'hotel', centroLat: 20.6, centroLng: -103.3, radio: 50000 });
+    igual('50 km justos pasan tal cual', PETICION.locationRestriction.circle.radius, 50000);
+    await busca({ input: 'hotel', centroLat: 20.6, centroLng: -103.3, radio: 1 });
+    igual('y uno diminuto sube a 5 km', PETICION.locationRestriction.circle.radius, 5000);
+    await busca({ input: 'hotel', centroLat: 20.6, centroLng: -103.3 });
+    igual('sin decir radio, 45 km', PETICION.locationRestriction.circle.radius, 45000);
+
+    /* Y la tabla del navegador tampoco puede prometer mas de 50 km */
+    const html = require('fs').readFileSync(
+      require('path').join(__dirname, '..', 'index.html'), 'utf8');
+    const tabla = /var RADIOS = \{([\s\S]*?)\};/.exec(html);
+    const numeros = (tabla ? tabla[1].match(/\d+/g) : []).map(Number);
+    cierto('la tabla de radios de index.html se pudo leer', numeros.length > 5);
+    igual('y ninguno de sus radios pasa de 50 km',
+      numeros.filter(function (n) { return n > 50000; }), []);
+  }
+
+  /* ============ 2. EL CERCO Y EL FILTRO DE PAIS SI CONVIVEN ============
+     Se llego a creer que no, y era falso: lo que rechazaba la peticion era
+     el radio. Se comprobo contra produccion mandando los dos con un radio
+     valido. Se prueba para que nadie vuelva a quitar uno creyendo que
+     estorba. */
   {
     await busca({ input: 'Av Vallarta', pais: 'mx' });
     igual('sin cerco, se le pide a Google solo México',
       PETICION.includedRegionCodes, ['mx']);
     igual('y sin cerco', PETICION.locationRestriction, undefined);
 
-    await busca({ input: 'Av Vallarta', pais: 'mx', centroLat: 20.6597, centroLng: -103.3496, radio: 60000 });
-    cierto('con cerco, el cerco se manda', !!PETICION.locationRestriction);
-    igual('y el filtro de pais NO, porque juntos Google rechaza todo',
-      PETICION.includedRegionCodes, undefined);
+    await busca({ input: 'Av Vallarta', pais: 'mx', centroLat: 20.6597, centroLng: -103.3496, radio: 45000 });
+    igual('con cerco, el filtro de pais TAMBIEN va', PETICION.includedRegionCodes, ['mx']);
     igual('el cerco lleva su centro y su radio',
       [PETICION.locationRestriction.circle.center.latitude,
-       PETICION.locationRestriction.circle.radius], [20.6597, 60000]);
-  }
-
-  /* ============ 2. EL RADIO, ACOTADO ============ */
-  {
-    await busca({ input: 'hotel', centroLat: 20.6, centroLng: -103.3, radio: 999999999 });
-    igual('un radio enorme se acota a 200 km', PETICION.locationRestriction.circle.radius, 200000);
-    await busca({ input: 'hotel', centroLat: 20.6, centroLng: -103.3, radio: 1 });
-    igual('y uno diminuto sube a 5 km', PETICION.locationRestriction.circle.radius, 5000);
+       PETICION.locationRestriction.circle.radius], [20.6597, 45000]);
   }
 
   /* ============ 3. UN CENTRO QUE NO ES CENTRO ============

@@ -117,32 +117,41 @@ module.exports = async function handler(req, res) {
       const conCerco = Number.isFinite(cLat) && Number.isFinite(cLng) &&
         Math.abs(cLat) <= 90 && Math.abs(cLng) <= 180 && !(cLat === 0 && cLng === 0);
 
+      peticion.includedRegionCodes = [String(cuerpo.pais || 'mx').slice(0, 2)];
+
       if (conCerco) {
         /* --------------------------------------------------------------
-           EL CERCO Y EL FILTRO DE PAIS NO PUEDEN IR JUNTOS
+           EL RADIO DEL CERCO TOPA EN 50 KM, Y SE MANDABAN 60
 
-           Iban, y Google RECHAZABA la petición entera. O sea que el buscador
-           de dirección exacta —el que se usa después de elegir la ciudad,
-           para marcar el hotel o el domicilio— no devolvía NADA. Nunca. El
-           cliente veía una lista vacía y tenía que escribir la dirección
-           completa a ciegas.
+           Google RECHAZA la petición entera cuando el círculo pasa de
+           50,000 metros. No la recorta: la rechaza. O sea que el buscador
+           de dirección exacta —el que sale después de elegir la ciudad,
+           para marcar el hotel o el domicilio del cliente— no devolvía
+           NADA. Nunca. El cliente veía una lista vacía y tenía que
+           escribir su dirección completa a ciegas.
 
-           No se vio antes porque el camino SIN cerco —el de elegir la
-           ciudad— sí funciona, y es el que se prueba a mano. El del cerco
-           falla en silencio: `pideAlProxy` recibe el error y solo cierra la
-           lista, que se ve igual que «no hay coincidencias».
+           Y le pegaba justo a los destinos más vendidos: la tabla de
+           `index.html` usaba 60 km para «ciudad», 70 para «playa» y 110
+           para «región». Guadalajara, Puerto Vallarta, la CDMX y Mazatlán
+           estaban todos rotos; solo funcionaban los aeropuertos (35 km) y
+           los pueblos mágicos (45 km).
 
-           Comprobado contra producción con el mismo texto: sin cerco,
-           cinco sugerencias; con cerco, «Google rechazó la solicitud».
+           No se vio antes porque falla EN SILENCIO: `pideAlProxy` recibe el
+           error y solo cierra la lista, que se ve igual que «no hay
+           coincidencias».
 
-           Así que cuando hay cerco, el país lo acota ESTE archivo, abajo.
+           Medido contra producción, un radio a la vez:
+               49,999 m -> cinco sugerencias
+               50,000 m -> cinco sugerencias
+               50,001 m -> «Google rechazó la solicitud»
+
+           Se recorta AQUI y no solo en la tabla del navegador porque este
+           es el lado que no se puede saltar.
            -------------------------------------------------------------- */
-        const radio = Math.min(200000, Math.max(5000, Number(cuerpo.radio) || 60000));
+        const radio = Math.min(50000, Math.max(5000, Number(cuerpo.radio) || 45000));
         peticion.locationRestriction = {
           circle: { center: { latitude: cLat, longitude: cLng }, radius: radio }
         };
-      } else {
-        peticion.includedRegionCodes = [String(cuerpo.pais || 'mx').slice(0, 2)];
       }
 
       const r = await fetch(GOOGLE + '/places:autocomplete', {

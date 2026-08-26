@@ -2596,14 +2596,24 @@ window.IMGS = {
     });
 
     /* Qué tan lejos del destino se aceptan direcciones. Generoso a propósito:
-       quien pide Puerto Vallarta puede querer Punta Mita o Sayulita. */
+       quien pide Puerto Vallarta puede querer Punta Mita o Sayulita.
+
+       PERO NINGUNO PUEDE PASAR DE 50 KM. Google rechaza la búsqueda entera
+       si el círculo es más grande —no la recorta, la rechaza— y aquí había
+       60 km para «ciudad», 70 para «playa» y 110 para «región». O sea que
+       este buscador no devolvía una sola sugerencia en Guadalajara, en
+       Puerto Vallarta, en la CDMX ni en Mazatlán, y fallaba en silencio.
+
+       El servidor lo recorta de todos modos, que es el lado que no se puede
+       saltar; aquí se dejan ya recortados para que la tabla no prometa lo
+       que no puede cumplir. */
     var RADIOS = {
       'aeropuerto': 35000, 'terminal': 35000, 'recinto': 35000,
       'zona arqueológica': 45000, 'zona industrial': 45000,
       'pueblo mágico': 45000, 'santuario': 45000, 'lago': 45000,
-      'ciudad': 60000, 'playa': 70000, 'región': 110000
+      'ciudad': 50000, 'playa': 50000, 'región': 50000
     };
-    function radioDe(p) { return (p && RADIOS[p[2]]) || 60000; }
+    function radioDe(p) { return (p && RADIOS[p[2]]) || 45000; }
 
     function setPick(p) {
       locPick = p;
