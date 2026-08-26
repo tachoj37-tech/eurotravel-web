@@ -636,11 +636,6 @@
   .unit-ph { position: relative; aspect-ratio: 16 / 10; overflow: hidden; background: var(--soft); }
   .unit-ph img { width: 100%; height: 100%; object-fit: cover; transition: transform 700ms var(--ease); }
   .unit:hover .unit-ph img { transform: scale(1.06); }
-  .unit-tag {
-    position: absolute; top: 12px; left: 12px; background: var(--red); color: #fff;
-    font-family: 'Archivo'; font-size: 10.5px; letter-spacing: 0.1em; text-transform: uppercase;
-    font-weight: 600; padding: 5px 10px; border-radius: 4px;
-  }
   .unit-body { padding: 18px; display: flex; flex-direction: column; gap: 10px; flex: 1; }
   .unit-body h3 { font-size: 21px; }
   .unit-cap { display: inline-flex; align-items: center; gap: 8px; font-size: 13.5px; color: var(--muted); }
@@ -1385,6 +1380,15 @@
 #v-inicio .foto-noche {background-image:url(img/noche.webp)}
 #v-inicio .foto-patio {background-image:url(img/hero1.jpg)}
 #v-inicio .foto-flota {background-image:url(img/hero3.jpg)}
+/* Las cinco de «Nuestros Viajes». Cada una es lo que dice su subtítulo, y
+   tres son destinos que de verdad se venden: Guayabitos, Talpa y Tapalpa
+   están en la lista de precios. Antes las cinco eran fotos del mismo
+   autobús blanco y la sección no decía nada.
+   Procedencia y licencias: img/creditos-viajes.json (todas CC0). */
+#v-inicio .foto-viaje-descanso {background-image:url(img/viaje-descanso.jpg)}
+#v-inicio .foto-viaje-religioso {background-image:url(img/viaje-religioso.jpg);background-position:50% 62%}
+#v-inicio .foto-viaje-sociales {background-image:url(img/viaje-sociales.jpg)}
+#v-inicio .foto-viaje-turismo {background-image:url(img/viaje-turismo.jpg);background-position:50% 58%}
 #v-inicio .foto-destino-vallarta {background-image:url(img/dest-vallarta.jpg)}
 #v-inicio .foto-destino-mazatlan {background-image:url(img/dest-mazatlan.jpg)}
 #v-inicio .foto-destino-cdmx {background-image:url(img/dest-cdmx.jpg)}
@@ -1666,24 +1670,37 @@ window.IMGS = {
   <div class="caja">
     <h2>Nuestros Viajes</h2>
     <div class="viajes">
+      <!-- Cada foto es LO QUE DICE SU SUBTÍTULO, no otra foto del mismo
+           autobús: la playa de Guayabitos, la basílica de Talpa, Bellas
+           Artes y Tapalpa. Las tres primeras y la última son destinos que
+           de verdad se venden, con precio en la lista.
+           `role="img"` con `aria-label` porque son fondos de CSS: sin eso,
+           quien navega con lector de pantalla no oye nada. -->
       <article class="viaje">
-        <div class="viaje-foto foto-patio"></div>
+        <div class="viaje-foto foto-viaje-descanso" role="img"
+             aria-label="Playa de Rincón de Guayabitos, Nayarit, desde el aire"></div>
         <h3>Descanso</h3><p>Disfruta tus vacaciones.</p>
       </article>
       <article class="viaje">
-        <div class="viaje-foto foto-flota"></div>
+        <div class="viaje-foto foto-viaje-religioso" role="img"
+             aria-label="Basílica de Talpa de Allende, Jalisco"></div>
         <h3>Cultural y religioso</h3><p>Conoce los mejores lugares y eventos religiosos.</p>
       </article>
       <article class="viaje">
-        <div class="viaje-foto foto-i6am"></div>
+        <div class="viaje-foto foto-viaje-sociales" role="img"
+             aria-label="Palacio de Bellas Artes, Ciudad de México"></div>
         <h3>Eventos sociales</h3><p>Graduaciones, bodas, conciertos.</p>
       </article>
       <article class="viaje">
-        <div class="viaje-foto foto-suburban"></div>
+        <!-- Ésta se queda: es la Suburban en zona de oficinas, que es
+             exactamente lo que dice el subtítulo. -->
+        <div class="viaje-foto foto-suburban" role="img"
+             aria-label="Suburban ejecutiva en zona de oficinas"></div>
         <h3>Ejecutivo</h3><p>Congresos, exposiciones, negocios.</p>
       </article>
       <article class="viaje">
-        <div class="viaje-foto foto-interior"></div>
+        <div class="viaje-foto foto-viaje-turismo" role="img"
+             aria-label="Valle de Tapalpa, Jalisco"></div>
         <h3>Turismo</h3><p>Explora el país acompañado de tus amigos.</p>
       </article>
     </div>
@@ -2443,7 +2460,11 @@ window.IMGS = {
       card.setAttribute('data-cat', u.cat);
       card.setAttribute('data-id', u.id);
       card.innerHTML =
-        '<div class="unit-ph"><span class="unit-tag">' + u.tag.split(' · ')[1] + '</span>' +
+        /* Sin etiqueta encima de la foto. Decía lo mismo que ya dicen el
+           nombre y la capacidad de abajo —«Turismo», «Larga distancia»— y
+           tapaba la esquina de cada unidad. El `tag` sigue vivo: se lee
+           entero en la ficha que abre al hacer clic. */
+        '<div class="unit-ph">' +
         '<img loading="lazy" alt="' + u.name + '" src="' + (I[u.img] || '') + '"></div>' +
         '<div class="unit-body"><h3>' + u.name + '</h3>' +
         '<span class="unit-cap"><svg aria-hidden="true"><use href="#i-users"/></svg>' + u.cap + '</span>' +

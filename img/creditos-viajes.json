@@ -1,0 +1,42 @@
+[
+ {
+  "archivo": "img/viaje-descanso.jpg",
+  "titulo": "Playa de Guayabitos desde un dron 03.jpg",
+  "licencia": "CC0",
+  "autor": "Luisalvaz",
+  "ficha": "https://commons.wikimedia.org/wiki/File%3APlaya%20de%20Guayabitos%20desde%20un%20dron%2003.jpg",
+  "porQueEsta": "Rincón de Guayabitos, Nayarit — está en su lista de precios ($18,500)",
+  "kb": 266,
+  "ancho": 1200
+ },
+ {
+  "archivo": "img/viaje-religioso.jpg",
+  "titulo": "Basílica de Talpa.jpg",
+  "licencia": "CC0",
+  "autor": "YdelaT",
+  "ficha": "https://commons.wikimedia.org/wiki/File%3ABas%C3%ADlica%20de%20Talpa.jpg",
+  "porQueEsta": "Basílica de Talpa de Allende — está en su lista de precios ($15,000)",
+  "kb": 422,
+  "ancho": 1200
+ },
+ {
+  "archivo": "img/viaje-sociales.jpg",
+  "titulo": "Palacio de Bellas Artes - CDMX.jpg",
+  "licencia": "CC0",
+  "autor": "JUAN CARLOS GONZALEZ",
+  "ficha": "https://commons.wikimedia.org/wiki/File%3APalacio%20de%20Bellas%20Artes%20-%20CDMX.jpg",
+  "porQueEsta": "Bellas Artes, CDMX — la sala de conciertos del país; CDMX está en su lista",
+  "kb": 480,
+  "ancho": 1200
+ },
+ {
+  "archivo": "img/viaje-turismo.jpg",
+  "titulo": "Tapalpa in summer cwb.jpg",
+  "licencia": "CC0",
+  "autor": "Mexikansi72",
+  "ficha": "https://commons.wikimedia.org/wiki/File%3ATapalpa%20in%20summer%20cwb.jpg",
+  "porQueEsta": "Tapalpa, Jalisco — está en su lista de precios ($14,500)",
+  "kb": 356,
+  "ancho": 1200
+ }
+]
