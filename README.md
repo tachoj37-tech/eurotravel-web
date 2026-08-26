@@ -53,10 +53,19 @@ Se configuran en Vercel → Settings → Environment Variables. Ver `.env.exampl
 | `STRIPE_WEBHOOK_SECRET` | Firma de los avisos de Stripe | — |
 | `CONTRATOS_API_KEY` | Registrar el contrato en EuroSystem | — |
 | `EUROSYSTEM_URL` | A dónde se manda el contrato. Opcional | — |
+| `RESEND_API_KEY` | Mandarle al cliente su folio y su contrato al pagar | — |
+| `RESEND_DE` | De quién sale ese correo. Opcional | — |
+| `CLAVE_COTIZADOR` | La pantalla temporal de revisión de costos | — |
 
 **Vercel solo aplica las variables a los despliegues nuevos.** Después de
 agregar o cambiar una hay que volver a desplegar, o el sitio sigue corriendo
 con las de antes.
+
+**Sin `RESEND_API_KEY` el contrato se sigue registrando en EuroSystem** —no se
+pierde ningún pago— pero al cliente no le llega nada, y la pantalla le promete
+que sí. Y antes del primer cliente real hay que **verificar el dominio en
+Resend**: sin eso, Resend solo entrega al dueño de la cuenta y rechaza a
+cualquier otro destinatario. `POST /api/diagnostico` dice si está configurada.
 
 Las de Google se restringen **por API**, no por sitio web: las llama el
 servidor, que no envía cabecera `Referer`.

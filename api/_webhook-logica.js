@@ -196,6 +196,7 @@ function contratoDesde(m, sesion) {
    preguntar. Vive en `_stripe.js`, junto con la regla de si esta pagada —que
    antes estaba escrita aqui y otra vez en confirmar.js—. */
 const stripe = require('./_stripe');
+const correo = require('./_correo');   // el correo al cliente, en un solo dueño
 
 /* `crudo` puede ser el cuerpo tal cual (Buffer/texto) o el objeto ya
    parseado, segun lo que deje pasar el entorno. */
@@ -295,14 +296,51 @@ async function procesa(crudo, cabeceraFirma) {
     const r = await fetch(EUROSYSTEM + PUERTA, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-api-key': llave },
-      body: JSON.stringify(cuerpo)
+      /* `incluirPdf` para que la respuesta traiga el contrato y se pueda
+         ADJUNTAR al correo. Su `urlPdf` vence a los 30 días; el adjunto no.
+         El cliente tiene que poder abrir su contrato en marzo. */
+      body: JSON.stringify(Object.assign({ incluirPdf: true }, cuerpo))
     });
     const d = await r.json().catch(function () { return {}; });
 
     if (r.ok) {
       console.log('[webhook] contrato ' + d.folio + (d.repetido ? ' (ya existía)' : ' creado') +
         ' para la sesión ' + sesion.id);
-      return { status: 200, cuerpo: { recibido: true, folio: d.folio, repetido: !!d.repetido } };
+
+      /* ------------------------------------------------------------
+         Y AHORA SI, EL CORREO
+
+         Hasta hoy esto no existía: el contrato se creaba en EuroSystem y
+         ahí se quedaba. La pantalla le decía al cliente «te mandamos el
+         folio y las instrucciones» y no se le mandaba nada.
+
+         Va DESPUÉS de crear el contrato y con su folio en la mano, porque
+         el folio es lo que el cliente necesita para cualquier aclaración.
+         ------------------------------------------------------------ */
+      const paraElCorreo = Object.assign({}, sesion.metadata || {}, { folio: d.folio });
+      const envio = await correo.mandaContrato(paraElCorreo, d.pdfBase64);
+
+      if (envio.ok) {
+        console.log('[webhook] correo enviado a la sesión ' + sesion.id +
+          (d.pdfBase64 ? ' con contrato adjunto' : ' SIN adjunto: EuroSystem no mandó el PDF'));
+        return { status: 200, cuerpo: { recibido: true, folio: d.folio, repetido: !!d.repetido, correo: true } };
+      }
+
+      /* El contrato YA existe; lo que falló es el correo. Crear el contrato
+         es idempotente —EuroSystem contesta «ya existía»—, así que pedirle a
+         Stripe que reintente no duplica nada y le da al correo más
+         oportunidades durante tres días.
+
+         Pero solo cuando el fallo es pasajero. Si falta la clave o el
+         dominio no está verificado, reintentar tres días es tener a Stripe
+         golpeando una puerta que no va a abrir: se acusa recibo y se grita
+         en el registro para que alguien lo mande a mano. */
+      console.error('[webhook] contrato ' + d.folio + ' creado pero EL CORREO NO SALIÓ: ' +
+        envio.motivo + (envio.reintentar ? ' — Stripe reintentará.'
+                                         : ' — NO se reintenta. MANDARLO A MANO.'));
+      return envio.reintentar
+        ? { status: 500, cuerpo: { error: 'correo no enviado', folio: d.folio } }
+        : { status: 200, cuerpo: { recibido: true, folio: d.folio, correo: false } };
     }
 
     /* 401/422 no se arreglan reintentando: la llave está mal o los datos no

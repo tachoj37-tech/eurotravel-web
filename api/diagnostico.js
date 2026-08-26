@@ -94,6 +94,20 @@ module.exports = async function handler(req, res) {
     }
   };
 
+  /* El correo al cliente. No se prueba contra Resend —mandar un correo de
+     verdad para diagnosticar seria mandarle correo a alguien— pero si se dice
+     si esta configurada y de donde saldria. */
+  const correo = require('./_correo');
+  salida.RESEND_API_KEY = {
+    configurada: correo.hayClave(),
+    sale_de: correo.DE,
+    /* El aviso que de verdad importa: sin dominio verificado, Resend solo
+       entrega al dueño de la cuenta y rechaza a cualquier otro. */
+    ojo: correo.hayClave()
+      ? 'Verifica el dominio en Resend antes del primer cliente real: sin eso solo llega a tu propio correo.'
+      : 'Sin esta clave el contrato se registra igual, pero al cliente NO le llega nada.'
+  };
+
   if (places) salida.GOOGLE_PLACES_KEY.prueba = await pruebaPlaces(places);
   if (routes) salida.GOOGLE_ROUTES_KEY.prueba = await pruebaRoutes(routes);
 

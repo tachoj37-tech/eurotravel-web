@@ -119,11 +119,21 @@ const sesionPagada = {
    pregunta por la sesion; el aviso del webhook ya no manda. */
 let ultimoEnvio = null;
 let sesionEnStripe = null;
+/* Y un tercero: Resend, desde que el cliente recibe su contrato por correo.
+   Se apunta aparte porque lo que se le manda a Resend NO puede confundirse
+   con lo que se le manda a EuroSystem. */
+let ultimoCorreo = null;
+let RESEND_DICE = { ok: true, status: 200, cuerpo: { id: 'em_1' } };
 function euroDice(status, datos) {
   global.fetch = function (url, opc) {
     if (String(url).indexOf('api.stripe.com') >= 0) {
       return Promise.resolve({ ok: !!sesionEnStripe, status: sesionEnStripe ? 200 : 404,
         json: function () { return Promise.resolve(sesionEnStripe || { error: { message: 'no such session' } }); } });
+    }
+    if (String(url).indexOf('api.resend.com') >= 0) {
+      ultimoCorreo = { cabeceras: opc.headers, cuerpo: JSON.parse(opc.body) };
+      return Promise.resolve({ ok: RESEND_DICE.ok, status: RESEND_DICE.status,
+        json: function () { return Promise.resolve(RESEND_DICE.cuerpo); } });
     }
     ultimoEnvio = { url: url, opciones: opc, cuerpo: JSON.parse(opc.body) };
     return Promise.resolve({ ok: status >= 200 && status < 300, status: status,
@@ -256,6 +266,73 @@ function euroDice(status, datos) {
   igual('fecha ilegible: 200 y NO se registra con fecha inventada',
     [r._status, r._json.error], [200, 'fechas ilegibles']);
   igual('no se llamó a EuroSystem', ultimoEnvio, null);
+
+  /* ============================================================
+     EL CORREO AL CLIENTE
+     ------------------------------------------------------------
+     Hasta hoy el cliente pagaba y no recibia NADA, mientras la
+     pantalla le prometia «te mandamos el folio y las
+     instrucciones». Esto comprueba que ahora si sale, y que sale
+     DESPUES de crear el contrato y con su folio.
+     ============================================================ */
+  process.env.RESEND_API_KEY = 're_de_mentiras';
+
+  /* -------- el camino bueno: contrato creado y correo enviado -------- */
+  ultimoEnvio = null; ultimoCorreo = null;
+  sesionEnStripe = sesionPagada;
+  RESEND_DICE = { ok: true, status: 200, cuerpo: { id: 'em_ok' } };
+  euroDice(201, { folio: 51001, pdfBase64: 'JVBERi0xLjMK' });
+  r = res();
+  await handler(pide({ type: 'checkout.session.completed', data: { object: sesionPagada } }), r);
+
+  igual('pago con correo: 200 y lo acusa', [r._status, r._json.correo], [200, true]);
+  cierto('se le pidió el PDF a EuroSystem', ultimoEnvio.cuerpo.incluirPdf === true);
+  cierto('salió el correo', !!ultimoCorreo);
+  igual('al correo del cliente', ultimoCorreo.cuerpo.to, ['quien@sea.mx']);
+  cierto('con el folio que devolvió EuroSystem, no otro',
+    ultimoCorreo.cuerpo.subject.indexOf('51001') >= 0);
+  cierto('y el contrato adjunto', ultimoCorreo.cuerpo.attachments &&
+    ultimoCorreo.cuerpo.attachments[0].content === 'JVBERi0xLjMK');
+
+  /* La metadata de Stripe trae `km`. El correo NO puede llevarlo. */
+  igual('y sin kilometraje ni tarifa en el correo',
+    JSON.stringify(ultimoCorreo.cuerpo).match(/\bkm\b|kilometr|tarifa|621\.2/i), null);
+
+  /* -------- el correo falla, pero es pasajero: que Stripe reintente --------
+     El contrato YA existe. Crearlo otra vez es idempotente —EuroSystem
+     contesta «ya existia»—, asi que reintentar no duplica y le da al correo
+     mas oportunidades durante tres dias. */
+  ultimoCorreo = null;
+  RESEND_DICE = { ok: false, status: 500, cuerpo: { message: 'internal' } };
+  euroDice(201, { folio: 51002, pdfBase64: 'JVBERi0xLjMK' });
+  r = res();
+  await handler(pide({ type: 'checkout.session.completed', data: { object: sesionPagada } }), r);
+  igual('Resend caído: 500 para que Stripe reintente', r._status, 500);
+  igual('y se dice qué folio quedó sin correo', r._json.folio, 51002);
+
+  /* -------- el correo falla y NO se arregla esperando --------
+     Dominio sin verificar. Reintentar tres dias seria tener a Stripe
+     golpeando una puerta que no va a abrir. Se acusa recibo y se grita en
+     el registro para mandarlo a mano. */
+  RESEND_DICE = { ok: false, status: 403, cuerpo: { message: 'domain is not verified' } };
+  euroDice(201, { folio: 51003, pdfBase64: 'JVBERi0xLjMK' });
+  r = res();
+  await handler(pide({ type: 'checkout.session.completed', data: { object: sesionPagada } }), r);
+  igual('dominio sin verificar: 200, no se reintenta', r._status, 200);
+  igual('y se acusa que el correo no salió', r._json.correo, false);
+  igual('pero el folio no se pierde', r._json.folio, 51003);
+
+  /* -------- sin RESEND_API_KEY el contrato SIGUE registrándose --------
+     El correo es lo nuevo; no puede tumbar lo que ya funcionaba. */
+  delete process.env.RESEND_API_KEY;
+  ultimoCorreo = null;
+  euroDice(201, { folio: 51004 });
+  r = res();
+  await handler(pide({ type: 'checkout.session.completed', data: { object: sesionPagada } }), r);
+  igual('sin clave de correo: el contrato se registra igual', [r._status, r._json.folio], [200, 51004]);
+  igual('no se intentó mandar nada', ultimoCorreo, null);
+  igual('y no se le pide a Stripe que reintente por una variable que falta',
+    r._json.correo, false);
 
   console.log('\n' + buenas + ' buenas, ' + malas + ' malas');
   process.exit(malas ? 1 : 0);
