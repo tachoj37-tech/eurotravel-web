@@ -142,6 +142,13 @@ const DESTINOS = [
   { nombre: "Mismaloya", km: 656,
     busca: /mismaloya/i,
     precio: { busNC47: 33000, bus4849: 34000, neobusI6: 35000, pbI6: 35000, marcopolo: 39000, irizar: 37000, sprinter: 20000 } },
+  /* VA ANTES que Pátzcuaro y que la Mariposa a propósito: el recorrido
+     combinado los nombra a los dos, y aquí gana el primer renglón que
+     empate. Lo pidió el dueño el 26-ago-2026 («créalo»): antes este texto
+     caía en Mariposa ($23,000) o Pátzcuaro ($25,000) y cobraba de menos. */
+  { nombre: "Mariposa / Azufres / Pátzcuaro", km: 820,
+    busca: /azufre|(mariposa|monarca)[^,]*(p[aá]tzcuaro|uruapan)|(p[aá]tzcuaro|uruapan)[^,]*(mariposa|monarca)/i,
+    precio: { busNC47: 45000, sprinter: 29000 } },
   { nombre: "Pátzcuaro / Uruapan", km: 656,
     busca: /p[aá]tzcuaro|uruapan/i,
     precio: { busNC47: 38000, bus4849: 39000, neobusI6: 43000, pbI6: 42000, marcopolo: 47000, irizar: 45000, sprinter: 25000 } },
@@ -183,7 +190,12 @@ const DESTINOS = [
     precio: { busNC47: 40000, bus4849: 41000, neobusI6: 44000, pbI6: 42000, marcopolo: 48000, irizar: 46000, sprinter: 22000 } },
   { nombre: "Grutas Tolantongo", km: 1102,
     busca: /tolantongo/i,
-    precio: { busNC47: 45000, bus4849: 46000, neobusI6: 49000, pbI6: 47000, marcopolo: 53000, irizar: 51000, sprinter: 29500 } },
+    /* El Excel trae DOS columnas: «SIN MOV $29,500» y «con mov $34,500». Los
+       movimientos van INCLUIDOS en la segunda: no se les suma banda ni
+       estadía. Antes se cobraba 29,500 + días + bandas = $41,500, y el dueño
+       corrigió el 26-ago-2026: «sí, estás mal, dalo de acuerdo al Excel». */
+    precio: { busNC47: 45000, bus4849: 46000, neobusI6: 49000, pbI6: 47000, marcopolo: 53000, irizar: 51000, sprinter: 29500 },
+    conMovimientos: 34500 },
   { nombre: "Real de Catorce", km: 1186,
     busca: /real de catorce|real de 14/i,
     precio: { busNC47: 48000, bus4849: 49000, neobusI6: 52000, pbI6: 50000, marcopolo: 56000, irizar: 54000, sprinter: 34500 } },
@@ -192,10 +204,18 @@ const DESTINOS = [
     precio: { busNC47: 38000, bus4849: 40000, neobusI6: 42000, pbI6: 40000, marcopolo: 46500, irizar: 44000, sprinter: 26500 } },
   { nombre: "Puebla", km: 1338,
     busca: /puebla/i,
-    precio: { busNC47: 58000, bus4849: 59000, neobusI6: 62000, pbI6: 60000, marcopolo: 65000, irizar: 63000, sprinter: 36500 } },
+    /* «PUEBLA 2 DIAS $36,500». El día extra de $2,000 lo dictó el dueño el
+       26-ago-2026 («el día tres súbele a dos mil») y cuadra con la fila 10
+       del Excel: «$4,000 bus y $2,000 SPR». */
+    precio: { busNC47: 58000, bus4849: 59000, neobusI6: 62000, pbI6: 60000, marcopolo: 65000, irizar: 63000, sprinter: 36500 },
+    porDias: { 2: 36500 },
+    diaExtra: 2000 },
   { nombre: "Puebla con Zacatlán", km: 1368,
     busca: /zacatl|chignahuapan|chignauapan/i,
-    precio: { busNC47: 63000, bus4849: 65000, neobusI6: 68000, pbI6: 65000, marcopolo: 70000, irizar: 68000, sprinter: 39500 } },
+    /* Mismo trato que Puebla: 2 días del Excel y $2,000 el extra (fila 10). */
+    precio: { busNC47: 63000, bus4849: 65000, neobusI6: 68000, pbI6: 65000, marcopolo: 70000, irizar: 68000, sprinter: 39500 },
+    porDias: { 2: 39500 },
+    diaExtra: 2000 },
   { nombre: "Acapulco", km: 1796,
     busca: /acapulco/i,
     precio: { busNC47: 80000, bus4849: 85000, neobusI6: 90000, pbI6: 95000, marcopolo: 100000, irizar: 96500, sprinter: 60000 } },
@@ -287,7 +307,10 @@ function precioDeLista(destino, unidad) {
        paquetes cuyo precio ya trae los días adentro. */
     porDias: d.porDias || null,
     diaExtra: typeof d.diaExtra === 'number' ? d.diaExtra : null,
-    diasIncluidos: typeof d.diasIncluidos === 'number' ? d.diasIncluidos : null
+    diasIncluidos: typeof d.diasIncluidos === 'number' ? d.diasIncluidos : null,
+    /* R5: destinos cuyo Excel trae una columna aparte para el viaje CON
+       movimientos (Tolantongo). Ese precio ya lo incluye todo. */
+    conMovimientos: typeof d.conMovimientos === 'number' ? d.conMovimientos : null
   };
 }
 

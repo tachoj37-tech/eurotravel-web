@@ -130,10 +130,14 @@ const SU_LISTA = [
   ['Mazatlán, Sinaloa, México', 28000],
   ['Valle de Bravo, Estado de México, México', 32000],
   ['Ixtapa Zihuatanejo, Guerrero, México', 29500],
-  ['Grutas Tolantongo, Hidalgo, México', 29500],
+  /* Tolantongo trae en el Excel su propio precio CON movimientos, que ya lo
+     incluye todo (correccion del dueño, 26-ago-2026). */
+  ['Grutas Tolantongo, Hidalgo, México', 29500, { conMovimientos: 34500 }],
   ['Real de Catorce, San Luis Potosí, México', 34500],
-  ['Puebla, Puebla, México', 36500],
-  ['Zacatlán, Puebla, México', 39500],
+  /* Puebla: 2 dias del Excel y $2,000 el dia extra («el dia tres subele a
+     dos mil», 26-ago-2026; cuadra con su fila 10: «$2,000 SPR»). */
+  ['Puebla, Puebla, México', 36500, { porDias: { 2: 36500 }, diaExtra: 2000 }],
+  ['Zacatlán, Puebla, México', 39500, { porDias: { 2: 39500 }, diaExtra: 2000 }],
   ['Acapulco, Guerrero, México', 60000],
   ['Oaxaca de Juárez, Oaxaca, México', 75000],
   ['San Cristóbal de las Casas, Chiapas, México', 85000, { diasIncluidos: 8 }],
@@ -258,6 +262,40 @@ const SU_LISTA = [
      Palabras del dueño: «si no tiene movimientos, nomas vas a cobrar mil». */
   igual('CDMX 3 dias sin movimientos: 22,000 + 3,000', sinMov('Ciudad de México, Ciudad de México, México', 3), 25000);
   igual('Huasteca 3 dias sin movimientos: 26,500 + 3,000', sinMov('Huasteca Potosina, San Luis Potosí, México', 3), 29500);
+
+  /* --- la segunda tanda de correcciones del dueño (26-ago-2026) --- */
+
+  /* Puebla: «el dia tres subele a dos mil» */
+  igual('Puebla 2 dias: sus 36,500', sinMov('Puebla, Puebla, México', 2), 36500);
+  igual('Puebla 3 dias: 36,500 + 2,000', sinMov('Puebla, Puebla, México', 3), 38500);
+  igual('Zacatlan 3 dias: 39,500 + 2,000', sinMov('Zacatlán, Puebla, México', 3), 41500);
+
+  /* Tolantongo con movimientos: el precio del Excel, no la suma de bandas.
+     Antes daba 41,500 y el dueño dijo: «si, estas mal, dalo de acuerdo al
+     Excel». */
+  const tolantongo = t.calcula(999, 3, {
+    destino: { direccion: 'Grutas Tolantongo, Hidalgo, México' }, noches: 2,
+    movimientos: [{ horaInicio: '08:00', horaFin: '16:00' },
+                  { horaInicio: '08:00', horaFin: '16:00' }]
+  });
+  igual('Tolantongo CON movimientos: los 34,500 del Excel (cobraba 41,500)', tolantongo.total, 34500);
+  igual('y el desglose sigue sumando el total',
+    tolantongo.desglose.servicio + tolantongo.desglose.importeMovimientos, 34500);
+  igual('Tolantongo SIN movimientos sigue en 29,500', sinMov('Grutas Tolantongo, Hidalgo, México', 3), 29500);
+
+  /* Guayabitos, confirmado: hasta 4 dias su precio, y cada noche de mas
+     suma 1,000 */
+  igual('Guayabitos 4 dias: sus 18,500', sinMov('Rincón de Guayabitos, Nayarit, México', 4), 18500);
+  igual('Guayabitos 5 dias: 18,500 + 1,000', sinMov('Rincón de Guayabitos, Nayarit, México', 5), 19500);
+
+  /* El recorrido combinado que el dueño mando crear («crealo»): antes caia
+     en Mariposa (23,000) o en Patzcuaro (25,000) y cobraba de menos. */
+  igual('Mariposa/Azufres/Patzcuaro: sus 29,000',
+    sinMov('tour mariposa monarca, los azufres y pátzcuaro', 1), 29000);
+  igual('y la Mariposa sola sigue en 23,000',
+    sinMov('Santuario de la Mariposa Monarca, Michoacán, México', 1), 23000);
+  igual('y Patzcuaro solo sigue en 25,000',
+    sinMov('Pátzcuaro, Michoacán, México', 1), 25000);
 })();
 
 /* ============ 4. LA FORMULA DE RESPALDO, KILOMETRO POR KILOMETRO ============ */
@@ -427,7 +465,11 @@ const SU_LISTA = [
              · sin regla: el modelo de siempre. */
         const reglaExcel = fila[2] || null;
         let esperado;
-        if (reglaExcel && reglaExcel.porDias) {
+        if (reglaExcel && reglaExcel.conMovimientos && cuantos > 0) {
+          /* R5: el precio con movimientos del Excel ya lo incluye todo;
+             solo el piso por dia le puede ganar. */
+          esperado = trasladoAMano(reglaExcel.conMovimientos, dias);
+        } else if (reglaExcel && reglaExcel.porDias) {
           esperado = trasladoAMano(porDuracionAMano(reglaExcel, dias), dias) + movAMano;
         } else if (reglaExcel && reglaExcel.diasIncluidos) {
           const gratis = Math.max(3, reglaExcel.diasIncluidos - 1);

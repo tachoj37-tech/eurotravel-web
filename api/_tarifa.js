@@ -225,7 +225,8 @@ function trasladoDe(kmTotal, destino, unidad, dias) {
       /* Con esto decide `calcula` qué más puede sumar: un precio por duración
          ya trae su estadía, y un paquete ya trae sus días (criterio R1 y R2). */
       porDuracion: !!enLista.porDias,
-      diasIncluidos: enLista.diasIncluidos || null
+      diasIncluidos: enLista.diasIncluidos || null,
+      precioConMovimientos: enLista.conMovimientos || null
     };
   }
 
@@ -642,7 +643,28 @@ function calcula(kmTotal, dias, extras) {
     importeNoches = nochesExtra * EXTRA_POR_NOCHE;
   }
 
-  const total = traslado + importeNoches + importeMovimientos;
+  /* ----------------------------------------------------------
+     R5 · EL PRECIO «CON MOVIMIENTOS» DEL PROPIO EXCEL
+
+     Tolantongo trae DOS columnas: «SIN MOV $29,500» y «con mov
+     $34,500». La segunda YA lo incluye todo: ni bandas de horas
+     ni estadía aparte. Antes se cobraba 29,500 + días + bandas =
+     $41,500, y el dueño corrigió el 26-ago-2026: «sí, estás mal,
+     dalo de acuerdo al Excel».
+
+     El piso por día manda igual que siempre: pedido a muchos
+     días, el mínimo le gana al precio del Excel.
+     ---------------------------------------------------------- */
+  let cobroTraslado = traslado;
+  let cobroNoches = importeNoches;
+  let cobroMovimientos = importeMovimientos;
+  if (km.precioConMovimientos && conMovimientos) {
+    cobroTraslado = Math.floor(Math.max(km.precioConMovimientos, minimo) / REDONDEO) * REDONDEO;
+    cobroNoches = 0;
+    cobroMovimientos = 0;
+  }
+
+  const total = cobroTraslado + cobroNoches + cobroMovimientos;
 
   // El anticipo se redondea al peso y el saldo se saca por resta, para que
   // las dos partes sumen exactamente el total y no sobre ni falte un centavo.
@@ -677,11 +699,11 @@ function calcula(kmTotal, dias, extras) {
          $2,000» le dice al cliente cuánto cuesta la noche. El servidor sí las
          necesita partidas —el contrato explica de dónde salió el total—, así
          que viven aquí y no en `desglose`. */
-      traslado: traslado,
+      traslado: cobroTraslado,
       noches: noches,
       nochesIncluidas: nochesIncluidas,   // la efectiva: un paquete incluye más
       nochesExtra: nochesExtra,
-      importeNoches: importeNoches,
+      importeNoches: cobroNoches,
       /* De dónde salió el traslado, para que la oficina lo pueda cuadrar:
          el nombre del destino si vino de la lista, o la marca de la fórmula. */
       destinoDeLista: km.deLista || null,
@@ -713,9 +735,9 @@ function calcula(kmTotal, dias, extras) {
        esconder la tarifa: un desglose que no cuadra con el total parece un
        error de cuentas, y el cliente llama a preguntar. */
     desglose: {
-      servicio: traslado + importeNoches,
+      servicio: cobroTraslado + cobroNoches,
       diasMovimiento: movimientos.length,
-      importeMovimientos: importeMovimientos,
+      importeMovimientos: cobroMovimientos,
       /* El NOMBRE del destino con regla propia, no su tarifa. Sale para que la
          pantalla no le prometa al cliente «8 horas incluidas» donde el día es
          tarifa fija sin importar las horas. */

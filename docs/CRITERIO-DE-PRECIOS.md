@@ -103,7 +103,44 @@ el camión los va esperando en puntos del camino. Por eso vale $26,500 cuando
 Talpa 2 días vale $16,500. Tiene su propio renglón y solo se entra a él si el
 texto dice «burrita».
 
-### R5 · El precio depende del origen — PENDIENTE, ignorar por ahora
+### R5 · Un destino puede traer su precio CON movimientos en el Excel (26-ago-2026)
+
+Tolantongo tiene DOS columnas: «SIN MOV $29,500» y «con mov $34,500». La
+segunda **ya lo incluye todo**: ni bandas de horas ni estadía aparte. Antes se
+sumaba banda por banda y daba $41,500; el dueño corrigió: *«sí, estás mal,
+dalo de acuerdo al Excel»*. Va como `conMovimientos` en el catálogo.
+
+Lección detrás: si el Excel trae una columna para un caso, esa columna manda
+sobre cualquier suma de reglas.
+
+### R6 · Entre duraciones, se interpola desde la duración GRANDE (26-ago-2026)
+
+Para Guanajuato 2 días el dueño dijo: *«evalúa cuánto cuesta Guanajuato tres
+días, y de acuerdo a eso saca cuánto cuesta dos»*. El precio intermedio se
+deduce del escalón mayor hacia abajo, no del menor hacia arriba (con
+escalones lineales da lo mismo, pero el ancla conceptual es el precio grande,
+que es el que está escrito). Y los movimientos suman sus $3,000 por día
+encima, como siempre.
+
+### R7 · Guayabitos, confirmado (26-ago-2026)
+
+«Hasta 4 días» = sus $18,500; cada noche de más suma $1,000. Es el único caso
+donde el dueño ha confirmado la tarifa de $1,000 por noche extra.
+
+### R8 · Puebla: día extra de $2,000 (26-ago-2026)
+
+*«Puebla tres días: trae dos días 36,500, y el día tres súbele dos mil.»*
+Cuadra con la fila 10 del Excel («$4,000 bus y $2,000 SPR»). Aplica igual a
+Puebla con Zacatlán. Nota: Puebla NO lleva la estadía por día de CDMX aunque
+el dueño los nombró juntos — su renglón guarda el precio del Excel completo,
+no una base.
+
+### R9 · Mariposa/Azufres/Pátzcuaro existe (26-ago-2026)
+
+El dueño mandó crearlo («créalo»): $29,000 Sprinter, $45,000 autobús NC47.
+Antes ese texto caía en Mariposa ($23,000) o Pátzcuaro ($25,000).
+
+### R10 · El precio depende del origen — PENDIENTE, ignorar por ahora
 
 El Excel tiene una fila «SPRINTER OCOTLAN» con precios más altos saliendo de
 Ocotlán. El dueño pidió ignorarla de momento (26-ago-2026). La página hoy
@@ -112,15 +149,19 @@ lanzamiento.**
 
 ---
 
+## Esperando autorización del dueño
+
+- **Guanajuato 4 días = $27,250** (24,500 + 2,750) y **5 días = $30,000**
+  (24,500 + 5,500). Los pidió calculados para autorizarlos. El redondeo de
+  la página cobra $27,200 en el de 4 (siempre a favor del cliente).
+
 ## Preguntas abiertas (lanzarlas al dueño en la siguiente ronda)
 
-- `MARIPOSA/AZUFRES/PATZCUARO $29,000`: ¿recorrido propio? Hoy no existe y un
-  texto así caería en Mariposa ($23,000) o Pátzcuaro ($25,000).
-- Un paquete pedido a MÁS días de los incluidos (Cancún 18 días): ¿día extra
-  de cuánto?
-- Un paquete con movimientos (Cancún moviéndose allá): ¿los movimientos van
-  aparte o el paquete ya lo trae todo?
-- Los destinos de playa sin días en el nombre (Vallarta, Mazatlán…): hoy traen
-  3 noches incluidas y $1,000 la extra. Cuadra con «Vallarta jueves a domingo
-  $19,000», pero la tarifa de $1,000 no está escrita en el Excel. ¿Es correcta?
-- `GUAYABITOS hasta 4 días $18,500`: ¿el día 5 en cuánto?
+- Un paquete pedido a MÁS días de los incluidos (Cancún 18 días): hoy se
+  cobra +$1,000 por noche. ¿Correcto, o el día extra de un paquete vale más?
+- Un paquete con movimientos (Cancún moviéndose allá): hoy suma las bandas
+  encima del paquete. ¿O el paquete ya lo trae todo, como Tolantongo?
+- Los destinos de playa sin días en el nombre (Vallarta, Mazatlán…): 3 noches
+  incluidas y $1,000 la extra. Guayabitos lo confirmó (R7) — ¿aplica igual a
+  todas las playas?
+- Tolantongo con movimientos a MÁS de 3 días: ¿34,500 más cuánto?
