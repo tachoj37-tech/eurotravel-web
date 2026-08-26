@@ -171,7 +171,44 @@ function necesitaMedirse(destino, unidad) {
    Todo esto se queda del lado del servidor: al cliente NUNCA se
    le enseña el kilometraje ni lo que cuesta el kilometro.
    ------------------------------------------------------------ */
-function trasladoDe(kmTotal, destino, unidad) {
+/* ------------------------------------------------------------
+   EL PRECIO DE LISTA A LA DURACION PEDIDA
+   ------------------------------------------------------------
+   Regla R1 del criterio (docs/CRITERIO-DE-PRECIOS.md): la lista
+   no es «traslado + noches», es precio por destino Y duración.
+   El Excel trae varios precios para el mismo destino según los
+   días, y aquí se elige:
+
+     · duración exacta del Excel → ese precio, al peso
+     · entre dos duraciones, o más allá de la última → el escalón
+       anterior más el día extra PROPIO del destino
+     · más corta que la primera → el de la primera (no existe un
+       viaje más corto que el más corto del Excel)
+
+   Antes de esta regla existía «3 noches gratis + $1,000 la
+   extra», que era inventada: cobró $5,500 de menos en Guanajuato
+   de 3 días y $13,000 de más en Cancún (criterio, error nº 1).
+   ------------------------------------------------------------ */
+function precioPorDuracion(enLista, dias) {
+  const tabla = enLista.porDias;
+  if (!tabla) return enLista.precio;
+
+  const d = Math.max(1, Math.floor(Number(dias) || 1));
+  if (typeof tabla[d] === 'number') return tabla[d];
+
+  const duraciones = Object.keys(tabla).map(Number)
+    .filter(function (x) { return isFinite(x) && typeof tabla[x] === 'number'; })
+    .sort(function (a, b) { return a - b; });
+  if (!duraciones.length) return enLista.precio;
+  if (d < duraciones[0]) return tabla[duraciones[0]];
+
+  let base = duraciones[0];
+  for (let i = 0; i < duraciones.length; i++) if (duraciones[i] <= d) base = duraciones[i];
+  const extra = typeof enLista.diaExtra === 'number' ? enLista.diaExtra : EXTRA_POR_NOCHE;
+  return tabla[base] + (d - base) * extra;
+}
+
+function trasladoDe(kmTotal, destino, unidad, dias) {
   const km = Math.max(0, Number(kmTotal) || 0);
 
   /* La unidad se traduce a la columna de la lista. Si no se sabe cotizar,
@@ -182,7 +219,14 @@ function trasladoDe(kmTotal, destino, unidad) {
     /* `porKm` va en null a propósito y no ausente: un precio de lista NO sale
        de una tarifa por kilómetro, y quien lea `interno.tarifaKm` tiene que
        ver eso y no un `undefined` que se pueda confundir con un cero. */
-    return { total: enLista.precio, deLista: enLista.nombre, porKm: null, km: km };
+    return {
+      total: precioPorDuracion(enLista, dias), deLista: enLista.nombre,
+      porKm: null, km: km,
+      /* Con esto decide `calcula` qué más puede sumar: un precio por duración
+         ya trae su estadía, y un paquete ya trae sus días (criterio R1 y R2). */
+      porDuracion: !!enLista.porDias,
+      diasIncluidos: enLista.diasIncluidos || null
+    };
   }
 
   if (km > TOPE_FORMULA_KM) {
@@ -272,7 +316,29 @@ const DESTINOS_CON_REGLA = [
     nombre: 'Huasteca Potosina',
     placeId: 'ChIJv8IdsTSP1oURPsKDyokOts4',   // el de lugares.js
     enTexto: /huasteca/i,
-    movimientoPorDia: 3000
+    movimientoPorDia: 3000,
+    estadiaPorDia: true
+  },
+  /* La CDMX comparte con la Huasteca la forma de cobrarse (criterio R3,
+     palabras del dueño el 26-ago-2026): «son cuatro mil por día extra, pero
+     con movimientos. Si no tiene movimientos, nomás vas a cobrar mil.»
+
+     `estadiaPorDia` es eso: cada día de estadía vale $1,000, haya o no
+     movimientos. Con movimientos, el día movido suma además su banda —$3,000
+     el día normal— y así el día completo da los $4,000 del Excel. Antes, sin
+     movimientos, las noches salían gratis hasta 3: eso era el modelo
+     inventado y cobraba de menos.
+
+     Las dos guardan en el catálogo una BASE derivada (22,000 y 26,500), no
+     un precio del Excel: base + días×1,000 + movimientos reconstruye al peso
+     sus cinco columnas. Puebla NO va aquí aunque el dueño la nombró junto a
+     ellas: su renglón guarda el precio del Excel completo (36,500 = «PUEBLA
+     2 DIAS» tal cual), y ponerle estadía por día lo cobraría doble. Cómo se
+     cobra Puebla a otros días está en las preguntas abiertas del criterio. */
+  {
+    nombre: 'Ciudad de México',
+    enTexto: /ciudad de m[eé]xico|cdmx/i,
+    estadiaPorDia: true
   }
 ];
 
@@ -474,7 +540,7 @@ function sinPrecio(km, dias, extras) {
 function calcula(kmTotal, dias, extras) {
   extras = extras || {};
 
-  const km = trasladoDe(kmTotal, extras.destino, extras.unidad);
+  const km = trasladoDe(kmTotal, extras.destino, extras.unidad, dias);
 
   /* ----------------------------------------------------------
      ARRIBA DEL TOPE NO HAY PRECIO — Y NO ES LO MISMO QUE UNO BAJO
@@ -539,12 +605,42 @@ function calcula(kmTotal, dias, extras) {
   const importeMovimientos = precioMovimientos(movimientos);
   const conMovimientos = movimientos.length > 0;
 
-  const nochesExtra = conMovimientos ? 0 : Math.max(0, noches - NOCHES_INCLUIDAS);
+  /* ----------------------------------------------------------
+     QUE SE LE PUEDE SUMAR AL TRASLADO — según de dónde salió
+
+     · `porDuracion` (criterio R1): el precio ya ES el de esta
+       duración —Guanajuato 3 días son $24,500, no $19,000 más
+       noches—. No se suma estadía; los movimientos sí van aparte
+       (el Excel dice «3 DIAS SIN MOV», o sea que moverse es otra
+       cosa).
+     · `diasIncluidos` (criterio R2): es un paquete. Cancún 17
+       días son $145,000 completos; solo del día 18 en adelante
+       hay noches que cobrar. Antes se le sumaban $13,000.
+     · `estadiaPorDia` (criterio R3): CDMX y Huasteca cobran
+       $1,000 por CADA día de estadía, haya movimientos o no.
+     · el resto: 3 noches incluidas y $1,000 la extra; con
+       movimientos, $1,000 por día. Es la regla de los viajes de
+       playa y está en las preguntas abiertas del criterio,
+       porque el $1,000 no aparece escrito en el Excel.
+     ---------------------------------------------------------- */
+  const nochesIncluidas = km.diasIncluidos
+    ? Math.max(NOCHES_INCLUIDAS, km.diasIncluidos - 1)
+    : NOCHES_INCLUIDAS;
+  const nochesExtra = (conMovimientos || km.porDuracion)
+    ? 0
+    : Math.max(0, noches - nochesIncluidas);
   const diasParados = conMovimientos ? Math.max(0, dias - movimientos.length) : 0;
 
-  const importeNoches = conMovimientos
-    ? dias * EXTRA_POR_NOCHE               // cada día de estadía, movido o no
-    : nochesExtra * EXTRA_POR_NOCHE;
+  let importeNoches;
+  if (km.porDuracion) {
+    importeNoches = 0;                     // la duración ya viene en el precio
+  } else if (regla && regla.estadiaPorDia) {
+    importeNoches = dias * EXTRA_POR_NOCHE;   // CDMX y Huasteca: cada día, siempre
+  } else if (conMovimientos) {
+    importeNoches = dias * EXTRA_POR_NOCHE;   // cada día de estadía, movido o no
+  } else {
+    importeNoches = nochesExtra * EXTRA_POR_NOCHE;
+  }
 
   const total = traslado + importeNoches + importeMovimientos;
 
@@ -583,7 +679,7 @@ function calcula(kmTotal, dias, extras) {
          que viven aquí y no en `desglose`. */
       traslado: traslado,
       noches: noches,
-      nochesIncluidas: NOCHES_INCLUIDAS,
+      nochesIncluidas: nochesIncluidas,   // la efectiva: un paquete incluye más
       nochesExtra: nochesExtra,
       importeNoches: importeNoches,
       /* De dónde salió el traslado, para que la oficina lo pueda cuadrar:

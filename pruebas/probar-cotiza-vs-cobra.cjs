@@ -370,9 +370,20 @@ function dia(fecha, inicio, fin) {
       [vta.cotiza.total, vta.cobra.total], [19000, 19000]);
 
     /* Y que el precio de lista NO se le enseñe al cliente como lo que es: el
-       nombre del renglon se queda del lado del servidor. */
+       nombre del renglon se queda del lado del servidor.
+
+       `reglaDestino` se excluye del barrido: es publico POR DISEÑO desde la
+       Huasteca —arriba hay una prueba que exige verlo— y desde el 26-ago-2026
+       la CDMX tambien trae regla, asi que su nombre aparece ahi. Lo que no
+       puede aparecer es el renglon de PRECIOS (destinoDeLista), y eso se
+       sigue barriendo completo. */
+    const sinRegla = function (r) {
+      const copia = JSON.parse(JSON.stringify(r));
+      if (copia.desglose) delete copia.desglose.reglaDestino;
+      return copia;
+    };
     igual('pero ninguno le dice al cliente de qué renglón salió',
-      JSON.stringify([vta.cotiza, cdmx.cotiza]).match(/Vallarta|Ciudad de M/), null);
+      JSON.stringify([sinRegla(vta.cotiza), sinRegla(cdmx.cotiza)]).match(/Vallarta|Ciudad de M/), null);
   }
 
   /* ============================================================
@@ -474,7 +485,11 @@ function dia(fecha, inicio, fin) {
 
     const cdmx = await cotizaContando({ direccion: 'Ciudad de México, Ciudad de México, México' });
     igual('la CDMX tampoco', cdmx.llamadas, 0);
-    igual('y cobra sus 22,000', cdmx.json.total, 22000);
+    /* Cambio de lado el 26-ago-2026: son 4 dias sin movimientos, y el dueño
+       corrigio que la CDMX cobra $1,000 por CADA dia aunque no haya
+       movimientos («nomas vas a cobrar mil»). Los 22,000 pelados eran el
+       modelo inventado de noches gratis. 22,000 + 4×1,000 = 26,000. */
+    igual('y cobra sus 22,000 más los 4 días de estadía', cdmx.json.total, 26000);
 
     /* El que NO está en la lista sí se mide: sin kilómetros no hay fórmula. */
     const bernal = await cotizaContando({ direccion: 'Bernal, Querétaro, México' });

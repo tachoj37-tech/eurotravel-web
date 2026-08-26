@@ -50,10 +50,28 @@ function formulaAMano(km) {
 function trasladoAMano(precioBase, dias) {
   return corta(Math.max(precioBase, dias * 3000));
 }
-/* La estadia se cobra de dos formas, y cual depende de si hay movimientos */
-function estadiaAMano(dias, noches, cuantosMovimientos) {
-  if (cuantosMovimientos > 0) return dias * 1000;      // dia por dia
+/* La estadia se cobra de dos formas, y cual depende de si hay movimientos.
+
+   `porDia` cambio de lado el 26-ago-2026: el dueño confirmo que CDMX y
+   Huasteca cobran $1,000 por CADA dia de estadia AUNQUE no haya movimientos
+   («si no tiene movimientos, nomas vas a cobrar mil»). Antes esos casos
+   caian en el paquete de 3 noches gratis, que era un modelo inventado
+   (criterio de precios, error nº 1). */
+function estadiaAMano(dias, noches, cuantosMovimientos, porDia) {
+  if (porDia || cuantosMovimientos > 0) return dias * 1000;   // dia por dia
   return Math.max(0, noches - 3) * 1000;               // paquete de 3 noches
+}
+
+/* El precio por duracion de los destinos que el Excel trae con varios dias
+   (criterio R1). Reimplementado a mano a proposito, como todo lo de aqui. */
+function porDuracionAMano(regla, dias) {
+  const tabla = regla.porDias;
+  if (tabla[dias] !== undefined) return tabla[dias];
+  const ds = Object.keys(tabla).map(Number).sort(function (a, b) { return a - b; });
+  if (dias < ds[0]) return tabla[ds[0]];
+  let base = ds[0];
+  for (let i = 0; i < ds.length; i++) if (ds[i] <= dias) base = ds[i];
+  return tabla[base] + (dias - base) * regla.diaExtra;
 }
 function diaDeMovimientoAMano(horas, esHuasteca) {
   if (esHuasteca) return 3000;
@@ -86,14 +104,17 @@ const SU_LISTA = [
   ['Mazamitla, Jalisco, México', 14500],
   ['San Juan de los Lagos, Jalisco, México', 14000],
   ['Zamora, Michoacán, México', 14500],
-  ['El Manto, Jalisco, México', 14000],
-  ['Talpa de Allende, Jalisco, México', 15000],
+  /* El tercer campo es la regla del Excel para ese destino, cuando la hay:
+     `porDias` son sus precios por duracion, `diasIncluidos` marca paquete.
+     Entraron el 26-ago-2026, cuando el dueño tumbo el modelo de noches. */
+  ['El Manto, Jalisco, México', 14000, { porDias: { 1: 14000, 3: 19000 }, diaExtra: 2500 }],
+  ['Talpa de Allende, Jalisco, México', 15000, { porDias: { 1: 15000, 2: 16500 }, diaExtra: 1500 }],
   ['Tepic, Nayarit, México', 16900],
   ['León, Guanajuato, México', 17600],
   ['Rincón de Guayabitos, Nayarit, México', 18500],
   ['Chacala, Nayarit, México', 16500],
   ['Sayulita, Nayarit, México', 18000],
-  ['Guanajuato, Guanajuato, México', 19000],
+  ['Guanajuato, Guanajuato, México', 19000, { porDias: { 1: 19000, 3: 24500 }, diaExtra: 2750 }],
   ['Manzanillo, Colima, México', 18500],
   ['Morelia, Michoacán, México', 19000],
   ['Puerto Vallarta, Jalisco, México', 19000],
@@ -103,7 +124,7 @@ const SU_LISTA = [
   ['San Miguel de Allende, Guanajuato, México', 26500],
   ['Barra de Navidad, Jalisco, México', 20500],
   ['Zacatecas, Zacatecas, México', 25000],
-  ['Tlalpujahua, Michoacán, México', 23500],
+  ['Tlalpujahua, Michoacán, México', 23500, { porDias: { 1: 23500, 2: 26500 }, diaExtra: 3000 }],
   ['Tenacatita, Jalisco, México', 20000],
   ['Mayto, Jalisco, México', 26500],
   ['Mazatlán, Sinaloa, México', 28000],
@@ -115,9 +136,9 @@ const SU_LISTA = [
   ['Zacatlán, Puebla, México', 39500],
   ['Acapulco, Guerrero, México', 60000],
   ['Oaxaca de Juárez, Oaxaca, México', 75000],
-  ['San Cristóbal de las Casas, Chiapas, México', 85000],
+  ['San Cristóbal de las Casas, Chiapas, México', 85000, { diasIncluidos: 8 }],
   ['Barrancas del Cobre, Chihuahua, México', 75000],
-  ['Cancún, Quintana Roo, México', 145000]
+  ['Cancún, Quintana Roo, México', 145000, { diasIncluidos: 17 }]
 ];
 
 /* ============ 1. LA LISTA DA EXACTAMENTE LO QUE DICE EL EXCEL ============
@@ -195,6 +216,48 @@ const SU_LISTA = [
     noches: 3, movimientos: movDe(2)
   });
   igual('CDMX 4 dias con movimientos en 2: 32,000', cuatroConDos.total, 32000);
+})();
+
+/* ============ 3b. LAS CORRECCIONES DEL DUEÑO, AL PESO ============
+   El 26-ago-2026 el dueño tumbo el modelo de «3 noches gratis + $1,000»:
+   cobraba $5,500 de menos en Guanajuato 3 dias y $13,000 de mas en Cancun.
+   Cada renglon de aqui es una correccion suya contra el Excel. Si alguno se
+   pone rojo, se le esta cobrando mal a un cliente otra vez. */
+(function () {
+  function sinMov(direccion, dias) {
+    return t.calcula(999, dias, {
+      destino: { direccion: direccion }, noches: Math.max(0, dias - 1), movimientos: []
+    }).total;
+  }
+
+  /* los precios por duracion del Excel, tal cual */
+  igual('Guanajuato MISMO DIA: 19,000', sinMov('Guanajuato, Guanajuato, México', 1), 19000);
+  igual('Guanajuato 3 DIAS SIN MOV: 24,500 (cobraba 19,000)', sinMov('Guanajuato, Guanajuato, México', 3), 24500);
+  igual('El Manto 1 DIA: 14,000', sinMov('El Manto, Jalisco, México', 1), 14000);
+  igual('El Manto 3 DIAS: 19,000 (cobraba 14,000)', sinMov('El Manto, Jalisco, México', 3), 19000);
+  igual('Tlalpujahua 1 DIA: 23,500', sinMov('Tlalpujahua, Michoacán, México', 1), 23500);
+  igual('Tlalpujahua 2 DIAS: 26,500 (cobraba 23,500)', sinMov('Tlalpujahua, Michoacán, México', 2), 26500);
+  igual('Talpa 1 DIA: 15,000', sinMov('Talpa de Allende, Jalisco, México', 1), 15000);
+  igual('Talpa 2 dias: 16,500 (cobraba 15,000)', sinMov('Talpa de Allende, Jalisco, México', 2), 16500);
+  /* y entre escalones, el dia extra PROPIO: Talpa 3 dias = 16,500 + 1,500 */
+  igual('Talpa 3 dias: 16,500 + su dia extra de 1,500', sinMov('Talpa de Allende, Jalisco, México', 3), 18000);
+
+  /* la Burrita es OTRO producto, no Talpa mas dias: es la peregrinacion —la
+     gente se va caminando y el camion la va esperando en puntos (R4) */
+  igual('Talpa Burrita 4 dias: 26,500', sinMov('Talpa Burrita, Jalisco, México', 4), 26500);
+  igual('escribir «burrita» no cae en la Talpa normal',
+    t.calcula(999, 4, { destino: { direccion: 'peregrinación talpa burrita' }, noches: 3 })
+      .interno.destinoDeLista, 'Talpa Burrita (peregrinación)');
+
+  /* los paquetes ya incluyen sus dias (R2) */
+  igual('Cancun 17 dias: 145,000 pelados (cobraba 158,000)', sinMov('Cancún, Quintana Roo, México', 17), 145000);
+  igual('Chiapas 8 dias: 85,000 pelados (cobraba 89,000)', sinMov('San Cristóbal de las Casas, Chiapas, México', 8), 85000);
+  igual('y el dia 18 de Cancun SI se cobra', sinMov('Cancún, Quintana Roo, México', 18), 146000);
+
+  /* CDMX y Huasteca sin movimientos: $1,000 por dia, no noches gratis (R3).
+     Palabras del dueño: «si no tiene movimientos, nomas vas a cobrar mil». */
+  igual('CDMX 3 dias sin movimientos: 22,000 + 3,000', sinMov('Ciudad de México, Ciudad de México, México', 3), 25000);
+  igual('Huasteca 3 dias sin movimientos: 26,500 + 3,000', sinMov('Huasteca Potosina, San Luis Potosí, México', 3), 29500);
 })();
 
 /* ============ 4. LA FORMULA DE RESPALDO, KILOMETRO POR KILOMETRO ============ */
@@ -307,8 +370,10 @@ const SU_LISTA = [
           for (let i = 0; i < cuantos; i++) {
             movAMano += diaDeMovimientoAMano(movs[i].horas, esHuasteca);
           }
+          /* La Huasteca cobra su estadia por dia SIEMPRE (criterio R3);
+             el destino cualquiera sigue con el paquete de 3 noches. */
           const esperado = trasladoAMano(formulaAMano(km), dias) +
-            estadiaAMano(dias, noches, cuantos) + movAMano;
+            estadiaAMano(dias, noches, cuantos, esHuasteca) + movAMano;
 
           // --- lo que hace la pagina ---
           const p = t.calcula(km, dias, { noches: noches, movimientos: movs, destino: destino });
@@ -352,7 +417,25 @@ const SU_LISTA = [
         const cuantos = Math.min(movs.length, dias);
         let movAMano = 0;
         for (let i = 0; i < cuantos; i++) movAMano += diaDeMovimientoAMano(movs[i].horas, false);
-        const esperado = trasladoAMano(fila[1], dias) + estadiaAMano(dias, noches, cuantos) + movAMano;
+
+        /* Tres formas de armar el esperado, segun la regla del Excel
+           (cambio de lado el 26-ago-2026, criterio R1 y R2):
+             · porDias: el precio ya es de ESA duracion, sin estadia aparte;
+               los movimientos si se suman (el Excel dice «SIN MOV»).
+             · diasIncluidos: paquete; noches gratis hasta un dia antes del
+               regreso. Antes Cancun 17 dias cobraba $13,000 de mas.
+             · sin regla: el modelo de siempre. */
+        const reglaExcel = fila[2] || null;
+        let esperado;
+        if (reglaExcel && reglaExcel.porDias) {
+          esperado = trasladoAMano(porDuracionAMano(reglaExcel, dias), dias) + movAMano;
+        } else if (reglaExcel && reglaExcel.diasIncluidos) {
+          const gratis = Math.max(3, reglaExcel.diasIncluidos - 1);
+          const estadia = cuantos > 0 ? dias * 1000 : Math.max(0, noches - gratis) * 1000;
+          esperado = trasladoAMano(fila[1], dias) + estadia + movAMano;
+        } else {
+          esperado = trasladoAMano(fila[1], dias) + estadiaAMano(dias, noches, cuantos, false) + movAMano;
+        }
 
         const p = t.calcula(999, dias, {
           destino: { direccion: fila[0] }, noches: noches, movimientos: movs

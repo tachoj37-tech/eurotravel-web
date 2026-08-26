@@ -77,10 +77,29 @@ const DESTINOS = [
     precio: { busNC47: 26000, sprinter: 14500 } },
   { nombre: "El Manto", km: 314,
     busca: /el manto/i,
-    precio: { busNC47: 22000, sprinter: 14000 } },
+    /* El Excel trae dos duraciones: 1 día $14,000 y 3 días $19,000. El día
+       extra de $2,500 se deduce de esos dos escalones: (19,000−14,000)/2. */
+    precio: { busNC47: 22000, sprinter: 14000 },
+    porDias: { 1: 14000, 3: 19000 },
+    diaExtra: 2500 },
+  /* VA ANTES que Talpa a propósito: «talpa burrita» empata con las dos
+     expresiones, y aquí gana el primer renglón que empate.
+
+     La Burrita NO es «Talpa más días»: es la peregrinación. La gente se va
+     CAMINANDO a Talpa y el camión los va esperando en puntos del camino.
+     Por eso vale $26,500 cuando Talpa 2 días vale $16,500. Lo explicó el
+     dueño el 26-ago-2026 (criterio R4). */
+  { nombre: "Talpa Burrita (peregrinación)", km: 402,
+    busca: /burrit/i,
+    precio: { busNC47: 38000, sprinter: 26500 },
+    diasIncluidos: 4 },
   { nombre: "Talpa de Allende", km: 402,
     busca: /talpa/i,
-    precio: { busNC47: 26000, bus4849: 27000, sprinter: 15000 } },
+    /* Los precios por duración vienen del Excel tal cual; el día extra de
+       $1,500 lo dice su fila 10: «$3000 bus y $1500 spr día extra». */
+    precio: { busNC47: 26000, bus4849: 27000, sprinter: 15000 },
+    porDias: { 1: 15000, 2: 16500 },
+    diaExtra: 1500 },
   { nombre: "Tepic", km: 414,
     busca: /tepic/i,
     precio: { sprinter: 16900 } },
@@ -101,7 +120,13 @@ const DESTINOS = [
      viene repetida como ciudad y estado. */
   { nombre: "Guanajuato", km: 550,
     busca: /^guanajuato\b|guanajuato, *(gto|guanajuato)\b/i,
-    precio: { busNC47: 30000, bus4849: 31000, sprinter: 19000 } },
+    /* Del Excel: «MISMO DIA $19,000» y «3 DIAS SIN MOV $24,500». El día
+       extra de $2,750 sale de esos escalones: (24,500−19,000)/2. Este fue
+       el destino que destapó el modelo inventado de noches (criterio,
+       error nº 1): cobraba $19,000 a 3 días. */
+    precio: { busNC47: 30000, bus4849: 31000, sprinter: 19000 },
+    porDias: { 1: 19000, 3: 24500 },
+    diaExtra: 2750 },
   { nombre: "Manzanillo", km: 574,
     busca: /manzanillo/i,
     precio: { busNC47: 30000, bus4849: 31000, neobusI6: 33000, pbI6: 32000, marcopolo: 37000, irizar: 35000, sprinter: 18500 } },
@@ -131,7 +156,10 @@ const DESTINOS = [
     precio: { busNC47: 38000, bus4849: 39000, neobusI6: 42000, pbI6: 40000, marcopolo: 46000, irizar: 44000, sprinter: 25000 } },
   { nombre: "Tlalpujahua", km: 762,
     busca: /tlalpujahua/i,
-    precio: { busNC47: 36000, bus4849: 37000, neobusI6: 40000, pbI6: 38000, marcopolo: 44000, irizar: 42000, sprinter: 23500 } },
+    /* Del Excel: 1 día $23,500 y 2 días $26,500 → día extra $3,000. */
+    precio: { busNC47: 36000, bus4849: 37000, neobusI6: 40000, pbI6: 38000, marcopolo: 44000, irizar: 42000, sprinter: 23500 },
+    porDias: { 1: 23500, 2: 26500 },
+    diaExtra: 3000 },
   { nombre: "Tenacatita", km: 762,
     busca: /tenacatita|boca de iguanas/i,
     precio: { busNC47: 32000, bus4849: 33000, neobusI6: 35000, pbI6: 34000, marcopolo: 39000, irizar: 37000, sprinter: 20000 } },
@@ -179,7 +207,10 @@ const DESTINOS = [
     precio: { busNC47: 100000, bus4849: 110000, neobusI6: 120000, pbI6: 115000, marcopolo: 130000, irizar: 125000, sprinter: 75000 } },
   { nombre: "Chiapas", km: 2848,
     busca: /chiapas|san crist|palenque|tuxtla/i,
-    precio: { busNC47: 130000, bus4849: 135000, neobusI6: 145000, pbI6: 140000, marcopolo: 160000, irizar: 155000, sprinter: 85000 } },
+    /* «CHIAPAS 8 DIAS»: el precio del Excel YA incluye los ocho días. Antes
+       se le sumaban noches encima y cobraba $4,000 de más (criterio R2). */
+    precio: { busNC47: 130000, bus4849: 135000, neobusI6: 145000, pbI6: 140000, marcopolo: 160000, irizar: 155000, sprinter: 85000 },
+    diasIncluidos: 8 },
   /* El Excel trae el Marcopolo de Barrancas en 1,300,000: un cero de mas.
      En los 40 destinos el Marcopolo nunca pasa del Irizar por mas de 5,000, y
      aqui lo pasaria por 1,175,000. Se corrigio a 130,000 —el escalon que
@@ -194,7 +225,10 @@ const DESTINOS = [
     precio: { busNC47: 105000, bus4849: 110000, neobusI6: 120000, pbI6: 115000, marcopolo: 130000, irizar: 125000, sprinter: 75000 } },
   { nombre: "Cancún", km: 4282,
     busca: /canc|riviera maya|playa del carmen|tulum/i,
-    precio: { busNC47: 180000, bus4849: 185000, neobusI6: 195000, pbI6: 190000, marcopolo: 215000, irizar: 205000, sprinter: 145000 } }
+    /* «CANCUN 17 DIAS»: el precio YA incluye los diecisiete días. Antes se
+       le sumaban $13,000 de noches encima (criterio R2). */
+    precio: { busNC47: 180000, bus4849: 185000, neobusI6: 195000, pbI6: 190000, marcopolo: 215000, irizar: 205000, sprinter: 145000 },
+    diasIncluidos: 17 }
 ];
 
 /* ------------------------------------------------------------
@@ -243,7 +277,18 @@ function precioDeLista(destino, unidad) {
   const d = buscaDestino(destino);
   if (!d) return null;
   const p = d.precio[unidad || 'sprinter'];
-  return typeof p === 'number' ? { precio: p, nombre: d.nombre, km: d.km } : null;
+  if (typeof p !== 'number') return null;
+  return {
+    precio: p, nombre: d.nombre, km: d.km,
+    /* Los tres campos del criterio de precios (docs/CRITERIO-DE-PRECIOS.md):
+       `porDias` son los precios del Excel por duración (solo Sprinter, que es
+       lo único que se cotiza en línea), `diaExtra` la tarifa propia del
+       destino más allá de su última duración, y `diasIncluidos` marca a los
+       paquetes cuyo precio ya trae los días adentro. */
+    porDias: d.porDias || null,
+    diaExtra: typeof d.diaExtra === 'number' ? d.diaExtra : null,
+    diasIncluidos: typeof d.diasIncluidos === 'number' ? d.diasIncluidos : null
+  };
 }
 
 module.exports = { DESTINOS, buscaDestino, precioDeLista };
