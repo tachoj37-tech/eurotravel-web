@@ -49,16 +49,37 @@ function res() {
   return r;
 }
 let n = 0;
-function cab() {
+function cab(cookie) {
   n++;
-  return { origin: 'https://eurotravel-web.vercel.app',
-           'x-vercel-forwarded-for': '10.6.' + Math.floor(n / 250) + '.' + (n % 250) };
+  const h = { origin: 'https://eurotravel-web.vercel.app',
+              'x-vercel-forwarded-for': '10.6.' + Math.floor(n / 250) + '.' + (n % 250) };
+  if (cookie) h.cookie = cookie;
+  return h;
 }
-async function abre(token) {
+
+/* ------------------------------------------------------------
+   LA LIGA SOLA YA NO ABRE NADA
+
+   Estas pruebas cambiaron de lado a proposito. Antes la liga firmada
+   bastaba: quien la tuviera, entraba. El dueño pidio otra cosa —liga MAS
+   codigo al correo, y verificacion cada ocho horas— porque una liga sola es
+   un pase al portador: se reenvia, se queda en el historial de una compu
+   prestada, o se la ve alguien por encima del hombro.
+
+   Asi que ahora `abre()` lleva la cookie de sesion, y sin ella lo que se
+   espera NO es el viaje: es «pideme un codigo».
+   ------------------------------------------------------------ */
+const acceso = require('../api/_acceso.js');
+
+async function abre(token, cookie) {
   PREGUNTAS_A_STRIPE = 0;
   const r = res();
-  await viaje({ method: 'POST', headers: cab(), body: { t: token } }, r);
+  await viaje({ method: 'POST', headers: cab(cookie), body: { t: token } }, r);
   return r;
+}
+/* La cookie que pondria el servidor tras verificar bien el codigo. */
+function cookieDe(idCliente) {
+  return acceso.COOKIE + '=' + acceso.firmaSesion(idCliente);
 }
 
 /* Dos clientes distintos, con datos distintos. La metadata trae `km` a
@@ -66,6 +87,10 @@ async function abre(token) {
 function sesionDe(id, quien, folio) {
   return {
     id: id, payment_status: 'paid', status: 'complete',
+    /* `customer_creation: 'always'` deja cliente en las sesiones PAGADAS, y
+       la liga solo se manda al pagar. La sesión de verificación va atada a
+       este cliente, no al viaje. */
+    customer: 'cus_' + quien.toUpperCase(),
     metadata: {
       folio: folio, nombre: quien, correo: quien.toLowerCase() + '@ejemplo.mx',
       telefono: '3312345678', canal: 'correo',
@@ -86,17 +111,46 @@ SESIONES = {
 
 (async function () {
 
-  /* ============ 1. CADA QUIEN VE LO SUYO, Y NADA MAS ============ */
+  /* ============ 0. LA LIGA SOLA NO ENSEÑA NADA ============
+     Es el cambio que pidio el dueño, y lo primero que hay que comprobar. */
   const deAna = ligas.firma('cs_test_ANA', '2026-09-06');
   const deBeto = ligas.firma('cs_test_BETO', '2026-09-06');
 
-  const ana = await abre(deAna);
-  igual('Ana abre su viaje', ana._status, 200);
+  const sinCodigo = await abre(deAna);
+  igual('con la liga sola, se pide código', sinCodigo._json.requiereCodigo, true);
+  igual('y NO se enseña el viaje', sinCodigo._json.folio, undefined);
+  igual('ni los montos', sinCodigo._json.total, undefined);
+  igual('se dice a dónde llega el código, sin publicar el correo',
+    sinCodigo._json.correo, 'a***@ejemplo.mx');
+  igual('y el correo completo NO sale',
+    JSON.stringify(sinCodigo._json).indexOf('ana@ejemplo.mx'), -1);
+  igual('y cuántas horas dura la verificación', sinCodigo._json.horas, 8);
+
+  /* ============ 1. CON LA SESION, CADA QUIEN VE LO SUYO ============ */
+  const ana = await abre(deAna, cookieDe('cus_ANA'));
+  igual('Ana, ya verificada, abre su viaje', ana._status, 200);
   igual('y ve SU folio', ana._json.folio, 'ET-AAAA-111');
   igual('y su nombre', ana._json.nombre, 'Ana');
 
-  const beto = await abre(deBeto);
+  const beto = await abre(deBeto, cookieDe('cus_BETO'));
   igual('Beto ve el suyo', beto._json.folio, 'ET-BBBB-222');
+
+  /* LA PRUEBA QUE IMPORTA: Ana ya verifico LO SUYO. Si con esa sesion pudiera
+     abrir la liga de Beto, todo esto no serviria de nada. */
+  const cruzada = await abre(deBeto, cookieDe('cus_ANA'));
+  igual('la sesión de Ana NO abre el viaje de Beto', cruzada._json.requiereCodigo, true);
+  igual('y no se le escapa el folio de Beto',
+    JSON.stringify(cruzada._json).indexOf('BBBB'), -1);
+
+  /* Una cookie inventada tampoco */
+  const falsa = await abre(deAna, acceso.COOKIE + '=inventada.deltodo');
+  igual('una cookie inventada no abre nada', falsa._json.requiereCodigo, true);
+
+  /* Y una vencida */
+  const vencida = acceso.COOKIE + '=' +
+    acceso.firmaSesion('cus_ANA', Date.now() - 9 * 3600000);
+  const rVencida = await abre(deAna, vencida);
+  igual('una sesión de hace nueve horas ya no abre', rVencida._json.requiereCodigo, true);
 
   /* El ataque: Ana pega la carga de Beto con su propia firma. */
   const inventada = deBeto.split('.')[0] + '.' + deAna.split('.')[1];
@@ -167,15 +221,15 @@ SESIONES = {
      -------------------------------------------------------------- */
   SESIONES.cs_test_OXXO = Object.assign(sesionDe('cs_test_OXXO', 'Caro', 'ET-CCCC-333'),
     { payment_status: 'unpaid', status: 'open' });
-  const rOxxo = await abre(ligas.firma('cs_test_OXXO', '2026-09-06'));
+  const rOxxo = await abre(ligas.firma('cs_test_OXXO', '2026-09-06'), cookieDe('cus_CARO'));
   igual('un voucher sin pagar SÍ enseña el viaje', rOxxo._status, 200);
   igual('pero NO dice que esté apartado', rOxxo._json.estado, 'pendiente');
   igual('y su folio sí lo ve', rOxxo._json.folio, 'ET-CCCC-333');
 
   /* Una sesion abandonada, en cambio, no tiene nada que enseñar */
   SESIONES.cs_test_MUERTA = { id: 'cs_test_MUERTA', payment_status: 'unpaid',
-                              status: 'expired', metadata: {} };
-  const rMuerta = await abre(ligas.firma('cs_test_MUERTA', '2026-09-06'));
+                              status: 'expired', customer: 'cus_MUERTA', metadata: {} };
+  const rMuerta = await abre(ligas.firma('cs_test_MUERTA', '2026-09-06'), cookieDe('cus_MUERTA'));
   igual('una sesión abandonada no enseña un viaje', rMuerta._json.estado, 'sinPagar');
   igual('y lo dice con palabras', typeof rMuerta._json.aviso, 'string');
 

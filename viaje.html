@@ -77,6 +77,25 @@
   .aviso.malo { background: #fdeaea; color: #8a0a0a; }
   .aviso.ojo { background: #fff8e6; color: #7a5200; }
   .cargando { text-align: center; color: var(--muted); padding: 50px 0; }
+
+  /* ---- el paso del código ---- */
+  .puerta { background: #fff; border: 1px solid var(--line); border-radius: 14px; padding: 26px 22px; text-align: center; }
+  .puerta h1 { font-size: 21px; margin: 0 0 8px; }
+  .puerta p { color: var(--muted); font-size: 14.5px; margin: 0 0 20px; }
+  .casillas { display: flex; gap: 8px; justify-content: center; margin-bottom: 18px; }
+  .casillas input {
+    width: 46px; height: 56px; text-align: center; font-size: 24px; font-weight: 600;
+    border: 1px solid var(--line); border-radius: 10px; background: #fff;
+    font-variant-numeric: tabular-nums; -moz-appearance: textfield;
+  }
+  .casillas input::-webkit-outer-spin-button,
+  .casillas input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+  .casillas input:focus { outline: 2px solid var(--red); outline-offset: 1px; border-color: var(--red); }
+  .casillas input.mal { border-color: var(--red); background: #fdeaea; }
+  @media (max-width: 420px) { .casillas input { width: 42px; height: 52px; font-size: 21px; } }
+  .enlace { background: none; border: 0; color: var(--red); font: inherit; font-size: 13.5px;
+            text-decoration: underline; cursor: pointer; padding: 8px; }
+  .error-codigo { color: #8a0a0a; font-size: 14px; margin: 0 0 14px; min-height: 20px; }
   [hidden] { display: none !important; }
   footer { text-align: center; color: var(--muted); font-size: 12.5px; margin-top: 26px; line-height: 1.7; }
   footer a { color: var(--red); }
@@ -204,6 +223,131 @@
     cuerpo.innerHTML = partes.join('');
   }
 
+  /* ============================================================
+     LA PUERTA DEL CODIGO
+     ------------------------------------------------------------
+     La liga sola ya no abre nada. Antes de enseñar el viaje se
+     pide un código de seis dígitos que llega al correo con el que
+     se pagó — no al que teclee quien esté enfrente.
+
+     Verificado una vez, no se vuelve a pedir en ocho horas: eso
+     lo lleva una cookie que pone el servidor y que este script
+     NO puede leer, a propósito.
+     ============================================================ */
+  function pintaPuerta(pista, horas) {
+    cuerpo.innerHTML =
+      '<div class="puerta">' +
+        '<h1>Confirma que eres tú</h1>' +
+        '<p>Te mandamos un código a <b>' + esc(pista || 'tu correo') + '</b>. ' +
+          'Tecléalo para ver tu viaje.</p>' +
+        '<div class="casillas" id="casillas">' +
+          '<input type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="1" aria-label="Dígito 1">' +
+          '<input type="text" inputmode="numeric" maxlength="1" aria-label="Dígito 2">' +
+          '<input type="text" inputmode="numeric" maxlength="1" aria-label="Dígito 3">' +
+          '<input type="text" inputmode="numeric" maxlength="1" aria-label="Dígito 4">' +
+          '<input type="text" inputmode="numeric" maxlength="1" aria-label="Dígito 5">' +
+          '<input type="text" inputmode="numeric" maxlength="1" aria-label="Dígito 6">' +
+        '</div>' +
+        '<p class="error-codigo" id="err" role="alert"></p>' +
+        '<button class="btn" id="entrar">Entrar</button>' +
+        '<button class="enlace" id="otro">No me llegó — mándame otro</button>' +
+        '<p class="nota" style="margin-top:6px">Te lo volveremos a pedir en ' +
+          (horas || 8) + ' horas.</p>' +
+      '</div>';
+
+    var casillas = [].slice.call(document.querySelectorAll('#casillas input'));
+    var err = document.getElementById('err');
+
+    function leido() { return casillas.map(function (c) { return c.value; }).join(''); }
+    function limpia(mal) {
+      casillas.forEach(function (c) { c.classList.toggle('mal', !!mal); });
+    }
+
+    /* Se acepta pegar: la gente copia «Tu código: 12 34 56» completo. */
+    function reparte(texto) {
+      var d = String(texto || '').replace(/\D/g, '').slice(0, 6).split('');
+      casillas.forEach(function (c, i) { c.value = d[i] || ''; });
+      if (d.length >= 6) manda();
+      else if (casillas[d.length]) casillas[d.length].focus();
+    }
+
+    casillas.forEach(function (c, i) {
+      c.addEventListener('input', function () {
+        limpia(false);
+        var v = c.value.replace(/\D/g, '');
+        if (v.length > 1) { reparte(leido()); return; }
+        c.value = v;
+        if (v && casillas[i + 1]) casillas[i + 1].focus();
+        if (leido().length === 6) manda();
+      });
+      c.addEventListener('keydown', function (e) {
+        if (e.key === 'Backspace' && !c.value && casillas[i - 1]) casillas[i - 1].focus();
+        if (e.key === 'Enter') manda();
+      });
+      c.addEventListener('paste', function (e) {
+        e.preventDefault();
+        reparte((e.clipboardData || window.clipboardData).getData('text'));
+      });
+    });
+    casillas[0].focus();
+
+    var mandando = false;
+    function manda() {
+      if (mandando) return;
+      var codigo = leido();
+      if (codigo.replace(/\D/g, '').length < 6) { err.textContent = 'Faltan dígitos.'; return; }
+      mandando = true;
+      err.textContent = 'Comprobando…';
+
+      fetch('/api/verificar-codigo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ t: t, codigo: codigo })
+      }).then(leeJSON).then(function (res) {
+        mandando = false;
+        var d = res.d || {};
+        if (res.ok) { pinta(d); return; }
+        limpia(true);
+        err.textContent = d.aviso || 'Ese código no es correcto.';
+        casillas.forEach(function (c) { c.value = ''; });
+        casillas[0].focus();
+        if (d.pideOtro) pideCodigo(true);
+      }).catch(function () {
+        mandando = false;
+        err.textContent = 'No hubo conexión. Vuelve a intentar.';
+      });
+    }
+
+    document.getElementById('entrar').addEventListener('click', manda);
+    document.getElementById('otro').addEventListener('click', function () {
+      err.textContent = 'Te mandamos otro código.';
+      pideCodigo(true);
+    });
+  }
+
+  function pideCodigo(callado) {
+    return fetch('/api/pedir-codigo', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ t: t })
+    }).then(leeJSON).then(function (res) {
+      if (!res.ok) {
+        if (!callado) {
+          pintaError(res.status === 410 ? 'ojo' : 'malo',
+            res.status === 410 ? 'Esta liga ya venció' : 'No pudimos mandarte el código',
+            (res.d && res.d.aviso) || 'Escríbenos por WhatsApp y te ayudamos.');
+        }
+        return null;
+      }
+      return res.d;
+    });
+  }
+
+  function leeJSON(res) {
+    return res.json().then(function (d) { return { ok: res.ok, status: res.status, d: d }; },
+                           function () { return { ok: false, status: res.status, d: {} }; });
+  }
+
   /* ---- el token viaja en la dirección y de ahí no se mueve ---- */
   var t = new URLSearchParams(location.search).get('t') || '';
   if (!t) {
@@ -216,10 +360,7 @@
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ t: t })
-  }).then(function (res) {
-    return res.json().then(function (d) { return { ok: res.ok, status: res.status, d: d }; },
-                           function () { return { ok: false, status: res.status, d: {} }; });
-  }).then(function (res) {
+  }).then(leeJSON).then(function (res) {
     var d = res.d || {};
     if (res.status === 410) {
       pintaError('ojo', 'Esta liga ya venció',
@@ -229,6 +370,13 @@
     if (!res.ok) {
       pintaError('malo', 'No encontramos ese viaje',
         d.aviso || 'Revisa que hayas abierto el enlace completo, tal como te llegó.');
+      return;
+    }
+    /* La liga es buena pero todavía no sabemos que sea él. Se le manda el
+       código y se le pinta la puerta. */
+    if (d.requiereCodigo) {
+      pintaPuerta(d.correo, d.horas);
+      pideCodigo(true);
       return;
     }
     if (d.estado === 'sinPagar') {

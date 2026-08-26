@@ -298,6 +298,61 @@ async function manda(mensaje) {
   return { ok: false, motivo: motivo, reintentar: r.status >= 500 };
 }
 
+/* ------------------------------------------------------------
+   EL CODIGO PARA ENTRAR A SU VIAJE
+   ------------------------------------------------------------
+   Corto a propósito. Este correo se lee en la pantalla de
+   notificaciones del teléfono, con el navegador abierto en la
+   otra mano: lo único que importa es que el número se vea sin
+   tener que abrirlo.
+
+   Por eso el código va TAMBIEN en el asunto.
+   ------------------------------------------------------------ */
+function mensajeDeCodigo(aDonde, codigo, nombre, folio) {
+  const quien = String(nombre || '').trim().split(/\s+/)[0];
+  const c = String(codigo || '');
+
+  const html =
+    '<div style="font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;' +
+    'max-width:440px;margin:0 auto;color:#1d1d1b;line-height:1.55">' +
+      '<p style="font-size:15px;margin:0 0 20px">' +
+        (quien ? 'Hola ' + esc(quien) + ',' : 'Hola,') + '</p>' +
+      '<p style="font-size:15px;margin:0 0 22px">Este es tu código para entrar a tu viaje' +
+        (folio ? ' <b>' + esc(folio) + '</b>' : '') + ':</p>' +
+      '<div style="border:2px solid #1d1d1b;border-radius:12px;padding:20px;text-align:center">' +
+        '<div style="font-size:38px;font-weight:700;letter-spacing:.22em;' +
+          'font-variant-numeric:tabular-nums">' + esc(c) + '</div>' +
+      '</div>' +
+      '<p style="font-size:13.5px;color:#6e6e6a;margin:20px 0 0">' +
+        'Vence en 10 minutos y sirve una sola vez. ' +
+        '<b>Si no lo pediste tú, no lo compartas con nadie</b> — alguien tiene tu liga.</p>' +
+      '<p style="font-size:12.5px;color:#6e6e6a;margin:26px 0 0;padding-top:16px;' +
+        'border-top:1px solid #e6e6e3">Eurotravel · San Pedro Tlaquepaque, Jalisco</p>' +
+    '</div>';
+
+  const texto = [
+    (quien ? 'Hola ' + quien + ',' : 'Hola,'),
+    '',
+    'Tu código para entrar a tu viaje' + (folio ? ' ' + folio : '') + ':',
+    '',
+    '    ' + c,
+    '',
+    'Vence en 10 minutos y sirve una sola vez.',
+    'Si no lo pediste tú, no lo compartas con nadie: alguien tiene tu liga.',
+    '',
+    'Eurotravel · San Pedro Tlaquepaque, Jalisco'
+  ].join('\n');
+
+  return {
+    from: DE,
+    to: [String(aDonde || '').trim().toLowerCase()],
+    /* El código en el asunto: se lee desde la notificación, sin abrir nada. */
+    subject: c + ' es tu código para entrar a tu viaje',
+    html: html,
+    text: texto
+  };
+}
+
 /* La puerta que usa el webhook: arma y manda, en un solo paso. */
 async function mandaContrato(metadata, pdfBase64, liga) {
   return manda(mensajeDeContrato(metadata, pdfBase64, liga));
@@ -305,6 +360,6 @@ async function mandaContrato(metadata, pdfBase64, liga) {
 
 module.exports = {
   DE, hayClave, porQueNoSePuede,
-  fechaLarga, datosDelCorreo, mensajeDeContrato,
+  fechaLarga, datosDelCorreo, mensajeDeContrato, mensajeDeCodigo,
   manda, mandaContrato
 };

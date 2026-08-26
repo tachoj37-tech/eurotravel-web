@@ -27,6 +27,7 @@
 
 const defensas = require('./_defensas');
 const ligas = require('./_ligas');
+const acceso = require('./_acceso');
 const stripe = require('./_stripe');
 const publico = require('./_publico');
 
@@ -88,6 +89,32 @@ module.exports = async function handler(req, res) {
   }
 
   const sesion = consulta.sesion;
+
+  /* ------------------------------------------------------------
+     3. ¿YA SE VERIFICO, O HAY QUE MANDARLE UN CODIGO?
+
+     La liga sola YA NO ABRE NADA. Prueba que la liga es legítima, no que
+     quien la tiene sea su dueño: una liga reenviada, o dejada en el
+     historial de una computadora prestada, sigue siendo válida.
+
+     La sesión va atada al CLIENTE, no al viaje: quien tiene dos viajes con
+     Eurotravel verifica una vez y ve los dos. Y comprobarla contra ESTE
+     cliente es lo que impide que quien ya verificó lo suyo entre a lo ajeno
+     nada más cambiando la liga.
+     ------------------------------------------------------------ */
+  const idCliente = typeof sesion.customer === 'string' ? sesion.customer
+                  : (sesion.customer && sesion.customer.id) || '';
+
+  if (!acceso.sesionValida(acceso.sesionDe(req), idCliente)) {
+    const aDonde = String((sesion.metadata || {}).correo ||
+      (sesion.customer_details && sesion.customer_details.email) || '');
+    res.status(200).json({
+      requiereCodigo: true,
+      correo: acceso.pistaDeCorreo(aDonde),
+      horas: acceso.HORAS_SESION
+    });
+    return;
+  }
 
   /* Un viaje que nunca se pagó no tiene nada que enseñar. Puede pasar con un
      voucher de OXXO generado y no pagado: la liga existe desde que se creó la

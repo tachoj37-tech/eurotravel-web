@@ -163,6 +163,68 @@ function paraStripe(t) {
     .trim();
 }
 
+/* ------------------------------------------------------------
+   LA FICHA DEL CLIENTE
+   ------------------------------------------------------------
+   Ahi vive el codigo de verificacion mientras dura: es el objeto
+   al que pertenece y ya existe, asi que no hace falta inventar
+   un almacen nuevo para algo que vive diez minutos.
+
+   En funciones serverless la memoria NO sirve para esto: cada
+   llamada puede caer en otra maquina, y el codigo guardado en una
+   no existe en la siguiente.
+   ------------------------------------------------------------ */
+function idDeClienteValido(s) {
+  return typeof s === 'string' && /^cus_[A-Za-z0-9]{4,}$/.test(s);
+}
+
+async function traeCliente(id) {
+  const k = clave();
+  if (!k) return { error: 'sin clave de Stripe' };
+  if (!idDeClienteValido(id)) return { error: 'id de cliente con mala forma' };
+  try {
+    const r = await fetch(STRIPE + '/customers/' + encodeURIComponent(id), {
+      headers: { 'Authorization': 'Bearer ' + k }
+    });
+    const d = await r.json();
+    if (!r.ok || d.error) return { error: 'Stripe no reconoce al cliente' };
+    return { cliente: d };
+  } catch (e) {
+    return { error: 'no se pudo consultar a Stripe', reintentar: true };
+  }
+}
+
+/* Escribe campos de metadata en la ficha del cliente. Un valor `null` o ''
+   BORRA ese campo: asi se limpia el codigo cuando ya se uso. */
+async function guardaEnCliente(id, metadata) {
+  const k = clave();
+  if (!k) return { error: 'sin clave de Stripe' };
+  if (!idDeClienteValido(id)) return { error: 'id de cliente con mala forma' };
+  try {
+    /* Stripe borra un campo de metadata cuando se le manda vacio, asi que
+       los `null` se mandan como cadena vacia y no se saltan. */
+    const campos = [];
+    Object.keys(metadata || {}).forEach(function (campo) {
+      const v = metadata[campo];
+      campos.push(encodeURIComponent('metadata[' + campo + ']') + '=' +
+        encodeURIComponent(v === null || v === undefined ? '' : String(v)));
+    });
+    const r = await fetch(STRIPE + '/customers/' + encodeURIComponent(id), {
+      method: 'POST',
+      headers: {
+        'Authorization': 'Bearer ' + k,
+        'Content-Type': 'application/x-www-form-urlencoded'
+      },
+      body: campos.join('&')
+    });
+    const d = await r.json();
+    if (!r.ok || d.error) return { error: 'Stripe rechazó la escritura' };
+    return { cliente: d };
+  } catch (e) {
+    return { error: 'no se pudo escribir en Stripe', reintentar: true };
+  }
+}
+
 /* Crea la sesion de cobro. Devuelve { ok, datos } tal cual contesto Stripe:
    quien llama arma su propio mensaje de error, que es cosa suya. */
 async function creaSesionDeCobro(cuerpo) {
@@ -183,7 +245,10 @@ module.exports = {
   porQueNoSePuedeCobrar,
   estadoDePago,
   idDeSesionValido,
+  idDeClienteValido,
   traeSesion,
+  traeCliente,
+  guardaEnCliente,
   creaSesionDeCobro,
   paraStripe,
   aFormulario
