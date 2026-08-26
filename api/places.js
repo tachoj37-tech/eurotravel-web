@@ -20,6 +20,68 @@ const GOOGLE = 'https://places.googleapis.com/v1';
 // El autocompletado es barato, así que aguanta más que cotizar o pagar.
 const freno = defensas.creaFreno({ porMinuto: 60, porDia: 2000 });
 
+/* Un número de verdad, o NaN. `Number()` a secas convierte `null`, `''` y
+   `false` en 0, y cero es una coordenada válida —en el Golfo de Guinea—. */
+function numeroDe(v) {
+  if (v === null || v === undefined || v === '' || typeof v === 'boolean') return NaN;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : NaN;
+}
+
+/* ------------------------------------------------------------
+   SOLO LUGARES DE MEXICO
+   ------------------------------------------------------------
+   Eurotravel no hace viajes al extranjero, así que una sugerencia
+   de fuera solo sirve para que alguien elija un destino que no se
+   puede cotizar.
+
+   Se decide AQUI y no solo con el parámetro de Google. Dos razones:
+
+     · con cerco no se puede mandar ese parámetro (arriba está por
+       qué), así que en ese camino esto es la única defensa
+     · y en el otro camino es la segunda: si Google algún día deja
+       de honrar `includedRegionCodes`, aquí no pasa nada
+
+   Se mira el texto COMPLETO de la sugerencia, que con
+   `languageCode: es` termina en «México» para todo lo de aquí:
+   «Chapala, Jal., México». Los estados abreviados están porque en
+   una búsqueda con cerco Google a veces omite el país —el cerco ya
+   lo implica— y sin ellos se caería la lista entera.
+   ------------------------------------------------------------ */
+const ESTADOS = ['ags', 'bc', 'bcs', 'camp', 'chih', 'chis', 'coah', 'col', 'cdmx',
+  'dgo', 'gro', 'gto', 'hgo', 'jal', 'mex', 'mich', 'mor', 'nay', 'nl', 'oax',
+  'pue', 'qro', 'q roo', 'sin', 'slp', 'son', 'tab', 'tamps', 'tlax', 'ver',
+  'yuc', 'zac'];
+
+/* Los vecinos, escritos como los escribe Google en español. Se revisan
+   PRIMERO: «Vancouver, BC, Canadá» trae una abreviatura que también es la de
+   Baja California, y sin esto pasaría. */
+const DE_FUERA = /\b(ee\.? ?uu|estados unidos|usa|united states|canada|guatemala|belice|belize|honduras|el salvador|cuba|espana|colombia|argentina)\b/;
+
+/* Los acentos se quitan con la clase escapada, no con los caracteres
+   combinantes escritos tal cual: esos son invisibles en el editor y ya se han
+   perdido antes al copiar un archivo de un lado a otro. */
+function sinAcentos(t) {
+  return String(t || '').toLowerCase().normalize('NFD').replace(new RegExp('[\\u0300-\\u036f]', 'g'), '');
+}
+
+function esDeMexico(s) {
+  const t = sinAcentos(s._completo || (s.principal + ', ' + s.secundario));
+  if (DE_FUERA.test(t)) return false;
+  if (/\bmexico\b/.test(t)) return true;
+  /* «..., Jal.» o «..., N.L.»: son abreviaturas de estado, y esas solo las
+     usa Google en direcciones mexicanas.
+
+     Los puntos se quitan ANTES de comparar: Google escribe unas con punto y
+     otras sin él —«Jal.» pero «Q Roo», «N.L.» pero «CDMX»— y con los puntos
+     dentro, «N.L.» no empataba con `nl` y Monterrey se caía de la lista. */
+  const sinPuntos = t.replace(/\./g, '');
+  for (let i = 0; i < ESTADOS.length; i++) {
+    if (new RegExp('(^|[,\\s])' + ESTADOS[i] + '(\\s|,|$)').test(sinPuntos)) return true;
+  }
+  return false;
+}
+
 module.exports = async function handler(req, res) {
   if (defensas.puerta(req, res)) return;   // OPTIONS, POST y origen, en un lugar
 
@@ -47,18 +109,40 @@ module.exports = async function handler(req, res) {
          dirección en Puerto Vallarta recibe coincidencias de todo el país. */
       const peticion = {
         input: texto,
-        includedRegionCodes: [String(cuerpo.pais || 'mx').slice(0, 2)],
         languageCode: String(cuerpo.idioma || 'es').slice(0, 5),
         sessionToken: sesion
       };
 
-      const cLat = Number(cuerpo.centroLat), cLng = Number(cuerpo.centroLng);
-      if (isFinite(cLat) && isFinite(cLng) && Math.abs(cLat) <= 90 && Math.abs(cLng) <= 180) {
-        // radio en metros, entre 5 y 200 km
+      const cLat = numeroDe(cuerpo.centroLat), cLng = numeroDe(cuerpo.centroLng);
+      const conCerco = Number.isFinite(cLat) && Number.isFinite(cLng) &&
+        Math.abs(cLat) <= 90 && Math.abs(cLng) <= 180 && !(cLat === 0 && cLng === 0);
+
+      if (conCerco) {
+        /* --------------------------------------------------------------
+           EL CERCO Y EL FILTRO DE PAIS NO PUEDEN IR JUNTOS
+
+           Iban, y Google RECHAZABA la petición entera. O sea que el buscador
+           de dirección exacta —el que se usa después de elegir la ciudad,
+           para marcar el hotel o el domicilio— no devolvía NADA. Nunca. El
+           cliente veía una lista vacía y tenía que escribir la dirección
+           completa a ciegas.
+
+           No se vio antes porque el camino SIN cerco —el de elegir la
+           ciudad— sí funciona, y es el que se prueba a mano. El del cerco
+           falla en silencio: `pideAlProxy` recibe el error y solo cierra la
+           lista, que se ve igual que «no hay coincidencias».
+
+           Comprobado contra producción con el mismo texto: sin cerco,
+           cinco sugerencias; con cerco, «Google rechazó la solicitud».
+
+           Así que cuando hay cerco, el país lo acota ESTE archivo, abajo.
+           -------------------------------------------------------------- */
         const radio = Math.min(200000, Math.max(5000, Number(cuerpo.radio) || 60000));
         peticion.locationRestriction = {
           circle: { center: { latitude: cLat, longitude: cLng }, radius: radio }
         };
+      } else {
+        peticion.includedRegionCodes = [String(cuerpo.pais || 'mx').slice(0, 2)];
       }
 
       const r = await fetch(GOOGLE + '/places:autocomplete', {
@@ -77,9 +161,13 @@ module.exports = async function handler(req, res) {
         return {
           id: p.placeId,
           principal: (f.mainText && f.mainText.text) || (p.text && p.text.text) || '',
-          secundario: (f.secondaryText && f.secondaryText.text) || ''
+          secundario: (f.secondaryText && f.secondaryText.text) || '',
+          /* el texto completo, solo para decidir si el lugar es de México */
+          _completo: (p.text && p.text.text) || ''
         };
-      }).filter(function (s) { return s.id; });
+      }).filter(function (s) { return s.id; })
+        .filter(esDeMexico)
+        .map(function (s) { delete s._completo; return s; });
 
       res.status(200).json({ suggestions: lista });
       return;
