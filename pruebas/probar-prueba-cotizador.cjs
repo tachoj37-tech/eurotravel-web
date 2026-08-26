@@ -194,7 +194,22 @@ async function pide(cuerpo) {
     igual('se midio desde el origen que se le dijo',
       JSON.stringify(TRAMOS[0].de).indexOf('ChIJ_orig1') >= 0, true);
     igual('y el viaje lo dice', r._json.viaje.desde, 'Puerto Vallarta, Jalisco, México');
-    igual('Vallarta esta a mas de 60 km de casa', r._json.viaje.saleDeCasa, false);
+
+    /* --------------------------------------------------------------
+       ESTA ASERCION CAMBIO DE LADO, Y ESTABA VERDE POR EL DEFECTO
+
+       Decia `saleDeCasa === false`, y pasaba. Pero este origen NO trae
+       coordenadas —solo texto y placeId— asi que no habia forma de saber
+       a que distancia estaba. Salia `false` porque `isFinite(null)` da
+       true en JavaScript: se medía la distancia de Guadalajara al 0,0 del
+       Golfo de Guinea, doce mil kilometros, y claro que daba «lejos».
+
+       O sea que la prueba comprobaba el resultado correcto por el camino
+       equivocado, y se hubiera quedado verde con cualquier origen del
+       mundo. Sin coordenadas la respuesta buena es `null`: no se puede
+       saber. Que se sepa de verdad se prueba abajo, con coordenadas.
+       -------------------------------------------------------------- */
+    igual('sin coordenadas no se puede saber si es de casa', r._json.viaje.saleDeCasa, null);
   }
 
   {
@@ -220,6 +235,33 @@ async function pide(cuerpo) {
     cierto('y se dice a cuanto esta', r._json.viaje.aCuantoDeCasa > 500);
     //  6,500 + 1,400 × 22 = 37,300 contra 19,000 de lista: 18,300 de menos
     igual('con la comparacion enfrente', r._json.comparativa.diferencia, 18300);
+  }
+
+  {
+    /* --- 4f-bis. UN ORIGEN SIN COORDENADAS NO ESTA «LEJOS DE CASA» ---
+       `isFinite(null)` da **true** en JavaScript, porque coacciona a 0 antes
+       de mirar. Con eso, un origen escrito a mano —que no trae coordenadas—
+       se comparaba contra el 0,0 del Golfo de Guinea y salia «a 12,000 km de
+       casa», con su aviso rojo y todo.
+
+       Es la MISMA trampa que en _rutas.js, cometida otra vez en el archivo
+       de al lado. Sin coordenadas la respuesta correcta no es «lejos»: es
+       «no se puede saber». */
+    METROS = 300000;
+    const r = await pide({ clave: CLAVE, dias: 3,
+      origen: { direccion: 'Bodega en la carretera a Chapala', lat: null, lng: null },
+      destino: punto(VALLARTA) });
+    igual('un origen sin coordenadas no dice ni que si ni que no',
+      r._json.viaje.saleDeCasa, null);
+    igual('y no inventa una distancia', r._json.viaje.aCuantoDeCasa, null);
+    igual('pero el viaje se cotiza igual', r._json.total, 19000);
+
+    /* y con coordenadas de verdad, si contesta */
+    const conCoords = await pide({ clave: CLAVE, dias: 3,
+      origen: { direccion: 'Zapopan, Jalisco, México', lat: 20.6719, lng: -103.4165 },
+      destino: punto(VALLARTA) });
+    igual('con coordenadas de casa, si sabe que es de casa',
+      conCoords._json.viaje.saleDeCasa, true);
   }
 
   {

@@ -60,16 +60,41 @@ const BASE = {
    viaje y la pantalla lo avisa. 60 km cubre toda la zona metropolitana. */
 const RADIO_DE_CASA_KM = 60;
 
+/* ------------------------------------------------------------
+   UN NÚMERO DE VERDAD, Y `isFinite` NO SIRVE PARA PREGUNTARLO
+   ------------------------------------------------------------
+   `isFinite(null)` da **true**, porque coacciona a 0 antes de mirar. Lo
+   mismo con `''` y con `[]`. Es la misma trampa que convertía los puntos
+   sin coordenadas en el 0,0 del Golfo de Guinea en `_rutas.js`, y aquí
+   volvía a caer: un origen escrito a mano —sin coordenadas— se comparaba
+   contra el 0,0 y salía «a 12,000 km de casa», con su aviso y todo.
+
+   `Number.isFinite` no coacciona. Y como del navegador pueden llegar como
+   texto, se convierten antes y se pregunta después.
+   ------------------------------------------------------------ */
+function numeroDe(v) {
+  if (v === null || v === undefined || v === '' || typeof v === 'boolean') return NaN;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : NaN;
+}
+
 /* Distancia en línea recta entre dos puntos, para saber si el origen sigue
    siendo la zona de casa. No es la distancia por carretera —esa la mide
-   Google— y no hace falta que lo sea: aquí solo se contesta «¿está cerca?». */
+   Google— y no hace falta que lo sea: aquí solo se contesta «¿está cerca?».
+
+   Devuelve null cuando alguno de los dos no trae coordenadas, y quien llama
+   lo entiende como «no se puede saber», que NO es lo mismo que «está lejos». */
 function lineaRecta(a, b) {
-  if (!isFinite(a.lat) || !isFinite(a.lng) || !isFinite(b.lat) || !isFinite(b.lng)) return null;
+  a = a || {}; b = b || {};
+  if (!Number.isFinite(numeroDe(a.lat)) || !Number.isFinite(numeroDe(a.lng)) ||
+      !Number.isFinite(numeroDe(b.lat)) || !Number.isFinite(numeroDe(b.lng))) return null;
   const rad = Math.PI / 180;
-  const dLat = (b.lat - a.lat) * rad;
-  const dLng = (b.lng - a.lng) * rad;
+  const aLat = numeroDe(a.lat), aLng = numeroDe(a.lng);
+  const bLat = numeroDe(b.lat), bLng = numeroDe(b.lng);
+  const dLat = (bLat - aLat) * rad;
+  const dLng = (bLng - aLng) * rad;
   const s = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos(a.lat * rad) * Math.cos(b.lat * rad) * Math.sin(dLng / 2) * Math.sin(dLng / 2);
+    Math.cos(aLat * rad) * Math.cos(bLat * rad) * Math.sin(dLng / 2) * Math.sin(dLng / 2);
   return 6371 * 2 * Math.atan2(Math.sqrt(s), Math.sqrt(1 - s));
 }
 
@@ -98,13 +123,15 @@ function puntoDe(p, porOmision) {
   if (!p || typeof p !== 'object') return porOmision || null;
   const direccion = String(p.direccion || p.texto || '').trim().slice(0, 300);
   const placeId = String(p.placeId || '').slice(0, 200);
-  const lat = Number(p.lat), lng = Number(p.lng);
-  if (!direccion && !placeId && !isFinite(lat)) return porOmision || null;
+  /* `numeroDe`, no `Number`: un `lat: null` del navegador se volvía cero, y
+     cero es una coordenada válida en el Golfo de Guinea. */
+  const lat = numeroDe(p.lat), lng = numeroDe(p.lng);
+  if (!direccion && !placeId && !Number.isFinite(lat)) return porOmision || null;
   return {
     direccion: direccion,
     placeId: /^[A-Za-z0-9_-]+$/.test(placeId) ? placeId : '',
-    lat: isFinite(lat) ? lat : null,
-    lng: isFinite(lng) ? lng : null
+    lat: Number.isFinite(lat) ? lat : null,
+    lng: Number.isFinite(lng) ? lng : null
   };
 }
 
