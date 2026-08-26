@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="robots" content="noindex, nofollow" />
+<title>Prueba del cotizador · Eurotravel</title>
+<!--
+  ============================================================
+  TEMPORAL — se borra cuando el dueño termine de revisar costos.
+  Para quitarla: borrar este archivo y api/prueba-cotizador.js.
+  No cuelga de ninguna liga del sitio a propósito.
+
+  Tres preguntas y nada más: a dónde va, cuántos días, y qué
+  días hay movimientos. Todo lo demás lo pone el servidor.
+  ============================================================
+-->
+<style>
+  :root {
+    --red: #db0d0d;
+    --ink: #1d1d1b;
+    --muted: #6e6e6a;
+    --line: #e6e6e3;
+    --soft: #f6f6f4;
+    --ok: #0a7d3c;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: #fff; color: var(--ink);
+    font: 15px/1.55 -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    -webkit-text-size-adjust: 100%;
+  }
+  .wrap { max-width: 940px; margin: 0 auto; padding: 22px 18px 70px; }
+
+  header { border-bottom: 3px solid var(--ink); padding-bottom: 14px; margin-bottom: 26px; }
+  .eyebrow {
+    font-size: 11px; letter-spacing: .13em; text-transform: uppercase;
+    color: var(--red); font-weight: 700;
+  }
+  h1 { margin: 6px 0 4px; font-size: 25px; letter-spacing: -.02em; }
+  header p { margin: 0; color: var(--muted); font-size: 13.5px; }
+
+  fieldset { border: 0; margin: 0 0 22px; padding: 0; }
+  legend {
+    font-size: 12px; letter-spacing: .09em; text-transform: uppercase;
+    color: var(--muted); font-weight: 700; padding: 0; margin-bottom: 9px;
+  }
+  label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 5px; }
+
+  input, select, button {
+    font: inherit; color: inherit;
+  }
+  input[type=text], input[type=password], input[type=number], select {
+    width: 100%; padding: 10px 12px; border: 1px solid var(--line);
+    border-radius: 8px; background: #fff;
+  }
+  input:focus, select:focus, button:focus-visible {
+    outline: 2px solid var(--red); outline-offset: 1px; border-color: var(--red);
+  }
+
+  .fila { display: grid; gap: 14px; grid-template-columns: 1fr 150px; align-items: end; }
+  @media (max-width: 620px) { .fila { grid-template-columns: 1fr; } }
+
+  .btn {
+    background: var(--red); color: #fff; border: 0; border-radius: 8px;
+    padding: 12px 22px; font-weight: 600; cursor: pointer;
+  }
+  .btn:hover { background: #b00a0a; }
+  .btn[disabled] { background: var(--muted); cursor: default; }
+
+  /* ---- los días, uno por renglón ---- */
+  .dias { border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+  .dia {
+    display: grid; grid-template-columns: 88px 1fr auto; gap: 12px;
+    align-items: center; padding: 9px 13px; border-bottom: 1px solid var(--line);
+  }
+  .dia:last-child { border-bottom: 0; }
+  .dia.on { background: #fff6f6; }
+  .dia b { font-weight: 600; font-size: 13.5px; }
+  .dia .marca { display: flex; align-items: center; gap: 8px; font-size: 13.5px; color: var(--muted); }
+  .dia input[type=checkbox] { width: 17px; height: 17px; accent-color: var(--red); }
+  .dia .horas { display: flex; gap: 6px; align-items: center; font-size: 13px; }
+  .dia .horas input { width: 82px; padding: 6px 8px; }
+  .dia .horas[hidden] { display: none; }
+  .dia .cuanto { font-variant-numeric: tabular-nums; font-weight: 600; font-size: 13.5px; min-width: 74px; text-align: right; }
+  @media (max-width: 620px) {
+    .dia { grid-template-columns: 1fr; gap: 7px; }
+    .dia .cuanto { text-align: left; }
+  }
+
+  /* ---- el resultado ---- */
+  #salida { margin-top: 30px; }
+  .tarjeta { border: 1px solid var(--line); border-radius: 12px; margin-bottom: 16px; overflow: hidden; }
+  .tarjeta > h2 {
+    margin: 0; padding: 11px 16px; background: var(--soft); border-bottom: 1px solid var(--line);
+    font-size: 12px; letter-spacing: .09em; text-transform: uppercase; color: var(--muted);
+  }
+  .tarjeta > div { padding: 6px 16px 14px; }
+  .r { display: flex; justify-content: space-between; gap: 16px; padding: 7px 0; border-bottom: 1px dotted var(--line); font-size: 14px; }
+  .r:last-child { border-bottom: 0; }
+  .r span { color: var(--muted); }
+  .r b { font-variant-numeric: tabular-nums; font-weight: 600; white-space: nowrap; }
+  .r.suma { border-top: 2px solid var(--ink); border-bottom: 0; margin-top: 5px; padding-top: 10px; }
+  .r.suma span, .r.suma b { color: var(--ink); font-weight: 700; font-size: 15.5px; }
+
+  .granTotal {
+    border: 2px solid var(--ink); border-radius: 12px; padding: 17px 20px; margin-bottom: 16px;
+    display: flex; justify-content: space-between; align-items: baseline; gap: 16px; flex-wrap: wrap;
+  }
+  .granTotal .cifra { font-size: 33px; font-weight: 700; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+  .granTotal small { display: block; color: var(--muted); font-size: 12.5px; font-weight: 400; }
+
+  .aviso { padding: 12px 15px; border-radius: 9px; font-size: 13.5px; margin-bottom: 15px; }
+  .aviso.malo { background: #fdeaea; color: #8a0a0a; }
+  .aviso.nota { background: var(--soft); color: var(--muted); }
+  .pista { font-size: 12.5px; color: var(--muted); margin: 5px 0 0; }
+  .cargando { color: var(--muted); font-size: 14px; }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="eyebrow">Uso interno · temporal</div>
+    <h1>Prueba del cotizador</h1>
+    <p>Las mismas reglas que cobra la página, pero con las cuentas a la vista.</p>
+  </header>
+
+  <!-- ============ el candado ============ -->
+  <form id="f-clave">
+    <fieldset>
+      <legend>Clave</legend>
+      <div class="fila">
+        <div>
+          <label for="clave">La clave de Vercel</label>
+          <input id="clave" type="password" autocomplete="current-password" />
+        </div>
+        <button class="btn" type="submit">Entrar</button>
+      </div>
+      <p class="pista">Esta pantalla enseña los costos por dentro, por eso pide clave.</p>
+    </fieldset>
+  </form>
+
+  <!-- ============ las tres preguntas ============ -->
+  <form id="f-viaje" hidden>
+
+    <fieldset>
+      <legend>1 · ¿A dónde va?</legend>
+      <select id="destino"></select>
+      <p class="pista">Sale de San Pedro Tlaquepaque, ida y vuelta.</p>
+    </fieldset>
+
+    <fieldset>
+      <legend>2 · ¿Cuántos días?</legend>
+      <div class="fila">
+        <div>
+          <label for="dias">Días de servicio, contando el de salida y el de regreso</label>
+          <input id="dias" type="number" min="1" max="30" value="4" />
+        </div>
+        <button class="btn" type="submit">Ver los costos</button>
+      </div>
+    </fieldset>
+
+    <fieldset>
+      <legend>3 · ¿Qué días hay movimientos?</legend>
+      <div class="dias" id="dias-lista"></div>
+      <p class="pista">Un día sin movimiento cobra solo la estadía. Marca el día y ajusta las horas si hace falta.</p>
+    </fieldset>
+
+  </form>
+
+  <div id="salida"></div>
+</div>
+
+<!-- El catálogo va ANTES del script de abajo, que lo lee al arrancar. -->
+<script src="/lugares.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  var pesos = new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 });
+  var byId = function (id) { return document.getElementById(id); };
+  function esc(t) {
+    return String(t == null ? '' : t).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+
+  /* La clave vive en memoria y en sessionStorage: se pierde al cerrar la
+     pestaña. No se guarda en localStorage a propósito —esto es temporal y
+     no tiene por qué quedarse en la computadora—. */
+  var clave = '';
+  try { clave = sessionStorage.getItem('pc') || ''; } catch (e) { clave = ''; }
+
+  /* ---------------- 1. el destino ---------------- */
+  /* El catálogo es el MISMO de la página (lugares.js), para que lo que se
+     revise aquí sea lo que de verdad se puede cotizar allá. */
+  var sel = byId('destino');
+  (function llenaDestinos() {
+    var lista = (window.LUGARES || []).slice();
+    lista.sort(function (a, b) { return a.n.localeCompare(b.n, 'es'); });
+    var html = ['<option value="">— elige un destino —</option>'];
+    lista.forEach(function (l, i) {
+      html.push('<option value="' + i + '">' + esc(l.n) + ' · ' + esc(l.e) + '</option>');
+    });
+    sel.innerHTML = html.join('');
+    sel._lista = lista;
+  })();
+
+  function destinoElegido() {
+    var l = sel._lista[Number(sel.value)];
+    if (!l) return null;
+    /* La dirección se arma IGUAL que en la página real (cotizacion.js →
+       puntoDe): nombre, estado, México. De ese texto depende en qué renglón
+       de la lista de precios cae, así que tiene que ser el mismo o aquí se
+       revisaría un precio que allá no se cobra. */
+    return { placeId: l.id || '', lat: l.lat || null, lng: l.lng || null,
+             direccion: [l.n, l.e, 'México'].filter(Boolean).join(', ') };
+  }
+
+  /* ---------------- 3. los días ---------------- */
+  var caja = byId('dias-lista');
+
+  function pintaDias() {
+    var n = Math.min(30, Math.max(1, Math.floor(Number(byId('dias').value) || 1)));
+    var previos = leeDias();
+    var html = [];
+    for (var i = 0; i < n; i++) {
+      var p = previos[i] || {};
+      var on = !!p.mueve;
+      html.push(
+        '<div class="dia' + (on ? ' on' : '') + '" data-i="' + i + '">' +
+          '<b>Día ' + (i + 1) + '</b>' +
+          '<span class="marca">' +
+            '<input type="checkbox" id="m' + i + '"' + (on ? ' checked' : '') + ' />' +
+            '<label for="m' + i + '" style="margin:0">se mueve</label>' +
+          '</span>' +
+          '<span class="horas"' + (on ? '' : ' hidden') + '>' +
+            '<input type="text" class="hi" value="' + esc(p.horaInicio || '08:00') + '" inputmode="numeric" aria-label="Hora de inicio del día ' + (i + 1) + '" />' +
+            '<span>a</span>' +
+            '<input type="text" class="hf" value="' + esc(p.horaFin || '16:00') + '" inputmode="numeric" aria-label="Hora de fin del día ' + (i + 1) + '" />' +
+          '</span>' +
+        '</div>');
+    }
+    caja.innerHTML = html.join('');
+  }
+
+  function leeDias() {
+    return [].map.call(caja.querySelectorAll('.dia'), function (d) {
+      return {
+        mueve: d.querySelector('input[type=checkbox]').checked,
+        horaInicio: d.querySelector('.hi') ? d.querySelector('.hi').value : '08:00',
+        horaFin: d.querySelector('.hf') ? d.querySelector('.hf').value : '16:00'
+      };
+    });
+  }
+
+  caja.addEventListener('change', function (e) {
+    var d = e.target.closest('.dia');
+    if (!d) return;
+    if (e.target.type === 'checkbox') {
+      d.classList.toggle('on', e.target.checked);
+      d.querySelector('.horas').hidden = !e.target.checked;
+    }
+  });
+  byId('dias').addEventListener('input', pintaDias);
+  pintaDias();
+
+  /* ---------------- el candado ---------------- */
+  function abre() {
+    byId('f-clave').hidden = true;
+    byId('f-viaje').hidden = false;
+  }
+  if (clave) abre();
+
+  byId('f-clave').addEventListener('submit', function (e) {
+    e.preventDefault();
+    clave = byId('clave').value;
+    try { sessionStorage.setItem('pc', clave); } catch (err) {}
+    abre();
+    byId('salida').innerHTML = '';
+  });
+
+  /* ---------------- pedir y pintar ---------------- */
+  byId('f-viaje').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var destino = destinoElegido();
+    if (!destino) { byId('salida').innerHTML = malo('Falta decir a dónde va.'); sel.focus(); return; }
+
+    var movimientos = leeDias().filter(function (d) { return d.mueve; })
+      .map(function (d) { return { horaInicio: d.horaInicio, horaFin: d.horaFin }; });
+
+    byId('salida').innerHTML = '<p class="cargando">Calculando…</p>';
+
+    fetch('/api/prueba-cotizador', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        clave: clave, destino: destino,
+        dias: Number(byId('dias').value) || 1,
+        movimientos: movimientos
+      })
+    }).then(function (r) {
+      return r.json().then(function (d) { return { ok: r.ok, status: r.status, d: d }; },
+                           function () { return { ok: false, status: r.status, d: {} }; });
+    }).then(function (res) {
+      if (res.status === 401 || res.status === 503) {
+        try { sessionStorage.removeItem('pc'); } catch (err) {}
+        byId('f-clave').hidden = false;
+        byId('f-viaje').hidden = true;
+      }
+      if (!res.ok) { byId('salida').innerHTML = malo(res.d.aviso || 'No se pudo calcular.'); return; }
+      pinta(res.d);
+    }).catch(function () {
+      byId('salida').innerHTML = malo('No hubo conexión con el servidor.');
+    });
+  });
+
+  function malo(t) { return '<div class="aviso malo">' + esc(t) + '</div>'; }
+  function r(etiqueta, valor, clase) {
+    return '<div class="r' + (clase ? ' ' + clase : '') + '"><span>' + esc(etiqueta) +
+      '</span><b>' + esc(valor) + '</b></div>';
+  }
+
+  function pinta(d) {
+    var out = [];
+    var t = d.traslado, e = d.estadia, m = d.movimientos;
+
+    /* ---- el número grande ---- */
+    if (d.requiereAsesor) {
+      out.push('<div class="aviso malo"><b>Este viaje no se cotiza solo.</b> Pasa de los ' +
+        t.topeFormulaKm.toLocaleString('es-MX') + ' km y no está en la lista de precios, así que la ' +
+        'página no da número: lo cotiza una persona. Al cliente le dice «te la enviamos hoy mismo».</div>');
+    } else {
+      out.push(
+        '<div class="granTotal">' +
+          '<div><div class="cifra">' + pesos.format(d.total) + '</div>' +
+            '<small>IVA incluido · ' + d.viaje.dias + (d.viaje.dias === 1 ? ' día' : ' días') +
+            ' · ' + d.viaje.noches + (d.viaje.noches === 1 ? ' noche' : ' noches') + '</small></div>' +
+          '<div style="text-align:right">' +
+            '<div style="font-weight:600">' + pesos.format(d.anticipo) + '</div>' +
+            '<small>anticipo ' + d.porcentajeAnticipo + '% · quedan ' + pesos.format(d.saldo) + '</small></div>' +
+        '</div>');
+    }
+
+    /* ---- 1. de dónde salió el traslado ---- */
+    var filas = [];
+    if (t.deLista) {
+      filas.push(r('Precio de tu lista · ' + t.deLista, pesos.format(t.antesDelPiso)));
+      filas.push(r('Kilómetros', 'no hicieron falta: el precio es cerrado'));
+    } else if (t.requiereAsesor) {
+      filas.push(r('Kilómetros medidos', t.km.toLocaleString('es-MX') + ' km, ida y vuelta'));
+      filas.push(r('Tope de la fórmula', t.topeFormulaKm.toLocaleString('es-MX') + ' km'));
+      filas.push(r('Resultado', 'lo cotiza un asesor'));
+    } else {
+      filas.push(r('Kilómetros medidos', t.km.toLocaleString('es-MX') + ' km, ida y vuelta'));
+      filas.push(r('Salir con la unidad', pesos.format(t.base)));
+      filas.push(r('El kilómetro, a ' + pesos.format(t.tarifaKm),
+        pesos.format(t.antesDelPiso - t.base)));
+      filas.push(r('Suma por fórmula', pesos.format(t.antesDelPiso)));
+    }
+    if (!t.requiereAsesor) {
+      filas.push(r('Mínimo por día · ' + d.viaje.dias + ' × ' + pesos.format(t.pisoPorDia),
+        pesos.format(t.piso) + (t.aplicoPiso ? '  ← manda éste' : '')));
+      filas.push(r('Traslado, cortado a la centena', pesos.format(t.final), 'suma'));
+    }
+    out.push(tarjeta('1 · El traslado', filas.join('')));
+
+    /* ---- 2. la estadía ---- */
+    filas = [];
+    if (t.requiereAsesor) {
+      filas.push(r('Sin precio de traslado', 'no se cobra nada más'));
+    } else if (e.conMovimientos) {
+      filas.push(r('Cómo se cobra', 'día por día, porque hay movimientos'));
+      filas.push(r('Cada día de estadía', pesos.format(e.porNoche)));
+      filas.push(r('Días parados, sin moverse', String(e.diasParados)));
+      filas.push(r('Estadía · ' + d.viaje.dias + ' × ' + pesos.format(e.porNoche),
+        pesos.format(e.importe), 'suma'));
+    } else {
+      filas.push(r('Cómo se cobra', 'paquete, porque no hay movimientos'));
+      filas.push(r('Noches incluidas', String(e.nochesIncluidas)));
+      filas.push(r('Noches de más', String(e.nochesExtra) + ' × ' + pesos.format(e.porNoche)));
+      filas.push(r('Estadía', pesos.format(e.importe), 'suma'));
+    }
+    out.push(tarjeta('2 · La estadía', filas.join('')));
+
+    /* ---- 3. los movimientos ---- */
+    filas = [];
+    if (!m.dias) {
+      filas.push(r('Días con movimiento', 'ninguno'));
+    } else if (d.requiereAsesor) {
+      /* Sin precio de traslado no se cobra NADA, tampoco los movimientos.
+         Antes esta tarjeta pintaba el precio de banda de cada día y abajo
+         «Movimientos · $0»: dos números que se contradecían y parecían un
+         error de cuentas. El día no vale su banda: no vale nada. */
+      filas.push(r('Días con movimiento que se pidieron', String(m.dias)));
+      filas.push(r('Cuánto suman', 'nada, mientras no haya precio de traslado'));
+      filas.push(r('Movimientos', pesos.format(0), 'suma'));
+    } else {
+      if (m.reglaDestino) {
+        filas.push(r('Regla propia de ' + m.reglaDestino,
+          'el día vale ' + pesos.format(3000) + ' sin importar las horas'));
+      }
+      m.horas.forEach(function (h, i) {
+        var precio = m.reglaDestino ? 3000 : bandaDe(h, m.bandas);
+        filas.push(r('Día ' + (i + 1) + ' · ' + horas(h), pesos.format(precio)));
+      });
+      filas.push(r('Movimientos · ' + m.dias + (m.dias === 1 ? ' día' : ' días'),
+        pesos.format(m.importe), 'suma'));
+    }
+    out.push(tarjeta('3 · Los movimientos en destino', filas.join('')));
+
+    /* ---- lo que ve el cliente ---- */
+    if (!d.requiereAsesor) {
+      var c = d.loQueVeElCliente;
+      filas = [r('Traslado y estadía, juntos', pesos.format(c.servicio))];
+      if (c.importeMovimientos) filas.push(r('Movimientos en destino', pesos.format(c.importeMovimientos)));
+      filas.push(r('Total', pesos.format(d.total), 'suma'));
+      out.push(tarjeta('Lo que ve el cliente', filas.join('') +
+        '<p class="pista">Son dos números, no cinco. Partirlos delataría lo que cuesta la ' +
+        'noche y lo que cuesta el kilómetro.</p>'));
+    }
+
+    byId('salida').innerHTML = out.join('');
+  }
+
+  function tarjeta(titulo, cuerpo) {
+    return '<div class="tarjeta"><h2>' + esc(titulo) + '</h2><div>' + cuerpo + '</div></div>';
+  }
+
+  /* Las horas partidas caen en la banda de ARRIBA: un día de nueve y media
+     paga la banda de diez. Es la misma regla del servidor; aquí solo se
+     pinta el renglón, el precio que manda es el que él sumó. */
+  function bandaDe(h, bandas) {
+    for (var i = 0; i < bandas.length; i++) if (h <= bandas[i].hasta) return bandas[i].precio;
+    return bandas[bandas.length - 1].precio;
+  }
+
+  function horas(h) {
+    if (!h) return 'horas no legibles, cuenta como el mínimo';
+    var ent = Math.floor(h), min = Math.round((h - ent) * 60);
+    return ent + ' h' + (min ? ' ' + min + ' min' : '');
+  }
+})();
+</script>
+</body>
+</html>
