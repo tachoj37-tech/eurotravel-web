@@ -223,6 +223,38 @@ const METADATA = {
   await correo.mandaContrato(Object.assign({}, METADATA, { correo: 'Ana@Ejemplo.MX' }), '');
   igual('el destinatario va en minúsculas', A_RESEND[0].cuerpo.to, ['ana@ejemplo.mx']);
 
+  /* --- por que no salio, dicho para quien configura, no para quien programa ---
+     El diagnostico enseña esto tal cual. Si dice «Resend contestó 403» y ya,
+     el que lo lee no sabe que tocar. */
+  {
+    const pista = correo.pistaDelFallo;
+
+    /* La que mas confunde: el correo parece bien puesto y aun asi rebota,
+       porque el remitente de prueba de Resend solo entrega a la direccion de
+       la cuenta. */
+    const de403 = 'Resend contestó 403: You can only send testing emails to your own email address (tacho@x.mx)';
+    cierto('el 403 del remitente de prueba explica que AVISOS_A tiene que ser el de la cuenta',
+      /AVISOS_A/.test(pista(de403)));
+    cierto('y nombra el remitente de prueba', /resend\.dev/.test(pista(de403)));
+
+    cierto('el dominio sin verificar dice qué poner mientras tanto',
+      /onboarding@resend\.dev/.test(pista('Resend contestó 403: The domain is not verified')));
+    cierto('la llave mala manda a generar otra',
+      /RESEND_API_KEY/.test(pista('Resend contestó 401: API key is invalid')));
+    cierto('el remitente mal escrito enseña el formato',
+      /Eurotravel <.+>/.test(pista('Resend contestó 422: Invalid `from` field')));
+    cierto('sin la variable, lo dice sin rodeos',
+      /RESEND_API_KEY/.test(pista('Falta RESEND_API_KEY en Vercel.')));
+    cierto('sin red, dice que puede ser pasajero',
+      /pasajero/.test(pista('sin conexión con Resend')));
+
+    /* Sin pista es mejor que una pista equivocada: el motivo crudo ya se
+       enseña al lado. */
+    igual('un motivo desconocido no inventa una pista', pista('algo rarísimo'), '');
+    igual('ni un motivo vacío', pista(''), '');
+    igual('ni un nulo', pista(null), '');
+  }
+
   console.log('\n' + buenas + ' buenas, ' + malas + ' malas');
   process.exit(malas ? 1 : 0);
 })();

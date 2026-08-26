@@ -15,6 +15,11 @@ const defensas = require('./_defensas');   // origen y freno, en un lugar
    revisión, no algo que se llame en bucle. */
 const freno = defensas.creaFreno({ porMinuto: 6, porDia: 60 });
 
+/* La prueba de correo tiene su propio freno, mucho más apretado: manda un
+   correo DE VERDAD, y seis por minuto a la oficina es una molestia que nadie
+   pidió. */
+const frenoCorreo = defensas.creaFreno({ porMinuto: 1, porDia: 8 });
+
 async function pruebaPlaces(clave) {
   try {
     const r = await fetch('https://places.googleapis.com/v1/places:autocomplete', {
@@ -94,9 +99,9 @@ module.exports = async function handler(req, res) {
     }
   };
 
-  /* El correo al cliente. No se prueba contra Resend —mandar un correo de
-     verdad para diagnosticar seria mandarle correo a alguien— pero si se dice
-     si esta configurada y de donde saldria. */
+  /* El correo. Por omisión NO se prueba contra Resend: solo se dice si está
+     configurada y de dónde saldría. Con `probarCorreo: true` sí se manda uno
+     de verdad — ver abajo. */
   const correo = require('./_correo');
   salida.RESEND_API_KEY = {
     configurada: correo.hayClave(),
@@ -124,6 +129,43 @@ module.exports = async function handler(req, res) {
 
   if (places) salida.GOOGLE_PLACES_KEY.prueba = await pruebaPlaces(places);
   if (routes) salida.GOOGLE_ROUTES_KEY.prueba = await pruebaRoutes(routes);
+
+  /* ---------------------------------------------------------------------
+     LA PRUEBA DE CORREO — solo si se pide, y solo a nuestra propia dirección
+
+     Decir «la clave está configurada» no sirve de nada: la clave puede estar
+     y el correo rebotar igual, porque el remitente no está verificado o
+     porque el destinatario no es el de la cuenta de Resend. La única forma
+     de saber si llega es mandarlo.
+
+     EL DESTINATARIO NO SE PUEDE PEDIR. Va a `aDondeAvisar()`, que es la
+     misma dirección de las alarmas. Un diagnóstico que le manda correo a
+     quien le digan es un cañón de spam con el remitente de la empresa —y la
+     puerta de origen no lo impide, porque quien llama desde fuera del
+     navegador escribe la cabecera que quiera.
+     --------------------------------------------------------------------- */
+  if (req.body && req.body.probarCorreo === true) {
+    const parado = frenoCorreo(req);
+    if (parado) {
+      salida.RESEND_API_KEY.prueba = { ok: false, motivo: 'demasiadas pruebas seguidas; espera un minuto' };
+    } else {
+      const aDonde = correo.aDondeAvisar();
+      const r = await correo.mandaALaOficina(
+        'PRUEBA de Eurotravel — si lees esto, el correo ya funciona',
+        [ 'Esto es una prueba de configuración. No pasó nada, no se cobró nada',
+          'y no hay ningún contrato involucrado.',
+          '',
+          'Sale de:  ' + correo.DE,
+          'Llega a:  ' + aDonde.join(', '),
+          '',
+          'Si este correo llegó, la alarma de reembolsos y contracargos también',
+          'va a llegar, que es lo que importa.' ].join('\n'));
+
+      salida.RESEND_API_KEY.prueba = r.ok
+        ? { ok: true, llego_a: aDonde, id: r.id || '' }
+        : { ok: false, motivo: r.motivo, queHacer: correo.pistaDelFallo(r.motivo) };
+    }
+  }
 
   res.status(200).json(salida);
 };

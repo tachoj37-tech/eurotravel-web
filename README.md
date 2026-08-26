@@ -148,3 +148,27 @@ Respuesta sana:
 
 Si `configurada` es `false`, falta registrar la variable en Vercel **y volver a
 desplegar**: las variables no se aplican a despliegues ya existentes.
+
+#### Probar que el correo de verdad llega
+
+Que `RESEND_API_KEY` esté configurada **no significa que el correo salga**: la
+clave puede estar bien y el envío rebotar igual, porque el remitente no está
+verificado o porque el destinatario no es el de la cuenta de Resend. La única
+forma de saberlo es mandar uno:
+
+```
+POST /api/diagnostico    { "probarCorreo": true }
+```
+
+Manda un correo real **a `AVISOS_A`** —nunca a una dirección que venga en la
+petición— y devuelve qué contestó Resend, traducido a qué hay que tocar:
+
+```json
+{ "RESEND_API_KEY": { "prueba": {
+    "ok": false,
+    "motivo": "Resend contestó 403: You can only send testing emails…",
+    "queHacer": "Estás usando el remitente de prueba de Resend (resend.dev), que SOLO…" } } }
+```
+
+Tiene su propio freno, más apretado que el del resto del diagnóstico: **uno por
+minuto, ocho al día**.

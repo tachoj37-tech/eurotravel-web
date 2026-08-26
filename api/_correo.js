@@ -46,6 +46,50 @@ function porQueNoSePuede() {
   return '';
 }
 
+/* ------------------------------------------------------------
+   POR QUE NO SALIO, EN CASTELLANO Y CON LO QUE HAY QUE HACER
+   ------------------------------------------------------------
+   Resend contesta en inglés y con el detalle enterrado en un JSON.
+   Quien configura esto no es programador: necesita leer qué pasó y
+   qué botón tocar, no un código de estado.
+
+   Son las fallas que de verdad ocurren al configurar. La primera es
+   la que más confunde, porque el correo parece bien puesto y aun
+   así rebota: el remitente de prueba de Resend SOLO entrega a la
+   dirección de la cuenta, y a nadie más.
+   ------------------------------------------------------------ */
+function pistaDelFallo(motivo) {
+  const m = String(motivo || '');
+
+  if (/Falta RESEND_API_KEY/i.test(m)) {
+    return 'Falta la variable RESEND_API_KEY en Vercel.';
+  }
+  if (/only send testing emails/i.test(m)) {
+    return 'Estás usando el remitente de prueba de Resend (resend.dev), que SOLO entrega ' +
+      'al correo de tu propia cuenta de Resend. Pon AVISOS_A exactamente igual a ese ' +
+      'correo, o verifica el dominio para poder mandarle a cualquiera.';
+  }
+  if (/not verified|domain/i.test(m)) {
+    return 'El dominio de RESEND_DE no está verificado en Resend. Mientras tanto usa ' +
+      'RESEND_DE=Eurotravel <onboarding@resend.dev>, que funciona sin verificar nada ' +
+      'pero solo te escribe a ti.';
+  }
+  /* El 422 va ANTES que el de la llave: Resend lo describe como «Invalid
+     `from` field», y una rama que buscara «invalid» se lo tragaba y mandaba a
+     cambiar una llave que estaba perfecta. */
+  if (/\b422\b/.test(m)) {
+    return 'RESEND_DE está mal escrito. Tiene que ser así: Eurotravel <algo@dominio.mx>.';
+  }
+  if (/\b401\b|\b403\b|API key|restricted/i.test(m)) {
+    return 'La RESEND_API_KEY no sirve o no tiene permiso de enviar. Genera otra en ' +
+      'Resend y ponla en Vercel.';
+  }
+  if (/sin conexión con Resend/i.test(m)) {
+    return 'No se pudo hablar con Resend. Puede ser pasajero: vuelve a intentarlo.';
+  }
+  return '';
+}
+
 const pesos = new Intl.NumberFormat('es-MX', {
   style: 'currency', currency: 'MXN', maximumFractionDigits: 0
 });
@@ -397,7 +441,7 @@ async function mandaContrato(metadata, pdfBase64, liga) {
 }
 
 module.exports = {
-  DE, hayClave, porQueNoSePuede,
+  DE, hayClave, porQueNoSePuede, pistaDelFallo,
   fechaLarga, datosDelCorreo, mensajeDeContrato, mensajeDeCodigo,
   aDondeAvisar, mandaALaOficina,
   manda, mandaContrato
