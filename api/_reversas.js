@@ -80,6 +80,46 @@ function montoRevertido(tipo, objeto) {
 }
 
 /* ------------------------------------------------------------
+   EL VEREDICTO DE STRIPE, QUE ES EL QUE VALE
+   ------------------------------------------------------------
+   Lo de arriba lee el AVISO. Esto lee el COBRO tal como lo tiene
+   Stripe, que es otra cosa: el aviso lo escribe quien llama a la
+   puerta, el cobro lo escribe Stripe.
+
+   Hizo falta porque se comprobó que la firma se puede saltar
+   mandando `Content-Type: application/json` —Vercel parsea el
+   cuerpo, se pierden los bytes exactos y ya no hay firma que
+   comprobar—. Sin este segundo candado, cualquiera que supiera un
+   `pi_…` podía inventar un reembolso y quemarle el folio a un
+   viaje pagado.
+
+   El monto sale de aquí, NUNCA del aviso.
+
+   Nota de un caso raro: una disputa vieja YA GANADA deja
+   `disputed` en true para siempre. Un aviso inventado sobre ese
+   cobro pasaría este filtro y llegaría un correo de más a la
+   oficina. Se prefiere ese correo de más a dejar pasar uno de
+   menos: un contracargo que nadie ve sí cuesta dinero.
+   ------------------------------------------------------------ */
+function loQueDiceStripe(motivo, cargo) {
+  const c = cargo || {};
+
+  if (motivo === 'CONTRACARGO') {
+    if (c.disputed !== true) {
+      return { confirmada: false, porque: 'Stripe no ve ninguna disputa en ese cobro' };
+    }
+    const total = Number(c.amount);
+    return { confirmada: true, monto: isFinite(total) && total > 0 ? Math.round(total) / 100 : 0 };
+  }
+
+  const devuelto = Number(c.amount_refunded);
+  if (!isFinite(devuelto) || devuelto <= 0) {
+    return { confirmada: false, porque: 'Stripe no ve ninguna devolución en ese cobro' };
+  }
+  return { confirmada: true, monto: Math.round(devuelto) / 100 };
+}
+
+/* ------------------------------------------------------------
    ¿ERA EL ANTICIPO O UN ABONO?
    ------------------------------------------------------------
    Lo dice la metadata de la sesión: los abonos se abren con
@@ -174,6 +214,6 @@ function avisoDeReversa(datos) {
 }
 
 module.exports = {
-  AVISOS, esReversa, motivoDe, pagoDelAviso, montoRevertido,
+  AVISOS, esReversa, motivoDe, pagoDelAviso, montoRevertido, loQueDiceStripe,
   claseDePago, cuerpoParaEuroSystem, avisoDeReversa
 };

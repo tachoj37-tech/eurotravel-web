@@ -37,7 +37,12 @@ process.env.CONTRATOS_API_KEY = 'llave_x';
 process.env.RESEND_API_KEY = 're_x';
 process.env.AVISOS_A = 'ventas@eurotravel.com.mx';
 
-/* Los tres destinos fingidos, cada uno con su interruptor. */
+/* Los destinos fingidos, cada uno con su interruptor. */
+
+/* El cobro TAL COMO LO TIENE STRIPE, que es el que manda. Por omisión trae
+   devolución Y disputa para que sirva a los dos motivos sin cambiarlo en cada
+   caso; los casos en que Stripe NO confirma se prueban aparte, abajo. */
+let CARGO = { id: 'ch_1', amount: 520000, amount_refunded: 520000, disputed: true };
 let SESION_POR_PAGO = null;
 let EUROSYSTEM_REVERSA = { ok: false, status: 404 };   // por omision: no existe
 let RESEND = { ok: true };
@@ -46,6 +51,10 @@ let LLAMADAS_EURO = [];
 
 global.fetch = function (url, opc) {
   const u = String(url);
+  if (u.indexOf('/payment_intents/') >= 0) {
+    return Promise.resolve({ ok: true, status: 200,
+      json: () => Promise.resolve({ id: 'pi_ABC123', latest_charge: CARGO }) });
+  }
   if (u.indexOf('/checkout/sessions?payment_intent=') >= 0) {
     return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({
       data: SESION_POR_PAGO ? [SESION_POR_PAGO] : [] }) });
@@ -243,6 +252,86 @@ const CONTRACARGO = { id: 'dp_1', charge: 'ch_1', payment_intent: 'pi_ABC123', a
     await avisa('charge.refunded', REEMBOLSO);
     igual('el aviso a la oficina no lleva kilometraje ni tarifa',
       JSON.stringify(CORREOS[0]).match(/\bkm\b|kilometr|621\.2|tarifa/i), null);
+  }
+
+  /* ============ 9. UNA REVERSA INVENTADA NO MUEVE NADA ============
+     Esta seccion salio de atacar el sitio PUBLICADO, no de imaginarla. La
+     misma peticion, con la misma firma inventada, cambiando una sola cosa:
+
+         Content-Type: text/plain          -> 400 firma inválida
+         Content-Type: application/json    -> 200, y entró hasta la lógica
+
+     O sea que la firma no era una puerta: era una puerta que el visitante
+     podia decidir no tocar, porque con `application/json` Vercel parsea el
+     cuerpo, se pierden los bytes exactos y ya no hay firma que comprobar.
+
+     Lo que eso permitia: cualquiera que supiera un `pi_…` inventaba un
+     reembolso y le quemaba el folio a un viaje pagado.
+
+     El candado nuevo no es la firma —a Stripe no se le puede pedir que
+     mande otro Content-Type—: es que ANTES de mover un peso se le pregunta
+     a Stripe si ese dinero de verdad se fue. */
+  {
+    /* Asi llega en produccion cuando el cuerpo viene parseado: un objeto, sin
+       bytes, o sea sin firma que valga. */
+    const avisaSinFirma = async function (tipo, objeto) {
+      CORREOS = []; LLAMADAS_EURO = [];
+      return logica.procesa({ type: tipo, data: { object: objeto } }, 'firma inventada');
+    };
+
+    SESION_POR_PAGO = sesionCon();
+    EUROSYSTEM_REVERSA = { ok: true, status: 200 };
+    RESEND = { ok: true };
+
+    /* --- a) el ataque: sin firma, y Stripe no ve ninguna devolucion --- */
+    CARGO = { id: 'ch_1', amount: 520000, amount_refunded: 0, disputed: false };
+    let r = await avisaSinFirma('charge.refunded', REEMBOLSO);
+    igual('reembolso inventado: no se atiende', !!r.cuerpo.reversa, false);
+    igual('reembolso inventado: se contesta 200, no un 500 con el que hacernos girar', r.status, 200);
+    igual('reembolso inventado: NO se le pide nada a EuroSystem', LLAMADAS_EURO.length, 0);
+    igual('reembolso inventado: NO se asusta a la oficina', CORREOS.length, 0);
+
+    /* --- b) contracargo inventado: Stripe no ve disputa --- */
+    r = await avisaSinFirma('charge.dispute.created', CONTRACARGO);
+    igual('contracargo inventado: no se atiende', !!r.cuerpo.reversa, false);
+    igual('contracargo inventado: no se quema ningún folio', LLAMADAS_EURO.length, 0);
+
+    /* --- c) pero uno DE VERDAD sin firma sí pasa ---
+       Hoy TODO el trafico bueno de Stripe llega asi —parseado, sin firma que
+       comprobar—. Si esta prueba se pone en rojo, los reembolsos reales
+       dejaron de atenderse, que es el defecto que se acaba de tapar. */
+    CARGO = { id: 'ch_1', amount: 520000, amount_refunded: 520000, disputed: false };
+    r = await avisaSinFirma('charge.refunded', REEMBOLSO);
+    cierto('un reembolso real sin firma SÍ se atiende', r.cuerpo.reversa);
+    igual('y se le avisa a la oficina', CORREOS.length, 1);
+
+    /* --- d) firmado pero Stripe todavía no lo refleja: que insista --- */
+    CARGO = { id: 'ch_1', amount: 520000, amount_refunded: 0, disputed: false };
+    r = await avisa('charge.refunded', REEMBOLSO);
+    igual('firmado y sin confirmar: se pide reintento', r.status, 500);
+    igual('firmado y sin confirmar: no se avisa todavía', CORREOS.length, 0);
+
+    /* --- e) el monto lo dice Stripe, no el aviso --- */
+    CARGO = { id: 'ch_1', amount: 520000, amount_refunded: 100000, disputed: false };
+    r = await avisa('charge.refunded', { id: 'ch_1', payment_intent: 'pi_ABC123',
+      amount: 999999999, amount_refunded: 999999999 });
+    igual('el monto sale de Stripe ($1,000), no del aviso', LLAMADAS_EURO[0].monto, 1000);
+
+    /* --- f) las piezas, por separado --- */
+    igual('sin devolución, no hay reembolso que atender',
+      reversas.loQueDiceStripe('REEMBOLSO', { amount_refunded: 0 }).confirmada, false);
+    igual('con devolución, sí',
+      reversas.loQueDiceStripe('REEMBOLSO', { amount_refunded: 520000 }).confirmada, true);
+    igual('y el monto en pesos',
+      reversas.loQueDiceStripe('REEMBOLSO', { amount_refunded: 520000 }).monto, 5200);
+    igual('sin disputa, no hay contracargo',
+      reversas.loQueDiceStripe('CONTRACARGO', { amount: 520000, disputed: false }).confirmada, false);
+    igual('`disputed` tiene que ser true de verdad, no un valor que se le parezca',
+      reversas.loQueDiceStripe('CONTRACARGO', { amount: 520000, disputed: 'sí' }).confirmada, false);
+    igual('con disputa, sí',
+      reversas.loQueDiceStripe('CONTRACARGO', { amount: 520000, disputed: true }).confirmada, true);
+    igual('un cobro vacío no confirma nada',
+      reversas.loQueDiceStripe('REEMBOLSO', null).confirmada, false);
   }
 
   console.log('\n' + buenas + ' buenas, ' + malas + ' malas');

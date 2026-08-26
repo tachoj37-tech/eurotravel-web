@@ -202,6 +202,45 @@ async function sesionPorPago(idPago) {
 }
 
 /* ------------------------------------------------------------
+   ¿DE VERDAD SE REGRESO ESE DINERO?
+   ------------------------------------------------------------
+   El aviso que llega dice «se reembolso tanto». Esa frase la
+   escribe quien manda el aviso, y —comprobado contra el sitio
+   publicado— la firma de Stripe se puede saltar eligiendo el
+   Content-Type. O sea que esa frase la puede escribir cualquiera.
+
+   Un desconocido que sepa un `pi_…` no puede inventar un reembolso
+   si antes de mover un peso se le pregunta a Stripe. Aqui se
+   pregunta.
+
+   Se pide el cobro junto con el pago —`expand[]=latest_charge`—
+   porque es el cobro el que sabe si se devolvio (`amount_refunded`)
+   y si esta disputado (`disputed`). Una sola llamada.
+
+   404 NO es pasajero: ese pago no existe, y no hay nada que
+   revertir. Un fallo de red si lo es, y pide reintento.
+   ------------------------------------------------------------ */
+async function cargoDelPago(idPago) {
+  const k = clave();
+  if (!k) return { error: 'sin clave de Stripe' };
+  const pi = String(idPago || '').trim();
+  if (!/^pi_[A-Za-z0-9]{4,}$/.test(pi)) return { error: 'id de pago con mala forma' };
+
+  try {
+    const r = await fetch(STRIPE + '/payment_intents/' + encodeURIComponent(pi) +
+      '?expand[]=latest_charge', { headers: { 'Authorization': 'Bearer ' + k } });
+    const d = await r.json();
+    if (r.status === 404) return { error: 'ese pago no existe en Stripe' };
+    if (!r.ok || (d && d.error)) return { error: 'Stripe rechazó la consulta', reintentar: true };
+    const cargo = d && d.latest_charge;
+    if (!cargo || typeof cargo !== 'object') return { error: 'ese pago no llegó a cobrarse' };
+    return { cargo: cargo };
+  } catch (e) {
+    return { error: 'no se pudo consultar a Stripe', reintentar: true };
+  }
+}
+
+/* ------------------------------------------------------------
    LA FICHA DEL CLIENTE
    ------------------------------------------------------------
    Ahi vive el codigo de verificacion mientras dura: es el objeto
@@ -286,6 +325,7 @@ module.exports = {
   idDeClienteValido,
   traeSesion,
   sesionPorPago,
+  cargoDelPago,
   traeCliente,
   guardaEnCliente,
   creaSesionDeCobro,

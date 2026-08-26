@@ -228,14 +228,62 @@ const defensas = require('./_defensas');
    reversa no es un movimiento de rutina: es una llamada que
    alguien tiene que hacerle al cliente antes del día del viaje.
    ============================================================ */
-async function atiendeReversa(tipo, objeto) {
+async function atiendeReversa(tipo, objeto, firmado) {
   const pago = reversas.pagoDelAviso(objeto);
   const motivo = reversas.motivoDe(tipo);
-  const monto = reversas.montoRevertido(tipo, objeto);
+  const loQueDiceElAviso = reversas.montoRevertido(tipo, objeto);
 
   if (!pago) {
     console.error('[reversa] ' + tipo + ' sin pago que buscar. NO SE PUDO ATENDER.');
     return { status: 200, cuerpo: { recibido: true, error: 'aviso sin pago' } };
+  }
+
+  /* ---- PRIMERO: ¿de verdad se fue ese dinero? ----------------------------
+     Antes se le creía al aviso. No se puede: se comprobó contra el sitio
+     publicado que mandando `Content-Type: application/json` la firma ni se
+     revisa, así que ese aviso lo puede escribir cualquiera. Y una reversa
+     inventada de un ANTICIPO le quema el folio a un viaje que sí está pagado.
+
+     Va ANTES de buscar la sesión a propósito: a un aviso inventado se le
+     gasta una sola consulta, no dos.
+     ---------------------------------------------------------------------- */
+  const cobro = await stripe.cargoDelPago(pago);
+  if (cobro.error) {
+    if (cobro.reintentar) {
+      console.error('[reversa] no se pudo preguntarle a Stripe por ' + pago + '; reintentará.');
+      return { status: 500, cuerpo: { error: cobro.error } };
+    }
+    console.log('[reversa] ' + motivo + ' de ' + pago + ': ' + cobro.error + ', no aplica.');
+    return { status: 200, cuerpo: { recibido: true, ajeno: true } };
+  }
+
+  const veredicto = reversas.loQueDiceStripe(motivo, cobro.cargo);
+  if (!veredicto.confirmada) {
+    /* Dos causas distintas, y se contestan distinto.
+
+       CON firma buena viene de Stripe de verdad, así que esto es una carrera
+       —el aviso llegó antes de que el cobro reflejara el cambio—. Se pide
+       reintento: perderlo sería justo el defecto que se acaba de tapar.
+
+       SIN firma no hay a quién reintentarle: es un desconocido inventando.
+       Se contesta 200 para no dejarle un botón con el que hacernos girar, y
+       no se manda ningún correo. */
+    if (firmado) {
+      console.error('[reversa] aviso FIRMADO que Stripe todavía no confirma (' +
+        veredicto.porque + ') — pago ' + pago + '. Se pide reintento.');
+      return { status: 500, cuerpo: { error: 'la reversa no cuadra con Stripe' } };
+    }
+    console.error('[reversa] AVISO SIN FIRMA E INVENTADO: ' + tipo + ' de ' + pago +
+      ' — ' + veredicto.porque + '. Se ignora y NO se avisa a nadie.');
+    return { status: 200, cuerpo: { recibido: true, ignorado: 'Stripe no lo confirma' } };
+  }
+
+  /* El monto sale de Stripe, nunca del aviso. Si no coinciden, queda escrito:
+     un aviso inventado se delata justo aquí. */
+  const monto = veredicto.monto;
+  if (loQueDiceElAviso && Math.abs(loQueDiceElAviso - monto) > 0.005) {
+    console.error('[reversa] el aviso decía $' + loQueDiceElAviso + ' y Stripe dice $' +
+      monto + ' — pago ' + pago + '. Manda Stripe.');
   }
 
   /* ---- ¿de qué viaje era este cobro? ---- */
@@ -332,11 +380,29 @@ async function procesa(crudo, cabeceraFirma) {
     return { status: 400, cuerpo: { error: 'cuerpo ilegible' } };
   }
 
-  /* LA FIRMA, cuando se puede. Solo cuadra si llegaron los BYTES exactos: si
-     el entorno parseo el cuerpo, no hay nada que verificar. Y no pasa nada,
-     porque abajo no se le cree una palabra a este aviso —se le pregunta a
-     Stripe—. La firma es la primera puerta, no la unica. */
+  /* LA FIRMA, cuando se puede — Y LA TRAMPA QUE TIENE
+     -------------------------------------------------
+     Solo cuadra si llegaron los BYTES exactos. Si el entorno parseó el
+     cuerpo, no queda nada que comprobar.
+
+     Aqui estaba el hueco, y era de verdad: QUIEN LLAMA ELIGE si el cuerpo
+     se parsea, nada mas escogiendo el Content-Type. Comprobado contra el
+     sitio publicado, la misma peticion con la misma firma inventada:
+
+         Content-Type: text/plain          -> 400 firma inválida
+         Content-Type: application/json    -> 200, y entró
+
+     O sea que la firma no era una puerta: era una puerta que el visitante
+     podia decidir no tocar. Es el caso 3 del skill del proyecto —nada que
+     mande el cliente decide seguridad—.
+
+     No se puede cerrar contestando 400 sin mas: Stripe manda justamente
+     `application/json`, asi que eso dejaria fuera a los avisos buenos. Lo
+     que se hace es CARGAR EL DATO: abajo, todo lo que valga dinero exige
+     ademas que Stripe lo confirme, y `firmado` decide como se trata lo que
+     no cuadra. */
   const secreto = (process.env.STRIPE_WEBHOOK_SECRET || '').trim();
+  let firmado = false;
   if (traeBytes && secreto) {
     const v = firma.verifica(crudo, cabeceraFirma, secreto);
     if (!v.ok) {
@@ -345,6 +411,7 @@ async function procesa(crudo, cabeceraFirma) {
       console.error('[webhook] firma rechazada: ' + v.motivo);
       return { status: 400, cuerpo: { error: 'firma inválida' } };
     }
+    firmado = true;
   } else if (!secreto) {
     console.error('[webhook] sin STRIPE_WEBHOOK_SECRET: no se pudo verificar la firma');
   } else {
@@ -363,7 +430,7 @@ async function procesa(crudo, cabeceraFirma) {
      y el sistema seguía diciendo que ese viaje estaba pagado.
      --------------------------------------------------------------------- */
   if (reversas.esReversa(tipo)) {
-    return await atiendeReversa(tipo, (evento.data && evento.data.object) || {});
+    return await atiendeReversa(tipo, (evento.data && evento.data.object) || {}, firmado);
   }
 
   const NOS_IMPORTAN = ['checkout.session.completed', 'checkout.session.async_payment_succeeded'];
