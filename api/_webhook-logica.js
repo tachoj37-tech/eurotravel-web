@@ -197,6 +197,8 @@ function contratoDesde(m, sesion) {
    antes estaba escrita aqui y otra vez en confirmar.js—. */
 const stripe = require('./_stripe');
 const correo = require('./_correo');   // el correo al cliente, en un solo dueño
+const ligas = require('./_ligas');     // y su liga propia, firmada
+const defensas = require('./_defensas');
 
 /* `crudo` puede ser el cuerpo tal cual (Buffer/texto) o el objeto ya
    parseado, segun lo que deje pasar el entorno. */
@@ -317,8 +319,36 @@ async function procesa(crudo, cabeceraFirma) {
          Va DESPUÉS de crear el contrato y con su folio en la mano, porque
          el folio es lo que el cliente necesita para cualquier aclaración.
          ------------------------------------------------------------ */
-      const paraElCorreo = Object.assign({}, sesion.metadata || {}, { folio: d.folio });
-      const envio = await correo.mandaContrato(paraElCorreo, d.pdfBase64);
+      /* ------------------------------------------------------------
+         UN SOLO FOLIO PARA EL CLIENTE, Y ES EL DE LA PAGINA
+
+         Aquí se sobreescribía el folio con el de EuroSystem, y eso le daba
+         al cliente DOS números para el mismo viaje: el correo decía «folio
+         51001» y su pantalla decía «ET-Q7TW-K3R». Peor todavía: el `ET-`
+         es el que ya vio en la pantalla de pago, antes de cualquier correo.
+
+         Manda el de la página, que es el que el cliente conoce y el que
+         EuroSystem ya trae anotado en las observaciones del contrato. El
+         número de contrato va aparte, porque ése sí aparece en el PDF
+         adjunto y hay que poder reconocerlo.
+         ------------------------------------------------------------ */
+      const paraElCorreo = Object.assign({}, sesion.metadata || {}, { contrato: d.folio });
+
+      /* La liga propia del cliente. Se firma con el identificador de SU
+         sesión de Stripe, así que solo abre su viaje.
+
+         El sitio sale de `_defensas.PERMITIDOS`, no de una cabecera: aquí
+         quien llama es Stripe, de servidor a servidor, y no manda `Origin`.
+         Poner el dominio a mano evitaría que la liga se pudiera desviar,
+         pero también lo dejaría desactualizado el día que cambie. */
+      const liga = ligas.ligaDelViaje(defensas.PERMITIDOS[0], sesion.id,
+        (sesion.metadata || {}).regreso);
+      if (!liga) {
+        console.error('[webhook] sin LIGAS_SECRETO: el correo sale SIN liga al viaje. ' +
+          'El cliente recibe folio y contrato, pero no puede entrar en línea.');
+      }
+
+      const envio = await correo.mandaContrato(paraElCorreo, d.pdfBase64, liga);
 
       if (envio.ok) {
         console.log('[webhook] correo enviado a la sesión ' + sesion.id +

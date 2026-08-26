@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="robots" content="noindex, nofollow" />
+<title>Tu viaje · Eurotravel</title>
+<!--
+  ============================================================
+  La pantalla propia de cada cliente.
+
+  Se llega con la liga firmada que vino en su correo. El token
+  NO se guarda en ningún lado ni se manda a analítica: viaja en
+  la dirección, se usa para preguntar, y ya.
+
+  `noindex` no es adorno: una liga que acabe en un buscador deja
+  de ser propia de nadie.
+  ============================================================
+-->
+<style>
+  :root {
+    --red: #db0d0d;
+    --ink: #1d1d1b;
+    --muted: #6e6e6a;
+    --line: #e6e6e3;
+    --soft: #f6f6f4;
+    --ok: #0a7d3c;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--soft); color: var(--ink);
+    font: 15px/1.55 -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    -webkit-text-size-adjust: 100%;
+  }
+  .hoja { max-width: 620px; margin: 0 auto; padding: 26px 18px 70px; }
+
+  header { text-align: center; padding: 6px 0 22px; }
+  .marca { font-size: 12px; letter-spacing: .18em; text-transform: uppercase; color: var(--red); font-weight: 700; }
+
+  .tarjeta {
+    background: #fff; border: 1px solid var(--line); border-radius: 14px;
+    padding: 22px; margin-bottom: 14px;
+  }
+
+  .folio-caja { border: 2px solid var(--ink); border-radius: 14px; padding: 20px 22px; background: #fff; margin-bottom: 14px; }
+  .eyebrow { font-size: 11px; letter-spacing: .13em; text-transform: uppercase; color: var(--red); font-weight: 700; }
+  .folio { font-size: 30px; font-weight: 700; letter-spacing: .04em; margin-top: 3px; font-variant-numeric: tabular-nums; }
+
+  .estado { display: inline-flex; align-items: center; gap: 7px; font-size: 13px; font-weight: 600;
+            background: #e9f6ee; color: var(--ok); padding: 5px 12px; border-radius: 999px; margin-top: 10px; }
+  .estado.espera { background: #fff8e6; color: #7a5200; }
+  .estado i { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+
+  h2 { font-size: 12px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted);
+       margin: 0 0 12px; font-weight: 700; }
+
+  .r { display: flex; justify-content: space-between; gap: 18px; padding: 9px 0;
+       border-bottom: 1px dotted var(--line); font-size: 14.5px; }
+  .r:last-child { border-bottom: 0; }
+  .r span { color: var(--muted); flex-shrink: 0; }
+  .r b { font-weight: 600; text-align: right; font-variant-numeric: tabular-nums; }
+  .r.suma { border-top: 2px solid var(--ink); border-bottom: 0; margin-top: 6px; padding-top: 12px; }
+  .r.suma span, .r.suma b { font-size: 16px; font-weight: 700; color: var(--ink); }
+  .r.saldo b { color: var(--red); }
+
+  .btn {
+    display: block; width: 100%; text-align: center; background: var(--red); color: #fff;
+    border: 0; border-radius: 10px; padding: 15px; font: inherit; font-weight: 600;
+    text-decoration: none; cursor: pointer; margin-top: 6px;
+  }
+  .btn:hover { background: #b00a0a; }
+  .btn.linea { background: #fff; color: var(--ink); border: 1px solid var(--line); }
+  .btn.linea:hover { background: var(--soft); }
+
+  .nota { font-size: 13px; color: var(--muted); margin: 14px 0 0; }
+  .aviso { border-radius: 12px; padding: 16px 18px; font-size: 14.5px; }
+  .aviso.malo { background: #fdeaea; color: #8a0a0a; }
+  .aviso.ojo { background: #fff8e6; color: #7a5200; }
+  .cargando { text-align: center; color: var(--muted); padding: 50px 0; }
+  [hidden] { display: none !important; }
+  footer { text-align: center; color: var(--muted); font-size: 12.5px; margin-top: 26px; line-height: 1.7; }
+  footer a { color: var(--red); }
+</style>
+</head>
+<body>
+<div class="hoja">
+
+  <header>
+    <div class="marca">Eurotravel</div>
+  </header>
+
+  <div id="cuerpo">
+    <p class="cargando">Buscando tu viaje…</p>
+  </div>
+
+  <footer>
+    Eurotravel · San Pedro Tlaquepaque, Jalisco<br>
+    <a href="https://wa.me/523324002285">33 2400 2285</a>
+  </footer>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  var pesos = new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 });
+  var cuerpo = document.getElementById('cuerpo');
+
+  function esc(t) {
+    return String(t == null ? '' : t).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+
+  /* «2026-09-03T08:00» -> «3 de septiembre de 2026, 08:00».
+     Se parte el texto, NO se construye un Date: `new Date('2026-09-03')` es
+     medianoche UTC, o sea las 18:00 del día anterior aquí, y la pantalla le
+     diría al cliente que sale un día antes. */
+  var MESES = ['enero','febrero','marzo','abril','mayo','junio',
+               'julio','agosto','septiembre','octubre','noviembre','diciembre'];
+  function fecha(iso) {
+    var m = /^(\d{4})-(\d{2})-(\d{2})(?:[T ](\d{2}):(\d{2}))?/.exec(String(iso || ''));
+    if (!m) return '';
+    var mes = MESES[Number(m[2]) - 1];
+    if (!mes) return '';
+    return Number(m[3]) + ' de ' + mes + ' de ' + m[1] + (m[4] ? ', ' + m[4] + ':' + m[5] : '');
+  }
+
+  function r(etiqueta, valor, clase) {
+    if (!valor && valor !== 0) return '';
+    return '<div class="r' + (clase ? ' ' + clase : '') + '"><span>' + esc(etiqueta) +
+      '</span><b>' + esc(valor) + '</b></div>';
+  }
+  function tarjeta(titulo, dentro) {
+    if (!dentro) return '';
+    return '<div class="tarjeta">' + (titulo ? '<h2>' + esc(titulo) + '</h2>' : '') + dentro + '</div>';
+  }
+  function wa(texto) {
+    return 'https://wa.me/523324002285?text=' + encodeURIComponent(texto);
+  }
+
+  function pintaError(clase, titulo, texto) {
+    cuerpo.innerHTML =
+      '<div class="aviso ' + clase + '"><b>' + esc(titulo) + '</b><br>' + esc(texto) + '</div>' +
+      '<a class="btn" style="margin-top:16px" href="' + wa('Hola, necesito ayuda con mi viaje.') +
+      '">Escríbenos por WhatsApp</a>';
+  }
+
+  function pinta(d) {
+    var pagado = d.estado === 'pagado';
+    var partes = [];
+
+    partes.push(
+      '<div class="folio-caja">' +
+        '<div class="eyebrow">Tu folio</div>' +
+        '<div class="folio">' + esc(d.folio || '—') + '</div>' +
+        '<div class="estado' + (pagado ? '' : ' espera') + '"><i></i>' +
+          (pagado ? 'Tu viaje está apartado' : 'Estamos confirmando tu pago') + '</div>' +
+      '</div>');
+
+    /* --- el dinero --- */
+    partes.push(tarjeta('Tu pago',
+      r('Total del viaje', pesos.format(d.total) + ' · IVA incluido') +
+      r('Ya pagaste', pesos.format(d.anticipo)) +
+      r('Queda por abonar', pesos.format(d.saldo), 'suma saldo')));
+
+    /* --- el viaje --- */
+    partes.push(tarjeta('Tu viaje',
+      r('Sale de', d.origen) +
+      r('Va a', d.destino) +
+      r('Salida', fecha(d.salida)) +
+      r('Regreso', fecha(d.regreso)) +
+      r('Días de servicio', d.dias || '') +
+      r('Unidad', d.unidad) +
+      r('Dónde los recogemos', d.puntoSalida) +
+      r('Paradas', d.paradas)));
+
+    /* --- los movimientos, si los hay --- */
+    if (d.diasMovimiento) {
+      partes.push(tarjeta('Movimientos en destino',
+        r('Días con movimiento', d.diasMovimiento) +
+        (d.movDetalle
+          ? d.movDetalle.split('|').map(function (linea, i) {
+              return r('Día ' + (i + 1), linea.trim());
+            }).join('')
+          : '') +
+        '<p class="nota">Cada día con movimientos cubre 8 horas dentro de la zona ' +
+        'metropolitana del destino, o 40 km a la redonda del centro.</p>'));
+    }
+
+    /* --- qué puede hacer --- */
+    partes.push(
+      '<div class="tarjeta">' +
+        '<h2>¿Qué sigue?</h2>' +
+        '<p class="nota" style="margin:0 0 14px">Tu contrato en PDF va adjunto en el correo ' +
+        'que te mandamos al pagar. Para abonar el resto o cambiar algo de tu viaje, ' +
+        'escríbenos y lo vemos contigo.</p>' +
+        '<a class="btn" href="' + wa('Hola, quiero abonar a mi viaje. Mi folio es ' +
+          (d.folio || '')) + '">Quiero abonar</a>' +
+        '<a class="btn linea" href="' + wa('Hola, quiero cambiar algo de mi viaje. Mi folio es ' +
+          (d.folio || '')) + '">Cambiar algo de mi viaje</a>' +
+      '</div>');
+
+    cuerpo.innerHTML = partes.join('');
+  }
+
+  /* ---- el token viaja en la dirección y de ahí no se mueve ---- */
+  var t = new URLSearchParams(location.search).get('t') || '';
+  if (!t) {
+    pintaError('malo', 'Falta tu liga',
+      'Abre el enlace tal como te llegó en el correo, completo.');
+    return;
+  }
+
+  fetch('/api/viaje', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ t: t })
+  }).then(function (res) {
+    return res.json().then(function (d) { return { ok: res.ok, status: res.status, d: d }; },
+                           function () { return { ok: false, status: res.status, d: {} }; });
+  }).then(function (res) {
+    var d = res.d || {};
+    if (res.status === 410) {
+      pintaError('ojo', 'Esta liga ya venció',
+        (d.aviso || '') + ' Ten tu folio a la mano.');
+      return;
+    }
+    if (!res.ok) {
+      pintaError('malo', 'No encontramos ese viaje',
+        d.aviso || 'Revisa que hayas abierto el enlace completo, tal como te llegó.');
+      return;
+    }
+    if (d.estado === 'sinPagar') {
+      pintaError('ojo', 'Todavía no hay un pago registrado',
+        d.aviso || 'Si ya pagaste tu ficha en la tienda, puede tardar unas horas en reflejarse.');
+      return;
+    }
+    pinta(d);
+  }).catch(function () {
+    pintaError('malo', 'No hubo conexión',
+      'Revisa tu internet y vuelve a intentar.');
+  });
+})();
+</script>
+</body>
+</html>

@@ -75,6 +75,30 @@ const CAMPOS_DESGLOSE = [
    esa metadata VIVE el kilometraje, y de ahi no pasa. */
 const CAMPOS_CONFIRMACION = ['estado', 'folio', 'anticipo', 'saldo', 'total', 'ruta', 'canal'];
 
+/* ------------------------------------------------------------
+   LO QUE VE EL CLIENTE EN SU PROPIA PANTALLA DE VIAJE
+   ------------------------------------------------------------
+   Entra con su liga firmada, así que ya sabemos que el viaje es
+   suyo. Aun así la regla del kilómetro no se afloja: en la
+   metadata de Stripe VIVE `km`, y esta pantalla es el camino más
+   nuevo por donde se podría escapar.
+
+   Lleva más que la confirmación de pago porque aquí sí necesita
+   ver su viaje entero —a dónde va, cuándo, en qué unidad, dónde
+   lo recogen— para saber que lo que apartó es lo que quería.
+
+   Y NO lleva su teléfono ni su correo: ya son suyos, no aportan
+   nada en pantalla, y menos datos personales en una respuesta es
+   siempre mejor.
+   ------------------------------------------------------------ */
+const CAMPOS_VIAJE = [
+  'estado', 'folio', 'nombre',
+  'total', 'anticipo', 'saldo',
+  'origen', 'destino', 'ruta',
+  'salida', 'regreso', 'dias', 'unidad', 'puntoSalida', 'paradas',
+  'diasMovimiento', 'movDetalle'
+];
+
 function porLista(objeto, lista) {
   const limpio = {};
   for (let i = 0; i < lista.length; i++) {
@@ -121,10 +145,46 @@ function confirmacion(m, estado) {
   }, CAMPOS_CONFIRMACION);
 }
 
+/* ------------------------------------------------------------
+   EL VIAJE, PARA SU PROPIA PANTALLA
+   ------------------------------------------------------------
+   Recibe la metadata de la sesión de Stripe —donde vive `km`— y
+   el estado del pago. Devuelve solo lo de `CAMPOS_VIAJE`.
+
+   Se arma nombrando campo por campo, como todo lo de este
+   archivo: lo que no está nombrado no sale, ni aunque mañana
+   `pagar.js` le agregue algo nuevo a la metadata.
+   ------------------------------------------------------------ */
+function viaje(m, estado) {
+  const d = m || {};
+  const texto = function (v, largo) { return String(v == null ? '' : v).slice(0, largo); };
+  return porLista({
+    estado: estado,
+    folio: texto(d.folio, 20),
+    nombre: texto(d.nombre, 80),
+    total: Number(d.total) || 0,
+    anticipo: Number(d.anticipo) || 0,
+    saldo: Number(d.saldo) || 0,
+    origen: texto(d.origen, 160),
+    destino: texto(d.destino, 160),
+    ruta: texto(d.ruta, 90),
+    salida: texto(d.salida, 25),
+    regreso: texto(d.regreso, 25),
+    dias: Number(d.dias) || 0,
+    unidad: texto(d.unidad, 60),
+    puntoSalida: texto(d.puntoSalida, 200),
+    paradas: texto(d.paradas, 300),
+    diasMovimiento: Number(d.movDias) || 0,
+    movDetalle: texto(d.movDetalle, 500)
+  }, CAMPOS_VIAJE);
+}
+
 module.exports = {
   CAMPOS_PRECIO,
   CAMPOS_DESGLOSE,
   CAMPOS_CONFIRMACION,
+  CAMPOS_VIAJE,
   precio,
-  confirmacion
+  confirmacion,
+  viaje
 };

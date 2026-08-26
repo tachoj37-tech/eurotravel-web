@@ -90,6 +90,11 @@ function datosDelCorreo(m) {
   const d = m || {};
   return {
     folio: String(d.folio || '').slice(0, 20),
+    /* El número de contrato de EuroSystem. Va aparte del folio y en chico:
+       el folio es el que el cliente ya vio en pantalla al pagar y el que va a
+       dictar por teléfono; el contrato es el que aparece en el PDF adjunto y
+       tiene que poder reconocerlo cuando lo abra. */
+    contrato: String(d.contrato || '').slice(0, 20),
     nombre: String(d.nombre || '').slice(0, 80),
     correo: String(d.correo || '').trim().toLowerCase().slice(0, 160),
     ruta: String(d.ruta || '').slice(0, 90),
@@ -112,7 +117,7 @@ function datosDelCorreo(m) {
    Se arma aparte de mandarlo para poder probarlo sin red. Devuelve
    lo que Resend espera, ya listo.
    ------------------------------------------------------------ */
-function mensajeDeContrato(metadata, pdfBase64) {
+function mensajeDeContrato(metadata, pdfBase64, liga) {
   const d = datosDelCorreo(metadata);
   const salida = fechaLarga(d.salida);
   const regreso = fechaLarga(d.regreso);
@@ -141,7 +146,8 @@ function mensajeDeContrato(metadata, pdfBase64) {
         '<div style="font-size:27px;font-weight:700;letter-spacing:.04em;margin-top:4px">' +
           esc(d.folio || '—') + '</div>' +
         '<div style="font-size:12.5px;color:#6e6e6a;margin-top:6px">' +
-          'Ténlo a la mano para cualquier aclaración.</div>' +
+          'Ténlo a la mano para cualquier aclaración.' +
+          (d.contrato ? ' Contrato ' + esc(d.contrato) + '.' : '') + '</div>' +
       '</div>' +
 
       '<table style="width:100%;border-collapse:collapse;margin:0 0 8px">' +
@@ -168,6 +174,19 @@ function mensajeDeContrato(metadata, pdfBase64) {
             'Tu contrato va adjunto en este correo, en PDF. Guárdalo.</p>'
         : '') +
 
+      /* La liga propia del cliente. Si no hay `LIGAS_SECRETO` configurado no
+         se puede firmar y el botón simplemente no va: vale más un correo con
+         el folio que ningún correo. */
+      (liga
+        ? '<p style="margin:26px 0 0"><a href="' + esc(liga) + '" ' +
+            'style="display:inline-block;background:#db0d0d;color:#fff;text-decoration:none;' +
+            'font-weight:600;font-size:15px;padding:13px 26px;border-radius:8px">' +
+            'Ver mi viaje</a></p>' +
+          '<p style="font-size:12.5px;color:#6e6e6a;margin:9px 0 0">' +
+            'Esta liga es tuya: desde ahí ves cómo va tu viaje y descargas tu contrato ' +
+            'cuando quieras. No la compartas.</p>'
+        : '') +
+
       '<p style="font-size:14px;margin:26px 0 0">Para abonar el resto o cambiar algo, ' +
         'contéstanos este correo o escríbenos por WhatsApp al ' +
         '<a href="https://wa.me/523324002285" style="color:#db0d0d">33 2400 2285</a>.</p>' +
@@ -189,7 +208,8 @@ function mensajeDeContrato(metadata, pdfBase64) {
     'Recibimos tu anticipo. Tu viaje ya está apartado.',
     '',
     'TU FOLIO: ' + (d.folio || '—'),
-    'Ténlo a la mano para cualquier aclaración.',
+    'Ténlo a la mano para cualquier aclaración.' +
+      (d.contrato ? ' Contrato ' + d.contrato + '.' : ''),
     '',
     'Pagaste hoy:      ' + pesos.format(d.anticipo),
     'Queda por abonar: ' + pesos.format(d.saldo),
@@ -206,6 +226,9 @@ function mensajeDeContrato(metadata, pdfBase64) {
     '',
     pdfBase64 ? 'Tu contrato va adjunto en este correo, en PDF. Guárdalo.' : null,
     pdfBase64 ? '' : null,
+    liga ? 'VER TU VIAJE — esta liga es tuya, no la compartas:' : null,
+    liga ? liga : null,
+    liga ? '' : null,
     'Para abonar el resto o cambiar algo, contesta este correo o escríbenos',
     'por WhatsApp al 33 2400 2285.',
     '',
@@ -276,8 +299,8 @@ async function manda(mensaje) {
 }
 
 /* La puerta que usa el webhook: arma y manda, en un solo paso. */
-async function mandaContrato(metadata, pdfBase64) {
-  return manda(mensajeDeContrato(metadata, pdfBase64));
+async function mandaContrato(metadata, pdfBase64, liga) {
+  return manda(mensajeDeContrato(metadata, pdfBase64, liga));
 }
 
 module.exports = {

@@ -56,6 +56,7 @@ Se configuran en Vercel → Settings → Environment Variables. Ver `.env.exampl
 | `RESEND_API_KEY` | Mandarle al cliente su folio y su contrato al pagar | — |
 | `RESEND_DE` | De quién sale ese correo. Opcional | — |
 | `CLAVE_COTIZADOR` | La pantalla temporal de revisión de costos | — |
+| `LIGAS_SECRETO` | Firma la liga propia de cada cliente | — |
 
 **Vercel solo aplica las variables a los despliegues nuevos.** Después de
 agregar o cambiar una hay que volver a desplegar, o el sitio sigue corriendo

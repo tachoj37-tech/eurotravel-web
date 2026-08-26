@@ -289,8 +289,23 @@ function euroDice(status, datos) {
   cierto('se le pidió el PDF a EuroSystem', ultimoEnvio.cuerpo.incluirPdf === true);
   cierto('salió el correo', !!ultimoCorreo);
   igual('al correo del cliente', ultimoCorreo.cuerpo.to, ['quien@sea.mx']);
-  cierto('con el folio que devolvió EuroSystem, no otro',
-    ultimoCorreo.cuerpo.subject.indexOf('51001') >= 0);
+  /* --------------------------------------------------------------
+     UN SOLO FOLIO PARA EL CLIENTE, Y ES EL DE LA PAGINA
+
+     Esta asercion cambio de lado. Pedia que el asunto llevara el folio de
+     EuroSystem, y con eso el cliente terminaba con DOS numeros para el
+     mismo viaje: el correo decia «folio 51001» y su pantalla de viaje
+     decia «ET-K3M9-4Q2». Y el `ET-` es el que ya vio en la pantalla de
+     pago, antes de que llegara ningun correo.
+
+     Ahora el folio es uno solo en los tres lados —pantalla de pago,
+     correo y pantalla del viaje— y el numero de contrato va aparte, en
+     chico, porque ese si aparece en el PDF adjunto.
+     -------------------------------------------------------------- */
+  cierto('el asunto lleva el folio de la página, el que el cliente ya vio',
+    ultimoCorreo.cuerpo.subject.indexOf('ET-K3M9-4Q2') >= 0);
+  cierto('y el número de contrato va dentro, para reconocer el PDF',
+    ultimoCorreo.cuerpo.text.indexOf('Contrato 51001') >= 0);
   cierto('y el contrato adjunto', ultimoCorreo.cuerpo.attachments &&
     ultimoCorreo.cuerpo.attachments[0].content === 'JVBERi0xLjMK');
 
