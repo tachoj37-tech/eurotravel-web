@@ -134,6 +134,32 @@ function claveDeUnidad(loQueLlego) {
 function seSabeCotizar(unidad) { return claveDeUnidad(unidad) !== null; }
 
 /* ------------------------------------------------------------
+   ¿HAY QUE MEDIR ESTE VIAJE, O YA SABEMOS CUÁNTO CUESTA?
+   ------------------------------------------------------------
+   Medir son DOS llamadas de pago a la Routes API de Google —ida y
+   vuelta— por cada cotización. Y una reserva no es una
+   cotización: el cliente cambia la fecha, cambia la unidad,
+   captura movimientos, y cada cambio vuelve a cotizar.
+
+   Cuando el destino tiene precio CERRADO en la lista, esos
+   kilómetros no mueven un peso: `trasladoDe` ni los mira. Se
+   pagaban dos llamadas por una respuesta que se tiraba, y 46 de
+   los 79 destinos del catálogo tienen precio cerrado.
+
+   La pregunta vive AQUI y no en `cotizar.js` a propósito: quien
+   sabe si el kilometraje importa es el archivo del dinero. Si un
+   día la lista cambia de forma, esto cambia con ella y los dos
+   endpoints se enteran solos.
+
+   OJO — `pagar.js` NO usa esto y mide siempre. El kilometraje va
+   a la metadata del contrato y la oficina lo lee ahí. Se mide una
+   vez, al comprometer el dinero, no en cada tecleo.
+   ------------------------------------------------------------ */
+function necesitaMedirse(destino, unidad) {
+  return !destinos.precioDeLista(destino, claveDeUnidad(unidad) || 'sprinter');
+}
+
+/* ------------------------------------------------------------
    EL PRECIO DEL TRASLADO
    ------------------------------------------------------------
    Tres respuestas posibles, y en este orden:
@@ -607,7 +633,7 @@ module.exports = {
   MINIMO_POR_DIA, REDONDEO, TASA_IVA, ANTICIPO,
   NOCHES_INCLUIDAS, EXTRA_POR_NOCHE, BANDAS_MOVIMIENTO, TOPE_DIAS_MOVIMIENTO,
   DESTINOS_CON_REGLA,
-  UNIDADES_QUE_COTIZAN, claveDeUnidad, seSabeCotizar,
+  UNIDADES_QUE_COTIZAN, claveDeUnidad, seSabeCotizar, necesitaMedirse,
   kmDe, diasDeServicio, nochesDe, trasladoDe, reglaDeDestino,
   horasDe, bandaDe, movimientosDe, precioMovimientos,
   calcula

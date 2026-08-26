@@ -32,12 +32,11 @@ const freno = defensas.creaFreno({ porMinuto: 30, porDia: 500 });
 module.exports = async function handler(req, res) {
   if (defensas.puerta(req, res)) return;
 
+  /* La clave de Google se comprueba MAS ABAJO, cuando ya se sabe si hace
+     falta medir. Antes se exigía aquí, antes de mirar nada, y con eso un
+     destino de precio cerrado —que no necesita a Google para nada— se
+     quedaba sin cotizar por una clave que no iba a usar. */
   const clave = process.env.GOOGLE_ROUTES_KEY;
-  if (!clave) {
-    // Sin clave el sitio no se rompe: el viaje sigue y se cotiza a mano
-    res.status(503).json({ error: 'Cotizador en línea no configurado' });
-    return;
-  }
 
   const frenado = freno(req);
   if (frenado) { res.status(frenado.status).json({ error: frenado.error }); return; }
@@ -76,32 +75,59 @@ module.exports = async function handler(req, res) {
   const dias = tarifa.diasDeServicio(cuerpo.salida, cuerpo.regreso);
   const noches = tarifa.nochesDe(cuerpo.salida, cuerpo.regreso);
 
-  try {
-    const ida = await rutas.mideTramo(origen, destino, clave);
-    if (!ida) {
-      res.status(422).json({
-        error: 'sin ruta de ida',
-        aviso: 'No encontramos una ruta por carretera entre esos dos puntos.'
-      });
-      return;
-    }
+  /* ------------------------------------------------------------
+     ¿HAY QUE MEDIR, O YA SABEMOS CUÁNTO CUESTA?
 
-    // La vuelta se mide aparte: por sentidos únicos y entronques rara vez da igual que la ida
-    let vuelta = null;
-    if (redondo) {
-      vuelta = await rutas.mideTramo(destino, origen, clave);
-      if (!vuelta) {
+     Medir son DOS llamadas de pago a Google por cotización, y una reserva
+     son varias cotizaciones: el cliente cambia la fecha, cambia la unidad,
+     captura movimientos, y cada cambio vuelve a pedir precio.
+
+     Cuando el destino tiene precio CERRADO en la lista, esos kilómetros no
+     mueven un peso —`trasladoDe` ni los mira— así que se pagaban dos
+     llamadas por una respuesta que se tiraba.
+
+     Quién sabe si hacen falta es `_tarifa`, no este archivo: es el dueño
+     del dinero. /api/pagar NO hace esto y mide siempre, porque el
+     kilometraje va al contrato y la oficina lo lee ahí.
+     ------------------------------------------------------------ */
+  const hayQueMedir = tarifa.necesitaMedirse(cuerpo.destino, cuerpo.unidad);
+
+  if (hayQueMedir && !clave) {
+    // Sin clave el sitio no se rompe: el viaje sigue y se cotiza a mano
+    res.status(503).json({ error: 'Cotizador en línea no configurado' });
+    return;
+  }
+
+  try {
+    let kmTotal = 0;
+
+    if (hayQueMedir) {
+      const ida = await rutas.mideTramo(origen, destino, clave);
+      if (!ida) {
         res.status(422).json({
-          error: 'sin ruta de vuelta',
-          aviso: 'No encontramos la ruta de regreso entre esos dos puntos.'
+          error: 'sin ruta de ida',
+          aviso: 'No encontramos una ruta por carretera entre esos dos puntos.'
         });
         return;
       }
-    }
 
-    /* La conversión vive en _tarifa, no aquí: cotizar y cobrar TIENEN que
-       sacar el mismo número del mismo lugar. */
-    const kmTotal = tarifa.kmDe(ida.metros, vuelta ? vuelta.metros : 0);
+      // La vuelta se mide aparte: por sentidos únicos y entronques rara vez da igual que la ida
+      let vuelta = null;
+      if (redondo) {
+        vuelta = await rutas.mideTramo(destino, origen, clave);
+        if (!vuelta) {
+          res.status(422).json({
+            error: 'sin ruta de vuelta',
+            aviso: 'No encontramos la ruta de regreso entre esos dos puntos.'
+          });
+          return;
+        }
+      }
+
+      /* La conversión vive en _tarifa, no aquí: cotizar y cobrar TIENEN que
+         sacar el mismo número del mismo lugar. */
+      kmTotal = tarifa.kmDe(ida.metros, vuelta ? vuelta.metros : 0);
+    }
 
     /* Las noches extra y los movimientos se suman aquí adentro, no aquí
        afuera. La lista de movimientos entra CRUDA —tal como la mandó el

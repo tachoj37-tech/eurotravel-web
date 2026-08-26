@@ -427,6 +427,85 @@ function dia(fecha, inicio, fin) {
     }
   }
 
+  /* ============================================================
+     NO SE LE PAGA A GOOGLE POR UNA RESPUESTA QUE NO SE USA
+     ------------------------------------------------------------
+     Cuando el destino tiene precio CERRADO en la lista, los kilómetros no
+     mueven un peso: `trasladoDe` ni los mira. Pero /api/cotizar los medía
+     igual, y medir son DOS llamadas de pago a la Routes API por cotización.
+
+     46 de los 79 destinos del catálogo tienen precio cerrado. Y una reserva
+     no es una cotización: el cliente cambia la fecha, cambia la unidad,
+     captura movimientos, y cada cambio vuelve a cotizar.
+
+     /api/pagar SI sigue midiendo siempre: el kilometraje va a la metadata
+     del contrato y la oficina lo lee ahí. Se mide una vez, al pagar, no en
+     cada tecleo.
+     ============================================================ */
+  {
+    function conteoDeGoogle() {
+      let n = 0;
+      const antes = global.fetch;
+      global.fetch = function (url, opc) {
+        if (String(url).indexOf('routes.googleapis.com') >= 0) n++;
+        return antes(url, opc);
+      };
+      return { cuantas: function () { return n; }, suelta: function () { global.fetch = antes; } };
+    }
+
+    async function cotizaContando(destinoFijo) {
+      METROS_IDA = 311400; METROS_VUELTA = 309800;
+      const marca = 'g' + (++corrida);
+      const espia = conteoDeGoogle();
+      const r = res();
+      await cotizar({ method: 'POST', headers: cabecerasDe(corrida), body: {
+        origen: Object.assign({}, ORIGEN, { placeId: ORIGEN.placeId + marca }),
+        destino: Object.assign({}, DESTINO, destinoFijo, { placeId: DESTINO.placeId + marca }),
+        salida: '2026-09-03T08:00', regreso: '2026-09-06T18:00', redondo: true
+      } }, r);
+      const n = espia.cuantas();
+      espia.suelta();
+      return { llamadas: n, json: r._json, status: r._status };
+    }
+
+    const vallarta = await cotizaContando({ direccion: 'Puerto Vallarta, Jalisco, México' });
+    igual('un destino de tu lista NO le pregunta a Google', vallarta.llamadas, 0);
+    igual('y aun así cobra sus 19,000', vallarta.json.total, 19000);
+
+    const cdmx = await cotizaContando({ direccion: 'Ciudad de México, Ciudad de México, México' });
+    igual('la CDMX tampoco', cdmx.llamadas, 0);
+    igual('y cobra sus 22,000', cdmx.json.total, 22000);
+
+    /* El que NO está en la lista sí se mide: sin kilómetros no hay fórmula. */
+    const bernal = await cotizaContando({ direccion: 'Bernal, Querétaro, México' });
+    igual('el que no está en la lista SÍ se mide', bernal.llamadas, 2);
+    igual('y se cotiza por fórmula', bernal.json.total > 0, true);
+
+    /* Solo ida: una llamada, no dos */
+    METROS_IDA = 311400; METROS_VUELTA = 0;
+    const espia = conteoDeGoogle();
+    const soloIda = res();
+    await cotizar({ method: 'POST', headers: cabecerasDe(++corrida), body: {
+      origen: Object.assign({}, ORIGEN, { placeId: ORIGEN.placeId + 'si' + corrida }),
+      destino: Object.assign({}, DESTINO, { placeId: DESTINO.placeId + 'si' + corrida,
+                                            direccion: 'Bernal, Querétaro, México' }),
+      salida: '2026-09-03T08:00', regreso: '', redondo: false } }, soloIda);
+    const nIda = espia.cuantas(); espia.suelta();
+    igual('solo ida y fuera de la lista: una sola llamada', nIda, 1);
+
+    /* ---- Y SIN CLAVE DE GOOGLE, la lista sigue cotizando ----
+       Antes /api/cotizar contestaba 503 antes de mirar nada. Ahora la clave
+       solo hace falta cuando de verdad hay que medir. */
+    const clave = process.env.GOOGLE_ROUTES_KEY;
+    delete process.env.GOOGLE_ROUTES_KEY;
+    const sinClave = await cotizaContando({ direccion: 'Puerto Vallarta, Jalisco, México' });
+    igual('sin clave de Google, un destino de lista se cotiza igual', sinClave.status, 200);
+    igual('a su precio de siempre', sinClave.json.total, 19000);
+    const sinClaveFormula = await cotizaContando({ direccion: 'Bernal, Querétaro, México' });
+    igual('pero el que hay que medir, no', sinClaveFormula.status, 503);
+    process.env.GOOGLE_ROUTES_KEY = clave;
+  }
+
   igual('sin fallas', fallas, []);
 
   console.log('\n' + buenas + ' buenas, ' + malas + ' malas');
