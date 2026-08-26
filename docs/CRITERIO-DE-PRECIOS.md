@@ -126,9 +126,10 @@ extra se le pregunta al dueño siempre que no esté en la fila 10 — un número
 deducido se presenta como propuesta, nunca se da por bueno.
 
 Días extra dictados por él hasta hoy: Talpa $1,500 (fila 10), Puebla y
-Zacatlán $2,000, Guanajuato $1,500. Deducidos y AÚN NO confirmados:
-El Manto $2,500, Tlalpujahua $3,000. Y los movimientos suman sus $3,000 por
-día encima, como siempre.
+Zacatlán $2,000, Guanajuato $1,500, El Manto $1,500, Tlalpujahua $1,500
+(«déjalos en 1500», 26-ago-2026). El patrón que va saliendo: **$1,500 el día
+extra de Sprinter casi siempre; $2,000 en los viajes largos tipo Puebla.**
+Y los movimientos suman sus $3,000 por día encima, como siempre.
 
 ### R7 · Guayabitos, confirmado (26-ago-2026)
 
@@ -156,12 +157,6 @@ cobra precio de Guadalajara salga de donde salga. **Retomar antes del
 lanzamiento.**
 
 ---
-
-## Esperando autorización del dueño
-
-- **El Manto** día extra $2,500 y **Tlalpujahua** día extra $3,000: deducidos
-  de sus escalones, igual que el de Guanajuato que resultó caro. Proponerle
-  confirmarlos o bajarlos.
 
 ## Preguntas abiertas (lanzarlas al dueño en la siguiente ronda)
 

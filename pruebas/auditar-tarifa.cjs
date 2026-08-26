@@ -107,7 +107,9 @@ const SU_LISTA = [
   /* El tercer campo es la regla del Excel para ese destino, cuando la hay:
      `porDias` son sus precios por duracion, `diasIncluidos` marca paquete.
      Entraron el 26-ago-2026, cuando el dueño tumbo el modelo de noches. */
-  ['El Manto, Jalisco, México', 14000, { porDias: { 1: 14000, 3: 19000 }, diaExtra: 2500 }],
+  /* Los dias extra deducidos de los escalones (2,500 y 3,000) los bajo el
+     dueño a 1,500 el 26-ago-2026, como el de Guanajuato. */
+  ['El Manto, Jalisco, México', 14000, { porDias: { 1: 14000, 3: 19000 }, diaExtra: 1500 }],
   ['Talpa de Allende, Jalisco, México', 15000, { porDias: { 1: 15000, 2: 16500 }, diaExtra: 1500 }],
   ['Tepic, Nayarit, México', 16900],
   ['León, Guanajuato, México', 17600],
@@ -126,7 +128,7 @@ const SU_LISTA = [
   ['San Miguel de Allende, Guanajuato, México', 26500],
   ['Barra de Navidad, Jalisco, México', 20500],
   ['Zacatecas, Zacatecas, México', 25000],
-  ['Tlalpujahua, Michoacán, México', 23500, { porDias: { 1: 23500, 2: 26500 }, diaExtra: 3000 }],
+  ['Tlalpujahua, Michoacán, México', 23500, { porDias: { 1: 23500, 2: 26500 }, diaExtra: 1500 }],
   ['Tenacatita, Jalisco, México', 20000],
   ['Mayto, Jalisco, México', 26500],
   ['Mazatlán, Sinaloa, México', 28000],
@@ -243,6 +245,9 @@ const SU_LISTA = [
      el primer calculo, 2,750 deducido de los escalones, le parecio caro */
   igual('Guanajuato 4 dias: 24,500 + 1,500', sinMov('Guanajuato, Guanajuato, México', 4), 26000);
   igual('Guanajuato 5 dias: 24,500 + 3,000', sinMov('Guanajuato, Guanajuato, México', 5), 27500);
+  /* «dejalos en 1500» (26-ago-2026): El Manto y Tlalpujahua, mismo dia extra */
+  igual('El Manto 4 dias: 19,000 + 1,500', sinMov('El Manto, Jalisco, México', 4), 20500);
+  igual('Tlalpujahua 3 dias: 26,500 + 1,500', sinMov('Tlalpujahua, Michoacán, México', 3), 28000);
   igual('El Manto 1 DIA: 14,000', sinMov('El Manto, Jalisco, México', 1), 14000);
   igual('El Manto 3 DIAS: 19,000 (cobraba 14,000)', sinMov('El Manto, Jalisco, México', 3), 19000);
   igual('Tlalpujahua 1 DIA: 23,500', sinMov('Tlalpujahua, Michoacán, México', 1), 23500);

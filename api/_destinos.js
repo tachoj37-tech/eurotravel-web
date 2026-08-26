@@ -78,10 +78,11 @@ const DESTINOS = [
   { nombre: "El Manto", km: 314,
     busca: /el manto/i,
     /* El Excel trae dos duraciones: 1 día $14,000 y 3 días $19,000. El día
-       extra de $2,500 se deduce de esos dos escalones: (19,000−14,000)/2. */
+       extra lo dictó el dueño el 26-ago-2026: $1,500, igual que Guanajuato
+       (el 2,500 deducido de los escalones le pareció caro). */
     precio: { busNC47: 22000, sprinter: 14000 },
     porDias: { 1: 14000, 3: 19000 },
-    diaExtra: 2500 },
+    diaExtra: 1500 },
   /* VA ANTES que Talpa a propósito: «talpa burrita» empata con las dos
      expresiones, y aquí gana el primer renglón que empate.
 
@@ -167,10 +168,11 @@ const DESTINOS = [
     precio: { busNC47: 38000, bus4849: 39000, neobusI6: 42000, pbI6: 40000, marcopolo: 46000, irizar: 44000, sprinter: 25000 } },
   { nombre: "Tlalpujahua", km: 762,
     busca: /tlalpujahua/i,
-    /* Del Excel: 1 día $23,500 y 2 días $26,500 → día extra $3,000. */
+    /* Del Excel: 1 día $23,500 y 2 días $26,500. El día extra lo dictó el
+       dueño el 26-ago-2026: $1,500 (el 3,000 deducido del escalón, caro). */
     precio: { busNC47: 36000, bus4849: 37000, neobusI6: 40000, pbI6: 38000, marcopolo: 44000, irizar: 42000, sprinter: 23500 },
     porDias: { 1: 23500, 2: 26500 },
-    diaExtra: 3000 },
+    diaExtra: 1500 },
   { nombre: "Tenacatita", km: 762,
     busca: /tenacatita|boca de iguanas/i,
     precio: { busNC47: 32000, bus4849: 33000, neobusI6: 35000, pbI6: 34000, marcopolo: 39000, irizar: 37000, sprinter: 20000 } },
