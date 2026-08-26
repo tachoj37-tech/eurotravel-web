@@ -184,6 +184,18 @@ lanzamiento.**
 
 ---
 
+## Riesgo detectado: el texto suelto se geocodifica mal (26-ago-2026)
+
+Al cotizar por texto libre, Google a veces encuentra OTRO lugar con ese
+nombre: Tecolotlán midió como si estuviera a 1,000 km, Colotlán como a 4,
+y **Cihuatlán —pegado a Melaque, $20,500— cotizó $9,000**. Ese último es
+dinero: un cobro de menos de $11,000 en un viaje a la costa.
+
+En la página real el cliente elige del autocompletado (que manda el lugar
+exacto), así que el riesgo vive en el texto tecleado sin elegir sugerencia.
+**Defensa pendiente de construir**: desconfiar de una medición absurdamente
+corta o larga para un texto desconocido.
+
 ## Preguntas abiertas (lanzarlas al dueño en la siguiente ronda)
 
 - Un paquete pedido a MÁS días de los incluidos (Cancún 18 días): hoy se
