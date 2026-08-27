@@ -308,7 +308,15 @@ async function entrar(cuerpo, ahoraMs) {
 
   const cliente = eligeCliente(hallados.clientes);
   const m = (cliente && cliente.metadata) || {};
-  if (!cliente || !cuentas.tieneContrasena(m)) return no(401, generico);
+  if (!cliente || !cuentas.tieneContrasena(m)) {
+    /* SE GASTA EL MISMO TIEMPO QUE SI LA CUENTA EXISTIERA.
+       Medido el 27-ago-2026: sin esto, un correo registrado tardaba 61.7 ms
+       y uno inventado 0.1 ms. Seiscientas sesenta veces. Que los dos casos
+       contesten palabra por palabra lo mismo no sirve de nada si el
+       cronómetro los separa: se saca la lista de clientes con solo medir. */
+    await cuentas.gastaElMismoTiempo(c.contrasena);
+    return no(401, generico);
+  }
 
   const buena = await cuentas.contrasenaValida(m, c.contrasena);
   if (!buena) return no(401, generico);

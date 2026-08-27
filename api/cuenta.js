@@ -93,9 +93,45 @@ const SIN_NADA = {
   config: logica.config
 };
 
+/* ------------------------------------------------------------
+   EL PISO DE TIEMPO DE «OLVIDE MI CONTRASEÑA»
+   ------------------------------------------------------------
+   Sale de una revisión de seguridad el 27-ago-2026, y de medirlo:
+
+     correo CON cuenta →  187 ms   (busca, escribe y manda correo)
+     correo SIN cuenta →   31 ms   (busca y ya)
+
+   Seis veces. La respuesta es palabra por palabra la misma en los
+   dos casos —eso se cuidó— pero el reloj los separaba igual, y con
+   eso se saca la lista de correos registrados de la empresa.
+
+   `entrar` tenía lo mismo y ahí se arregló con trabajo de verdad:
+   se corre `scrypt` aunque no haya cuenta. Aquí no se puede —no se
+   le manda un correo a nadie— así que se empareja por abajo: la
+   respuesta nunca sale antes del piso, exista la cuenta o no.
+
+   VA EN LA CASCARA Y NO EN LA LOGICA, como la cookie: es cuánto
+   tarda la RESPUESTA, no qué decide el servidor. Así la lógica se
+   sigue probando sin esperar un segundo por llamada.
+
+   El piso está por arriba de lo que tarda el camino largo en
+   producción. Si Resend tuviera un día muy malo y se pasara, la
+   diferencia volvería a asomarse; contra eso queda el tope de la
+   puerta —cuatro por minuto, ciento cincuenta al día— que es lo
+   que de verdad impide barrer una lista.
+   ------------------------------------------------------------ */
+const PISO_MS = { olvide: 1200 };
+
+function esperaHasta(desde, ms) {
+  const falta = ms - (Date.now() - desde);
+  if (falta <= 0) return Promise.resolve();
+  return new Promise(function (listo) { setTimeout(listo, falta); });
+}
+
 module.exports = async function handler(req, res) {
   if (defensas.puerta(req, res)) return;
 
+  const arranco = Date.now();
   const cuerpo = defensas.cuerpoJSON(req);
   const accion = String((cuerpo && cuerpo.accion) || '').trim();
 
@@ -125,6 +161,10 @@ module.exports = async function handler(req, res) {
   } else {
     r = await CON_CUERPO[accion](cuerpo);
   }
+
+  /* Antes de contestar, el piso de tiempo si esta acción lo tiene. Ver la
+     nota de arriba: sin esto, el reloj dice si un correo tiene cuenta. */
+  if (PISO_MS[accion]) await esperaHasta(arranco, PISO_MS[accion]);
 
   /* La cookie es cosa del transporte, y por eso se pone y se quita aquí y no
      en la lógica: así la lógica se prueba sin fingir un `res`. */

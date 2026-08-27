@@ -214,6 +214,34 @@ async function contrasenaValida(metadata, contrasena) {
 }
 
 /* ------------------------------------------------------------
+   EL RELOJ TAMBIEN DELATA
+   ------------------------------------------------------------
+   Esto salió de una revisión de seguridad el 27-ago-2026, y de una
+   medición, no de una sospecha:
+
+     correo CON cuenta, contraseña mala →  61.7 ms
+     correo SIN cuenta, misma petición  →   0.1 ms
+
+   Seiscientas sesenta veces. Todo el trabajo de que los dos casos
+   contesten EXACTAMENTE lo mismo —mismo estado, mismo mensaje,
+   mismos campos— lo tiraba el cronómetro: bastaba con medir para
+   sacar la lista de correos registrados de la empresa.
+
+   La causa es la buena parte del diseño: `scrypt` tarda a
+   propósito. Pero solo se ejecutaba cuando la cuenta existía.
+
+   Así que cuando NO existe se gasta el mismo tiempo a propósito.
+   La sal es fija y no protege nada —no hay nada que proteger, no
+   hay contraseña— solo hace que el servidor tarde igual.
+   ------------------------------------------------------------ */
+const SAL_DE_RELLENO = 'sin-cuenta-pero-el-reloj-no-lo-dice';
+
+async function gastaElMismoTiempo(contrasena) {
+  const c = String(contrasena == null ? '' : contrasena).slice(0, MAXIMO);
+  try { await resumen(c, SAL_DE_RELLENO); } catch (e) { /* el resultado da igual */ }
+}
+
+/* ------------------------------------------------------------
    EL CORREO, NORMALIZADO
    ------------------------------------------------------------
    Se guarda y se busca SIEMPRE en minúsculas y sin espacios. Se
@@ -316,5 +344,5 @@ module.exports = {
   porQueNoSirve, nuevaSal, resumen,
   paraCrear, paraCambiar, paraVerificar, paraNacer, paraLigarGoogle,
   tieneCuenta, tieneContrasena, estaVerificada, googleDe,
-  contrasenaValida, normalizaCorreo, correoValido
+  contrasenaValida, gastaElMismoTiempo, normalizaCorreo, correoValido
 };

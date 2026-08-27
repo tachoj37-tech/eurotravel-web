@@ -129,6 +129,50 @@ async function cuentaLista(correo, nombre) {
       /correo o esa contrase/i.test(claveMala.cuerpo.aviso));
   }
 
+  /* ============ 2-bis. EL RELOJ TAMPOCO DICE SI LA CUENTA EXISTE ============
+     ESTA PRUEBA NACIO DE UNA REVISION DE SEGURIDAD, el 27-ago-2026, y de una
+     medición:
+
+         correo CON cuenta, contraseña mala →  61.7 ms
+         correo SIN cuenta, misma petición  →   0.1 ms
+
+     Seiscientas sesenta veces. Todo el trabajo de arriba —que los dos casos
+     contesten palabra por palabra lo mismo— lo tiraba el cronómetro: bastaba
+     medir para sacar la lista de correos registrados.
+
+     La causa era la buena parte del diseño: `scrypt` tarda a propósito, pero
+     solo corría cuando la cuenta existía.
+
+     Se compara por PROPORCION y no contra un número de milisegundos: en una
+     máquina rápida `scrypt` tarda menos y un tope fijo se pondría rojo sin
+     que nada esté mal. Lo que importa es que los dos caminos cuesten lo
+     mismo, no cuánto. */
+  {
+    FICHAS = []; CORREOS = [];
+    await cuentaLista('ana@ejemplo.mx', 'Ana Ruiz');
+
+    function mediana(a) { const b = a.slice().sort(function (x, y) { return x - y; }); return b[Math.floor(b.length / 2)]; }
+    const con = [], sin = [];
+    for (let i = 0; i < 9; i++) {
+      let t = process.hrtime.bigint();
+      await logica.entrar({ correo: 'ana@ejemplo.mx', contrasena: 'no es la buena' });
+      con.push(Number(process.hrtime.bigint() - t) / 1e6);
+
+      t = process.hrtime.bigint();
+      await logica.entrar({ correo: 'nohay@ejemplo.mx', contrasena: 'no es la buena' });
+      sin.push(Number(process.hrtime.bigint() - t) / 1e6);
+    }
+    const conCuenta = mediana(con), sinCuenta = mediana(sin);
+    const proporcion = sinCuenta / conCuenta;
+
+    cierto('un correo SIN cuenta cuesta casi lo mismo que uno CON cuenta' +
+      '  (con ' + conCuenta.toFixed(1) + ' ms · sin ' + sinCuenta.toFixed(1) + ' ms)',
+      proporcion > 0.5);
+    /* Y que de verdad esté costando trabajo, no que las dos sean instantáneas
+       porque alguien quitó `scrypt` de en medio. */
+    cierto('y las dos cuestan trabajo de verdad', conCuenta > 5 && sinCuenta > 5);
+  }
+
   /* ============ 3. SIN CONFIRMAR NO ENTRA ============
      Pero SOLO se le dice después de acertar la contraseña: así ya demostró
      que la cuenta es suya y no se le regala nada a nadie. */
