@@ -455,6 +455,74 @@ function mensajeDeCuenta(aDonde, codigo, nombre) {
   };
 }
 
+/* ------------------------------------------------------------
+   EL CODIGO PARA RECUPERAR LA CONTRASEÑA
+   ------------------------------------------------------------
+   Tercer correo con código, y otra vez el aviso del final es lo
+   que cambia. Los otros dos van a alguien que puede no tener
+   cuenta; éste va SIEMPRE al dueño de una cuenta que existe.
+
+   Por eso aquí sí se avisa con firmeza: si él no lo pidió,
+   alguien está intentando entrar a su cuenta. No es alarma de
+   más, es lo único que le va a llegar de ese intento.
+
+   Y se le dice lo que de verdad importa: que su contraseña NO
+   cambió. Sin esa línea, quien recibe esto sin haberlo pedido
+   asume lo peor y llama asustado.
+   ------------------------------------------------------------ */
+function mensajeDeClaveNueva(aDonde, codigo, nombre) {
+  const quien = String(nombre || '').trim().split(/\s+/)[0];
+  const c = String(codigo || '');
+
+  const html =
+    '<div style="font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;' +
+    'max-width:440px;margin:0 auto;color:#1d1d1b;line-height:1.55">' +
+      '<p style="font-size:15px;margin:0 0 20px">' +
+        (quien ? 'Hola ' + esc(quien) + ',' : 'Hola,') + '</p>' +
+      '<p style="font-size:15px;margin:0 0 22px">Con este código puedes poner ' +
+        'una contraseña nueva en tu cuenta de Eurotravel:</p>' +
+      '<div style="border:2px solid #1d1d1b;border-radius:12px;padding:20px;text-align:center">' +
+        '<div style="font-size:38px;font-weight:700;letter-spacing:.22em;' +
+          'font-variant-numeric:tabular-nums">' + esc(c) + '</div>' +
+      '</div>' +
+      '<p style="font-size:13.5px;color:#6e6e6a;margin:20px 0 0">Vence en 10 minutos.</p>' +
+      '<p style="font-size:13.5px;color:#6e6e6a;margin:12px 0 0">' +
+        '<b>Si no lo pediste tú, alguien está intentando entrar a tu cuenta.</b> ' +
+        'Tu contraseña NO cambió y sigue sirviendo: sin este código nadie puede ' +
+        'cambiarla. Si te preocupa, escríbenos.</p>' +
+      '<p style="font-size:12.5px;color:#6e6e6a;margin:26px 0 0;padding-top:16px;' +
+        'border-top:1px solid #e6e6e3">Eurotravel · San Pedro Tlaquepaque, Jalisco</p>' +
+    '</div>';
+
+  const texto = [
+    (quien ? 'Hola ' + quien + ',' : 'Hola,'),
+    '',
+    'Con este código puedes poner una contraseña nueva en tu cuenta de Eurotravel:',
+    '',
+    '    ' + c,
+    '',
+    'Vence en 10 minutos.',
+    '',
+    'Si no lo pediste tú, alguien está intentando entrar a tu cuenta.',
+    'Tu contraseña NO cambió y sigue sirviendo: sin este código nadie',
+    'puede cambiarla. Si te preocupa, escríbenos.',
+    '',
+    'Eurotravel · San Pedro Tlaquepaque, Jalisco'
+  ].join('\n');
+
+  return {
+    from: DE,
+    to: [String(aDonde || '').trim().toLowerCase()],
+    subject: c + ' es tu código para cambiar tu contraseña',
+    html: html,
+    text: texto
+  };
+}
+
+async function mandaCodigoDeClave(aDonde, codigo, nombre) {
+  return manda(mensajeDeClaveNueva(aDonde, codigo, nombre));
+}
+
 async function mandaCodigoDeCuenta(aDonde, codigo, nombre) {
   return manda(mensajeDeCuenta(aDonde, codigo, nombre));
 }
@@ -506,6 +574,7 @@ module.exports = {
   DE, hayClave, porQueNoSePuede, pistaDelFallo,
   fechaLarga, datosDelCorreo, mensajeDeContrato, mensajeDeCodigo,
   mensajeDeCuenta, mandaCodigoDeCuenta,
+  mensajeDeClaveNueva, mandaCodigoDeClave,
   aDondeAvisar, mandaALaOficina,
   manda, mandaContrato
 };

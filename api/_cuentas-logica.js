@@ -614,8 +614,159 @@ async function cambiarClave(cuerpo, idCliente) {
   return { status: 200, cuerpo: ok({ cambiada: true }) };
 }
 
+/* ============================================================
+   OLVIDE MI CONTRASEÑA
+   ------------------------------------------------------------
+   El dueño lo pidió con las cuentas: «solo le mandarías correo si
+   olvida su contraseña». Es el ÚNICO correo que recibe una cuenta
+   ya confirmada.
+
+   Y ES LA PUERTA MAS DELICADA DE TODAS. Por aquí se cambia la
+   contraseña de alguien sin saber la que tenía: si se hace mal,
+   es el camino para robarse una cuenta. Tres cosas la sostienen:
+
+   1. EL CODIGO VA AL BUZON, NO A LA PANTALLA. Quien pide el
+      cambio no ve nada; el código llega al correo del dueño. Sin
+      acceso a ese buzón no hay nada que hacer.
+
+   2. PEDIRLO NO DICE SI LA CUENTA EXISTE. Un correo registrado y
+      uno inventado contestan EXACTAMENTE lo mismo. Si no, esto se
+      vuelve un buscador de clientes de la empresa.
+
+   3. EL CODIGO ES DE UN SOLO USO, vive diez minutos y aguanta
+      cinco errores. Es el mismo mecanismo del alta, con las
+      mismas reglas ya probadas.
+
+   LO QUE ESTA PUERTA SI PERMITE, dicho de frente: quien sepa el
+   correo de alguien puede hacerle llegar hasta doce correos en
+   veinticuatro horas, y después dejarlo sin poder pedir otro
+   hasta el día siguiente. Es la regla 4 del proyecto —un candado
+   que el atacante le puede cerrar a otro— y aquí se acepta a
+   sabiendas: sin tope, el ataque es llenarle el buzón, que es
+   peor. Los códigos ya mandados siguen sirviendo, así que quien
+   recibió uno de esos doce todavía puede usarlo.
+   ============================================================ */
+async function olvide(cuerpo, ahoraMs) {
+  const email = cuentas.normalizaCorreo((cuerpo || {}).correo);
+
+  /* La MISMA respuesta pase lo que pase, armada una sola vez para que no se
+     pueda ir separando por descuido en cada rama. */
+  const igualParaTodos = {
+    status: 200,
+    cuerpo: ok({ mandado: true, pista: acceso.pistaDeCorreo(email) })
+  };
+
+  if (!cuentas.correoValido(email)) return igualParaTodos;
+  if (!acceso.hayClave()) {
+    console.error('[cuentas] sin LIGAS_SECRETO: no se puede firmar el código');
+    return igualParaTodos;
+  }
+
+  const hallados = await stripe.clientesPorCorreo(email);
+  if (hallados.error) {
+    console.error('[cuentas] no se pudo consultar a Stripe al recuperar: ' + hallados.error);
+    return igualParaTodos;
+  }
+
+  const cliente = eligeCliente(hallados.clientes);
+  /* Sin cuenta no hay nada que recuperar, y no se dice. */
+  if (!cliente || !cuentas.tieneCuenta(cliente.metadata || {})) return igualParaTodos;
+
+  const puede = cuentas.puedeMandarCodigo(cliente.metadata || {}, ahoraMs);
+  if (!puede.ok) {
+    /* Tampoco aquí se distingue: decir «espera 40 segundos» solo a los correos
+       registrados sería contestar distinto y regalar la lista. Se calla y se
+       apunta en el registro. */
+    console.error('[cuentas] recuperación frenada (' + puede.motivo + ')');
+    return igualParaTodos;
+  }
+
+  const codigo = acceso.nuevoCodigo();
+  const guardar = Object.assign(
+    acceso.paraGuardar(codigo, ahoraMs),
+    cuentas.paraContarEnvio(cliente.metadata || {}, ahoraMs)
+  );
+
+  const escrito = await stripe.guardaEnCliente(cliente.id, guardar);
+  if (escrito.error) {
+    console.error('[cuentas] no se pudo guardar el código de recuperación: ' + escrito.error);
+    return igualParaTodos;
+  }
+
+  const envio = await correo.mandaCodigoDeClave(email, codigo, cliente.name);
+  if (!envio.ok) {
+    /* El código quedó escrito pero no llegó: se borra, para que el cliente no
+       se quede con una cuenta pidiendo un código que nunca vio. */
+    await stripe.guardaEnCliente(cliente.id, acceso.paraBorrar());
+    console.error('[cuentas] el código de recuperación NO salió: ' + envio.motivo);
+  }
+
+  return igualParaTodos;
+}
+
+/* ============================================================
+   LA CONTRASEÑA NUEVA
+   ------------------------------------------------------------
+   Código + contraseña nueva. Al acertar se cambia la contraseña,
+   se borra el código —de un solo uso— y se abre sesión: quien
+   demostró que el buzón es suyo ya no tiene nada más que probar,
+   y mandarlo a teclear la contraseña que acaba de inventar sería
+   un paso de más.
+
+   Y SE MARCA VERIFICADA. Si la cuenta estaba a medias, acabar
+   aquí vale como confirmación: es el mismo buzón al que se le
+   mandó el código de alta.
+   ============================================================ */
+async function claveNueva(cuerpo, ahoraMs) {
+  const c = cuerpo || {};
+  const email = cuentas.normalizaCorreo(c.correo);
+
+  /* El mismo mensaje para todo lo que salga mal, por lo mismo de arriba: un
+     correo sin cuenta y un código equivocado no se pueden distinguir. */
+  const generico = 'Ese código no es. Revísalo o pide otro.';
+
+  const mala = cuentas.porQueNoSirve(c.nueva);
+  if (mala) return no(422, mala);
+  if (!cuentas.correoValido(email)) return no(422, generico);
+
+  const hallados = await stripe.clientesPorCorreo(email);
+  if (hallados.error) return no(503, 'No pudimos hacerlo ahora mismo. Inténtalo en un momento.');
+
+  const cliente = eligeCliente(hallados.clientes);
+  if (!cliente || !cuentas.tieneCuenta(cliente.metadata || {})) return no(422, generico);
+
+  const veredicto = acceso.revisaCodigo(cliente.metadata || {}, c.codigo, ahoraMs);
+  if (!veredicto.ok) {
+    if (veredicto.gastado) {
+      const m = {};
+      m[acceso.CAMPO_INTENTOS] = String(veredicto.van);
+      await stripe.guardaEnCliente(cliente.id, m);
+    }
+    if (veredicto.agotado) return no(429, 'Se acabaron los intentos de ese código. Pide uno nuevo.');
+    return no(422, generico);
+  }
+
+  const escrito = await stripe.guardaEnCliente(cliente.id, Object.assign(
+    await cuentas.paraCambiar(c.nueva),
+    cuentas.paraVerificar(),
+    acceso.paraBorrar(),
+    cuentas.paraBorrarEnvios()
+  ));
+  if (escrito.error) {
+    console.error('[cuentas] no se pudo poner la contraseña nueva: ' + escrito.error);
+    return no(503, 'No pudimos hacerlo ahora mismo. Inténtalo en un momento.');
+  }
+
+  return {
+    status: 200,
+    cuerpo: ok({ cambiada: true, nombre: String(cliente.name || '').trim(), correo: email }),
+    sesionPara: cliente.id
+  };
+}
+
 module.exports = {
   crear, reenviar, confirmar, entrar, salir, yo,
   conGoogle, config, misViajes, cambiarClave,
+  olvide, claveNueva,
   eligeCliente, mandaCodigo
 };

@@ -55,7 +55,14 @@ const FRENOS = {
   'mis-viajes': defensas.creaFreno({ porMinuto: 15, porDia: 800 }),
   /* Cambiar contraseña cuesta un `scrypt` de comprobación y otro de escritura:
      doscientos milisegundos de máquina por intento. */
-  'cambiar-clave': defensas.creaFreno({ porMinuto: 6, porDia: 200 })
+  'cambiar-clave': defensas.creaFreno({ porMinuto: 6, porDia: 200 }),
+  /* Recuperar manda correos, que cuestan dinero y llenan buzones ajenos. El
+     freno de fondo son los doce por cuenta en 24 horas que vive en la ficha
+     de Stripe; éste corta la ráfaga desde una misma dirección. */
+  olvide: defensas.creaFreno({ porMinuto: 4, porDia: 150 }),
+  /* Adivinar el código: seis dígitos, y el propio código solo aguanta cinco
+     errores antes de morirse. Esto es contra la ráfaga de un millón. */
+  'clave-nueva': defensas.creaFreno({ porMinuto: 8, porDia: 200 })
 };
 
 /* Las que necesitan saber QUIEN está dentro reciben el id sacado de la
@@ -66,7 +73,9 @@ const CON_CUERPO = {
   codigo: logica.reenviar,
   confirmar: logica.confirmar,
   entrar: logica.entrar,
-  google: logica.conGoogle
+  google: logica.conGoogle,
+  olvide: logica.olvide,
+  'clave-nueva': logica.claveNueva
 };
 const CON_SESION = {
   yo: logica.yo,

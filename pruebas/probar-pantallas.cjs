@@ -114,6 +114,11 @@ PAGINAS.forEach(function (nombre) {
     'cta-p-viajes', 'cta-v-estado', 'cta-v-lista', 'cta-v-error',
     'cta-p-config', 'cta-s-nombre', 'cta-s-correo', 'cta-s-actual', 'cta-s-actual-caja',
     'cta-s-nueva', 'cta-s-guardar', 'cta-s-error', 'cta-s-listo',
+    /* olvidé mi contraseña: sus dos pantallas y las dos puertas que llevan */
+    'cta-ir-olvide', 'ent-olvide',
+    'cta-p-olvide', 'cta-o-correo', 'cta-o-mandar', 'cta-o-error', 'cta-o-volver',
+    'cta-p-clave', 'cta-n-texto', 'cta-n-casillas', 'cta-n-nueva', 'cta-n-guardar',
+    'cta-n-otro', 'cta-n-error',
     'cta-g', 'cta-g-boton', 'cta-g2', 'cta-g2-boton',
     /* el menú de la barra */
     'menu-cuenta', 'menu-nombre', 'menu-correo', 'menu-viajes', 'menu-config', 'menu-salir'
@@ -137,6 +142,7 @@ PAGINAS.forEach(function (nombre) {
   igual('el código de la pantalla de pago tiene sus seis casillas',
     cuentaCasillas('cod-casillas'), 6);
   igual('y el de la barra también', cuentaCasillas('cta-c-casillas'), 6);
+  igual('y el de recuperar la contraseña también', cuentaCasillas('cta-n-casillas'), 6);
 
   /* Y que la página ya NO prometa que no hay cuentas: ese texto se escribió
      cuando la liga era el único camino, y ahora sería mentira. Se mira lo que

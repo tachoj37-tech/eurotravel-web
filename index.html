@@ -1077,6 +1077,10 @@
   .cta-opc { color: var(--muted); font-weight: 400; }
   .btn-ancho { width: 100%; justify-content: center; margin-top: 4px; }
   .cta-pie { font-size: 13px; color: var(--muted); margin-top: 18px; text-align: center; }
+  /* La liga de «olvidé mi contraseña» va justo debajo del botón de entrar y
+     centrada: es donde la busca quien acaba de fallar. */
+  .cta-olvide-liga { text-align: center; margin: 12px 0 0; }
+  .cta-olvide-liga .enlace-sec { margin-left: 0; }
   .cta-pie .enlace-sec { margin-left: 4px; }
   .cta-acciones { display: flex; gap: 10px; margin-top: 20px; }
   .cta-acciones .btn { flex: 1; justify-content: center; }
@@ -2550,6 +2554,9 @@ window.IMGS = {
                   </div>
                   <button class="btn btn-ink btn-sm" type="button" id="ent-entrar">Entrar</button>
                   <button class="enlace-sec" type="button" id="ent-crear-mejor">Mejor crear una cuenta</button>
+                  <!-- Lleva al mismo cuadro de la barra: una sola forma que
+                       mantener, dos puertas para llegar. -->
+                  <button class="enlace-sec" type="button" id="ent-olvide">Olvidé mi contraseña</button>
                   <p class="caminos-error" id="ent-error" role="alert"></p>
 
                   <div class="google-zona" id="g-entrar" style="display: none">
@@ -2833,6 +2840,9 @@ window.IMGS = {
         <input id="cta-e-clave" type="password" autocomplete="current-password" />
       </div>
       <button class="btn btn-red btn-ancho" type="button" id="cta-e-entrar">Entrar</button>
+      <p class="cta-olvide-liga">
+        <button class="enlace-sec" type="button" id="cta-ir-olvide">Olvidé mi contraseña</button>
+      </p>
       <p class="caminos-error" id="cta-e-error" role="alert"></p>
 
       <div class="google-zona" id="cta-g" style="display: none">
@@ -2917,6 +2927,47 @@ window.IMGS = {
         <button class="btn btn-line btn-sm" type="button" id="cta-d-viajes">Mis viajes</button>
         <button class="btn btn-red btn-sm" type="button" id="cta-d-cotizar">Cotizar un viaje</button>
       </div>
+    </div>
+
+    <!-- ---- olvidé mi contraseña ----
+         El ÚNICO correo que recibe una cuenta ya confirmada, y lo pidió así
+         el dueño. Es también la puerta más delicada: por aquí se cambia la
+         contraseña de alguien sin saber la que tenía. Lo que la sostiene es
+         que el código va al buzón, no a esta pantalla. -->
+    <div class="cta-panel" id="cta-p-olvide" style="display: none">
+      <p class="caminos-nota">
+        Escribe tu correo y te mandamos un código de 6 dígitos para poner una
+        contraseña nueva.
+      </p>
+      <div class="field">
+        <label for="cta-o-correo">Tu correo</label>
+        <input id="cta-o-correo" type="email" autocomplete="email" placeholder="tucorreo@ejemplo.com" />
+      </div>
+      <button class="btn btn-red btn-ancho" type="button" id="cta-o-mandar">Mándame el código</button>
+      <p class="caminos-error" id="cta-o-error" role="alert"></p>
+      <p class="cta-pie">¿Ya te acordaste?
+        <button class="enlace-sec" type="button" id="cta-o-volver">Entrar</button>
+      </p>
+    </div>
+
+    <!-- ---- el código + la contraseña nueva ---- -->
+    <div class="cta-panel" id="cta-p-clave" style="display: none">
+      <p class="caminos-nota" id="cta-n-texto"></p>
+      <div class="casillas" id="cta-n-casillas">
+        <input type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="1" aria-label="Dígito 1" />
+        <input type="text" inputmode="numeric" maxlength="1" aria-label="Dígito 2" />
+        <input type="text" inputmode="numeric" maxlength="1" aria-label="Dígito 3" />
+        <input type="text" inputmode="numeric" maxlength="1" aria-label="Dígito 4" />
+        <input type="text" inputmode="numeric" maxlength="1" aria-label="Dígito 5" />
+        <input type="text" inputmode="numeric" maxlength="1" aria-label="Dígito 6" />
+      </div>
+      <div class="field">
+        <label for="cta-n-nueva">Tu contraseña nueva</label>
+        <input id="cta-n-nueva" type="password" autocomplete="new-password" placeholder="Al menos 8 caracteres" />
+      </div>
+      <button class="btn btn-red btn-ancho" type="button" id="cta-n-guardar">Guardar y entrar</button>
+      <button class="enlace-sec" type="button" id="cta-n-otro">No me llegó — mándame otro</button>
+      <p class="caminos-error" id="cta-n-error" role="alert"></p>
     </div>
 
     <!-- ---- mis viajes ---- -->
@@ -3744,6 +3795,7 @@ window.IMGS = {
          que rompió la tecla de escape. */
       var cierraMenu = function () {};
       var avisaDentro = function () {};
+      var abreOlvide = function () {};
 
       /* Quien ya entró no ve la bifurcación: ve su nombre. */
       function pintaDentro() {
@@ -3889,6 +3941,9 @@ window.IMGS = {
       });
       byId('ent-crear-mejor').addEventListener('click', function () {
         byId('camino-cuenta').click();
+      });
+      byId('ent-olvide').addEventListener('click', function () {
+        abreOlvide((byId('ent-correo').value || byId('f-mail').value || '').trim());
       });
 
       /* ---- crear la cuenta ---- */
@@ -4070,7 +4125,7 @@ window.IMGS = {
         var googlePuesto = false;
 
         var PANELES = ['cta-p-entrar', 'cta-p-alta', 'cta-p-codigo', 'cta-p-dentro',
-          'cta-p-viajes', 'cta-p-config'];
+          'cta-p-viajes', 'cta-p-config', 'cta-p-olvide', 'cta-p-clave'];
         var TITULOS = {
           'cta-p-entrar': ['Entra a tu cuenta', 'Guarda tus viajes, mira tus saldos y abona sin buscar correos viejos.'],
           'cta-p-alta': ['Crea tu cuenta', 'No necesitas comprar nada para abrirla. Cuando cotices un viaje, ya va a quedar guardado aquí.'],
@@ -4079,7 +4134,9 @@ window.IMGS = {
              que el de arriba se calla: dos títulos seguidos se estorban. */
           'cta-p-dentro': ['', ''],
           'cta-p-viajes': ['Mis viajes', ''],
-          'cta-p-config': ['Configuración', '']
+          'cta-p-config': ['Configuración', ''],
+          'cta-p-olvide': ['Olvidé mi contraseña', ''],
+          'cta-p-clave': ['Tu contraseña nueva', '']
         };
 
         function verPanel(cual) {
@@ -4334,6 +4391,99 @@ window.IMGS = {
               : (r.datos.aviso || 'No se pudo mandar.');
           }).catch(function () { error.textContent = 'No hubo conexión.'; });
         });
+
+        /* ============================================================
+           OLVIDE MI CONTRASEÑA
+           ------------------------------------------------------------
+           Pedirlo contesta SIEMPRE lo mismo, exista o no la cuenta:
+           así se cuida allá y así se enseña aquí. Por eso la pantalla
+           pasa a las casillas pase lo que pase, con el mismo texto.
+           Si el correo no tiene cuenta, simplemente no le llega nada y
+           nadie se enteró de nada.
+           ============================================================ */
+        var CASN = armaCasillas('cta-n-casillas');
+        var correoAOlvidar = '';
+
+        byId('cta-ir-olvide').addEventListener('click', function () {
+          byId('cta-o-correo').value = (byId('cta-e-correo').value || '').trim();
+          byId('cta-o-error').textContent = '';
+          verPanel('cta-p-olvide');
+        });
+        byId('cta-o-volver').addEventListener('click', function () {
+          byId('cta-e-correo').value = (byId('cta-o-correo').value || '').trim();
+          verPanel('cta-p-entrar');
+        });
+
+        function pideCodigoDeClave(correo, dondeElError) {
+          var error = byId(dondeElError);
+          error.textContent = '';
+          return pideCuenta('olvide', { correo: correo }).then(function (r) {
+            byId('cta-n-texto').textContent = 'Si ese correo tiene cuenta, le acaba de llegar ' +
+              'un código de 6 dígitos' + ((r.datos && r.datos.pista) ? ' a ' + r.datos.pista : '') +
+              '. Tecléalo y escribe tu contraseña nueva.';
+            correoAOlvidar = correo;
+            CASN.vacia(); byId('cta-n-nueva').value = '';
+            byId('cta-n-error').textContent = '';
+            verPanel('cta-p-clave'); CASN.enfoca();
+          });
+        }
+
+        byId('cta-o-mandar').addEventListener('click', function () {
+          var error = byId('cta-o-error'), boton = byId('cta-o-mandar');
+          var correo = (byId('cta-o-correo').value || '').trim();
+          if (!correo) { error.textContent = 'Escribe tu correo.'; return; }
+
+          boton.disabled = true; boton.textContent = 'Mandando…';
+          pideCodigoDeClave(correo, 'cta-o-error').then(function () {
+            boton.disabled = false; boton.textContent = 'Mándame el código';
+          }).catch(function () {
+            boton.disabled = false; boton.textContent = 'Mándame el código';
+            error.textContent = 'No hubo conexión. Inténtalo en un momento.';
+          });
+        });
+
+        byId('cta-n-otro').addEventListener('click', function () {
+          var error = byId('cta-n-error');
+          error.textContent = 'Mandando…';
+          pideCuenta('olvide', { correo: correoAOlvidar }).then(function () {
+            error.textContent = 'Listo, va otro código en camino.';
+          }).catch(function () { error.textContent = 'No hubo conexión.'; });
+        });
+
+        byId('cta-n-guardar').addEventListener('click', function () {
+          var error = byId('cta-n-error'), boton = byId('cta-n-guardar');
+          error.textContent = ''; boton.disabled = true; boton.textContent = 'Guardando…';
+
+          pideCuenta('clave-nueva', {
+            correo: correoAOlvidar, codigo: CASN.leido(), nueva: byId('cta-n-nueva').value
+          }).then(function (r) {
+            boton.disabled = false; boton.textContent = 'Guardar y entrar';
+            if (r.status === 200) {
+              CASN.bien();
+              byId('cta-n-nueva').value = '';
+              CUENTA = { dentro: true, nombre: r.datos.nombre, correo: r.datos.correo, tieneClave: true };
+              pintaDentro();
+              verDentro('entro');
+              return;
+            }
+            /* Si lo que falló fue la contraseña y no el código, las casillas
+               no se borran: el cliente perdería el código por un error que no
+               tuvo nada que ver con él. */
+            if (!/contrase/i.test(r.datos.aviso || '')) CASN.mal();
+            error.textContent = r.datos.aviso || 'No se pudo.';
+          }).catch(function () {
+            boton.disabled = false; boton.textContent = 'Guardar y entrar';
+            error.textContent = 'No hubo conexión. Inténtalo en un momento.';
+          });
+        });
+
+        /* Desde la pantalla de pago se llega al mismo lugar: una sola forma
+           que mantener, dos puertas para llegar. */
+        abreOlvide = function (correo) {
+          byId('cta-o-correo').value = String(correo || '').trim();
+          byId('cta-o-error').textContent = '';
+          muestra('cta-p-olvide');
+        };
 
         /* ---- ya dentro ---- */
         byId('cta-d-viajes').addEventListener('click', function () {
