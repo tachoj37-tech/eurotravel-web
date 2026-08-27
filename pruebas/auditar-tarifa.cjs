@@ -103,6 +103,11 @@ const SU_LISTA = [
   ['San Juan Cosalá, Jalisco, México', 6500],
   ['Magdalena, Jalisco, México', 7500],
   ['Zirahuén, Michoacán, México', 23000],
+  /* Segunda tanda dictada (26-ago-2026). Zacoalco a 5,000 con los mismos
+     kilometros que Tequila a 7,000: el precio no es funcion del km (R12). */
+  ['Tala, Jalisco, México', 6000],
+  ['Zacoalco de Torres, Jalisco, México', 5000],
+  ['Cocula, Jalisco, México', 6500],
   /* Cambió de 8,500 a 7,000 el 26-ago-2026. No es que la prueba estuviera
      mal: el dueño bajó el precio de lista de la Sprinter a Tequila. */
   ['Tequila, Jalisco, México', 7000],

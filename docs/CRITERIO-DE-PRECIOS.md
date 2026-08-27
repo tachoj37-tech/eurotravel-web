@@ -171,9 +171,23 @@ camino (o pegado) a uno de la lista, el precio sale del de la lista — hacia
 arriba Y hacia abajo. Cada corrección entra al catálogo como renglón propio,
 como entraron León y Tepic.
 
-**Cómo detectarlo antes de que lo corrija:** al proponer una lista de viajes,
-señalar todo destino a menos de ~30 km de uno del catálogo y proponer el
-precio anclado, no el de la fórmula.
+**Cómo detectarlo:** al presentar una lista de viajes, señalar todo destino
+pegado a uno del catálogo — señalarlo, NO proponerle precio (ver R12).
+
+### R12 · YO NO PROPONGO PRECIOS (26-ago-2026)
+
+Propuse cuatro precios anclados y el dueño me paró en seco: *«para empezar
+tú no propongas precios, la tabla se edita con los años, esos precios están
+ya por algo, solo quiero ajustar tu criterio».*
+
+**La regla:** mi trabajo es enseñar QUÉ COBRARÍA la página y señalar lo que
+huela raro (vecino más barato que la lista, medición absurda). El número lo
+dicta él, siempre. Cada precio dictado entra al catálogo tal cual.
+
+Y la prueba de que la tabla no se puede modelar: el mismo día dictó
+Zacoalco $5,000 (136 km medidos) y Tequila vale $7,000 a los mismos 136 km.
+El precio no es función del kilómetro ni ahí: cada ruta tiene su historia
+(cuota, competencia, años de ajustes). Por eso no se extrapola.
 
 ### R10 · El precio depende del origen — PENDIENTE, ignorar por ahora
 

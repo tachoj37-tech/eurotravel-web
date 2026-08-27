@@ -64,6 +64,19 @@ const DESTINOS = [
   { nombre: "Chapala", km: 100,
     busca: /chapala|ajijic/i,
     precio: { busNC47: 10500, bus4849: 12000, neobusI6: 13000, pbI6: 12000, marcopolo: 15000, irizar: 14000, sprinter: 6500 } },
+  /* Los tres siguientes los dictó el dueño el 26-ago-2026, segunda tanda
+     (la fórmula los cobraba 8,500 / 9,500 / 9,700). Ojo con Zacoalco:
+     $5,000 a los mismos kilómetros que Tequila ($7,000) — el precio no es
+     función del kilómetro, cada ruta tiene su historia (criterio R12). */
+  { nombre: "Tala", km: 91,
+    busca: /\btala\b/i,
+    precio: { sprinter: 6000 } },
+  { nombre: "Zacoalco de Torres", km: 136,
+    busca: /zacoalco/i,
+    precio: { sprinter: 5000 } },
+  { nombre: "Cocula", km: 145,
+    busca: /\bcocula\b/i,
+    precio: { sprinter: 6500 } },
   { nombre: "Tequila / Guachimontones", km: 136,
     busca: /tequila|guachimont|amatit/i,
     /* Sprinter bajado de 8,500 a 7,000 el 26-ago-2026 por decisión del dueño.
