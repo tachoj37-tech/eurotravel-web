@@ -41,6 +41,7 @@ De ahí se siguen tres reglas de conducta:
 | **R14** | el día de un paquete corre en los dos sentidos | Cancún baja $4,000 por día menos |
 | **R15** | la medición depende de la salida | las tandas salen del centro de Guadalajara |
 | **R16** | arriba de 1,400 km ya se cotiza solo | $36 el km, y menos fiable — saberlo |
+| **R17** | hay destinos donde moverse no cuesta | Barrancas: $3,000 el día, se mueva o no |
 | **R10** | *pendiente:* el precio depende del origen | la fila de Ocotlán, ignorada por ahora |
 
 ---
@@ -307,12 +308,33 @@ Chiapas =  $85,000 + (días −  8) × $4,000     («Chiapas igual que Cancún»
 
 Acapulco = $60,000 + (días −  4) × $2,000     («Acapulco 2000 el día»)
     3 días →  $58,000      5 días →  $62,000
+
+Barrancas = $75,000 + (días − 4) × $3,000     («3000 día CON O SIN mov»)
+    3 días →  $72,000      5 días →  $78,000
 ```
 
 Antes el día extra sumaba $1,000 y pedir menos días no descontaba nada.
 
-**Barrancas y Talpa Burrita siguen con la noche de $1,000**: el dueño dictó
-Cancún, Chiapas y Acapulco, y de esos dos no dijo nada. No se extrapola (R12).
+**Talpa Burrita se queda como está** — el dueño lo revisó y dijo «ok»:
+$26,500 por sus 4 días, la noche de más a $1,000 y los movimientos por
+banda. Es el único paquete que no descuenta al pedir menos días.
+
+### R17 · Hay destinos donde moverse NO cuesta aparte (26-ago-2026)
+
+*«Barrancas del Cobre, 3,000 el día, con o sin movimientos.»*
+
+Es el primero así: allá el viaje **es** el recorrido, no un traslado con
+paseos sueltos, y su banda de horas va apagada. Un día de 13 horas cuesta lo
+mismo que uno parado.
+
+Se expresa con `movimientoPorDia: 0` en la tabla de destinos con regla — la
+misma donde viven CDMX y la Huasteca. Y ahí salió un defecto latente: el
+código leía la tarifa fija con `fijo || banda`, así que **un cero se caía a
+la banda por ser falso** y la regla no habría servido de nada. Ahora se lee
+con `typeof`.
+
+**Lección: una tarifa de cero es un valor válido, no un valor ausente.** El
+`||` no distingue entre «no hay tarifa» y «la tarifa es cero».
 
 **Lección:** cuando el dueño da una tarifa de día, preguntar SIEMPRE si baja
 además de subir. La mitad hacia abajo no se deduce sola.
@@ -358,12 +380,14 @@ lanzamiento.**
 
 ### Preguntas abiertas (lanzarlas al dueño en la siguiente ronda)
 
-- **Barrancas del Cobre y Talpa Burrita**: siguen con la noche de $1,000. El
-  dueño ya dictó el día de Cancún ($4,000), Chiapas ($4,000) y Acapulco
-  ($2,000); de esos dos no ha dicho nada.
+- **CUÁNTOS DÍAS INCLUYE BARRANCAS.** Es la única columna grande del Excel
+  que no lo dice, así que la página le puso el paquete por omisión —4 días—
+  y eso es **suposición mía**. Si el viaje son 6 o 7 días, su día de $3,000
+  arranca demasiado pronto y le cobra de más al cliente.
 - Un paquete con movimientos (Cancún moviéndose allá): hoy suma las bandas
   encima del paquete. ¿O el paquete ya lo trae todo, como Tolantongo?
-- **Cuántos días incluye cada paquete.** Solo están confirmados Tolantongo
-  (3) y Guayabitos (4, «hasta 4 días»). Los demás salen del nombre de su
-  columna del Excel. Si alguno no dura lo que dice el nombre, su día extra
-  empieza en el día equivocado — que fue justo el error de Tolantongo.
+- **Cuántos días incluye cada paquete.** Confirmados: Tolantongo (3),
+  Guayabitos (4, «hasta 4 días») y Talpa Burrita (4, revisado y «ok»). Los
+  demás salen del nombre de su columna. Si alguno no dura lo que dice el
+  nombre, su día extra empieza en el día equivocado — que fue justo el error
+  de Tolantongo.

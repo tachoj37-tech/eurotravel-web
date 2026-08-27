@@ -402,6 +402,16 @@ const DESTINOS_CON_REGLA = [
     nombre: 'Ciudad de México',
     enTexto: /ciudad de m[eé]xico|cdmx/i,
     estadiaPorDia: true
+  },
+  /* Barrancas del Cobre: «3,000 el día, CON O SIN movimientos» (dueño,
+     26-ago-2026). Es el primer destino donde moverse no cuesta aparte — allá
+     el viaje es el recorrido, no un traslado con paseos sueltos. El día lo
+     cobra su `diaExtra` del catálogo; aquí solo se apaga la banda de horas,
+     para que un día movido no sume otros $3,000 encima. */
+  {
+    nombre: 'Barrancas del Cobre',
+    enTexto: /barranca|creel/i,
+    movimientoPorDia: 0
   }
 ];
 
@@ -464,14 +474,18 @@ function bandaDe(horas) {
 function movimientosDe(lista, diasDeServicio, regla) {
   if (!Array.isArray(lista)) return [];
   const tope = Math.min(TOPE_DIAS_MOVIMIENTO, Math.max(0, Math.floor(Number(diasDeServicio) || 0)));
-  const fijo = regla && regla.movimientoPorDia;
+  /* `typeof`, no `&&`: una tarifa fija de CERO es válida —Barrancas cobra el
+     día igual se mueva o no— y con `fijo || banda` el cero se caía a la banda
+     por ser falso. */
+  const fijo = regla && typeof regla.movimientoPorDia === 'number'
+    ? regla.movimientoPorDia : null;
   const salida = [];
   for (let i = 0; i < lista.length && salida.length < tope; i++) {
     const d = lista[i] || {};
     const horas = horasDe(d.horaInicio, d.horaFin);
     /* Con regla propia las horas no cambian el precio, pero SÍ se guardan:
        el operador necesita saber a qué hora, aunque cueste lo mismo. */
-    salida.push({ horas: horas, precio: fijo || bandaDe(horas).precio });
+    salida.push({ horas: horas, precio: fijo === null ? bandaDe(horas).precio : fijo });
   }
   return salida;
 }

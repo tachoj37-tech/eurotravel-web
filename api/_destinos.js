@@ -296,7 +296,19 @@ const DESTINOS = [
      cobrarle de mas. Quien escriba «Chihuahua» va con un asesor. */
   { nombre: "Barrancas del Cobre", km: 2882,
     busca: /barranca|creel/i,
-    precio: { busNC47: 105000, bus4849: 110000, neobusI6: 120000, pbI6: 115000, marcopolo: 130000, irizar: 125000, sprinter: 75000 } },
+    /* «3,000 el día, con o sin movimientos» (dueño, 26-ago-2026). El día
+       corre en los dos sentidos, como todo día dictado (R14), y la banda de
+       horas va apagada en `DESTINOS_CON_REGLA` para que moverse no sume
+       aparte.
+
+       OJO: su columna del Excel NO dice cuántos días incluye —es la única de
+       las grandes que no lo dice— así que los 4 de aquí son SUPOSICIÓN mía,
+       el paquete por omisión. Está anotado en las preguntas abiertas del
+       criterio: si el viaje son 6 o 7 días, el cobro extra arranca antes de
+       tiempo. */
+    precio: { busNC47: 105000, bus4849: 110000, neobusI6: 120000, pbI6: 115000, marcopolo: 130000, irizar: 125000, sprinter: 75000 },
+    diasIncluidos: 4,
+    diaExtra: 3000 },
   { nombre: "Cancún", km: 4282,
     busca: /canc|riviera maya|playa del carmen|tulum/i,
     /* «CANCUN 17 DIAS»: el precio YA incluye los diecisiete días. Antes se

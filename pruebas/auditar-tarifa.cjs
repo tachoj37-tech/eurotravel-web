@@ -169,7 +169,9 @@ const SU_LISTA = [
   /* Chiapas: 85,000 POR 8 DIAS, y su dia vale 4,000 en los dos sentidos,
      igual que Cancun («Chiapas igual que Cancun, 4000», 26-ago-2026). */
   ['San Cristóbal de las Casas, Chiapas, México', 85000, { diasIncluidos: 8, diaExtra: 4000 }],
-  ['Barrancas del Cobre, Chihuahua, México', 75000],
+  /* Barrancas: su dia vale 3,000 CON O SIN movimientos (26-ago-2026). Los
+     4 dias son suposicion —su columna del Excel no dice cuantos incluye—. */
+  ['Barrancas del Cobre, Chihuahua, México', 75000, { diasIncluidos: 4, diaExtra: 3000, movimientoCero: true }],
   /* Cancun: 145,000 POR 17 DIAS, y su dia vale 4,000 en los dos sentidos
      («el dia esta en 4000» / «si quiere 15 dias serian 8,000 menos»). */
   ['Cancún, Quintana Roo, México', 145000, { diasIncluidos: 17, diaExtra: 4000 }]
@@ -468,6 +470,27 @@ const SU_LISTA = [
   igual('Acapulco 5 dias: +2,000 (antes +1,000)', sinMov(ACA, 5), 62000);
   igual('Acapulco 3 dias: 2,000 menos', sinMov(ACA, 3), 58000);
 
+  /* --- BARRANCAS DEL COBRE: 3,000 el dia, CON O SIN movimientos ---
+     Dictado el 26-ago-2026. Es el primer destino donde moverse no cuesta
+     aparte: alla el viaje ES el recorrido. Antes el dia valia la noche de
+     1,000 y cada dia movido sumaba su banda encima. */
+  const BAR = 'Barrancas del Cobre, Chihuahua, México';
+  igual('Barrancas 4 dias: sus 75,000 del Excel', sinMov(BAR, 4), 75000);
+  igual('Barrancas 5 dias: +3,000', sinMov(BAR, 5), 78000);
+  igual('Barrancas 3 dias: 3,000 menos', sinMov(BAR, 3), 72000);
+  /* lo que lo distingue de todos los demas: moverse NO suma */
+  [3, 4, 5, 7].forEach(function (d) {
+    igual('Barrancas ' + d + ' dias: moverse no cambia el precio',
+      conMov(BAR, d, d), sinMov(BAR, d));
+  });
+  /* ni con la banda mas cara, que en cualquier otro destino valdria 5,000 */
+  const barLargo = t.calcula(999, 4, {
+    destino: { direccion: BAR }, noches: 3,
+    movimientos: [{ horaInicio: '08:00', horaFin: '21:00' }, { horaInicio: '08:00', horaFin: '21:00' }]
+  });
+  igual('ni con jornadas de 13 horas', barLargo.total, 75000);
+  igual('y el desglose lo dice: cero de movimientos', barLargo.desglose.importeMovimientos, 0);
+
   /* Y los paquetes que el dueño NO ha tocado siguen dando su precio del
      Excel a su propia duracion. Es la prueba de que quitar el piso de las
      tres noches no movio a nadie mas. */
@@ -642,7 +665,10 @@ const SU_LISTA = [
         casos++;
         const cuantos = Math.min(movs.length, dias);
         let movAMano = 0;
-        for (let i = 0; i < cuantos; i++) movAMano += diaDeMovimientoAMano(movs[i].horas, false);
+        /* Barrancas cobra el dia igual se mueva o no: su banda vale cero. */
+        if (!(fila[2] && fila[2].movimientoCero)) {
+          for (let i = 0; i < cuantos; i++) movAMano += diaDeMovimientoAMano(movs[i].horas, false);
+        }
 
         /* Tres formas de armar el esperado, segun la regla del Excel
            (cambio de lado el 26-ago-2026, criterio R1 y R2):

@@ -128,9 +128,13 @@ function en(direccion, placeId) { return { direccion: direccion, placeId: placeI
      precio de Barrancas era cobrarle de mas. */
   cierto('la ciudad de Chihuahua ya NO es Barrancas',
     t.trasladoDe(2400, en('Chihuahua, Chihuahua, México')).deLista === undefined);
+  /* Van con sus 4 dias: desde el 26-ago-2026 el precio de Barrancas depende
+     de la duracion —su dia vale 3,000, con o sin movimientos— asi que sin
+     decir dias se lee como un viaje de uno solo. */
   igual('pero las Barrancas siguen en su precio',
-    t.trasladoDe(2882, en('Barrancas del Cobre, Chihuahua, México')).total, 75000);
-  igual('y Creel tambien', t.trasladoDe(2800, en('Creel, Chihuahua, México')).total, 75000);
+    t.trasladoDe(2882, en('Barrancas del Cobre, Chihuahua, México'), null, 4).total, 75000);
+  igual('y Creel tambien',
+    t.trasladoDe(2800, en('Creel, Chihuahua, México'), null, 4).total, 75000);
 })();
 
 /* ---- 4. LA FORMULA DE RESPALDO: $6,500 + $22 EL KILOMETRO ----

@@ -191,8 +191,12 @@ const CRUCE = {
    verdad importaba.
    ============================================================ */
 (function () {
-  function precio(direccion) {
-    return tarifa.trasladoDe(999, { direccion: direccion }).total;
+  /* `dias` importa: varios destinos ya cobran segun la duracion, asi que sin
+     decirlo se leen como un viaje de UN dia y devuelven otro numero. Por
+     omision se piden a un dia, que es como estaba, y quien tenga paquete
+     pasa el suyo. */
+  function precio(direccion, dias) {
+    return tarifa.trasladoDe(999, { direccion: direccion }, null, dias || 1).total;
   }
   function pideAsesor(direccion, km) {
     return !!tarifa.trasladoDe(km, { direccion: direccion }).requiereAsesor;
@@ -225,7 +229,9 @@ const CRUCE = {
   igual('Guanajuato sigue en 19,000', precio('Guanajuato, Guanajuato, México'), 19000);
   igual('Puebla sigue en 36,500', precio('Puebla, Puebla, México'), 36500);
   igual('Oaxaca sigue en 75,000', precio('Oaxaca de Juárez, Oaxaca, México'), 75000);
-  igual('Barrancas sigue en 75,000', precio('Barrancas del Cobre, Chihuahua, México'), 75000);
+  /* Barrancas se pide a sus 4 dias: su precio depende de la duracion desde
+     que el dueño le dicto el dia de 3,000 (26-ago-2026). */
+  igual('Barrancas sigue en 75,000', precio('Barrancas del Cobre, Chihuahua, México', 4), 75000);
 })();
 
 /* ============================================================
