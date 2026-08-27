@@ -273,6 +273,77 @@ async function traeCliente(id) {
 
 /* Escribe campos de metadata en la ficha del cliente. Un valor `null` o ''
    BORRA ese campo: asi se limpia el codigo cuando ya se uso. */
+/* ------------------------------------------------------------
+   BUSCAR AL CLIENTE POR SU CORREO
+   ------------------------------------------------------------
+   Es lo que sostiene las cuentas: el correo es el nombre de
+   usuario, y aquí se averigua si ya existe.
+
+   Va por FILTRO DE LISTA y no por la búsqueda de Stripe, por lo
+   mismo que `sesionPorPago`: la búsqueda tarda hasta un minuto en
+   reflejar lo recién escrito, y aquí se consulta justo después de
+   crear una cuenta.
+
+   EL FILTRO DISTINGUE MAYUSCULAS —comprobado contra la cuenta
+   real—, así que el correo tiene que llegar ya normalizado. De eso
+   se encarga `_cuentas.normalizaCorreo`, y por eso esta función NO
+   lo normaliza: si lo hiciera por su cuenta, encontraría clientes
+   que se guardaron con otra forma y daría una falsa sensación de
+   que el asunto está resuelto.
+
+   Se piden DOS y no uno a propósito: Stripe no impide dos clientes
+   con el mismo correo, y quien llama necesita poder darse cuenta.
+   ------------------------------------------------------------ */
+async function clientesPorCorreo(correo) {
+  const k = clave();
+  if (!k) return { error: 'sin clave de Stripe' };
+  const c = String(correo || '').trim();
+  if (!c) return { error: 'sin correo que buscar' };
+  try {
+    const r = await fetch(STRIPE + '/customers?email=' + encodeURIComponent(c) + '&limit=2', {
+      headers: { 'Authorization': 'Bearer ' + k }
+    });
+    const d = await r.json();
+    if (!r.ok || (d && d.error)) return { error: 'Stripe rechazó la consulta', reintentar: true };
+    return { clientes: (d && d.data) || [] };
+  } catch (e) {
+    return { error: 'no se pudo consultar a Stripe', reintentar: true };
+  }
+}
+
+/* ------------------------------------------------------------
+   CREAR EL CLIENTE
+   ------------------------------------------------------------
+   Hasta hoy los clientes nacían solos, dentro del cobro
+   (`customer_creation: 'always'`). Con cuentas nacen ANTES de
+   pagar: alguien puede registrarse y no comprar nunca.
+   ------------------------------------------------------------ */
+async function creaCliente(datos) {
+  const k = clave();
+  if (!k) return { error: 'sin clave de Stripe' };
+  const d = datos || {};
+  const cuerpo = {};
+  if (d.email) cuerpo.email = paraStripe(d.email).slice(0, 160);
+  if (d.name) cuerpo.name = paraStripe(d.name).slice(0, 120);
+  if (d.phone) cuerpo.phone = paraStripe(d.phone).slice(0, 30);
+  if (d.metadata) cuerpo.metadata = d.metadata;
+  try {
+    const r = await fetch(STRIPE + '/customers', {
+      method: 'POST',
+      headers: {
+        'Authorization': 'Bearer ' + k,
+        'Content-Type': 'application/x-www-form-urlencoded'
+      },
+      body: aFormulario(cuerpo).join('&')
+    });
+    const j = await r.json();
+    if (!r.ok || (j && j.error)) return { error: 'Stripe rechazó el alta', reintentar: r.status >= 500 };
+    return { cliente: j };
+  } catch (e) {
+    return { error: 'no se pudo hablar con Stripe', reintentar: true };
+  }
+}
+
 async function guardaEnCliente(id, metadata) {
   const k = clave();
   if (!k) return { error: 'sin clave de Stripe' };
@@ -327,6 +398,8 @@ module.exports = {
   sesionPorPago,
   cargoDelPago,
   traeCliente,
+  clientesPorCorreo,
+  creaCliente,
   guardaEnCliente,
   creaSesionDeCobro,
   paraStripe,

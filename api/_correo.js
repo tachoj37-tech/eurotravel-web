@@ -398,6 +398,68 @@ function mensajeDeCodigo(aDonde, codigo, nombre, folio) {
 }
 
 /* ------------------------------------------------------------
+   EL CODIGO PARA CONFIRMAR UNA CUENTA NUEVA
+   ------------------------------------------------------------
+   Se parece al de arriba pero NO es el mismo, y la diferencia es
+   el aviso del final. Aquel dice «si no lo pediste tú, alguien
+   tiene tu liga», que ahí es cierto y da miedo con razón. Aquí no:
+   quien recibe esto puede ser alguien que ni sabe que existimos,
+   porque otro escribió su correo al registrarse. A ése hay que
+   decirle que no haga nada y ya.
+
+   Una alarma que asusta a quien no corre peligro se vuelve ruido, y
+   el día que importe nadie la lee.
+   ------------------------------------------------------------ */
+function mensajeDeCuenta(aDonde, codigo, nombre) {
+  const quien = String(nombre || '').trim().split(/\s+/)[0];
+  const c = String(codigo || '');
+
+  const html =
+    '<div style="font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;' +
+    'max-width:440px;margin:0 auto;color:#1d1d1b;line-height:1.55">' +
+      '<p style="font-size:15px;margin:0 0 20px">' +
+        (quien ? 'Hola ' + esc(quien) + ',' : 'Hola,') + '</p>' +
+      '<p style="font-size:15px;margin:0 0 22px">Confirma tu correo con este código ' +
+        'y tu cuenta de Eurotravel queda lista:</p>' +
+      '<div style="border:2px solid #1d1d1b;border-radius:12px;padding:20px;text-align:center">' +
+        '<div style="font-size:38px;font-weight:700;letter-spacing:.22em;' +
+          'font-variant-numeric:tabular-nums">' + esc(c) + '</div>' +
+      '</div>' +
+      '<p style="font-size:13.5px;color:#6e6e6a;margin:20px 0 0">' +
+        'Vence en 10 minutos. Si no fuiste tú quien se registró, ' +
+        'no tienes que hacer nada: sin este código la cuenta no se abre.</p>' +
+      '<p style="font-size:12.5px;color:#6e6e6a;margin:26px 0 0;padding-top:16px;' +
+        'border-top:1px solid #e6e6e3">Eurotravel · San Pedro Tlaquepaque, Jalisco</p>' +
+    '</div>';
+
+  const texto = [
+    (quien ? 'Hola ' + quien + ',' : 'Hola,'),
+    '',
+    'Confirma tu correo con este código y tu cuenta de Eurotravel queda lista:',
+    '',
+    '    ' + c,
+    '',
+    'Vence en 10 minutos.',
+    'Si no fuiste tú quien se registró, no tienes que hacer nada:',
+    'sin este código la cuenta no se abre.',
+    '',
+    'Eurotravel · San Pedro Tlaquepaque, Jalisco'
+  ].join('\n');
+
+  return {
+    from: DE,
+    to: [String(aDonde || '').trim().toLowerCase()],
+    subject: c + ' es tu código para confirmar tu cuenta',
+    html: html,
+    text: texto
+  };
+}
+
+async function mandaCodigoDeCuenta(aDonde, codigo, nombre) {
+  return manda(mensajeDeCuenta(aDonde, codigo, nombre));
+}
+
+/* ------------------------------------------------------------
    EL AVISO A LA OFICINA
    ------------------------------------------------------------
    Para lo que una persona tiene que atender hoy mismo: un
@@ -443,6 +505,7 @@ async function mandaContrato(metadata, pdfBase64, liga) {
 module.exports = {
   DE, hayClave, porQueNoSePuede, pistaDelFallo,
   fechaLarga, datosDelCorreo, mensajeDeContrato, mensajeDeCodigo,
+  mensajeDeCuenta, mandaCodigoDeCuenta,
   aDondeAvisar, mandaALaOficina,
   manda, mandaContrato
 };

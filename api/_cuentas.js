@@ -57,6 +57,10 @@ const CAMPO_SAL = 'cuenta_sal';
 const CAMPO_VERIFICADA = 'cuenta_verificada';
 const CAMPO_GOOGLE = 'cuenta_google';
 const CAMPO_CREADA = 'cuenta_creada';
+/* El freno de reenvíos, más abajo. */
+const CAMPO_ENVIOS = 'cuenta_envios';
+const CAMPO_ENVIO_MS = 'cuenta_envio_ms';
+const CAMPO_VENTANA = 'cuenta_envio_desde';
 
 /* ------------------------------------------------------------
    EL COSTO DE `scrypt`, Y POR QUE ESTOS NUMEROS
@@ -220,8 +224,85 @@ function correoValido(correo) {
   return /^[^\s@]+@[^\s@.]+\.[^\s@]{2,}$/.test(c);
 }
 
+/* ============================================================
+   EL FRENO DE LOS REENVIOS
+   ------------------------------------------------------------
+   El dueño pidió que el código se pueda mandar «las veces que sea
+   necesario» hasta que el cliente confirme. Necesario no es
+   infinito: sin freno, cualquiera escribe el correo de otro y le
+   llena la bandeja, y de paso nos gasta el envío.
+
+   VIVE EN LA FICHA DE STRIPE, NO EN MEMORIA, y eso importa por dos
+   razones. Una: en funciones serverless cada llamada puede caer en
+   otra máquina, así que un contador en memoria no cuenta nada —el
+   atacante solo tiene que insistir hasta que le toque una máquina
+   fresca—. Dos: la regla 5 del proyecto dice que un contador en
+   memoria con clave que elige el atacante crece sin tope, y aquí
+   la clave sería un correo del cuerpo de la petición. En la ficha
+   del cliente no hay mapa que crezca: cada cuenta lleva su cuenta.
+
+   Dos topes, y cada uno ataja algo distinto:
+     · UN MINUTO entre envíos ataja el dedo nervioso y el bot tonto
+     · DOCE en 24 horas ataja el llenado de bandeja
+
+   La ventana es de reloj, no de calendario: así no hay que pensar
+   en husos horarios (regla 7) ni hay medianoche que regale doce
+   envíos nuevos.
+   ============================================================ */
+const ESPERA_MS = 60 * 1000;
+const TOPE_VENTANA = 12;
+const VENTANA_MS = 24 * 60 * 60 * 1000;
+
+function puedeMandarCodigo(metadata, ahoraMs) {
+  const m = metadata || {};
+  const ahora = typeof ahoraMs === 'number' ? ahoraMs : Date.now();
+
+  const ultimo = Number(m[CAMPO_ENVIO_MS]);
+  if (isFinite(ultimo) && ultimo > 0 && ahora - ultimo < ESPERA_MS) {
+    const faltan = Math.ceil((ESPERA_MS - (ahora - ultimo)) / 1000);
+    return { ok: false, motivo: 'muy seguido', segundos: faltan };
+  }
+
+  const desde = Number(m[CAMPO_VENTANA]);
+  const van = Number(m[CAMPO_ENVIOS]) || 0;
+  /* Fuera de la ventana el contador ya no cuenta: empieza una nueva. */
+  if (isFinite(desde) && desde > 0 && ahora - desde < VENTANA_MS && van >= TOPE_VENTANA) {
+    return { ok: false, motivo: 'demasiados hoy' };
+  }
+  return { ok: true };
+}
+
+/* Lo que hay que escribir después de mandar uno. Se devuelve en vez de
+   escribirse aquí para poder probarlo sin red, como todo lo demás. */
+function paraContarEnvio(metadata, ahoraMs) {
+  const m = metadata || {};
+  const ahora = typeof ahoraMs === 'number' ? ahoraMs : Date.now();
+  const desde = Number(m[CAMPO_VENTANA]);
+  const dentro = isFinite(desde) && desde > 0 && ahora - desde < VENTANA_MS;
+  const van = dentro ? (Number(m[CAMPO_ENVIOS]) || 0) : 0;
+
+  const out = {};
+  out[CAMPO_ENVIOS] = String(van + 1);
+  out[CAMPO_ENVIO_MS] = String(ahora);
+  out[CAMPO_VENTANA] = String(dentro ? desde : ahora);
+  return out;
+}
+
+/* Al confirmar se borra el contador: la cuenta ya no manda códigos de alta,
+   y si algún día se le olvida la contraseña arranca de cero. */
+function paraBorrarEnvios() {
+  const m = {};
+  m[CAMPO_ENVIOS] = '';
+  m[CAMPO_ENVIO_MS] = '';
+  m[CAMPO_VENTANA] = '';
+  return m;
+}
+
 module.exports = {
   CAMPO_HASH, CAMPO_SAL, CAMPO_VERIFICADA, CAMPO_GOOGLE, CAMPO_CREADA,
+  CAMPO_ENVIOS, CAMPO_ENVIO_MS, CAMPO_VENTANA,
+  ESPERA_MS, TOPE_VENTANA, VENTANA_MS,
+  puedeMandarCodigo, paraContarEnvio, paraBorrarEnvios,
   MINIMO, MAXIMO,
   porQueNoSirve, nuevaSal, resumen,
   paraCrear, paraCambiar, paraVerificar, paraLigarGoogle,
