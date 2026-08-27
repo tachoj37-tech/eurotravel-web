@@ -136,9 +136,53 @@ function codigoDelCorreo() {
     cierto('la deja verificada', bien.cuerpo.verificada);
     cierto('y abre sesión', !!bien.sesionPara);
     cierto('la ficha queda verificada', cuentas.estaVerificada(ficha('ana@ejemplo.mx').metadata));
-    /* de un solo uso */
+    /* ------------------------------------------------------------
+       ESTA ASERCION CAMBIO DE LADO, Y ES LA MAS CARA DEL PROYECTO
+       ------------------------------------------------------------
+       Decía: «confirmar dos veces no truena, solo entra», y comprobaba que
+       la segunda vez devolviera `yaEstaba` y abriera sesión.
+
+       Estaba dando por buena una ENTRADA LIBRE A CUALQUIER CUENTA. El código
+       cortaba antes de revisar los seis dígitos si la cuenta ya estaba
+       verificada —y toda cuenta que sirve lo está—, así que con el correo de
+       alguien y un código inventado se recibía su sesión, sus viajes y las
+       ligas de sus contratos. Comprobado, no supuesto.
+
+       La prueba no lo cazó porque estaba escrita para confirmar la intención
+       («que no truene si le dan dos veces») en vez de para atacar el camino.
+       Una prueba que solo repite lo que el código quiso hacer no revisa nada.
+
+       Ahora se comprueba lo contrario: el código es de UN SOLO USO y sin
+       código no hay sesión, le hayan dado dos veces o veinte. */
     const otraVez = await logica.confirmar({ correo: 'ana@ejemplo.mx', codigo: codigo });
-    cierto('confirmar dos veces no truena, solo entra', otraVez.cuerpo.yaEstaba);
+    igual('el mismo código NO sirve dos veces', otraVez.status, 422);
+    falso('y la segunda vez NO abre sesión', otraVez.sesionPara);
+  }
+
+  /* ============ 2-bis. NO SE ENTRA A UNA CUENTA AJENA SIN EL CODIGO ============
+     De la revisión de seguridad del 27-ago-2026. Es el ataque completo, tal
+     como se hacía: se conoce el correo de alguien y nada más. */
+  {
+    /* NO se vacían FICHAS ni CORREOS: los bloques de abajo cuentan con la
+       cuenta de Ana ya creada. Se usa un correo nuevo y ya. */
+    await logica.crear({ correo: 'victima@ejemplo.mx', contrasena: 'su contraseña privada',
+      nombre: 'Otra Persona' });
+    const suyo = /\b(\d{6})\b/.exec(CORREOS[CORREOS.length - 1].text)[1];
+    await logica.confirmar({ correo: 'victima@ejemplo.mx', codigo: suyo });
+
+    const intentos = [
+      ['un código inventado', '000000'],
+      ['el código en blanco', ''],
+      ['sin código', undefined],
+      ['letras', 'abcdef'],
+      ['el código que YA se usó', suyo]
+    ];
+    const entraron = [];
+    for (let i = 0; i < intentos.length; i++) {
+      const r = await logica.confirmar({ correo: 'victima@ejemplo.mx', codigo: intentos[i][1] });
+      if (r.sesionPara) entraron.push(intentos[i][0]);
+    }
+    igual('con el correo de otro, NADA abre su sesión', entraron, []);
   }
 
   /* ============ 3. NADA DICE SI UN CORREO YA TIENE CUENTA ============

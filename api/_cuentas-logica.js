@@ -236,12 +236,47 @@ async function confirmar(cuerpo, ahoraMs) {
   const generico = 'Ese código no es. Revísalo o pide otro.';
   if (!cliente || !cuentas.tieneCuenta(cliente.metadata || {})) return no(422, generico);
 
-  if (cuentas.estaVerificada(cliente.metadata || {})) {
-    /* Ya estaba: no es un error, es que le dieron dos veces. Se abre sesión y
-       ya, en vez de mandarlo a empezar de nuevo. */
-    return { status: 200, cuerpo: ok({ yaEstaba: true }), sesionPara: cliente.id };
-  }
+  /* ------------------------------------------------------------
+     AQUI HABIA UNA ENTRADA LIBRE A CUALQUIER CUENTA
+     ------------------------------------------------------------
+     Encontrada en la revisión de seguridad del 27-ago-2026, y
+     comprobada. Antes de mirar el código estaba esto:
 
+         if (estaVerificada(cliente.metadata)) {
+           return { status: 200, cuerpo: ok({ yaEstaba: true }),
+                    sesionPara: cliente.id };     // <-- sesión
+         }
+
+     La intención era buena y se lee bien: «le dieron dos veces al
+     botón, no lo mandes a empezar de nuevo». Pero abría sesión
+     ANTES de comprobar el código, y toda cuenta que sirve está
+     verificada. O sea que con el correo de alguien y seis dígitos
+     inventados:
+
+         POST /api/cuenta
+         {"accion":"confirmar","correo":"victima@gmail.com",
+          "codigo":"000000"}
+
+     devolvía una cookie de sesión buena por ocho horas. Y con ella:
+     su nombre, su correo, TODOS sus viajes y las ligas firmadas de
+     sus contratos —que siguen sirviendo semanas después de que la
+     sesión venza—.
+
+     Todo el cuidado de que los mensajes no delaten, de que el
+     código sea de un solo uso, de que aguante cinco intentos: no
+     servía de nada. Se entraba por al lado.
+
+     LA REGLA QUE SE ROMPIO: nunca se abre sesión en un camino que
+     no comprobó un secreto. Ahora el código se revisa primero, y
+     el «le dieron dos veces» se resuelve DESPUES, con el código ya
+     bueno en la mano.
+
+     ¿Y si de verdad le dan dos veces? El código es de un solo uso:
+     el segundo intento recibe «ese código no es», que es la verdad.
+     La pantalla ya apaga el botón mientras la primera petición va
+     en camino, así que el caso casi no existe — y valía mucho menos
+     que la puerta que costaba.
+     ------------------------------------------------------------ */
   const veredicto = acceso.revisaCodigo(cliente.metadata || {}, c.codigo, ahoraMs);
   if (!veredicto.ok) {
     if (veredicto.gastado) {
