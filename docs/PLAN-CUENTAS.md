@@ -18,17 +18,17 @@ datos y cero dependencias nuevas, que es como está el resto del proyecto.
 
 ---
 
-## Dos cosas que tiene que dar el dueño
+## Lo que falta, y es del dueño
+
+**Los 8 pasos están escritos y probados.** Lo único que queda no es código:
 
 | | para qué | sin eso |
 |---|---|---|
-| **Verificar `eurotravel.com.mx` en Resend** | que el código de confirmación llegue | se construye y se prueba con su correo, pero **ningún cliente real puede crear cuenta** |
-| **Un ID de cliente de OAuth de Google** | el botón «Continuar con Google» | el paso 7 no se puede terminar |
+| **Verificar `eurotravel.com.mx` en Resend** | que salgan los correos | **ningún cliente real puede crear cuenta ni recuperar su contraseña**: el código solo llega al correo de la cuenta de Resend |
+| **Picarle a «Continuar con Google»** con su cuenta | cerrar el paso 7 | es lo único que no se puede probar sin ser él |
+| **Pagar un viaje de verdad** | cerrar el paso 8 | no se ha visto un viaje aparecer en «Mis viajes» con datos reales |
 
-El ID de Google **no es secreto** (va en la página). Se saca en la misma
-consola donde ya viven las llaves de Places y Routes: *Credenciales → Crear
-credenciales → ID de cliente de OAuth → Aplicación web*, autorizando el
-origen `https://eurotravel-web.vercel.app`.
+El `GOOGLE_CLIENT_ID` ya quedó puesto en Vercel el 27-ago-2026.
 
 ---
 
@@ -93,18 +93,33 @@ Configuración enseña nombre y correo y **cambia la contraseña**, pidiendo la 
 ahorita: una sesión abierta en un teléfono prestado podría, si no, dejar al
 dueño fuera de su cuenta para siempre.
 
-### Paso 6 · Olvidé mi contraseña — PENDIENTE
+### Paso 6 · Olvidé mi contraseña — ✅ HECHO (27-ago-2026)
 
-- `accion: 'olvide'` — manda un código al correo.
-- `accion: 'clave-nueva'` — código + contraseña nueva.
+`accion: 'olvide'` y `accion: 'clave-nueva'`, con 55 pruebas. El único correo
+que recibe una cuenta ya confirmada, como lo pidió el dueño. Se llega desde la
+barra y desde la pantalla de pago, a la misma forma.
 
-El único correo que recibe una cuenta ya confirmada. **Hoy quien la olvide no
-tiene salida**: es lo que falta para que el camino de la contraseña esté
-completo.
+**Es la puerta más delicada del sistema**: por aquí se cambia la contraseña de
+alguien sin saber la que tenía. Tres cosas la sostienen:
 
-Casi todo está hecho ya: el código de seis dígitos, su freno, su vida de diez
-minutos y sus cinco intentos son los mismos del alta; y `paraCambiar` —con sal
-nueva— ya se usa en Configuración. Falta la puerta y su pantalla.
+1. El código va al **buzón**, no a la pantalla.
+2. **Pedirlo no dice si el correo tiene cuenta.** Un correo registrado y uno
+   inventado contestan exactamente lo mismo —mismas llaves, mismo estado— y
+   también cuando el freno corta, para que «espera 40 segundos» no se vuelva
+   el delator.
+3. El código es de un solo uso, vive diez minutos y aguanta cinco errores; el
+   sexto lo mata.
+
+**Lo que sí permite, dicho de frente:** quien sepa el correo de alguien puede
+hacerle llegar doce correos en 24 horas y después dejarlo sin poder pedir otro
+hasta el día siguiente. Es la regla 4 del proyecto y se acepta a sabiendas:
+sin tope, el ataque es llenarle el buzón, que es peor. Los códigos ya mandados
+siguen sirviendo.
+
+Y dos detalles que se sienten al usarlo: el correo dice **«tu contraseña NO
+cambió y sigue sirviendo»** —quien lo recibe sin haberlo pedido asume lo peor—;
+y si la contraseña nueva no sirve, **las casillas del código no se borran**: el
+error fue de la contraseña, no del código.
 
 ### Paso 7 · Continuar con Google — ✅ HECHO (27-ago-2026)
 
