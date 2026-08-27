@@ -193,7 +193,11 @@ const REGRESO = '2026-09-06';
 /* ============ 6. LA DIRECCION QUE VA EN EL CORREO ============ */
 (function () {
   const url = ligas.ligaDelViaje('https://eurotravel-web.vercel.app', 'cs_test_U', REGRESO, AHORA);
-  cierto('sale con /viaje?t=', url.indexOf('https://eurotravel-web.vercel.app/viaje?t=') === 0);
+  /* Cambió de lado el 26-ago-2026: antes exigía /viaje?t= y esa ruta da 404
+     en producción (Vercel sirve el estático en /viaje.html, sin cleanUrls).
+     La prueba fijaba el bug; ahora exige la ruta que sí abre. */
+  cierto('sale con /viaje.html?t=', url.indexOf('https://eurotravel-web.vercel.app/viaje.html?t=') === 0);
+  cierto('y NO con /viaje?t= a secas, que da 404', !/\/viaje\?t=/.test(url));
   igual('sin diagonal doble aunque el sitio traiga una',
     ligas.ligaDelViaje('https://x.mx/', 'cs_1', REGRESO, AHORA).indexOf('x.mx//'), -1);
 

@@ -14,7 +14,7 @@
    y qué asiento, y trae un sello que solo la aerolínea sabe
    hacer. Nadie guarda una lista de pases.
 
-       /viaje?t=eyJzIjoiY3NfMUEyQiIsImUiOjE3OTk5fQ.9f3a7c…
+       /viaje.html?t=eyJzIjoiY3NfMUEyQiIsImUiOjE3OTk5fQ.9f3a7c…
                 └────── qué viaje y hasta cuándo ──┘ └ sello ┘
 
    La primera mitad dice CUAL viaje —el identificador de la sesión
@@ -132,11 +132,16 @@ function firma(idSesion, regresoISO, ahoraMs) {
   return carga + '.' + sello(carga);
 }
 
-/* La dirección completa, lista para el correo. */
+/* La dirección completa, lista para el correo.
+
+   VA CON `.html`. Vercel sirve el archivo estático en `/viaje.html`; sin
+   `cleanUrls`, `/viaje` a secas da 404. Antes esto armaba `/viaje?t=` y TODO
+   cliente que pagaba caía en un 404 al abrir su liga — lo cazó la tanda de
+   clientes de prueba el 26-ago-2026. */
 function ligaDelViaje(sitio, idSesion, regresoISO, ahoraMs) {
   const t = firma(idSesion, regresoISO, ahoraMs);
   if (!t) return '';
-  return String(sitio || '').replace(/\/+$/, '') + '/viaje?t=' + t;
+  return String(sitio || '').replace(/\/+$/, '') + '/viaje.html?t=' + t;
 }
 
 /* ------------------------------------------------------------
