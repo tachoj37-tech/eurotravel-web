@@ -156,13 +156,15 @@ const SU_LISTA = [
   ['Ixtapa Zihuatanejo, Guerrero, México', 29500],
   /* Tolantongo trae en el Excel su propio precio CON movimientos, que ya lo
      incluye todo (correccion del dueño, 26-ago-2026). */
-  ['Grutas Tolantongo, Hidalgo, México', 29500, { conMovimientos: 34500 }],
+  /* Tolantongo son TRES dias («4» = donde empieza el dia extra, 26-ago-2026) */
+  ['Grutas Tolantongo, Hidalgo, México', 29500, { conMovimientos: 34500, diasIncluidos: 3 }],
   ['Real de Catorce, San Luis Potosí, México', 34500],
   /* Puebla: 2 dias del Excel y $2,000 el dia extra («el dia tres subele a
      dos mil», 26-ago-2026; cuadra con su fila 10: «$2,000 SPR»). */
   ['Puebla, Puebla, México', 36500, { porDias: { 2: 36500 }, diaExtra: 2000 }],
   ['Zacatlán, Puebla, México', 39500, { porDias: { 2: 39500 }, diaExtra: 2000 }],
-  ['Acapulco, Guerrero, México', 60000],
+  /* «ACAPULCO 4 DIAS», y su dia vale 2,000 en los dos sentidos (26-ago-2026) */
+  ['Acapulco, Guerrero, México', 60000, { diasIncluidos: 4, diaExtra: 2000 }],
   ['Oaxaca de Juárez, Oaxaca, México', 75000],
   /* Chiapas: 85,000 POR 8 DIAS, y su dia vale 4,000 en los dos sentidos,
      igual que Cancun («Chiapas igual que Cancun, 4000», 26-ago-2026). */
@@ -437,13 +439,17 @@ const SU_LISTA = [
   /* --- TOLANTONGO pasado el paquete (dictado 26-ago-2026) ---
      «Tolantongo 1000 sin movimientos, +3000 si hay movimientos». Antes el
      precio con movimientos era PLANO —34,500 dijeran lo que dijeran los
-     dias— y el dia de mas no sumaba nada. */
+     dias— y el dia de mas no sumaba nada.
+
+     Y son TRES dias: el dia extra empieza en el CUARTO. Se implemento
+     primero con el paquete de siempre —4 dias— y el dueño lo corrigio con
+     un «4» el mismo dia. */
   const TOL = 'Grutas Tolantongo, Hidalgo, México';
-  igual('Tolantongo dentro del paquete, sin mov: sus 29,500', sinMov(TOL, 4), 29500);
-  igual('Tolantongo dentro del paquete, con mov: sus 34,500', conMov(TOL, 4, 4), 34500);
-  igual('un dia de mas SIN movimientos: +1,000', sinMov(TOL, 5), 30500);
-  igual('un dia de mas CON movimiento: +1,000 y +3,000', conMov(TOL, 5, 5), 38500);
-  igual('dos dias de mas con movimiento: +2,000 y +6,000', conMov(TOL, 6, 6), 42500);
+  igual('Tolantongo 3 dias, sin mov: sus 29,500', sinMov(TOL, 3), 29500);
+  igual('Tolantongo 3 dias, con mov: sus 34,500', conMov(TOL, 3, 3), 34500);
+  igual('el DIA 4 ya suma, sin mov: +1,000', sinMov(TOL, 4), 30500);
+  igual('el DIA 4 con movimiento: +1,000 y +3,000', conMov(TOL, 4, 4), 38500);
+  igual('dos dias de mas con movimiento: +2,000 y +6,000', conMov(TOL, 5, 5), 42500);
 
   /* --- CHIAPAS: su dia vale 4,000 y corre en los dos sentidos, como Cancun
      («Chiapas igual que Cancun, 4000», 26-ago-2026). Antes el dia 9 sumaba
@@ -454,8 +460,21 @@ const SU_LISTA = [
   igual('Chiapas 7 dias: 4,000 MENOS', sinMov(CHIS, 7), 81000);
   igual('Chiapas 6 dias: 8,000 menos', sinMov(CHIS, 6), 77000);
 
-  /* Acapulco NO se movio: el dueño solo dicto Chiapas y Cancun. */
-  igual('Acapulco sigue con la noche de 1,000, que es lo que hay', sinMov('Acapulco, Guerrero, México', 5), 61000);
+  /* ACAPULCO: sus 4 dias no estaban marcados y su dia valia la noche de
+     1,000. El dueño lo dicto en 2,000 el 26-ago-2026 («acapulco 2000 el
+     dia»), y como todo dia dictado corre en los dos sentidos (R14). */
+  const ACA = 'Acapulco, Guerrero, México';
+  igual('Acapulco 4 dias: sus 60,000 del Excel', sinMov(ACA, 4), 60000);
+  igual('Acapulco 5 dias: +2,000 (antes +1,000)', sinMov(ACA, 5), 62000);
+  igual('Acapulco 3 dias: 2,000 menos', sinMov(ACA, 3), 58000);
+
+  /* Y los paquetes que el dueño NO ha tocado siguen dando su precio del
+     Excel a su propia duracion. Es la prueba de que quitar el piso de las
+     tres noches no movio a nadie mas. */
+  igual('Talpa Burrita 4 dias sigue en 26,500', sinMov('peregrinación talpa burrita', 4), 26500);
+  igual('Chiapas 8 dias sigue en 85,000', sinMov(CHIS, 8), 85000);
+  igual('Cancun 17 dias sigue en 145,000', sinMov('Cancún, Quintana Roo, México', 17), 145000);
+  igual('Guayabitos 4 dias sigue en 18,500', sinMov('Rincón de Guayabitos, Nayarit, México', 4), 18500);
 })();
 
 /* ============ 4. LA FORMULA DE RESPALDO, KILOMETRO POR KILOMETRO ============ */
@@ -635,12 +654,17 @@ const SU_LISTA = [
         const reglaExcel = fila[2] || null;
         let esperado;
         if (reglaExcel && reglaExcel.conMovimientos && cuantos > 0) {
-          /* R5: el precio con movimientos del Excel cubre EL PAQUETE —sus 3
+          /* R5: el precio con movimientos del Excel cubre EL PAQUETE —sus
              noches y los movimientos de esos dias—. Pasado el paquete manda
              la regla de siempre: +1,000 la noche y +3,000 el dia movido
-             (dictado el 26-ago-2026; antes esto era plano). */
-          let extra = Math.max(0, noches - 3) * 1000;
-          for (let i = 4; i < cuantos; i++) extra += diaDeMovimientoAMano(movs[i].horas, false);
+             (dictado el 26-ago-2026; antes esto era plano).
+
+             Las noches del paquete salen del propio destino, SIN piso de
+             tres: Tolantongo son 3 dias / 2 noches, y con piso su dia 4
+             salia gratis. */
+          const nochesPaq = reglaExcel.diasIncluidos ? reglaExcel.diasIncluidos - 1 : 3;
+          let extra = Math.max(0, noches - nochesPaq) * 1000;
+          for (let i = nochesPaq + 1; i < cuantos; i++) extra += diaDeMovimientoAMano(movs[i].horas, false);
           esperado = trasladoAMano(reglaExcel.conMovimientos, dias) + extra;
         } else if (reglaExcel && reglaExcel.porDias) {
           esperado = trasladoAMano(porDuracionAMano(reglaExcel, dias), dias) + movAMano;
@@ -652,8 +676,9 @@ const SU_LISTA = [
           esperado = trasladoAMano(base, dias) + movAMano;
         } else if (reglaExcel && reglaExcel.diasIncluidos) {
           /* Paquete sin tarifa de dia propia: noches gratis hasta un dia antes
-             del regreso, y moverse YA NO las borra (correccion del 26-ago). */
-          const gratis = Math.max(3, reglaExcel.diasIncluidos - 1);
+             del regreso, y moverse YA NO las borra (correccion del 26-ago).
+             Sin piso de tres: manda lo que diga el destino. */
+          const gratis = reglaExcel.diasIncluidos - 1;
           esperado = trasladoAMano(fila[1], dias) + Math.max(0, noches - gratis) * 1000 + movAMano;
         } else {
           esperado = trasladoAMano(fila[1], dias) + estadiaAMano(dias, noches, cuantos, false) + movAMano;

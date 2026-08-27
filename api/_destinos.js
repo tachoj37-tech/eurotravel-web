@@ -236,7 +236,11 @@ const DESTINOS = [
        estadía. Antes se cobraba 29,500 + días + bandas = $41,500, y el dueño
        corrigió el 26-ago-2026: «sí, estás mal, dalo de acuerdo al Excel». */
     precio: { busNC47: 45000, bus4849: 46000, neobusI6: 49000, pbI6: 47000, marcopolo: 53000, irizar: 51000, sprinter: 29500 },
-    conMovimientos: 34500 },
+    conMovimientos: 34500,
+    /* Son TRES días: el día extra empieza en el cuarto, dictado por el dueño
+       el 26-ago-2026 («4»). Sin esto el paquete tomaba las tres noches de
+       siempre y el día cuatro salía gratis. */
+    diasIncluidos: 3 },
   { nombre: "Real de Catorce", km: 1186,
     busca: /real de catorce|real de 14/i,
     precio: { busNC47: 48000, bus4849: 49000, neobusI6: 52000, pbI6: 50000, marcopolo: 56000, irizar: 54000, sprinter: 34500 } },
@@ -259,7 +263,12 @@ const DESTINOS = [
     diaExtra: 2000 },
   { nombre: "Acapulco", km: 1796,
     busca: /acapulco/i,
-    precio: { busNC47: 80000, bus4849: 85000, neobusI6: 90000, pbI6: 95000, marcopolo: 100000, irizar: 96500, sprinter: 60000 } },
+    /* «ACAPULCO 4 DIAS $60,000». Sus cuatro días no estaban marcados y su
+       día extra valía la noche de $1,000; el dueño lo dictó en $2,000 el
+       26-ago-2026. Como todo día dictado, corre en los dos sentidos (R14). */
+    precio: { busNC47: 80000, bus4849: 85000, neobusI6: 90000, pbI6: 95000, marcopolo: 100000, irizar: 96500, sprinter: 60000 },
+    diasIncluidos: 4,
+    diaExtra: 2000 },
   /* «oaxaca» a secas se llevaba a Puerto Escondido y a Huatulco —que estan en
      el estado, pero 500 km MAS ALLA de la capital— al precio de la capital.
      Ahora esos dos caen en «lo cotiza un asesor», que es lo correcto. */

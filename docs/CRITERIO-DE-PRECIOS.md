@@ -157,11 +157,21 @@ sobre cualquier suma de reglas.
 movimientos»*). Antes era plano —$34,500 dijeran lo que dijeran los días— y
 el día de más no sumaba nada. Pasado el paquete manda R13:
 
+**Y son TRES días, no cuatro.** El día extra empieza en el **cuarto** — lo
+dictó el dueño con un «4» el 26-ago-2026, corrigiéndome: yo lo había puesto
+con el paquete por omisión de R13 (4 días / 3 noches) y el día cuatro salía
+gratis.
+
 | días | sin movimientos | con movimiento cada día |
 |---|---|---|
-| 4 (el paquete) | $29,500 | $34,500 |
-| 5 | $30,500 | $38,500 |
-| 6 | $31,500 | $42,500 |
+| 3 (el paquete) | $29,500 | $34,500 |
+| **4** | **$30,500** | **$38,500** |
+| 5 | $31,500 | $42,500 |
+
+Para poder expresarlo hubo que quitar un piso escondido en el código: las
+noches incluidas iban con `Math.max(3, …)`, así que **ningún paquete podía
+durar menos de 4 días**. Quitarlo no movió a nadie más — Talpa Burrita
+incluye 4 días, Chiapas 8, Cancún 17.
 
 ### R6 · El paso entre escalones NO es la tarifa del día extra (26-ago-2026)
 
@@ -294,13 +304,15 @@ Cancún  = $145,000 + (días − 17) × $4,000
 
 Chiapas =  $85,000 + (días −  8) × $4,000     («Chiapas igual que Cancún»)
     7 días →  $81,000      9 días →  $89,000
+
+Acapulco = $60,000 + (días −  4) × $2,000     («Acapulco 2000 el día»)
+    3 días →  $58,000      5 días →  $62,000
 ```
 
 Antes el día extra sumaba $1,000 y pedir menos días no descontaba nada.
 
-**Acapulco, Barrancas y Talpa Burrita siguen con la noche de $1,000**: el
-dueño dictó Chiapas y Cancún, y de esos tres no dijo nada. No se extrapola
-(R12).
+**Barrancas y Talpa Burrita siguen con la noche de $1,000**: el dueño dictó
+Cancún, Chiapas y Acapulco, y de esos dos no dijo nada. No se extrapola (R12).
 
 **Lección:** cuando el dueño da una tarifa de día, preguntar SIEMPRE si baja
 además de subir. La mitad hacia abajo no se deduce sola.
@@ -346,12 +358,12 @@ lanzamiento.**
 
 ### Preguntas abiertas (lanzarlas al dueño en la siguiente ronda)
 
-- **Acapulco 4 días**: ¿su día extra también vale $4,000? El dueño dictó
-  Chiapas y Cancún el 26-ago-2026 y no mencionó Acapulco, así que sigue con
-  $1,000 la noche. Mismo caso Barrancas y Talpa Burrita.
+- **Barrancas del Cobre y Talpa Burrita**: siguen con la noche de $1,000. El
+  dueño ya dictó el día de Cancún ($4,000), Chiapas ($4,000) y Acapulco
+  ($2,000); de esos dos no ha dicho nada.
 - Un paquete con movimientos (Cancún moviéndose allá): hoy suma las bandas
   encima del paquete. ¿O el paquete ya lo trae todo, como Tolantongo?
-- **Dónde empieza el día extra de Tolantongo.** Se implementó con el paquete
-  por omisión de R13 —4 días / 3 noches—, así que el cobro extra arranca en
-  el día 5. La pregunta se le hizo diciendo «a más de 3 días», así que si él
-  contaba desde el día 4, el escalón va un día antes. **Sin confirmar.**
+- **Cuántos días incluye cada paquete.** Solo están confirmados Tolantongo
+  (3) y Guayabitos (4, «hasta 4 días»). Los demás salen del nombre de su
+  columna del Excel. Si alguno no dura lo que dice el nombre, su día extra
+  empieza en el día equivocado — que fue justo el error de Tolantongo.

@@ -703,8 +703,17 @@ function calcula(kmTotal, dias, extras) {
        playa y está en las preguntas abiertas del criterio,
        porque el $1,000 no aparece escrito en el Excel.
      ---------------------------------------------------------- */
+  /* Las noches que trae el paquete. Si el destino dice cuántos días incluye,
+     manda ÉL —aunque sean menos de las tres de siempre—.
+
+     Antes iba con `Math.max(NOCHES_INCLUIDAS, …)`, que le ponía piso de tres
+     y hacía imposible un paquete más corto. Tolantongo es de tres días, y su
+     día extra empieza en el CUARTO: con el piso, ese día salía gratis. Lo
+     dictó el dueño el 26-ago-2026 («4»). Quitar el piso no mueve a ningún
+     otro: Talpa Burrita incluye 4 días (3 noches, igual que el piso),
+     Chiapas 8 y Cancún 17. */
   const nochesIncluidas = km.diasIncluidos
-    ? Math.max(NOCHES_INCLUIDAS, km.diasIncluidos - 1)
+    ? Math.max(0, km.diasIncluidos - 1)
     : NOCHES_INCLUIDAS;
   /* Las noches incluidas NO se pierden por moverse. Corrección del dueño el
      26-ago-2026: «la playa es sencillo: cada noche que supere las 3 noches
