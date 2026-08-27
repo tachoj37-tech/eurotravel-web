@@ -341,9 +341,26 @@
   .qa-card:hover .go svg { transform: translateX(3px); }
 
   /* ================= buscador ================= */
-  .search-shell { background: var(--ink); padding: 34px 0 44px; }
+  /* Detrás va la flota de verdad —hero3, tres unidades en el patio— con un
+     velo negro encima. El velo NO es parejo: cierra sobre la izquierda, que
+     es donde vive el texto, y se abre hacia la derecha para que se alcance a
+     ver el camión. Así la foto aporta sin pelearse con la lectura. */
+  .search-shell {
+    position: relative;
+    background: var(--ink) url('img/hero3.jpg') center right / cover no-repeat;
+    padding: 34px 0 44px;
+  }
+  .search-shell::before {
+    content: ''; position: absolute; inset: 0; pointer-events: none;
+    background: linear-gradient(97deg,
+      rgba(18, 18, 17, 0.97) 0%,
+      rgba(18, 18, 17, 0.94) 34%,
+      rgba(18, 18, 17, 0.78) 66%,
+      rgba(18, 18, 17, 0.62) 100%);
+  }
+  .search-shell > .wrap { position: relative; }
   .search-shell h2 { color: #fff; font-size: clamp(26px, 3.6vw, 38px); margin-top: 10px; }
-  .search-shell p.sub { color: rgba(255, 255, 255, 0.6); margin-top: 10px; font-size: 15px; max-width: 62ch; }
+  .search-shell p.sub { color: rgba(255, 255, 255, 0.72); margin-top: 10px; font-size: 15px; max-width: 62ch; }
 
   .seg { display: inline-flex; background: rgba(255, 255, 255, 0.08); border-radius: 999px; padding: 4px; gap: 2px; margin-top: 22px; flex-wrap: wrap; }
   .seg button {
@@ -365,7 +382,19 @@
     margin-top: 16px; background: #fff; border-radius: var(--radius); padding: 16px;
     display: grid; gap: 12px; grid-template-columns: 1fr; box-shadow: var(--shadow-lg);
   }
-  @media (min-width: 980px) { .search-card { grid-template-columns: 1fr 1fr 1.75fr 0.9fr auto; align-items: end; padding: 18px; } }
+  /* Origen y destino cargan la ayuda más larga, así que se llevan más ancho
+     que las fechas —que solo enseñan dos días— y que la unidad. */
+  @media (min-width: 980px) { .search-card { grid-template-columns: 1.32fr 1.32fr 1.46fr 0.8fr auto; align-items: end; padding: 18px; } }
+  /* La tarjeta se sale del ancho del texto para darle aire a los campos: los
+     cuatro venían apretados y las ayudas se cortaban.
+
+     Crece SOLA con lo que sobra a los lados, sin escalón: el `clamp` reparte
+     el espacio libre —(ancho de pantalla − el wrap − un respiro de 40 px) / 2—
+     y se detiene a los 90 px. Con un `@media` seco, la pantalla que caía justo
+     abajo del corte se quedaba sin nada. */
+  @media (min-width: 1240px) {
+    .search-card { margin-inline: calc(-1 * clamp(0px, (100vw - var(--maxw) - 40px) / 2, 90px)); }
+  }
 
   .field { display: flex; flex-direction: column; gap: 6px; position: relative; min-width: 0; }
   .field.full { grid-column: 1 / -1; }
@@ -397,8 +426,17 @@
   }
   .locbtn:hover { border-color: var(--ink); }
   .locbtn > svg { width: 17px; height: 17px; color: var(--red); flex-shrink: 0; }
+  /* POR QUE EL TEXTO SE SALIA DEL BOTON
+     El <span> de adentro es un hijo flex, y un hijo flex NO baja de su ancho
+     de contenido a menos que se le diga `min-width: 0`. Encima el <small>
+     traía `max-width: 30ch`, que le ponía un piso todavía más ancho. Entre
+     los dos empujaban el botón más allá de su columna y la ayuda se cortaba
+     contra el campo de al lado —sin puntos suspensivos siquiera, porque el
+     recorte lo hacía la tarjeta, no el texto—. */
+  .locbtn > span { min-width: 0; flex: 1; }
+  .locbtn b, .locbtn small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .locbtn b { display: block; font-size: 14.5px; font-weight: 500; line-height: 1.25; }
-  .locbtn small { display: block; font-size: 11.5px; color: var(--muted); line-height: 1.3; margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 30ch; }
+  .locbtn small { display: block; font-size: 11.5px; color: var(--muted); line-height: 1.3; margin-top: 2px; }
   .locbtn.empty b { color: #9a9a96; font-weight: 400; }
 
   .stepper { display: flex; align-items: center; border: 1px solid var(--line); border-radius: var(--radius-sm); height: 44px; }
