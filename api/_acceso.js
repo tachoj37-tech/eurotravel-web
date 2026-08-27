@@ -229,6 +229,40 @@ function cookieBorrada() {
    Un navegador normal manda UNA. Dos es una anomalía, y ante una
    anomalía en un candado la respuesta es no abrir.
    ------------------------------------------------------------ */
+/* ------------------------------------------------------------
+   DE QUIEN ES ESTA SESION
+   ------------------------------------------------------------
+   `sesionValida` compara contra un cliente que quien llama YA
+   sabe: en la liga, el que sale del viaje. Una cuenta no tiene ese
+   dato de antemano — la cookie ES la identidad.
+
+   EL ORDEN AQUI NO ES NEGOCIABLE: primero se comprueba el sello y
+   la vigencia, y SOLO despues se lee el cliente de adentro. Leerlo
+   antes seria creerle a un dato que escribe quien manda la cookie,
+   y entonces cualquiera entraria a cualquier cuenta cambiando un
+   texto en el navegador.
+
+   Devuelve el identificador, o cadena vacia. Nunca revienta.
+   ------------------------------------------------------------ */
+function clienteDeSesion(token, ahoraMs) {
+  if (!hayClave()) return '';
+  const t = String(token || '');
+  const punto = t.indexOf('.');
+  if (punto < 1 || punto === t.length - 1) return '';
+
+  const carga = t.slice(0, punto);
+  /* el sello, antes que nada */
+  if (!igualesEnTiempoConstante(t.slice(punto + 1), sello(carga))) return '';
+
+  let d;
+  try { d = JSON.parse(deB64(carga).toString('utf8')); } catch (e) { return ''; }
+  if (!d || typeof d.c !== 'string' || typeof d.e !== 'number') return '';
+
+  const ahora = typeof ahoraMs === 'number' ? ahoraMs : Date.now();
+  if (ahora > d.e) return '';
+  return d.c;
+}
+
 function sesionDe(req) {
   const crudo = String(((req && req.headers) || {}).cookie || '');
   const encontradas = [];
@@ -261,6 +295,6 @@ module.exports = {
   VIDA_CODIGO_MS, INTENTOS, HORAS_SESION, VIDA_SESION_MS, COOKIE,
   CAMPO_HASH, CAMPO_VENCE, CAMPO_INTENTOS,
   hayClave, nuevoCodigo, paraGuardar, paraBorrar, revisaCodigo,
-  firmaSesion, sesionValida, cookieDeSesion, cookieBorrada, sesionDe,
+  firmaSesion, sesionValida, clienteDeSesion, cookieDeSesion, cookieBorrada, sesionDe,
   pistaDeCorreo
 };

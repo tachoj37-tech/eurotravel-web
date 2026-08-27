@@ -259,4 +259,114 @@ async function confirmar(cuerpo, ahoraMs) {
   return { status: 200, cuerpo: ok({ verificada: true }), sesionPara: cliente.id };
 }
 
-module.exports = { crear, reenviar, confirmar, eligeCliente, mandaCodigo };
+/* ============================================================
+   ENTRAR
+   ------------------------------------------------------------
+   Correo y contraseña. Y NADA MAS: el dueño lo pidió expreso —«una
+   vez que creó correo y contraseña ya no le vas a mandar correos
+   para nada al entrar»—.
+
+   CONTRA LA FUERZA BRUTA, LO QUE DE VERDAD ATAJA ES `scrypt`.
+
+   Cada intento cuesta ~100 ms de máquina, así que probar un
+   diccionario de un millón pasa de un segundo a día y medio. Eso
+   es el freno de fondo; el de la puerta solo evita la ráfaga.
+
+   Y NO HAY BLOQUEO POR CUENTA, a propósito. La regla 4 del
+   proyecto lo dice: «un candado que el atacante le puede cerrar a
+   otro no es un candado». Contar los fallos por correo dejaría a
+   cualquiera fuera de su propia cuenta con solo teclearle mal la
+   contraseña quince veces.
+   ============================================================ */
+async function entrar(cuerpo, ahoraMs) {
+  const c = cuerpo || {};
+  const email = cuentas.normalizaCorreo(c.correo);
+
+  /* El MISMO mensaje para todo lo que salga mal: correo que no existe,
+     cuenta sin contraseña, contraseña equivocada. Distinguirlos regalaría
+     la lista de clientes registrados. */
+  const generico = 'Ese correo o esa contraseña no son.';
+
+  if (!cuentas.correoValido(email) || cuentas.porQueNoSirve(c.contrasena)) {
+    return no(401, generico);
+  }
+
+  const hallados = await stripe.clientesPorCorreo(email);
+  if (hallados.error) {
+    console.error('[cuentas] no se pudo consultar a Stripe al entrar: ' + hallados.error);
+    return no(503, 'No pudimos entrar ahora mismo. Inténtalo en un momento.');
+  }
+
+  const cliente = eligeCliente(hallados.clientes);
+  const m = (cliente && cliente.metadata) || {};
+  if (!cliente || !cuentas.tieneContrasena(m)) return no(401, generico);
+
+  const buena = await cuentas.contrasenaValida(m, c.contrasena);
+  if (!buena) return no(401, generico);
+
+  /* Acertó la contraseña, así que ya demostró que la cuenta es suya: aquí
+     SI se le puede decir que le falta confirmar, sin regalarle nada a nadie.
+     Al revés —avisarlo antes de comprobar la contraseña— sería decirle a
+     cualquiera que ese correo tiene cuenta. */
+  if (!cuentas.estaVerificada(m)) {
+    return no(403, 'Te falta confirmar tu correo. Te mandamos un código cuando quieras.',
+      { faltaConfirmar: true });
+  }
+
+  return {
+    status: 200,
+    cuerpo: ok({ nombre: String(cliente.name || '').trim(), correo: email }),
+    sesionPara: cliente.id
+  };
+}
+
+/* ============================================================
+   SALIR
+   ------------------------------------------------------------
+   No hay nada que borrar del lado del servidor —la sesión no se
+   guarda en ningún lado, va firmada— así que salir es tirar la
+   cookie. La cáscara es la que la tira.
+   ============================================================ */
+function salir() {
+  return { status: 200, cuerpo: ok({ salio: true }), borrarSesion: true };
+}
+
+/* ============================================================
+   ¿QUIEN SOY?
+   ------------------------------------------------------------
+   Lo pregunta la pantalla al cargar, para saber si enseña «entrar»
+   o el nombre del cliente. Contesta con lo mínimo: si hay sesión y
+   de quién es. Nunca el identificador de Stripe.
+
+   Sin sesión NO es un error: es la respuesta normal de quien no ha
+   entrado. Por eso contesta 200 con `dentro: false` en vez de un
+   401, que la pantalla tendría que tratar como falla.
+   ============================================================ */
+async function yo(idCliente) {
+  if (!idCliente) return { status: 200, cuerpo: { dentro: false } };
+
+  const ficha = await stripe.traeCliente(idCliente);
+  if (ficha.error) {
+    /* La cookie estaba bien firmada pero el cliente ya no está. Se contesta
+       «fuera» y la cáscara tira la cookie: dejarla puesta haría que la
+       pantalla preguntara lo mismo en cada carga, para siempre. */
+    return { status: 200, cuerpo: { dentro: false }, borrarSesion: true };
+  }
+
+  const cliente = ficha.cliente || {};
+  const m = cliente.metadata || {};
+  if (!cuentas.tieneCuenta(m) || !cuentas.estaVerificada(m)) {
+    return { status: 200, cuerpo: { dentro: false }, borrarSesion: true };
+  }
+
+  return {
+    status: 200,
+    cuerpo: {
+      dentro: true,
+      nombre: String(cliente.name || '').trim(),
+      correo: cuentas.normalizaCorreo(cliente.email)
+    }
+  };
+}
+
+module.exports = { crear, reenviar, confirmar, entrar, salir, yo, eligeCliente, mandaCodigo };

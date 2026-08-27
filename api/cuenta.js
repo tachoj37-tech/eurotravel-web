@@ -35,13 +35,27 @@ const logica = require('./_cuentas-logica');
 const FRENOS = {
   crear: defensas.creaFreno({ porMinuto: 5, porDia: 200 }),
   codigo: defensas.creaFreno({ porMinuto: 6, porDia: 300 }),
-  confirmar: defensas.creaFreno({ porMinuto: 10, porDia: 200 })
+  confirmar: defensas.creaFreno({ porMinuto: 10, porDia: 200 }),
+  /* Entrar es el que más se intenta a lo bruto. El freno de fondo es
+     `scrypt`, que cuesta ~100 ms por intento; éste solo corta la ráfaga.
+     NO hay bloqueo por cuenta: la regla 4 del proyecto —un candado que el
+     atacante le puede cerrar a otro no es un candado—. */
+  entrar: defensas.creaFreno({ porMinuto: 8, porDia: 300 }),
+  salir: defensas.creaFreno({ porMinuto: 20, porDia: 500 }),
+  yo: defensas.creaFreno({ porMinuto: 40, porDia: 2000 })
 };
 
-const ACCIONES = {
+/* Las que necesitan saber QUIEN está dentro reciben el id sacado de la
+   cookie; las demás, el cuerpo. Se separan para que ninguna acción de las
+   de arriba pueda leer la sesión por accidente. */
+const CON_CUERPO = {
   crear: logica.crear,
   codigo: logica.reenviar,
-  confirmar: logica.confirmar
+  confirmar: logica.confirmar,
+  entrar: logica.entrar
+};
+const CON_SESION = {
+  yo: logica.yo
 };
 
 module.exports = async function handler(req, res) {
@@ -50,8 +64,8 @@ module.exports = async function handler(req, res) {
   const cuerpo = defensas.cuerpoJSON(req);
   const accion = String((cuerpo && cuerpo.accion) || '').trim();
 
-  const hacer = Object.prototype.hasOwnProperty.call(ACCIONES, accion) ? ACCIONES[accion] : null;
-  if (!hacer) {
+  const tiene = function (o) { return Object.prototype.hasOwnProperty.call(o, accion); };
+  if (!tiene(CON_CUERPO) && !tiene(CON_SESION) && accion !== 'salir') {
     res.status(400).json({ error: true, aviso: 'No entendimos qué querías hacer.' });
     return;
   }
@@ -59,12 +73,23 @@ module.exports = async function handler(req, res) {
   const frenado = FRENOS[accion](req);
   if (frenado) { res.status(frenado.status).json({ error: true, aviso: frenado.error }); return; }
 
-  const r = await hacer(cuerpo);
+  let r;
+  if (accion === 'salir') {
+    r = logica.salir();
+  } else if (tiene(CON_SESION)) {
+    /* El cliente sale de la COOKIE, ya comprobado el sello: nunca de lo que
+       manda el navegador en el cuerpo. Ahí estaría el hueco. */
+    r = await CON_SESION[accion](acceso.clienteDeSesion(acceso.sesionDe(req)));
+  } else {
+    r = await CON_CUERPO[accion](cuerpo);
+  }
 
-  /* La sesión se pone aquí y no en la lógica: la cookie es cosa del
-     transporte, y así la lógica se prueba sin fingir un `res`. */
+  /* La cookie es cosa del transporte, y por eso se pone y se quita aquí y no
+     en la lógica: así la lógica se prueba sin fingir un `res`. */
   if (r.sesionPara) {
     res.setHeader('Set-Cookie', acceso.cookieDeSesion(acceso.firmaSesion(r.sesionPara)));
+  } else if (r.borrarSesion) {
+    res.setHeader('Set-Cookie', acceso.cookieBorrada());
   }
   res.status(r.status).json(r.cuerpo);
 };
