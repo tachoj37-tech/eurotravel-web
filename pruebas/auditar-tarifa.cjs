@@ -169,9 +169,9 @@ const SU_LISTA = [
   /* Chiapas: 85,000 POR 8 DIAS, y su dia vale 4,000 en los dos sentidos,
      igual que Cancun («Chiapas igual que Cancun, 4000», 26-ago-2026). */
   ['San Cristóbal de las Casas, Chiapas, México', 85000, { diasIncluidos: 8, diaExtra: 4000 }],
-  /* Barrancas: su dia vale 3,000 CON O SIN movimientos (26-ago-2026). Los
-     4 dias son suposicion —su columna del Excel no dice cuantos incluye—. */
-  ['Barrancas del Cobre, Chihuahua, México', 75000, { diasIncluidos: 4, diaExtra: 3000, movimientoCero: true }],
+  /* Barrancas: SIETE dias, y su dia vale 3,000 CON O SIN movimientos
+     (dictado 26-ago-2026). Su columna del Excel no dice los dias. */
+  ['Barrancas del Cobre, Chihuahua, México', 75000, { diasIncluidos: 7, diaExtra: 3000, movimientoCero: true }],
   /* Cancun: 145,000 POR 17 DIAS, y su dia vale 4,000 en los dos sentidos
      («el dia esta en 4000» / «si quiere 15 dias serian 8,000 menos»). */
   ['Cancún, Quintana Roo, México', 145000, { diasIncluidos: 17, diaExtra: 4000 }]
@@ -474,18 +474,22 @@ const SU_LISTA = [
      Dictado el 26-ago-2026. Es el primer destino donde moverse no cuesta
      aparte: alla el viaje ES el recorrido. Antes el dia valia la noche de
      1,000 y cada dia movido sumaba su banda encima. */
+  /* Son SIETE dias: lo dicto el dueño el 26-ago-2026. Estuvo un rato con el
+     paquete por omision de 4 y un viaje de 6 dias cobraba 81,000 en vez de
+     72,000 — nueve mil de mas. */
   const BAR = 'Barrancas del Cobre, Chihuahua, México';
-  igual('Barrancas 4 dias: sus 75,000 del Excel', sinMov(BAR, 4), 75000);
-  igual('Barrancas 5 dias: +3,000', sinMov(BAR, 5), 78000);
-  igual('Barrancas 3 dias: 3,000 menos', sinMov(BAR, 3), 72000);
+  igual('Barrancas 7 dias: sus 75,000 del Excel', sinMov(BAR, 7), 75000);
+  igual('Barrancas 8 dias: +3,000', sinMov(BAR, 8), 78000);
+  igual('Barrancas 6 dias: 3,000 menos (cobraba 81,000)', sinMov(BAR, 6), 72000);
+  igual('Barrancas 5 dias: 6,000 menos', sinMov(BAR, 5), 69000);
   /* lo que lo distingue de todos los demas: moverse NO suma */
-  [3, 4, 5, 7].forEach(function (d) {
+  [5, 6, 7, 9].forEach(function (d) {
     igual('Barrancas ' + d + ' dias: moverse no cambia el precio',
       conMov(BAR, d, d), sinMov(BAR, d));
   });
   /* ni con la banda mas cara, que en cualquier otro destino valdria 5,000 */
-  const barLargo = t.calcula(999, 4, {
-    destino: { direccion: BAR }, noches: 3,
+  const barLargo = t.calcula(999, 7, {
+    destino: { direccion: BAR }, noches: 6,
     movimientos: [{ horaInicio: '08:00', horaFin: '21:00' }, { horaInicio: '08:00', horaFin: '21:00' }]
   });
   igual('ni con jornadas de 13 horas', barLargo.total, 75000);

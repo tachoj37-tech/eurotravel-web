@@ -231,7 +231,7 @@ const CRUCE = {
   igual('Oaxaca sigue en 75,000', precio('Oaxaca de Juárez, Oaxaca, México'), 75000);
   /* Barrancas se pide a sus 4 dias: su precio depende de la duracion desde
      que el dueño le dicto el dia de 3,000 (26-ago-2026). */
-  igual('Barrancas sigue en 75,000', precio('Barrancas del Cobre, Chihuahua, México', 4), 75000);
+  igual('Barrancas sigue en 75,000', precio('Barrancas del Cobre, Chihuahua, México', 7), 75000);
 })();
 
 /* ============================================================

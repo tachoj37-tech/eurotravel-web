@@ -301,13 +301,12 @@ const DESTINOS = [
        horas va apagada en `DESTINOS_CON_REGLA` para que moverse no sume
        aparte.
 
-       OJO: su columna del Excel NO dice cuántos días incluye —es la única de
-       las grandes que no lo dice— así que los 4 de aquí son SUPOSICIÓN mía,
-       el paquete por omisión. Está anotado en las preguntas abiertas del
-       criterio: si el viaje son 6 o 7 días, el cobro extra arranca antes de
-       tiempo. */
+       Son SIETE días —dictado por el dueño el 26-ago-2026—. Su columna del
+       Excel no lo dice, es la única de las grandes que no lo dice, y estuvo
+       un rato con el paquete por omisión de 4: así, un viaje de 6 días
+       cobraba $81,000 en vez de $72,000. Nueve mil pesos de más. */
     precio: { busNC47: 105000, bus4849: 110000, neobusI6: 120000, pbI6: 115000, marcopolo: 130000, irizar: 125000, sprinter: 75000 },
-    diasIncluidos: 4,
+    diasIncluidos: 7,
     diaExtra: 3000 },
   { nombre: "Cancún", km: 4282,
     busca: /canc|riviera maya|playa del carmen|tulum/i,

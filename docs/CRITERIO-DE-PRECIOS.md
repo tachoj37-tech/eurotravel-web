@@ -309,8 +309,8 @@ Chiapas =  $85,000 + (días −  8) × $4,000     («Chiapas igual que Cancún»
 Acapulco = $60,000 + (días −  4) × $2,000     («Acapulco 2000 el día»)
     3 días →  $58,000      5 días →  $62,000
 
-Barrancas = $75,000 + (días − 4) × $3,000     («3000 día CON O SIN mov»)
-    3 días →  $72,000      5 días →  $78,000
+Barrancas = $75,000 + (días − 7) × $3,000     («3000 día CON O SIN mov»)
+    6 días →  $72,000      8 días →  $78,000
 ```
 
 Antes el día extra sumaba $1,000 y pedir menos días no descontaba nada.
@@ -380,14 +380,15 @@ lanzamiento.**
 
 ### Preguntas abiertas (lanzarlas al dueño en la siguiente ronda)
 
-- **CUÁNTOS DÍAS INCLUYE BARRANCAS.** Es la única columna grande del Excel
-  que no lo dice, así que la página le puso el paquete por omisión —4 días—
-  y eso es **suposición mía**. Si el viaje son 6 o 7 días, su día de $3,000
-  arranca demasiado pronto y le cobra de más al cliente.
 - Un paquete con movimientos (Cancún moviéndose allá): hoy suma las bandas
   encima del paquete. ¿O el paquete ya lo trae todo, como Tolantongo?
-- **Cuántos días incluye cada paquete.** Confirmados: Tolantongo (3),
-  Guayabitos (4, «hasta 4 días») y Talpa Burrita (4, revisado y «ok»). Los
-  demás salen del nombre de su columna. Si alguno no dura lo que dice el
-  nombre, su día extra empieza en el día equivocado — que fue justo el error
-  de Tolantongo.
+- **Cuántos días incluye cada paquete.** Confirmados por el dueño:
+  **Barrancas 7**, Tolantongo 3, Guayabitos 4 («hasta 4 días») y Talpa
+  Burrita 4 (revisado y «ok»). Los demás salen del nombre de su columna —
+  Cancún 17, Chiapas 8, Acapulco 4—. Si alguno no dura lo que dice el
+  nombre, su día extra empieza en el día equivocado.
+
+  **Los dos que ya se preguntaron dieron dos números distintos de los que
+  yo había supuesto**: Tolantongo (yo 4, él 3) y Barrancas (yo 4, él 7). Con
+  Barrancas eran $9,000 de sobrecobro en un viaje de 6 días. Vale la pena
+  preguntar los tres que faltan.
