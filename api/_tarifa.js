@@ -80,6 +80,34 @@ const BASE_TRASLADO = 6500;
 const POR_KM = 22;
 const TOPE_FORMULA_KM = 1400;
 
+/* ------------------------------------------------------------
+   ARRIBA DE 1,400 KM: EL TRAMO LARGO
+   ------------------------------------------------------------
+   Antes aquí no se cotizaba: se contestaba «lo cotiza un asesor». El dueño
+   lo quitó el 26-ago-2026: «que no haya asesor, anímate a cotizar tú».
+
+   Se ajustó contra SUS propios precios de esa distancia, anclando el tramo
+   en lo que vale la fórmula corta justo en los 1,400 km ($37,300) para que
+   NO haya escalón — un destino a 1,401 km no puede costar de golpe miles
+   más que uno a 1,399.
+
+   Sale $36 por kilómetro, contra los $22 del tramo corto. El salto es real
+   y está explicado: a esa distancia el viaje deja de ser ir y volver y se
+   vuelve expedición —hotel de operador, relevos, viáticos—.
+
+   ESTE TRAMO ES MUCHO MENOS FIABLE QUE EL CORTO, y hay que saberlo: error
+   promedio de $9,800 contra los $1,534 del corto. No es que esté mal
+   ajustado; es que los precios largos del dueño NO son función del
+   kilómetro. Oaxaca son $75,000 a 1,988 km y Barrancas son $75,000 a
+   2,882 km: novecientos kilómetros más por el mismo precio.
+
+   Los cinco destinos que sirvieron de guía están todos EN la lista, así
+   que la fórmula nunca los cotiza. Este tramo solo contesta por destinos
+   lejanos que el dueño no ha puesto precio — y el día que ponga uno, entra
+   al catálogo y deja de estimarse.
+   ------------------------------------------------------------ */
+const POR_KM_LARGO = 36;
+
 /* La LISTA DE PRECIOS. Manda ella; lo de arriba solo contesta por los
    destinos que no estén en ella. */
 const destinos = require('./_destinos');
@@ -252,8 +280,13 @@ function trasladoDe(kmTotal, destino, unidad, dias) {
     };
   }
 
+  /* El tramo largo, sin escalón: arranca donde termina el corto. */
   if (km > TOPE_FORMULA_KM) {
-    return { total: 0, requiereAsesor: true, porKm: null, km: km };
+    const ancla = BASE_TRASLADO + POR_KM * TOPE_FORMULA_KM;
+    return {
+      total: ancla + POR_KM_LARGO * (km - TOPE_FORMULA_KM),
+      porFormula: true, tramoLargo: true, porKm: POR_KM_LARGO, km: km
+    };
   }
 
   return { total: BASE_TRASLADO + POR_KM * km, porFormula: true, porKm: POR_KM, km: km };
@@ -815,7 +848,7 @@ function calcula(kmTotal, dias, extras) {
 }
 
 module.exports = {
-  BASE_TRASLADO, POR_KM, TOPE_FORMULA_KM,
+  BASE_TRASLADO, POR_KM, TOPE_FORMULA_KM, POR_KM_LARGO,
   MINIMO_POR_DIA, REDONDEO, TASA_IVA, ANTICIPO,
   NOCHES_INCLUIDAS, EXTRA_POR_NOCHE, BANDAS_MOVIMIENTO, TOPE_DIAS_MOVIMIENTO,
   DESTINOS_CON_REGLA,

@@ -453,19 +453,28 @@ const SU_LISTA = [
   igual('y con decimales tambien', malosDec, 0);
 
   /* el borde exacto del tope */
-  igual('1,400 km justos todavia se cotizan solos', t.trasladoDe(1400, null).total, 6500 + 22 * 1400);
-  igual('1,400.001 ya no', !!t.trasladoDe(1400.001, null).requiereAsesor, true);
+  igual('1,400 km justos valen lo de siempre', t.trasladoDe(1400, null).total, 6500 + 22 * 1400);
+  /* CAMBIO DE LADO el 26-ago-2026: arriba del tope ya NO se pide asesor
+     («animate a cotizar tu»); entra el tramo largo, a $36 el km. */
+  igual('1,400.001 ya entra al tramo largo', !!t.trasladoDe(1400.001, null).tramoLargo, true);
+  igual('y ya no pide asesor', !!t.trasladoDe(1400.001, null).requiereAsesor, false);
 
-  /* Un viaje sin precio no cobra NADA, ni noches ni movimientos */
-  let conCobro = 0;
+  /* Lo que hay que cuidar ahora es que el tramo largo SIEMPRE de un numero
+     coherente: nunca cero, nunca a la baja, y con sus partes cuadrando. */
+  let malosLargo = 0, anteriorLargo = -1, bajoLargo = 0;
   for (let km = 1401; km <= 5000; km += 37) {
     const p = t.calcula(km, 5, {
       noches: 4,
       movimientos: [{ horaInicio: '08:00', horaFin: '16:00' }, { horaInicio: '08:00', horaFin: '21:00' }]
     });
-    if (p.total !== 0 || p.anticipo !== 0 || p.desglose.servicio !== 0) conCobro++;
+    if (p.total <= 0 || p.requiereAsesor) malosLargo++;
+    if (p.anticipo !== Math.round(p.total * 0.2)) malosLargo++;
+    if (p.desglose.servicio + p.desglose.importeMovimientos !== p.total) malosLargo++;
+    if (p.total <= anteriorLargo) bajoLargo++;
+    anteriorLargo = p.total;
   }
-  igual('arriba del tope NUNCA se cobra un peso', conCobro, 0);
+  igual('arriba del tope SIEMPRE hay un precio, y sus partes cuadran', malosLargo, 0);
+  igual('y nunca baja al alejarse', bajoLargo, 0);
 })();
 
 /* ============ 5. QUE TAN LEJOS QUEDA LA FORMULA DE SUS PRECIOS ============

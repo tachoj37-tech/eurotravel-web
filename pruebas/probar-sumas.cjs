@@ -78,7 +78,14 @@ function cierto(nombre, v) { igual(nombre, !!v, true); }
            Arriba del tope no hay precio y no hay nada que comprobar.
            ------------------------------------------------------------ */
         if (!p.requiereAsesor) {
-          const bruto = t.BASE_TRASLADO + t.POR_KM * p.interno.km;
+          /* DOS TRAMOS desde el 26-ago-2026: hasta 1,400 km a $22 el km, y
+             de ahi en adelante a $36, anclado en lo que vale el corto justo
+             en los 1,400 para que no haya escalon. Antes arriba del tope no
+             habia precio; el dueño quito el asesor. */
+          const bruto = p.interno.km <= t.TOPE_FORMULA_KM
+            ? t.BASE_TRASLADO + t.POR_KM * p.interno.km
+            : t.BASE_TRASLADO + t.POR_KM * t.TOPE_FORMULA_KM +
+              t.POR_KM_LARGO * (p.interno.km - t.TOPE_FORMULA_KM);
           if (Math.abs(bruto - p.interno.porKilometro) > 0.5) rotos.tramos.push({ km, dias, p });
         } else if (p.total !== 0) {
           /* y si pide asesor, no se cobra un peso: ni noches ni movimientos */

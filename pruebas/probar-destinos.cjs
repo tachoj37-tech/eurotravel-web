@@ -209,12 +209,16 @@ const CRUCE = {
   /* -- los tres que caian en el precio de su ESTADO -- */
   igual('Dolores Hidalgo ya no cobra los 19,000 de Guanajuato',
     precio('Dolores Hidalgo, Guanajuato, México') === 19000, false);
-  igual('Puerto Escondido, a 2,400 km, lo cotiza un asesor',
-    pideAsesor('Puerto Escondido, Oaxaca, México', 2400), true);
-  igual('Huatulco, a 2,500 km, tambien',
-    pideAsesor('Huatulco, Oaxaca, México', 2500), true);
-  igual('y la ciudad de Chihuahua, a 2,400 km, tambien',
-    pideAsesor('Chihuahua, Chihuahua, México', 2400), true);
+  /* CAMBIO DE LADO el 26-ago-2026: antes estos tres pedian asesor porque
+     arriba de 1,400 km no se cotizaba. El dueño quito el asesor, asi que
+     ahora los cotiza el tramo largo. Lo que importa sigue igual y por eso
+     se prueba asi: que NO cobren el precio de la capital de su estado. */
+  igual('Puerto Escondido NO cobra los 75,000 de Oaxaca',
+    precio('Puerto Escondido, Oaxaca, México') === 75000, false);
+  igual('Huatulco tampoco',
+    precio('Huatulco, Oaxaca, México') === 75000, false);
+  igual('y la ciudad de Chihuahua no cobra los 75,000 de Barrancas',
+    precio('Chihuahua, Chihuahua, México') === 75000, false);
 
   /* -- y los grandes siguen cobrando lo suyo -- */
   igual('Vallarta sigue en 19,000', precio('Puerto Vallarta, Jalisco, México'), 19000);

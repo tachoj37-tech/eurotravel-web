@@ -108,18 +108,26 @@ function en(direccion, placeId) { return { direccion: direccion, placeId: placeI
     t.trasladoDe(740, en('Dolores Hidalgo, Guanajuato, México')).porFormula === true);
 
   /* Puerto Escondido esta 500 km MAS ALLA de Oaxaca: cobrarle el precio de
-     Oaxaca era regalar el viaje. Ahora pasa del tope y lo ve un asesor. */
+     Oaxaca era regalar el viaje.
+
+     CAMBIO DE LADO el 26-ago-2026. Antes estas tres exigian `requiereAsesor`
+     porque arriba de 1,400 km no se cotizaba. El dueño quito el asesor
+     («animate a cotizar tu»), asi que ahora las contesta el tramo largo.
+     Lo que se prueba sigue siendo lo mismo y es lo que importa: que NO
+     hereden el precio de su vecino de la lista. */
   cierto('Puerto Escondido ya NO es Oaxaca',
-    t.trasladoDe(2400, en('Puerto Escondido, Oaxaca, México')).requiereAsesor === true);
+    t.trasladoDe(2400, en('Puerto Escondido, Oaxaca, México')).deLista === undefined);
+  cierto('y lo cotiza el tramo largo',
+    t.trasladoDe(2400, en('Puerto Escondido, Oaxaca, México')).tramoLargo === true);
   cierto('Huatulco tampoco',
-    t.trasladoDe(2500, en('Huatulco, Oaxaca, México')).requiereAsesor === true);
+    t.trasladoDe(2500, en('Huatulco, Oaxaca, México')).deLista === undefined);
   igual('pero la capital sigue en su precio',
     t.trasladoDe(1988, en('Oaxaca de Juárez, Oaxaca, México')).total, 75000);
 
   /* La ciudad de Chihuahua esta 450 km ANTES de las Barrancas: cobrarle el
      precio de Barrancas era cobrarle de mas. */
   cierto('la ciudad de Chihuahua ya NO es Barrancas',
-    t.trasladoDe(2400, en('Chihuahua, Chihuahua, México')).requiereAsesor === true);
+    t.trasladoDe(2400, en('Chihuahua, Chihuahua, México')).deLista === undefined);
   igual('pero las Barrancas siguen en su precio',
     t.trasladoDe(2882, en('Barrancas del Cobre, Chihuahua, México')).total, 75000);
   igual('y Creel tambien', t.trasladoDe(2800, en('Creel, Chihuahua, México')).total, 75000);
@@ -165,28 +173,47 @@ function en(direccion, placeId) { return { direccion: direccion, placeId: placeI
   igual('de 0 a 1,400 km el precio nunca baja ni se queda igual', rompe, null);
 })();
 
-/* ---- 6. ARRIBA DEL TOPE NO HAY PRECIO ----
-   Y cero no es un precio bajo: es la señal de que lo cotiza una persona. */
-(function () {
-  cierto('1,400.001 km ya pide asesor',
-    t.trasladoDe(1400.001, null).requiereAsesor === true);
-  cierto('2,000 km tambien', t.trasladoDe(2000, null).requiereAsesor === true);
-  igual('y el traslado viene en cero', t.trasladoDe(2000, null).total, 0);
+/* ---- 6. ARRIBA DEL TOPE: EL TRAMO LARGO ----
+   CAMBIO DE LADO el 26-ago-2026. Antes arriba de 1,400 km no habia precio y
+   se contestaba «lo cotiza un asesor». El dueño lo quito: «que no haya
+   asesor, animate a cotizar tu». Ahora hay un segundo tramo, a $36 el
+   kilometro, anclado en lo que vale la formula corta en los 1,400.
 
-  /* Lo que mas importa: que la suma NO siga corriendo. Sin este freno, un
-     viaje de 4 dias con movimientos saldria en $16,000 —solo noches y
-     movimientos— y ese numero llegaria a la pantalla como si fuera el precio. */
+   Lo que se prueba ahora es que NO haya escalon en la costura: un destino
+   un kilometro mas lejos no puede costar de golpe miles mas. */
+(function () {
+  cierto('arriba del tope YA se cotiza, sin asesor',
+    !t.trasladoDe(1400.001, null).requiereAsesor);
+  cierto('y se marca como tramo largo', t.trasladoDe(2000, null).tramoLargo === true);
+
+  const justoAntes = t.trasladoDe(1400, null).total;
+  const justoDespues = t.trasladoDe(1401, null).total;
+  igual('en los 1,400 justos vale lo de siempre', justoAntes, 37300);
+  cierto('un km mas cuesta mas, no menos', justoDespues > justoAntes);
+  cierto('y el salto en la costura es de centavos, no de miles',
+    justoDespues - justoAntes < 100);
+
+  /* El tramo largo tambien tiene que subir siempre. */
+  let ant = -1, rompe = null;
+  for (let km = 1400; km <= 5000; km += 7) {
+    const v = t.trasladoDe(km, null).total;
+    if (v <= ant) { rompe = km; break; }
+    ant = v;
+  }
+  igual('de 1,400 a 5,000 km el precio nunca baja', rompe, null);
+
+  /* Y el viaje completo ya da un numero, con sus noches y movimientos. */
   const p = t.calcula(4282, 4, {
     noches: 3,
     movimientos: [{ horaInicio: '08:00', horaFin: '16:00' },
                   { horaInicio: '08:00', horaFin: '18:00' }]
   });
-  igual('un viaje sin precio no cobra las noches ni los movimientos', p.total, 0);
-  igual('ni anticipo', p.anticipo, 0);
-  igual('ni saldo', p.saldo, 0);
-  igual('ni el desglose enseña un servicio', p.desglose.servicio, 0);
-  cierto('y lo dice claro', p.requiereAsesor === true);
-  /* pero la oficina si necesita saber que se pidio, para cotizarlo a mano */
+  cierto('un viaje larguisimo ya trae precio', p.total > 0);
+  cierto('y ya no pide asesor', !p.requiereAsesor);
+  igual('el anticipo sigue siendo el 20%', p.anticipo, Math.round(p.total * 0.2));
+  igual('y las dos partes suman el total',
+    p.desglose.servicio + p.desglose.importeMovimientos, p.total);
+  /* la oficina si necesita saber los kilometros, para revisarlo */
   igual('la oficina si ve los kilometros', p.interno.km, 4282);
   igual('y los dias que se pidieron con movimiento', p.desglose.diasMovimiento, 2);
 })();
