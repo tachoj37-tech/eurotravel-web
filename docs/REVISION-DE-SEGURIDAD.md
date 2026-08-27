@@ -3,6 +3,23 @@
 Sobre el sistema de cuentas completo, recién terminado: crear, entrar, Google,
 Mis viajes, Configuración y recuperar la contraseña.
 
+**Seis defectos encontrados, seis tapados.** Dos de ellos dejaban entrar a la
+cuenta de cualquier cliente.
+
+| | Qué permitía | Cómo se encontró |
+|---|---|---|
+| **0** | entrar a cualquier cuenta sabiendo solo el correo | leyendo el camino de lado |
+| **0-bis** | plantar una contraseña en una cuenta ajena | siguiendo el dato hasta Google |
+| **0-ter** | el permiso de ver un viaje valía como cuenta completa | comparando dos permisos parecidos |
+| **0-quater** | sacar la lista de clientes, correo por correo | un campo de más en la respuesta |
+| **1** | lo mismo, pero con un cronómetro | midiendo |
+| **2** | — | lo que salió limpio |
+
+**Ninguno se veía leyendo la función de frente.** Todos tienen la misma forma:
+el candado estaba bien puesto y había un camino que no pasaba por él.
+
+Y **tres de ellos los tapaba una prueba que decía que todo estaba bien.**
+
 ---
 
 ## 0. LA GRAVE: se entraba a cualquier cuenta sabiendo solo el correo — TAPADO
@@ -51,6 +68,79 @@ resuelve con la verdad —el código es de un solo uso y el segundo intento reci
 «ese código no es»—, y la pantalla ya apaga el botón mientras la petición va en
 camino. La prueba nueva hace el ataque completo con cinco variantes; al volver
 a abrir el hueco se ponen rojas tres aserciones.
+
+---
+
+## 0-bis. Se podía plantar una contraseña en una cuenta ajena — TAPADO
+
+Cualquiera pedía una cuenta con el correo de **otra persona** y una contraseña
+suya. Nacía sin verificar y no abría, así que parecía inofensivo — al dueño
+hasta se le escribe *«si no fuiste tú, no tienes que hacer nada: sin este
+código la cuenta no se abre»*, y es verdad **mientras nadie la verifique**.
+
+El otro lado era Google. Cuando el dueño de verdad entraba con su cuenta de
+Google, se le marcaba la cuenta como verificada —bien— y **se le dejaba puesta
+la contraseña del extraño**. Con eso, el extraño entraba a la cuenta ajena y
+veía todos sus viajes.
+
+Comprobado con el ataque completo, paso por paso.
+
+**Arreglo:** una contraseña que solo existe en una cuenta **sin verificar** no
+la puso nadie que haya demostrado ser dueño del buzón. Cuando alguien lo
+demuestra por otra puerta, esa contraseña se tira. Al dueño de verdad no le
+cuesta nada: entra con Google, o la repone en dos minutos con «olvidé mi
+contraseña».
+
+---
+
+## 0-ter. Un permiso de «ver un viaje» valía como sesión de cuenta — TAPADO
+
+Aquí conviven **dos permisos que se parecen y no valen lo mismo**:
+
+| | Qué da | Cómo se consigue |
+|---|---|---|
+| **Liga** | ver **un** viaje | el código de 6 dígitos, que **el dueño le dicta a quien quiera** — así está pensado |
+| **Cuenta** | todos sus viajes, sus datos, su contraseña | correo y contraseña, o Google |
+
+Los dos usaban el **mismo campo** para el código y la **misma cookie** con el
+mismo contenido. Nadie preguntaba de cuál de las dos venía el permiso. Así que
+quien recibía el código dictado para ver un viaje se llevaba de pilón:
+
+- **«Mis viajes» completo**, con ligas firmadas a todos los contratos —que
+  siguen sirviendo semanas después de que la sesión venza—, y
+- en una cuenta de **Google**, donde no hay contraseña anterior que pedir,
+  **podía ponerle contraseña a la cuenta** y quedarse con ella para siempre.
+
+No era un hueco de la cuenta ni de la liga: era que los dos permisos se veían
+iguales.
+
+**Arreglo:** el uso va **dentro del sello**, en la cookie y en el resumen del
+código. Un permiso de liga no puede hacerse pasar por uno de cuenta porque **la
+firma no cuadra**, no porque alguien se acuerde de comprobarlo.
+
+> **Al desplegar esto, las sesiones de cuenta abiertas se caen.** Una cookie
+> sin marca de uso se trata como la débil —falla cerrado— así que hay que
+> volver a entrar. **Las ligas de los viajes no se tocan.**
+
+---
+
+## 0-quater. «Mándame otro código» delataba con un campo de más — TAPADO
+
+`reenviar` devolvía `pista` solo cuando la cuenta existía sin verificar, y un
+`429` con `segundos` al frenarse. Un correo sin cuenta recibía `{ok, mandado}`
+a secas.
+
+Es **exactamente** el defecto que el comentario del alta, treinta líneas más
+arriba, dice que ya se había pagado una vez: *«un campo de diferencia bastaba
+para saber si un correo ya estaba registrado»*. Se arregló allá y se escribió
+igualito aquí.
+
+Y encadenado con el alta daba un oráculo completo: se pide el alta y luego el
+reenvío; si sale `pista`, ese correo **no** tenía cuenta; si no sale, es un
+cliente que ya estaba. La lista entera, correo por correo.
+
+**Arreglo:** la misma respuesta en todos los caminos, armada una sola vez, como
+en `olvide`. Y su piso de tiempo.
 
 ---
 
@@ -118,18 +208,35 @@ al día por dirección— que es lo que de verdad impide barrer una lista larga.
 | **Registros del servidor** | ninguno escribe contraseñas, códigos, resúmenes ni llaves |
 | **Papeles de Google** | firma, algoritmo, **destinatario** y `email_verified`; probado con papeles forjados |
 
-### Lo que aprendí de la grave, y vale para todo lo que siga
+### Lo que aprendí, y vale para todo lo que siga
 
-Las tres cosas que encontró esta revisión —la entrada libre y los dos relojes—
-tienen la misma forma: **el candado estaba bien puesto, y había un camino que
-no pasaba por él.** Ninguna se veía leyendo la función de frente; las tres
-salieron de preguntar «¿y si llego por otro lado?».
+**Los seis defectos tienen la misma forma:** el candado estaba bien puesto, y
+había un camino que no pasaba por él. Ninguno se veía leyendo la función de
+frente; todos salieron de preguntar *«¿y si llego por otro lado?»*.
 
-Y la más grave la tapaba una prueba que decía que todo estaba bien. Cuando una
-prueba se escribe para confirmar lo que el código quiso hacer, hereda sus
-puntos ciegos. **Las pruebas de seguridad se escriben desde el lado de quien
-ataca**, y por eso las nuevas se llaman «con el correo de otro, NADA abre su
-sesión» y no «confirmar funciona».
+Los tres más caros venían de lo mismo: **dos cosas parecidas que se trataron
+como si fueran la misma.** Una cuenta verificada y una sin verificar. Un
+permiso de ver un viaje y uno de entrar a la cuenta. Un código dictado a un
+tercero y uno que prueba quién eres. En los tres casos el código las mezclaba
+porque *funcionalmente* se parecen — y en seguridad lo que importa no es qué
+hacen, sino **qué demostró quien las trae**.
+
+**Y tres los tapaba una prueba que decía que todo estaba bien:**
+
+| La prueba decía | Lo que estaba dando por bueno |
+|---|---|
+| «confirmar dos veces no truena, solo entra» | entrada libre a cualquier cuenta |
+| «así que ya entra con su contraseña también» | la contraseña plantada por un extraño |
+| «otro de inmediato se frena, y dice cuántos segundos» | el delator de quién tiene cuenta |
+
+Las tres estaban escritas para **confirmar la intención del código** en vez de
+para atacar el camino. Una prueba así hereda los puntos ciegos de lo que
+prueba: si el código se equivocó de idea, la prueba se equivoca con él y
+además da la tranquilidad de estar en verde.
+
+**Las pruebas de seguridad se escriben desde el lado de quien ataca.** Por eso
+las nuevas se llaman «con el correo de otro, NADA abre su sesión» y «la cookie
+de LIGA no sirve como cuenta», y no «confirmar funciona».
 
 ---
 
