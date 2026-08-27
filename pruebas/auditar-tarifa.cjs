@@ -57,9 +57,18 @@ function trasladoAMano(precioBase, dias) {
    («si no tiene movimientos, nomas vas a cobrar mil»). Antes esos casos
    caian en el paquete de 3 noches gratis, que era un modelo inventado
    (criterio de precios, error nº 1). */
+/* CAMBIO DE LADO el 26-ago-2026. Antes decia:
+       if (porDia || cuantosMovimientos > 0) return dias * 1000;
+   o sea que UN movimiento borraba las 3 noches incluidas y cobraba 1,000 por
+   todos los dias. El dueño lo corrigio: «la playa es sencillo: cada noche que
+   supere las 3 noches por defecto son 1000, y si tiene movimientos son 3000 x
+   dia». Estadia y movimiento se SUMAN; no se excluyen.
+
+   `porDia` (CDMX y Huasteca) sigue igual: su precio es un traslado de un dia,
+   no un paquete, asi que ahi si se cobra desde el primer dia. */
 function estadiaAMano(dias, noches, cuantosMovimientos, porDia) {
-  if (porDia || cuantosMovimientos > 0) return dias * 1000;   // dia por dia
-  return Math.max(0, noches - 3) * 1000;               // paquete de 3 noches
+  if (porDia) return dias * 1000;                      // CDMX y Huasteca: dia por dia
+  return Math.max(0, noches - 3) * 1000;               // paquete de 3 noches, se mueva o no
 }
 
 /* El precio por duracion de los destinos que el Excel trae con varios dias
@@ -157,7 +166,9 @@ const SU_LISTA = [
   ['Oaxaca de Juárez, Oaxaca, México', 75000],
   ['San Cristóbal de las Casas, Chiapas, México', 85000, { diasIncluidos: 8 }],
   ['Barrancas del Cobre, Chihuahua, México', 75000],
-  ['Cancún, Quintana Roo, México', 145000, { diasIncluidos: 17 }]
+  /* Cancun: 145,000 POR 17 DIAS, y su dia vale 4,000 en los dos sentidos
+     («el dia esta en 4000» / «si quiere 15 dias serian 8,000 menos»). */
+  ['Cancún, Quintana Roo, México', 145000, { diasIncluidos: 17, diaExtra: 4000 }]
 ];
 
 /* ============ 1. LA LISTA DA EXACTAMENTE LO QUE DICE EL EXCEL ============
@@ -165,10 +176,16 @@ const SU_LISTA = [
 (function () {
   const rotos = [];
   SU_LISTA.forEach(function (fila) {
-    const dio = t.calcula(1, 1, { destino: { direccion: fila[0] } }).total;
+    /* Cada destino se pide a SU duracion de referencia: la del Excel si la
+       tiene. Cancun son $145,000 POR 17 DIAS, no un precio pelado — desde el
+       26-ago-2026 su dia vale $4,000 y se descuenta hacia abajo, asi que
+       pedirlo a un dia ya no da el numero del Excel (y no debe darlo). */
+    const regla = fila[2] || {};
+    const dias = regla.diasIncluidos || 1;
+    const dio = t.calcula(1, dias, { destino: { direccion: fila[0] }, noches: 0, movimientos: [] }).total;
     /* un dia de servicio pone un piso de 3,000, que ninguno de estos alcanza */
-    const esperado = trasladoAMano(fila[1], 1);
-    if (dio !== esperado) rotos.push({ destino: fila[0], dio: dio, esperaba: esperado });
+    const esperado = trasladoAMano(fila[1], dias);
+    if (dio !== esperado) rotos.push({ destino: fila[0], dias: dias, dio: dio, esperaba: esperado });
   });
   console.log('(' + SU_LISTA.length + ' destinos de su lista, copiados del Excel a mano)');
   igual('los ' + SU_LISTA.length + ' dan su precio del Excel, al peso', rotos.length, 0);
@@ -278,7 +295,10 @@ const SU_LISTA = [
   /* los paquetes ya incluyen sus dias (R2) */
   igual('Cancun 17 dias: 145,000 pelados (cobraba 158,000)', sinMov('Cancún, Quintana Roo, México', 17), 145000);
   igual('Chiapas 8 dias: 85,000 pelados (cobraba 89,000)', sinMov('San Cristóbal de las Casas, Chiapas, México', 8), 85000);
-  igual('y el dia 18 de Cancun SI se cobra', sinMov('Cancún, Quintana Roo, México', 18), 146000);
+  /* Cambio de lado el 26-ago-2026: el dia de Cancun vale $4,000, no $1,000
+     («Cancun, el dia esta en 4000»). Antes esta prueba exigia 146,000. */
+  igual('y el dia 18 de Cancun vale 4,000, no 1,000',
+    sinMov('Cancún, Quintana Roo, México', 18), 149000);
 
   /* CDMX y Huasteca sin movimientos: $1,000 por dia, no noches gratis (R3).
      Palabras del dueño: «si no tiene movimientos, nomas vas a cobrar mil». */
@@ -369,6 +389,48 @@ const SU_LISTA = [
     t.regresoAntesDeSalida('2026-09-10', ''), false);
   igual('con fechas ilegibles no inventa un error de orden',
     t.regresoAntesDeSalida('no-es-fecha', 'tampoco'), false);
+
+  /* ============ LA TANDA DEL 26-ago-2026, SEGUNDA PARTE ============ */
+
+  function conMov(direccion, dias, cuantos) {
+    const m = [];
+    for (let i = 0; i < cuantos; i++) m.push({ horaInicio: '08:00', horaFin: '16:00' });
+    return t.calcula(999, dias, {
+      destino: { direccion: direccion }, noches: Math.max(0, dias - 1), movimientos: m
+    }).total;
+  }
+
+  /* --- LA PLAYA: las 3 noches incluidas NO se pierden por moverse ---
+     «cada noche que supere las 3 noches por defecto son 1000, y si tiene
+     movimientos son 3000 x dia — o sea que un dia extra con movimientos
+     son 4000». Antes, un solo movimiento borraba las noches incluidas y
+     cobraba 1,000 por TODOS los dias: Vallarta 4d/2mov daba 29,000. */
+  igual('Vallarta 4 dias sin movimientos: sus 19,000',
+    sinMov('Puerto Vallarta, Jalisco, México', 4), 19000);
+  igual('Vallarta 4 dias CON 2 movimientos: 19,000 + 2x3,000 (daba 29,000)',
+    conMov('Puerto Vallarta, Jalisco, México', 4, 2), 25000);
+  igual('Vallarta 6 dias CON 2 movimientos: + 2 noches extra + 2 bandas',
+    conMov('Puerto Vallarta, Jalisco, México', 6, 2), 27000);
+  igual('un dia extra CON movimiento son 4,000 (1,000 + 3,000)',
+    conMov('Puerto Vallarta, Jalisco, México', 5, 1) -
+    sinMov('Puerto Vallarta, Jalisco, México', 4), 4000);
+
+  /* --- CANCUN: su dia vale 4,000 y se mueve en los DOS sentidos ---
+     «Cancun, el dia esta en 4000» y «si el cliente quiere 15 dias solamente
+     serian 8,000 menos del precio que esta en la tabla». */
+  igual('Cancun 17 dias: sus 145,000 del Excel', sinMov('Cancún, Quintana Roo, México', 17), 145000);
+  igual('Cancun 18 dias: +4,000 (antes +1,000)', sinMov('Cancún, Quintana Roo, México', 18), 149000);
+  igual('Cancun 15 dias: 8,000 MENOS, como lo dictó', sinMov('Cancún, Quintana Roo, México', 15), 137000);
+  igual('Cancun 16 dias: 4,000 menos', sinMov('Cancún, Quintana Roo, México', 16), 141000);
+
+  /* --- y lo que NO debe haberse movido: CDMX y Huasteca reconstruyen su
+     Excel al peso, porque su precio es un traslado de un dia, no un paquete */
+  igual('CDMX 1 dia con movimiento sigue en sus 26,000',
+    conMov('Ciudad de México, Ciudad de México, México', 1, 1), 26000);
+  igual('CDMX 3 dias con movimientos sigue en sus 34,000',
+    conMov('Ciudad de México, Ciudad de México, México', 3, 3), 34000);
+  igual('Huasteca 3 dias con movimientos sigue en sus 38,500',
+    conMov('Huasteca Potosina, San Luis Potosí, México', 3, 3), 38500);
 })();
 
 /* ============ 4. LA FORMULA DE RESPALDO, KILOMETRO POR KILOMETRO ============ */
@@ -544,10 +606,17 @@ const SU_LISTA = [
           esperado = trasladoAMano(reglaExcel.conMovimientos, dias);
         } else if (reglaExcel && reglaExcel.porDias) {
           esperado = trasladoAMano(porDuracionAMano(reglaExcel, dias), dias) + movAMano;
+        } else if (reglaExcel && reglaExcel.diasIncluidos && reglaExcel.diaExtra) {
+          /* Paquete con tarifa de dia PROPIA (Cancun, $4,000): el precio se
+             ajusta por duracion en los dos sentidos y ya no lleva estadia
+             aparte. Dictado el 26-ago-2026. */
+          const base = fila[1] + (dias - reglaExcel.diasIncluidos) * reglaExcel.diaExtra;
+          esperado = trasladoAMano(base, dias) + movAMano;
         } else if (reglaExcel && reglaExcel.diasIncluidos) {
+          /* Paquete sin tarifa de dia propia: noches gratis hasta un dia antes
+             del regreso, y moverse YA NO las borra (correccion del 26-ago). */
           const gratis = Math.max(3, reglaExcel.diasIncluidos - 1);
-          const estadia = cuantos > 0 ? dias * 1000 : Math.max(0, noches - gratis) * 1000;
-          esperado = trasladoAMano(fila[1], dias) + estadia + movAMano;
+          esperado = trasladoAMano(fila[1], dias) + Math.max(0, noches - gratis) * 1000 + movAMano;
         } else {
           esperado = trasladoAMano(fila[1], dias) + estadiaAMano(dias, noches, cuantos, false) + movAMano;
         }

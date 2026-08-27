@@ -287,9 +287,14 @@ const DESTINOS = [
   { nombre: "Cancún", km: 4282,
     busca: /canc|riviera maya|playa del carmen|tulum/i,
     /* «CANCUN 17 DIAS»: el precio YA incluye los diecisiete días. Antes se
-       le sumaban $13,000 de noches encima (criterio R2). */
+       le sumaban $13,000 de noches encima (criterio R2).
+
+       Del día 18 en adelante, $4,000 — dictado por el dueño el 26-ago-2026
+       («Cancún, el día está en 4000»). No es la noche suelta de $1,000: a esa
+       distancia el día extra se cobra completo. */
     precio: { busNC47: 180000, bus4849: 185000, neobusI6: 195000, pbI6: 190000, marcopolo: 215000, irizar: 205000, sprinter: 145000 },
-    diasIncluidos: 17 }
+    diasIncluidos: 17,
+    diaExtra: 4000 }
 ];
 
 /* ------------------------------------------------------------

@@ -214,13 +214,59 @@ centro de Guadalajara. En la página real el cliente elige del autocompletado
 sugerencia con un origen igual de vago. Defensa pendiente: desconfiar de una
 medición absurdamente corta o larga para un texto desconocido.
 
+### R13 · Estadía y movimiento se SUMAN; no se excluyen (26-ago-2026)
+
+*«La playa es sencillo: cada noche que supere las 3 noches por defecto son
+1000, y si tiene movimientos son 3000 por día — o sea que un día extra con
+movimientos son 4000.»*
+
+Yo lo tenía como dos modos que se excluían: en cuanto había **un** movimiento,
+las 3 noches incluidas desaparecían y se cobraban $1,000 por **todos** los
+días. Vallarta 4 días con 2 movimientos salía en $29,000 en vez de $25,000.
+
+Son dos cobros independientes:
+
+```
+noches que pasan de 3  →  $1,000 cada una
+días con movimiento    →  $3,000 cada uno
+un día extra CON movimiento = 1,000 + 3,000 = $4,000
+```
+
+Y ahí está de dónde salen los $4,000 por día de CDMX y la Huasteca: no es una
+tarifa aparte, es la suma de las dos. La diferencia es que su precio del Excel
+es un **traslado de un día**, no un paquete, así que la estadía se les cobra
+desde el primer día y no tienen noches incluidas.
+
+También confirmó la lectura de «hasta 4 días»: *«sí son días, pero son 3
+noches»*. Cuatro días = tres noches. El paquete por omisión es ése.
+
+### R14 · La tarifa de día de un paquete corre en los DOS sentidos (26-ago-2026)
+
+*«Cancún, el día está en 4000»* — y en el mismo aliento: *«si el cliente
+quiere 15 días solamente serían 8,000 menos del precio que está en la tabla».*
+
+Así que el precio del Excel es un **punto de referencia, no un piso**:
+
+```
+Cancún = $145,000 + (días − 17) × $4,000
+   15 días → $137,000     18 días → $149,000
+```
+
+Antes el día 18 sumaba $1,000 y pedir menos días no descontaba nada.
+
+**Lección:** cuando el dueño da una tarifa de día, preguntar SIEMPRE si baja
+además de subir. La mitad hacia abajo no se deduce sola.
+
 ## Preguntas abiertas (lanzarlas al dueño en la siguiente ronda)
 
-- Un paquete pedido a MÁS días de los incluidos (Cancún 18 días): hoy se
-  cobra +$1,000 por noche. ¿Correcto, o el día extra de un paquete vale más?
+- **¿HASTA DÓNDE BAJA EL DESCUENTO DE UN PAQUETE?** Con R14 tal cual, Cancún
+  a 1 día cotiza **$81,000** (145,000 − 16×4,000) para un viaje de 4,282 km.
+  Eso es cobrar de menos. El dueño habló de 15 días (dos abajo de 17), no de
+  uno. **Falta el piso**: abajo de X días, ¿se manda con asesor? Aplica igual
+  a Chiapas (8 días) y a Talpa Burrita (4 días).
+- Chiapas 8 días y Acapulco 4 días: ¿su día extra también vale $4,000, o solo
+  el de Cancún? Hoy siguen con $1,000 la noche.
 - Un paquete con movimientos (Cancún moviéndose allá): hoy suma las bandas
   encima del paquete. ¿O el paquete ya lo trae todo, como Tolantongo?
-- Los destinos de playa sin días en el nombre (Vallarta, Mazatlán…): 3 noches
-  incluidas y $1,000 la extra. Guayabitos lo confirmó (R7) — ¿aplica igual a
-  todas las playas?
-- Tolantongo con movimientos a MÁS de 3 días: ¿34,500 más cuánto?
+- Tolantongo con movimientos a MÁS de 3 días: ¿34,500 más cuánto? Hoy el día
+  4 no suma nada.

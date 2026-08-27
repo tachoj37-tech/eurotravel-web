@@ -191,9 +191,27 @@ function necesitaMedirse(destino, unidad) {
    ------------------------------------------------------------ */
 function precioPorDuracion(enLista, dias) {
   const tabla = enLista.porDias;
+  const dd = Math.max(1, Math.floor(Number(dias) || 1));
+
+  /* ----------------------------------------------------------
+     UN PAQUETE CON TARIFA DE DIA PROPIA SE MUEVE EN LOS DOS SENTIDOS
+
+     Cancún son $145,000 por 17 días y su día vale $4,000. El dueño lo
+     dictó el 26-ago-2026 con las dos mitades: hacia arriba, «el día está
+     en 4000»; y hacia abajo, «si el cliente quiere 15 días solamente
+     serían 8,000 menos del precio que está en la tabla».
+
+     Así que el precio del Excel es un punto de referencia, no un piso:
+     145,000 + (días − 17) × 4,000.
+     ---------------------------------------------------------- */
+  if (!tabla && typeof enLista.diasIncluidos === 'number' &&
+      typeof enLista.diaExtra === 'number') {
+    return enLista.precio + (dd - enLista.diasIncluidos) * enLista.diaExtra;
+  }
+
   if (!tabla) return enLista.precio;
 
-  const d = Math.max(1, Math.floor(Number(dias) || 1));
+  const d = dd;
   if (typeof tabla[d] === 'number') return tabla[d];
 
   const duraciones = Object.keys(tabla).map(Number)
@@ -224,7 +242,11 @@ function trasladoDe(kmTotal, destino, unidad, dias) {
       porKm: null, km: km,
       /* Con esto decide `calcula` qué más puede sumar: un precio por duración
          ya trae su estadía, y un paquete ya trae sus días (criterio R1 y R2). */
-      porDuracion: !!enLista.porDias,
+      /* `porDuracion` también cuando el paquete trae su propia tarifa de día
+         (Cancún): ese precio YA se ajustó por duración arriba, así que no se
+         le pueden volver a sumar noches encima. */
+      porDuracion: !!enLista.porDias ||
+        (typeof enLista.diasIncluidos === 'number' && typeof enLista.diaExtra === 'number'),
       diasIncluidos: enLista.diasIncluidos || null,
       precioConMovimientos: enLista.conMovimientos || null
     };
@@ -651,18 +673,28 @@ function calcula(kmTotal, dias, extras) {
   const nochesIncluidas = km.diasIncluidos
     ? Math.max(NOCHES_INCLUIDAS, km.diasIncluidos - 1)
     : NOCHES_INCLUIDAS;
-  const nochesExtra = (conMovimientos || km.porDuracion)
-    ? 0
-    : Math.max(0, noches - nochesIncluidas);
+  /* Las noches incluidas NO se pierden por moverse. Corrección del dueño el
+     26-ago-2026: «la playa es sencillo: cada noche que supere las 3 noches
+     por defecto son 1000, y si tiene movimientos son 3000 por día — o sea que
+     un día extra con movimientos son 4000».
+
+     O sea que estadía y movimiento son dos cobros independientes que se
+     suman, no dos modos que se excluyen. Antes, en cuanto había UN
+     movimiento se cobraban $1,000 por TODOS los días y las 3 noches
+     incluidas desaparecían: Vallarta 4 días con 2 movimientos salía en
+     $29,000 en vez de $25,000. */
+  const nochesExtra = km.porDuracion ? 0 : Math.max(0, noches - nochesIncluidas);
   const diasParados = conMovimientos ? Math.max(0, dias - movimientos.length) : 0;
 
   let importeNoches;
   if (km.porDuracion) {
     importeNoches = 0;                     // la duración ya viene en el precio
   } else if (regla && regla.estadiaPorDia) {
-    importeNoches = dias * EXTRA_POR_NOCHE;   // CDMX y Huasteca: cada día, siempre
-  } else if (conMovimientos) {
-    importeNoches = dias * EXTRA_POR_NOCHE;   // cada día de estadía, movido o no
+    /* CDMX y Huasteca son la excepción: su precio es un traslado de UN día,
+       no un paquete, así que la estadía se cobra desde el primer día y no
+       hay noches incluidas que valgan. Reconstruye sus renglones del Excel
+       al peso ($4,000 el día con movimiento = 1,000 + 3,000). */
+    importeNoches = dias * EXTRA_POR_NOCHE;
   } else {
     importeNoches = nochesExtra * EXTRA_POR_NOCHE;
   }

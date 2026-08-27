@@ -67,9 +67,13 @@ function en(direccion, placeId) { return { direccion: direccion, placeId: placeI
     t.trasladoDe(620, en('Puerto Vallarta, Jalisco, México')).porKm, null);
 
   /* Cancun mide 4,282 km —muy arriba del tope de la formula— pero esta en la
-     lista, y la lista contesta primero. El tope solo aplica a la formula. */
+     lista, y la lista contesta primero. El tope solo aplica a la formula.
+
+     Va con sus 17 dias: desde el 26-ago-2026 el precio de Cancun depende de
+     la duracion («el dia esta en 4000», y hacia abajo tambien). Antes esta
+     prueba no pasaba dias y leia los 145,000 pelados. */
   igual('Cancun esta en la lista aunque pase el tope',
-    t.trasladoDe(4282, en('Cancún, Quintana Roo, México')).total, 145000);
+    t.trasladoDe(4282, en('Cancún, Quintana Roo, México'), null, 17).total, 145000);
   igual('y por eso NO pide asesor',
     !!t.trasladoDe(4282, en('Cancún, Quintana Roo, México')).requiereAsesor, false);
 })();
@@ -410,13 +414,21 @@ igual('sin nada no vale', t.horasDe(null, undefined), 0);
   igual('Vallarta 5 noches: 21,000',
     t.calcula(620, 6, { destino: vallarta, noches: 5 }).total, 21000);
 
-  /* Con UN dia de movimiento el trato cambia entero: se paga cada dia. */
-  //  19,000 + 4 dias × 1,000 + 1 dia de 8 h × 3,000 = 26,000
-  igual('Vallarta 4 días con un movimiento: 26,000',
-    t.calcula(620, 4, { destino: vallarta, noches: 3, movimientos: [ochoHoras] }).total, 26000);
-  igual('y ya no hay noches incluidas que valgan',
+  /* CAMBIO DE LADO el 26-ago-2026. Antes esta prueba exigia 26,000 porque el
+     codigo borraba las noches incluidas en cuanto habia UN movimiento y
+     cobraba 1,000 por TODOS los dias. El dueño lo corrigio: «la playa es
+     sencillo: cada noche que supere las 3 noches por defecto son 1000, y si
+     tiene movimientos son 3000 x dia». Son dos cobros que se SUMAN, no dos
+     modos que se excluyen. 4 dias son 3 noches, o sea ninguna extra:
+         19,000 + 0 de estadia + 1 dia de 8 h × 3,000 = 22,000              */
+  igual('Vallarta 4 días con un movimiento: 22,000 (antes cobraba 26,000)',
+    t.calcula(620, 4, { destino: vallarta, noches: 3, movimientos: [ochoHoras] }).total, 22000);
+  igual('las 3 noches incluidas NO se pierden por moverse',
     t.calcula(620, 4, { destino: vallarta, noches: 3, movimientos: [ochoHoras] })
       .interno.nochesExtra, 0);
+  /* Y la cuarta noche si se cobra, ademas de la banda: 1,000 + 3,000 */
+  igual('un día extra CON movimiento son 4,000',
+    t.calcula(620, 5, { destino: vallarta, noches: 4, movimientos: [ochoHoras] }).total, 23000);
   /* Los dias que la unidad se queda parada la oficina los ve, para explicarlo */
   igual('la oficina ve los días que la unidad se quedó parada',
     t.calcula(620, 4, { destino: vallarta, noches: 3, movimientos: [ochoHoras] })
@@ -507,15 +519,21 @@ igual('sin nada no vale', t.horasDe(null, undefined), 0);
      FORMULA a proposito —solo con placeId, sin direccion, la lista no los
      reconoce— para que la unica diferencia entre los dos sea la regla.
          6,500 + 900 × 22 = 26,300  ·  minimo 5 × 3,000 = 15,000
-         5 dias de estadia × 1,000 = 5,000
-         movimientos: 12,000 en la Huasteca contra 17,000 en otro lado       */
+         movimientos: 12,000 en la Huasteca contra 17,000 en otro lado
+
+     LA ESTADIA CAMBIO DE LADO el 26-ago-2026. Antes los dos cobraban 5,000
+     (5 dias × 1,000) porque moverse borraba las noches incluidas. Ahora solo
+     la Huasteca cobra estadia por dia —su precio es un traslado, no un
+     paquete—; el otro destino tiene sus 3 noches incluidas y de 4 noches
+     solo paga UNA extra. Son dos reglas distintas a proposito.               */
   const viaje = { noches: 4, movimientos: cuatroDias };
   const huasteca = t.calcula(900, 5, Object.assign({ destino: { placeId: HUASTECA_ID } }, viaje));
   const otro = t.calcula(900, 5, Object.assign({ destino: { placeId: 'ChIJ_otro' } }, viaje));
 
-  igual('Huasteca: 26,300 + 5,000 + 12,000', huasteca.total, 43300);
-  igual('otro destino: 26,300 + 5,000 + 17,000', otro.total, 48300);
-  igual('la diferencia son los 5,000 de las bandas', otro.total - huasteca.total, 5000);
+  igual('Huasteca: 26,300 + 5 días × 1,000 + 12,000', huasteca.total, 43300);
+  igual('otro destino: 26,300 + 1 noche extra × 1,000 + 17,000', otro.total, 44300);
+  igual('la Huasteca cobra estadía los 5 días', huasteca.interno.importeNoches, 5000);
+  igual('el otro solo la noche que pasa de tres', otro.interno.importeNoches, 1000);
   igual('y el contrato sabra por que', huasteca.interno.reglaDestino, 'Huasteca Potosina');
   igual('en otro destino no hay regla que explicar', otro.interno.reglaDestino, null);
 })();
@@ -539,16 +557,20 @@ igual('sin nada no vale', t.horasDe(null, undefined), 0);
   });
 
   igual('el traslado, solo', p.interno.traslado, 18000);
-  igual('la estadía, día por día', p.interno.importeNoches, 6000);
+  /* CAMBIO DE LADO el 26-ago-2026: antes eran 6,000 (6 dias × 1,000) porque
+     moverse borraba las 3 noches incluidas. Ahora un destino de formula las
+     conserva: de 5 noches, solo 2 pasan de tres. */
+  igual('la estadía: solo las noches que pasan de tres', p.interno.importeNoches, 2000);
   igual('los movimientos', p.desglose.importeMovimientos, 12000);
-  igual('el total', p.total, 36000);
+  igual('el total', p.total, 32000);
   igual('las tres partes suman el total',
     p.interno.traslado + p.interno.importeNoches + p.desglose.importeMovimientos, p.total);
 
   /* Y lo que ve el cliente son DOS numeros que tambien suman el total. Si el
      desglose no cuadrara con el total pareceria un error de cuentas, y eso es
      peor que no dar desglose. */
-  igual('el cliente ve traslado y estadía juntos', p.desglose.servicio, 24000);
+  /* 18,000 + 2,000; era 24,000 cuando la estadia se cobraba por dia */
+  igual('el cliente ve traslado y estadía juntos', p.desglose.servicio, 20000);
   igual('y sus dos numeros suman el total',
     p.desglose.servicio + p.desglose.importeMovimientos, p.total);
   /* `reglaDestino` es un NOMBRE, no una tarifa: la pantalla lo necesita para
@@ -560,8 +582,9 @@ igual('sin nada no vale', t.horasDe(null, undefined), 0);
   /* El anticipo sale del total FINAL, no del traslado. Si saliera del
      traslado, se apartaria un viaje de 36,000 con el anticipo de uno de
      18,000: 3,600 en vez de 7,200. */
-  igual('el anticipo es el 20% del total final', p.anticipo, 7200);
-  igual('y el saldo, lo que queda', p.saldo, 28800);
+  /* 20% de 32,000; eran 7,200 cuando el total era 36,000 */
+  igual('el anticipo es el 20% del total final', p.anticipo, 6400);
+  igual('y el saldo, lo que queda', p.saldo, 25600);
   igual('anticipo + saldo = total', p.anticipo + p.saldo, p.total);
 })();
 

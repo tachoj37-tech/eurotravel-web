@@ -268,29 +268,37 @@ function dia(fecha, inicio, fin) {
      tampoco por ahi se cuele el kilometraje. */
   const rm = await corre(610000, 600000, '2026-09-03T08:00', '2026-09-10T18:00',
     [dia('2026-09-04', '08:00', '18:00'), dia('2026-09-05', '08:00', '21:00')]);
+  /* El kilometraje se busca como NUMERO SUELTO, no como pedazo de texto.
+     Con `/610/` a secas la prueba se ponia roja el 26-ago-2026 por un total
+     de 46,100 —que lleva «610» adentro— y parecia una fuga que no existia.
+     Una prueba que grita en falso acaba ignorandose, y esta cuida la regla
+     mas importante del proyecto. */
   igual('el desglose tampoco delata el kilometraje',
-    JSON.stringify(rm.cotiza).match(/km|tarifa|tramo|1210|610/i), null);
+    JSON.stringify(rm.cotiza).match(/km|tarifa|tramo|(^|[^0-9])(1210|610)([^0-9]|$)/i), null);
 
   /* Las cuentas del caso completo, a mano. Tequisquiapan NO esta en la lista,
      asi que contesta la formula de respaldo:
        6,500 + 1,210 × 22 = 33,120
        minimo 8 dias × 3,000 = 24,000, no gana
        corte a la centena ................................. traslado 33,100
-       HAY movimientos, asi que la estadia se cobra DIA POR DIA:
-       8 dias × 1,000 ........................................ +  8,000
+       CAMBIO DE LADO el 26-ago-2026: antes, por haber movimientos, se
+       cobraban los 8 dias de estadia (8,000) y el total daba 50,100. El
+       dueño corrigio que las 3 noches incluidas NO se pierden por moverse:
+       de 7 noches, solo 4 pasan de tres.
+       4 noches extra × 1,000 ................................ +  4,000
        10 h -> 4,000 y 13 h -> 5,000 ......................... +  9,000
                                                                --------
-                                                                 50,100 */
-  igual('el caso completo da 50,100', rm.cotiza.total, 50100);
+                                                                 46,100 */
+  igual('el caso completo da 46,100 (antes cobraba 50,100)', rm.cotiza.total, 46100);
   /* Al cliente le llegan DOS numeros: traslado y estadia juntos (33,100 +
-     8,000 = 41,100) y los movimientos aparte. Partirlos diria cuanto cuesta
+     4,000 = 37,100) y los movimientos aparte. Partirlos diria cuanto cuesta
      la noche. */
   igual('y su desglose lo explica sin delatar la tarifa por noche',
     [rm.cotiza.desglose.servicio, rm.cotiza.desglose.importeMovimientos],
-    [41100, 9000]);
+    [37100, 9000]);
   igual('los dos numeros suman el total',
     rm.cotiza.desglose.servicio + rm.cotiza.desglose.importeMovimientos, rm.cotiza.total);
-  igual('el anticipo es el 20% de los 50,100', rm.cotiza.anticipo, 10020);
+  igual('el anticipo es el 20% de los 46,100', rm.cotiza.anticipo, 9220);
 
   /* LA HUASTECA, POR LOS DOS ENDPOINTS.
      Es el caso donde mas facil se separarian: si uno reconociera el destino y
