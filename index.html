@@ -269,10 +269,39 @@
   .view.on { display: block; animation: viewIn 420ms var(--ease); }
   @keyframes viewIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
 
-  .pad { padding: 64px 0 88px; }
+  /* ------------------------------------------------------------
+     OJO: SOLO ARRIBA Y ABAJO
+     ------------------------------------------------------------
+     Esto decía `padding: 64px 0 88px`, y esa forma corta escribe
+     los CUATRO lados. Como `.pad` siempre va junto a `.wrap` —que
+     pone `padding: 0 20px`— y está más abajo en la hoja, le
+     BORRABA los 20px de los costados a las cinco secciones que la
+     usan.
+
+     En computadora no se veía: la ventana es más ancha que los
+     1200px del contenido, así que sobra aire por fuera. En celular
+     el texto quedaba pegado a la orilla de la pantalla, y de ahí
+     venía lo de «está muy apretado». Lo reportó el dueño el
+     27-ago-2026 con una foto de su teléfono.
+
+     Con `padding-top` y `padding-bottom` por separado, cada regla
+     escribe lo suyo y ninguna pisa a la otra.
+     ------------------------------------------------------------ */
+  .pad { padding-top: 64px; padding-bottom: 88px; }
   .sec-head { max-width: 660px; }
   .sec-head h2 { font-size: clamp(28px, 4.2vw, 44px); margin-top: 12px; }
   .sec-head p { margin-top: 16px; }
+
+  @media (max-width: 640px) {
+    /* En una pantalla de mano, 64 y 88 son media pantalla de aire antes de
+       llegar al contenido. */
+    .pad { padding-top: 40px; padding-bottom: 56px; }
+    /* La interlínea de los títulos es 1.1, que a 44px se ve firme y a 28px en
+       dos renglones aprieta: las colas de la «p» y la «g» casi tocan el
+       renglón de abajo. */
+    .sec-head h2 { line-height: 1.18; }
+    .sec-head p { font-size: 15.5px; }
+  }
 
   /* ================= hero ================= */
   .hero {
@@ -1019,7 +1048,60 @@
   .loc-pin.on { display: flex; }
   .loc-pin svg { width: 17px; height: 17px; color: var(--red); flex-shrink: 0; }
   .loc-pin b { font-family: 'Archivo'; font-size: 10.5px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); display: block; }
-  .loc-actions { display: flex; gap: 10px; justify-content: flex-end; padding: 16px 22px; border-top: 1px solid var(--line); }
+  /* ------------------------------------------------------------
+     EL BOTON NO SE PUEDE IR ABAJO DE LA PANTALLA
+     ------------------------------------------------------------
+     Medido en un teléfono de 430×932 el 27-ago-2026, con el modal
+     de origen abierto: la tarjeta cabe en 839px y su contenido
+     mide 939. «Confirmar ubicación» arrancaba en y=910 — fuera.
+
+     Y lo peor no era eso, sino que la tarjeta SI se podía
+     desplazar: el dedo caía sobre la lista de destinos, que tiene
+     su propio desplazamiento, y se lo quedaba. El cliente movía el
+     dedo, veía moverse los destinos, y concluía que no había más
+     abajo.
+
+     Encoger las filas —que es lo que se pidió— gana unos 46px de
+     los 100 que faltaban. Ayuda y se hace, pero no es la
+     solución: el día que una búsqueda devuelva nombres largos, el
+     botón se vuelve a ir. Pegado abajo, ya no puede.
+     ------------------------------------------------------------ */
+  .loc-actions {
+    display: flex; gap: 10px; justify-content: flex-end; padding: 16px 22px;
+    border-top: 1px solid var(--line);
+    position: sticky; bottom: 0; background: #fff; z-index: 2;
+  }
+
+  @media (max-width: 640px) {
+    /* Todo el modal más compacto. Las filas quedan en unos 52px de alto:
+       menos que antes, y todavía por encima de los 44 que necesita un dedo. */
+    .loc-head { padding: 16px 18px 12px; }
+    .loc-head h3 { font-size: 18px; }
+    .loc-search { padding: 12px 18px; }
+    .loc-search > svg { left: 30px; }
+    /* Con el botón ya fijo abajo, la lista puede ser más alta sin riesgo:
+       antes cada píxel que crecía era un píxel que empujaba al botón fuera
+       de la pantalla. */
+    .loc-list { max-height: min(280px, 32vh); }
+    .loc-list button { padding: 9px 18px; gap: 10px; }
+    /* Dos cosas, y la segunda es la que de verdad encoge la fila:
+
+       1. La interlínea la heredaban del cuerpo, que es 1.6 —buena para leer
+          un párrafo, cara para dos renglones sueltos dentro de un botón—.
+
+       2. El `<b>` es EN LINEA, así que su renglón lo mandaba el contenedor
+          (25.6px) y no su propia interlínea (17.5px). Nueve píxeles por fila
+          que no se veían por ningún lado. En bloque usa la suya. */
+    .loc-list b { display: block; font-size: 14px; line-height: 1.25; }
+    .loc-list small { font-size: 11.5px; line-height: 1.3; }
+    .loc-detail { padding: 14px 18px 18px; }
+    .loc-actions { padding: 12px 18px; }
+    /* Los botones ocupan el renglón completo en vez de amontonarse a la
+       derecha. No quedan iguales —«Confirmar ubicación» no cabe en la mitad y
+       se queda con lo que necesita— y así está bien: el grande es el que se
+       busca. A una mano se pica lo que se alcanza, no lo que se lee. */
+    .loc-actions .btn { flex: 1; justify-content: center; }
+  }
 
   @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after { animation-duration: 1ms !important; animation-delay: 0ms !important; transition-duration: 1ms !important; }
