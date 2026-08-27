@@ -106,11 +106,28 @@ PAGINAS.forEach(function (nombre) {
     'cta-p-alta', 'cta-a-nombre', 'cta-a-correo', 'cta-a-tel', 'cta-a-clave',
     'cta-a-crear', 'cta-ir-entrar',
     'cta-p-codigo', 'cta-c-casillas', 'cta-c-confirmar', 'cta-c-otro', 'cta-c-texto',
-    'cta-p-dentro', 'cta-d-quien', 'cta-d-salir', 'cta-d-cotizar',
-    'cta-g', 'cta-g-boton', 'cta-g2', 'cta-g2-boton'
+    /* `cta-d-salir` estaba aquí y se fue: cerrar sesión pasó al menú de la
+       barra el 27-ago-2026, a pedido del dueño. En el aviso de «ya quedó» no
+       tiene nada que hacer —ahí se acaba de crear la cuenta, salirse es lo
+       último que quiere quien está viendo esa pantalla—. */
+    'cta-p-dentro', 'cta-d-titulo', 'cta-d-quien', 'cta-d-nota', 'cta-d-viajes', 'cta-d-cotizar',
+    'cta-p-viajes', 'cta-v-estado', 'cta-v-lista', 'cta-v-error',
+    'cta-p-config', 'cta-s-nombre', 'cta-s-correo', 'cta-s-actual', 'cta-s-actual-caja',
+    'cta-s-nueva', 'cta-s-guardar', 'cta-s-error', 'cta-s-listo',
+    'cta-g', 'cta-g-boton', 'cta-g2', 'cta-g2-boton',
+    /* el menú de la barra */
+    'menu-cuenta', 'menu-nombre', 'menu-correo', 'menu-viajes', 'menu-config', 'menu-salir'
   ];
   igual('la cuenta desde la barra está completa',
     DE_LA_BARRA.filter(function (id) { return html.indexOf('id="' + id + '"') < 0; }), []);
+
+  /* «Mis viajes» va HASTA ARRIBA del menú: lo pidió el dueño, y es lo que la
+     gente viene a buscar cuando abre ahí. Si alguien reordena sin querer, esto
+     lo caza — el orden en el HTML es el orden en la pantalla. */
+  const orden = ['menu-viajes', 'menu-config', 'menu-salir']
+    .map(function (id) { return html.indexOf('id="' + id + '"'); });
+  igual('en el menú, «Mis viajes» va primero y «Cerrar sesión» al final',
+    orden[0] < orden[1] && orden[1] < orden[2], true);
 
   /* seis casillas en las DOS pantallas del código, ni cinco ni siete */
   function cuentaCasillas(id) {

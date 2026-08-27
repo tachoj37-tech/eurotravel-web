@@ -50,7 +50,12 @@ const FRENOS = {
   google: defensas.creaFreno({ porMinuto: 10, porDia: 400 }),
   /* Ésta la pregunta la pantalla al abrir la bifurcación, y no cuesta nada:
      devuelve un id que ya es público. */
-  config: defensas.creaFreno({ porMinuto: 40, porDia: 2000 })
+  config: defensas.creaFreno({ porMinuto: 40, porDia: 2000 }),
+  /* Cada consulta de viajes es una llamada a Stripe, así que no se regala. */
+  'mis-viajes': defensas.creaFreno({ porMinuto: 15, porDia: 800 }),
+  /* Cambiar contraseña cuesta un `scrypt` de comprobación y otro de escritura:
+     doscientos milisegundos de máquina por intento. */
+  'cambiar-clave': defensas.creaFreno({ porMinuto: 6, porDia: 200 })
 };
 
 /* Las que necesitan saber QUIEN está dentro reciben el id sacado de la
@@ -64,7 +69,14 @@ const CON_CUERPO = {
   google: logica.conGoogle
 };
 const CON_SESION = {
-  yo: logica.yo
+  yo: logica.yo,
+  'mis-viajes': logica.misViajes
+};
+/* Las que necesitan las DOS cosas. Van aparte y nombradas para que se vea de
+   un vistazo cuáles pueden tocar la sesión: la lista corta es la que se
+   revisa cuando algo huele mal. */
+const CON_AMBOS = {
+  'cambiar-clave': logica.cambiarClave
 };
 /* Las que no miran ni el cuerpo ni la sesión. `config` solo devuelve el id
    de cliente de Google, que ya es público y va escrito en la página. */
@@ -79,7 +91,8 @@ module.exports = async function handler(req, res) {
   const accion = String((cuerpo && cuerpo.accion) || '').trim();
 
   const tiene = function (o) { return Object.prototype.hasOwnProperty.call(o, accion); };
-  if (!tiene(CON_CUERPO) && !tiene(CON_SESION) && !tiene(SIN_NADA) && accion !== 'salir') {
+  if (!tiene(CON_CUERPO) && !tiene(CON_SESION) && !tiene(CON_AMBOS) &&
+      !tiene(SIN_NADA) && accion !== 'salir') {
     res.status(400).json({ error: true, aviso: 'No entendimos qué querías hacer.' });
     return;
   }
@@ -96,6 +109,10 @@ module.exports = async function handler(req, res) {
     /* El cliente sale de la COOKIE, ya comprobado el sello: nunca de lo que
        manda el navegador en el cuerpo. Ahí estaría el hueco. */
     r = await CON_SESION[accion](acceso.clienteDeSesion(acceso.sesionDe(req)));
+  } else if (tiene(CON_AMBOS)) {
+    /* El cuerpo va PRIMERO y la sesión después, en ese orden, para que nunca
+       se pueda confundir uno con otro al leer la llamada. */
+    r = await CON_AMBOS[accion](cuerpo, acceso.clienteDeSesion(acceso.sesionDe(req)));
   } else {
     r = await CON_CUERPO[accion](cuerpo);
   }

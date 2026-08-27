@@ -312,6 +312,44 @@ async function clientesPorCorreo(correo) {
 }
 
 /* ------------------------------------------------------------
+   LOS VIAJES DE UN CLIENTE
+   ------------------------------------------------------------
+   Para «Mis viajes». No hay base de datos: los viajes SON las
+   sesiones de cobro de Stripe, con el folio y los montos en su
+   metadata —los mismos que el webhook usa para armar el contrato—.
+
+   SE FILTRA POR CLIENTE DEL LADO DE STRIPE Y OTRA VEZ AQUI. El
+   filtro de Stripe basta, pero quien llama pasa un id sacado de
+   una cookie firmada y esto es lo que decide qué viajes ve una
+   persona: si algún día el filtro cambia de nombre o Stripe
+   ignora un parámetro que no entiende, sin la segunda revisión la
+   pantalla enseñaría los viajes de todos. Cuesta tres líneas.
+   ------------------------------------------------------------ */
+async function sesionesDelCliente(idCliente, cuantas) {
+  const k = clave();
+  if (!k) return { error: 'sin clave de Stripe' };
+  if (!idDeClienteValido(idCliente)) return { error: 'id de cliente con mala forma' };
+  const limite = Math.min(Math.max(Number(cuantas) || 20, 1), 50);
+
+  try {
+    const r = await fetch(STRIPE + '/checkout/sessions?customer=' +
+      encodeURIComponent(idCliente) + '&limit=' + limite, {
+      headers: { 'Authorization': 'Bearer ' + k }
+    });
+    const d = await r.json();
+    if (!r.ok || (d && d.error)) return { error: 'Stripe rechazó la consulta', reintentar: true };
+
+    const suyas = ((d && d.data) || []).filter(function (s) {
+      const c = typeof s.customer === 'string' ? s.customer : (s.customer && s.customer.id) || '';
+      return c === idCliente;
+    });
+    return { sesiones: suyas };
+  } catch (e) {
+    return { error: 'no se pudo consultar a Stripe', reintentar: true };
+  }
+}
+
+/* ------------------------------------------------------------
    CREAR EL CLIENTE
    ------------------------------------------------------------
    Hasta hoy los clientes nacían solos, dentro del cobro
@@ -399,6 +437,7 @@ module.exports = {
   cargoDelPago,
   traeCliente,
   clientesPorCorreo,
+  sesionesDelCliente,
   creaCliente,
   guardaEnCliente,
   creaSesionDeCobro,

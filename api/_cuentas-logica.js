@@ -33,6 +33,14 @@ const acceso = require('./_acceso');
 const stripe = require('./_stripe');
 const correo = require('./_correo');
 const google = require('./_google');
+const ligas = require('./_ligas');
+const defensas = require('./_defensas');
+
+/* El sitio del que salen las ligas de «Mis viajes». Sale de la lista de
+   orígenes —o sea de `SITIO_URL` en Vercel— y no de una cabecera: es la misma
+   dirección que el webhook pone en el correo del contrato, y las dos tienen
+   que decir lo mismo el día que entre el dominio de verdad. */
+function sitio() { return defensas.PERMITIDOS[0]; }
 
 /* Lo que la pantalla puede enseñar. NUNCA se devuelve el id del cliente ni
    nada de la ficha: la pantalla no lo necesita y la cookie ya lo lleva. */
@@ -365,7 +373,12 @@ async function yo(idCliente) {
     cuerpo: {
       dentro: true,
       nombre: String(cliente.name || '').trim(),
-      correo: cuentas.normalizaCorreo(cliente.email)
+      correo: cuentas.normalizaCorreo(cliente.email),
+      /* Para que Configuración sepa si pedir «tu contraseña de ahorita»: quien
+         entró con Google nunca puso una. No es dato sensible —es sobre la
+         cuenta de quien pregunta, y solo se contesta con sesión buena— y sin
+         esto la pantalla tendría que adivinar. */
+      tieneClave: cuentas.tieneContrasena(m)
     }
   };
 }
@@ -498,8 +511,111 @@ function config() {
   return { status: 200, cuerpo: cuerpo };
 }
 
+/* ============================================================
+   MIS VIAJES
+   ------------------------------------------------------------
+   No hay base de datos: los viajes SON las sesiones de cobro de
+   Stripe, con el folio y los montos en su metadata —los mismos
+   que el webhook usa para armar el contrato—.
+
+   DE QUIEN SON LOS VIAJES QUE SE DEVUELVEN
+
+   Del cliente que viene en la COOKIE FIRMADA, nunca de un campo
+   del cuerpo. La cáscara ya lo saca del sello; aquí solo se
+   recibe el id. Es toda la seguridad de esta puerta, así que vale
+   la pena decirlo de frente: si algún día alguien le pasa a esta
+   función un id que venga del navegador, cualquiera lee los
+   viajes de cualquiera con solo cambiarlo.
+
+   CADA VIAJE LLEVA SU LIGA, la misma firmada que le llegó por
+   correo. Así el botón «Ver» reusa la pantalla que ya existe en
+   vez de tener que hacer otra.
+
+   Y NO SE ENSEÑA MAS DE LO QUE HACE FALTA: para la lista bastan
+   folio, destino, fechas y saldo. El desglose completo vive en la
+   pantalla del viaje, detrás de la liga.
+   ============================================================ */
+async function misViajes(idCliente) {
+  if (!idCliente) return { status: 200, cuerpo: { dentro: false, viajes: [] } };
+
+  const r = await stripe.sesionesDelCliente(idCliente);
+  if (r.error) {
+    console.error('[cuentas] no se pudieron traer los viajes: ' + r.error);
+    return no(503, 'No pudimos traer tus viajes ahora mismo. Inténtalo en un momento.');
+  }
+
+  const ahora = Date.now();
+  const viajes = [];
+  (r.sesiones || []).forEach(function (s) {
+    const m = s.metadata || {};
+    /* Sin folio no es un viaje cerrado: es un cobro que quedó a medias, y
+       enseñarlo confunde más de lo que ayuda. */
+    const folio = String(m.folio || '').trim();
+    if (!folio) return;
+
+    const estado = stripe.estadoDePago(s);
+    viajes.push({
+      folio: folio,
+      destino: String(m.destino || '').slice(0, 160),
+      origen: String(m.origen || '').slice(0, 160),
+      salida: String(m.salida || '').slice(0, 25),
+      regreso: String(m.regreso || '').slice(0, 25),
+      total: Number(m.total) || 0,
+      saldo: Number(m.saldo) || 0,
+      unidad: String(m.unidad || '').slice(0, 60),
+      estado: estado,
+      liga: acceso.hayClave() ? ligas.ligaDelViaje(sitio(), s.id, m.regreso, ahora) : ''
+    });
+  });
+
+  /* El más nuevo primero: es el que la gente viene a ver. */
+  viajes.sort(function (a, b) { return String(b.salida).localeCompare(String(a.salida)); });
+
+  return { status: 200, cuerpo: { dentro: true, viajes: viajes } };
+}
+
+/* ============================================================
+   CAMBIAR LA CONTRASEÑA
+   ------------------------------------------------------------
+   SE PIDE LA DE AHORITA aunque ya haya sesión abierta, y no es
+   burocracia: una sesión robada —un teléfono prestado, una
+   pestaña abierta en un café— podría cambiar la contraseña y
+   dejar al dueño fuera de su propia cuenta para siempre. Con la
+   actual de por medio, lo peor que hace quien se sienta en esa
+   pestaña es mirar; no se apodera.
+
+   Quien entró con Google y nunca puso contraseña puede ponerse
+   una: ahí no hay ninguna que pedir.
+   ============================================================ */
+async function cambiarClave(cuerpo, idCliente) {
+  if (!idCliente) return no(401, 'Entra a tu cuenta primero.');
+  const c = cuerpo || {};
+
+  const malaNueva = cuentas.porQueNoSirve(c.nueva);
+  if (malaNueva) return no(422, malaNueva);
+
+  const ficha = await stripe.traeCliente(idCliente);
+  if (ficha.error) return no(503, 'No pudimos hacerlo ahora mismo. Inténtalo en un momento.');
+
+  const cliente = ficha.cliente || {};
+  const m = cliente.metadata || {};
+
+  if (cuentas.tieneContrasena(m)) {
+    const buena = await cuentas.contrasenaValida(m, c.actual);
+    if (!buena) return no(401, 'Esa no es tu contraseña de ahorita.');
+  }
+
+  const escrito = await stripe.guardaEnCliente(idCliente, await cuentas.paraCambiar(c.nueva));
+  if (escrito.error) {
+    console.error('[cuentas] no se pudo cambiar la contraseña: ' + escrito.error);
+    return no(503, 'No pudimos hacerlo ahora mismo. Inténtalo en un momento.');
+  }
+
+  return { status: 200, cuerpo: ok({ cambiada: true }) };
+}
+
 module.exports = {
   crear, reenviar, confirmar, entrar, salir, yo,
-  conGoogle, config,
+  conGoogle, config, misViajes, cambiarClave,
   eligeCliente, mandaCodigo
 };
