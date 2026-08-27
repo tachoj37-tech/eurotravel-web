@@ -152,6 +152,17 @@ dalo de acuerdo al Excel»*. Va como `conMovimientos` en el catálogo.
 Lección detrás: si el Excel trae una columna para un caso, esa columna manda
 sobre cualquier suma de reglas.
 
+**Pero ese precio cubre EL PAQUETE, no cualquier duración** (dictado el
+26-ago-2026: *«Tolantongo $1,000 sin movimientos, +$3,000 si hay
+movimientos»*). Antes era plano —$34,500 dijeran lo que dijeran los días— y
+el día de más no sumaba nada. Pasado el paquete manda R13:
+
+| días | sin movimientos | con movimiento cada día |
+|---|---|---|
+| 4 (el paquete) | $29,500 | $34,500 |
+| 5 | $30,500 | $38,500 |
+| 6 | $31,500 | $42,500 |
+
 ### R6 · El paso entre escalones NO es la tarifa del día extra (26-ago-2026)
 
 Deduje el día extra de Guanajuato del paso entre sus escalones —(24,500 −
@@ -278,11 +289,18 @@ quiere 15 días solamente serían 8,000 menos del precio que está en la tabla»
 Así que el precio del Excel es un **punto de referencia, no un piso**:
 
 ```
-Cancún = $145,000 + (días − 17) × $4,000
+Cancún  = $145,000 + (días − 17) × $4,000
    15 días → $137,000     18 días → $149,000
+
+Chiapas =  $85,000 + (días −  8) × $4,000     («Chiapas igual que Cancún»)
+    7 días →  $81,000      9 días →  $89,000
 ```
 
-Antes el día 18 sumaba $1,000 y pedir menos días no descontaba nada.
+Antes el día extra sumaba $1,000 y pedir menos días no descontaba nada.
+
+**Acapulco, Barrancas y Talpa Burrita siguen con la noche de $1,000**: el
+dueño dictó Chiapas y Cancún, y de esos tres no dijo nada. No se extrapola
+(R12).
 
 **Lección:** cuando el dueño da una tarifa de día, preguntar SIEMPRE si baja
 además de subir. La mitad hacia abajo no se deduce sola.
@@ -328,9 +346,12 @@ lanzamiento.**
 
 ### Preguntas abiertas (lanzarlas al dueño en la siguiente ronda)
 
-- Chiapas 8 días y Acapulco 4 días: ¿su día extra también vale $4,000, o solo
-  el de Cancún? Hoy siguen con $1,000 la noche.
+- **Acapulco 4 días**: ¿su día extra también vale $4,000? El dueño dictó
+  Chiapas y Cancún el 26-ago-2026 y no mencionó Acapulco, así que sigue con
+  $1,000 la noche. Mismo caso Barrancas y Talpa Burrita.
 - Un paquete con movimientos (Cancún moviéndose allá): hoy suma las bandas
   encima del paquete. ¿O el paquete ya lo trae todo, como Tolantongo?
-- Tolantongo con movimientos a MÁS de 3 días: ¿34,500 más cuánto? Hoy el día
-  4 no suma nada.
+- **Dónde empieza el día extra de Tolantongo.** Se implementó con el paquete
+  por omisión de R13 —4 días / 3 noches—, así que el cobro extra arranca en
+  el día 5. La pregunta se le hizo diciendo «a más de 3 días», así que si él
+  contaba desde el día 4, el escalón va un día antes. **Sin confirmar.**

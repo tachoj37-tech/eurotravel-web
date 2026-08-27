@@ -164,7 +164,9 @@ const SU_LISTA = [
   ['Zacatlán, Puebla, México', 39500, { porDias: { 2: 39500 }, diaExtra: 2000 }],
   ['Acapulco, Guerrero, México', 60000],
   ['Oaxaca de Juárez, Oaxaca, México', 75000],
-  ['San Cristóbal de las Casas, Chiapas, México', 85000, { diasIncluidos: 8 }],
+  /* Chiapas: 85,000 POR 8 DIAS, y su dia vale 4,000 en los dos sentidos,
+     igual que Cancun («Chiapas igual que Cancun, 4000», 26-ago-2026). */
+  ['San Cristóbal de las Casas, Chiapas, México', 85000, { diasIncluidos: 8, diaExtra: 4000 }],
   ['Barrancas del Cobre, Chihuahua, México', 75000],
   /* Cancun: 145,000 POR 17 DIAS, y su dia vale 4,000 en los dos sentidos
      («el dia esta en 4000» / «si quiere 15 dias serian 8,000 menos»). */
@@ -431,6 +433,29 @@ const SU_LISTA = [
     conMov('Ciudad de México, Ciudad de México, México', 3, 3), 34000);
   igual('Huasteca 3 dias con movimientos sigue en sus 38,500',
     conMov('Huasteca Potosina, San Luis Potosí, México', 3, 3), 38500);
+
+  /* --- TOLANTONGO pasado el paquete (dictado 26-ago-2026) ---
+     «Tolantongo 1000 sin movimientos, +3000 si hay movimientos». Antes el
+     precio con movimientos era PLANO —34,500 dijeran lo que dijeran los
+     dias— y el dia de mas no sumaba nada. */
+  const TOL = 'Grutas Tolantongo, Hidalgo, México';
+  igual('Tolantongo dentro del paquete, sin mov: sus 29,500', sinMov(TOL, 4), 29500);
+  igual('Tolantongo dentro del paquete, con mov: sus 34,500', conMov(TOL, 4, 4), 34500);
+  igual('un dia de mas SIN movimientos: +1,000', sinMov(TOL, 5), 30500);
+  igual('un dia de mas CON movimiento: +1,000 y +3,000', conMov(TOL, 5, 5), 38500);
+  igual('dos dias de mas con movimiento: +2,000 y +6,000', conMov(TOL, 6, 6), 42500);
+
+  /* --- CHIAPAS: su dia vale 4,000 y corre en los dos sentidos, como Cancun
+     («Chiapas igual que Cancun, 4000», 26-ago-2026). Antes el dia 9 sumaba
+     1,000 y pedir menos dias no descontaba nada. --- */
+  const CHIS = 'San Cristóbal de las Casas, Chiapas, México';
+  igual('Chiapas 8 dias: sus 85,000 del Excel', sinMov(CHIS, 8), 85000);
+  igual('Chiapas 9 dias: +4,000 (antes +1,000)', sinMov(CHIS, 9), 89000);
+  igual('Chiapas 7 dias: 4,000 MENOS', sinMov(CHIS, 7), 81000);
+  igual('Chiapas 6 dias: 8,000 menos', sinMov(CHIS, 6), 77000);
+
+  /* Acapulco NO se movio: el dueño solo dicto Chiapas y Cancun. */
+  igual('Acapulco sigue con la noche de 1,000, que es lo que hay', sinMov('Acapulco, Guerrero, México', 5), 61000);
 })();
 
 /* ============ 4. LA FORMULA DE RESPALDO, KILOMETRO POR KILOMETRO ============ */
@@ -610,9 +635,13 @@ const SU_LISTA = [
         const reglaExcel = fila[2] || null;
         let esperado;
         if (reglaExcel && reglaExcel.conMovimientos && cuantos > 0) {
-          /* R5: el precio con movimientos del Excel ya lo incluye todo;
-             solo el piso por dia le puede ganar. */
-          esperado = trasladoAMano(reglaExcel.conMovimientos, dias);
+          /* R5: el precio con movimientos del Excel cubre EL PAQUETE —sus 3
+             noches y los movimientos de esos dias—. Pasado el paquete manda
+             la regla de siempre: +1,000 la noche y +3,000 el dia movido
+             (dictado el 26-ago-2026; antes esto era plano). */
+          let extra = Math.max(0, noches - 3) * 1000;
+          for (let i = 4; i < cuantos; i++) extra += diaDeMovimientoAMano(movs[i].horas, false);
+          esperado = trasladoAMano(reglaExcel.conMovimientos, dias) + extra;
         } else if (reglaExcel && reglaExcel.porDias) {
           esperado = trasladoAMano(porDuracionAMano(reglaExcel, dias), dias) + movAMano;
         } else if (reglaExcel && reglaExcel.diasIncluidos && reglaExcel.diaExtra) {

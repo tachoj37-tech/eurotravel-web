@@ -749,8 +749,18 @@ function calcula(kmTotal, dias, extras) {
   let cobroMovimientos = importeMovimientos;
   if (km.precioConMovimientos && conMovimientos) {
     cobroTraslado = Math.floor(Math.max(km.precioConMovimientos, minimo) / REDONDEO) * REDONDEO;
-    cobroNoches = 0;
-    cobroMovimientos = 0;
+
+    /* El precio del Excel cubre EL PAQUETE —sus noches incluidas y los
+       movimientos de esos días—, no un viaje de cualquier duración. Pasado
+       el paquete manda la regla de siempre (R13), que el dueño confirmó el
+       26-ago-2026 para este destino: «Tolantongo $1,000 sin movimientos,
+       +$3,000 si hay movimientos».
+
+       Antes esto era plano: 34,500 dijeran lo que dijeran los días, así que
+       el día de más no sumaba nada. */
+    const diasDelPaquete = nochesIncluidas + 1;
+    cobroNoches = nochesExtra * EXTRA_POR_NOCHE;
+    cobroMovimientos = precioMovimientos(movimientos.slice(diasDelPaquete));
   }
 
   /* SOLO IDA manda sobre todo lo demás: 65% del precio de UN DÍA sin

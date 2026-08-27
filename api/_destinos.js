@@ -271,7 +271,11 @@ const DESTINOS = [
     /* «CHIAPAS 8 DIAS»: el precio del Excel YA incluye los ocho días. Antes
        se le sumaban noches encima y cobraba $4,000 de más (criterio R2). */
     precio: { busNC47: 130000, bus4849: 135000, neobusI6: 145000, pbI6: 140000, marcopolo: 160000, irizar: 155000, sprinter: 85000 },
-    diasIncluidos: 8 },
+    /* «CHIAPAS 8 DIAS»: paquete completo. Su día vale $4,000 y corre en los
+       DOS sentidos, igual que Cancún — dictado por el dueño el 26-ago-2026
+       («Chiapas igual que Cancún, 4000»). */
+    diasIncluidos: 8,
+    diaExtra: 4000 },
   /* El Excel trae el Marcopolo de Barrancas en 1,300,000: un cero de mas.
      En los 40 destinos el Marcopolo nunca pasa del Irizar por mas de 5,000, y
      aqui lo pasaria por 1,175,000. Se corrigio a 130,000 —el escalon que
