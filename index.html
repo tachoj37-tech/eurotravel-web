@@ -251,6 +251,34 @@
   .nav-mid { display: none; }
   @media (min-width: 1000px) { .nav-mid { display: flex; } .nav-phone { display: flex; } }
 
+  /* ---- el botón de la cuenta, en la barra ----
+     Va con borde y no en rojo: el rojo es de «Cotizar viaje», que es lo que
+     el dueño quiere que se pique. Entrar a la cuenta es una puerta de
+     servicio, no la principal. */
+  .nav-cuenta { display: inline-flex; align-items: center; gap: 7px; }
+  .nav-cuenta svg { width: 15px; height: 15px; flex-shrink: 0; }
+  .nav-cuenta span { max-width: 12ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  /* Tres anchos, medidos con el logo y el botón rojo puestos al lado:
+       · de 720 para arriba cabe «Iniciar sesión»
+       · de 340 a 719 cabe «Entrar», que dice lo mismo en menos
+       · abajo de 340 —teléfonos viejos— ya no cabe nada y se queda el
+         monigote, con la frase completa en aria-label
+
+     Los cortes salieron de medir, no de números redondos: a 375 y a 360
+     todavía sobran 79 y 64 píxeles entre el logo y el botón. Esconder el
+     texto ahí era prudencia de más, y un monigote solo no dice qué hace
+     —que es justo lo que este botón necesita que se entienda sin que nadie
+     lo explique—. */
+  .nav-cuenta .corto { display: none; }
+  @media (max-width: 719px) {
+    .nav-cuenta .largo { display: none; }
+    .nav-cuenta .corto { display: inline; }
+  }
+  @media (max-width: 339px) {
+    .nav-cuenta .corto { display: none; }
+    .nav-cuenta { padding-left: 11px; padding-right: 11px; }
+  }
+
   .tabs-mobile {
     display: flex;
     gap: 4px;
@@ -999,6 +1027,25 @@
   .seatmap b { display: block; font-family: 'Archivo'; font-size: 10.5px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted); margin-bottom: 10px; }
   .seatmap img { width: 100%; border: 1px solid var(--line); border-radius: 10px; padding: 10px; background: #fff; }
 
+  /* ---- el modal de la cuenta ---- */
+  .cta-card { max-width: 430px; }
+  .cta-head { padding: 24px 26px 4px; }
+  .cta-head h3 { font-size: 21px; }
+  .cta-bajada { font-size: 13.5px; color: var(--muted); line-height: 1.55; margin-top: 8px; }
+  .cta-panel { padding: 18px 26px 26px; }
+  .cta-panel .field { margin-bottom: 13px; }
+  .cta-opc { color: var(--muted); font-weight: 400; }
+  .btn-ancho { width: 100%; justify-content: center; margin-top: 4px; }
+  .cta-pie { font-size: 13px; color: var(--muted); margin-top: 18px; text-align: center; }
+  .cta-pie .enlace-sec { margin-left: 4px; }
+  .cta-acciones { display: flex; gap: 10px; margin-top: 20px; }
+  .cta-acciones .btn { flex: 1; justify-content: center; }
+  @media (max-width: 640px) {
+    .cta-head { padding: 20px 18px 2px; }
+    .cta-head h3 { font-size: 19px; }
+    .cta-panel { padding: 16px 18px 22px; }
+  }
+
   .loc-card { max-width: 580px; }
   .loc-head { padding: 20px 22px 14px; border-bottom: 1px solid var(--line); }
   .loc-head h3 { font-size: 20px; }
@@ -1653,6 +1700,7 @@ window.IMGS = {
     <symbol id="i-target" viewBox="0 0 24 24"><circle cx="12" cy="12" r="7.6" fill="none" stroke="currentColor" stroke-width="1.6"/><circle cx="12" cy="12" r="2.4" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M12 1.6v3.2M12 19.2v3.2M1.6 12h3.2M19.2 12h3.2" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></symbol>
     <symbol id="i-link" viewBox="0 0 24 24"><path d="M10.5 13.5a4 4 0 005.7 0l2.8-2.8a4 4 0 10-5.7-5.7l-1.2 1.2" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><path d="M13.5 10.5a4 4 0 00-5.7 0L5 13.3a4 4 0 105.7 5.7l1.2-1.2" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></symbol>
     <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.6" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M16 16l4.5 4.5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></symbol>
+    <symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.6" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M4.8 20a7.2 7.2 0 0114.4 0" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></symbol>
   </defs>
 </svg>
 
@@ -1714,6 +1762,18 @@ window.IMGS = {
 
     <div class="nav-right">
       <a class="nav-phone" href="tel:+523324002285"><svg aria-hidden="true"><use href="#i-phone" /></svg> 33 2400 2285</a>
+      <!-- La cuenta se puede abrir sin comprar nada, y quien ya compró de
+           invitado entra aquí: el servidor le monta la cuenta encima de la
+           ficha que ya tiene, así que sus viajes viejos no se quedan fuera. -->
+      <button class="btn btn-line btn-sm nav-cuenta" type="button" id="nav-cuenta">
+        <svg aria-hidden="true"><use href="#i-user" /></svg>
+        <!-- Dos textos, uno para cada ancho. Un botón con un monigote y nada
+             más no dice qué hace, y éste es justo el que hay que descubrir sin
+             que nadie lo explique. Solo en pantallas muy angostas se queda el
+             dibujo solo, y ahí la etiqueta accesible carga la frase. -->
+        <span class="largo" id="nav-cuenta-txt">Iniciar sesión</span>
+        <span class="corto" id="nav-cuenta-corto">Entrar</span>
+      </button>
       <button class="btn btn-red btn-sm" data-go="cotizar">Cotizar viaje</button>
     </div>
   </div>
@@ -2624,6 +2684,122 @@ window.IMGS = {
   </div>
 </div>
 
+<!-- ============ LA CUENTA, DESDE LA BARRA ============
+     Pedido por el dueño el 27-ago-2026: «que alguien pueda crear cuenta sin
+     la necesidad de comprar, o iniciar sesión si ya tiene un viaje».
+
+     POR QUE ESTE MODAL NO ES EL MISMO QUE EL DE LA PANTALLA DE PAGO
+
+     Ahí el cliente YA escribió su nombre, su correo y su teléfono en el
+     formulario de arriba, así que crear cuenta es solo poner una contraseña
+     —una caja, un botón—. Aquí no ha escrito nada, así que hace falta el
+     formulario completo. Son dos formas distintas porque son dos momentos
+     distintos, no por descuido.
+
+     Lo que SI es lo mismo: el servidor. Las dos puertas llaman a las mismas
+     acciones de /api/cuenta, así que las reglas de seguridad —que nada diga
+     si un correo ya existe, el freno de códigos, la sesión firmada— viven en
+     un solo lugar y se prueban una sola vez.
+     ================================================== -->
+<div class="modal" id="cuentamodal" role="dialog" aria-modal="true" aria-labelledby="cta-titulo">
+  <div class="modal-bg" data-cta-close></div>
+  <div class="modal-card cta-card">
+    <button class="modal-close" type="button" data-cta-close aria-label="Cerrar"><svg aria-hidden="true"><use href="#i-x" /></svg></button>
+
+    <div class="cta-head">
+      <span class="eyebrow">Tu cuenta</span>
+      <h3 id="cta-titulo" style="margin-top: 6px">Entra a tu cuenta</h3>
+      <p class="cta-bajada" id="cta-bajada">Guarda tus viajes, mira tus saldos y abona sin buscar correos viejos.</p>
+    </div>
+
+    <!-- ---- entrar ---- -->
+    <div class="cta-panel" id="cta-p-entrar">
+      <div class="field">
+        <label for="cta-e-correo">Tu correo</label>
+        <input id="cta-e-correo" type="email" autocomplete="email" placeholder="tucorreo@ejemplo.com" />
+      </div>
+      <div class="field">
+        <label for="cta-e-clave">Tu contraseña</label>
+        <input id="cta-e-clave" type="password" autocomplete="current-password" />
+      </div>
+      <button class="btn btn-red btn-ancho" type="button" id="cta-e-entrar">Entrar</button>
+      <p class="caminos-error" id="cta-e-error" role="alert"></p>
+
+      <div class="google-zona" id="cta-g" style="display: none">
+        <span class="google-o">o</span>
+        <div id="cta-g-boton"></div>
+      </div>
+
+      <p class="cta-pie">¿No tienes cuenta?
+        <button class="enlace-sec" type="button" id="cta-ir-alta">Crear una</button>
+      </p>
+    </div>
+
+    <!-- ---- crear ---- -->
+    <div class="cta-panel" id="cta-p-alta" style="display: none">
+      <div class="field">
+        <label for="cta-a-nombre">Tu nombre</label>
+        <input id="cta-a-nombre" type="text" autocomplete="name" placeholder="Como te llamas" />
+      </div>
+      <div class="field">
+        <label for="cta-a-correo">Tu correo</label>
+        <input id="cta-a-correo" type="email" autocomplete="email" placeholder="tucorreo@ejemplo.com" />
+      </div>
+      <div class="field">
+        <label for="cta-a-tel">Tu WhatsApp <span class="cta-opc">(opcional)</span></label>
+        <input id="cta-a-tel" type="tel" autocomplete="tel" placeholder="33 1234 5678" />
+      </div>
+      <div class="field">
+        <label for="cta-a-clave">Crea una contraseña</label>
+        <input id="cta-a-clave" type="password" autocomplete="new-password" placeholder="Al menos 8 caracteres" />
+        <span class="msg">Al menos 8 caracteres. Una frase que recuerdes sirve mejor que una palabra rara.</span>
+      </div>
+      <button class="btn btn-red btn-ancho" type="button" id="cta-a-crear">Crear mi cuenta</button>
+      <p class="caminos-error" id="cta-a-error" role="alert"></p>
+
+      <div class="google-zona" id="cta-g2" style="display: none">
+        <span class="google-o">o</span>
+        <div id="cta-g2-boton"></div>
+      </div>
+
+      <p class="cta-pie">¿Ya tienes cuenta?
+        <button class="enlace-sec" type="button" id="cta-ir-entrar">Entrar</button>
+      </p>
+    </div>
+
+    <!-- ---- el código de seis dígitos ---- -->
+    <div class="cta-panel" id="cta-p-codigo" style="display: none">
+      <p class="caminos-nota" id="cta-c-texto"></p>
+      <div class="casillas" id="cta-c-casillas">
+        <input type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="1" aria-label="Dígito 1" />
+        <input type="text" inputmode="numeric" maxlength="1" aria-label="Dígito 2" />
+        <input type="text" inputmode="numeric" maxlength="1" aria-label="Dígito 3" />
+        <input type="text" inputmode="numeric" maxlength="1" aria-label="Dígito 4" />
+        <input type="text" inputmode="numeric" maxlength="1" aria-label="Dígito 5" />
+        <input type="text" inputmode="numeric" maxlength="1" aria-label="Dígito 6" />
+      </div>
+      <button class="btn btn-red btn-ancho" type="button" id="cta-c-confirmar">Confirmar</button>
+      <button class="enlace-sec" type="button" id="cta-c-otro">No me llegó — mándame otro</button>
+      <p class="caminos-error" id="cta-c-error" role="alert"></p>
+    </div>
+
+    <!-- ---- ya está dentro ---- -->
+    <div class="cta-panel" id="cta-p-dentro" style="display: none">
+      <p class="caminos-dentro">
+        <svg aria-hidden="true"><use href="#i-shield" /></svg>
+        <span id="cta-d-quien"></span>
+      </p>
+      <p class="caminos-nota" style="margin-top: 14px">
+        Cuando compres un viaje va a quedar guardado aquí, con su folio y su contrato.
+      </p>
+      <div class="cta-acciones">
+        <button class="btn btn-line btn-sm" type="button" id="cta-d-salir">Salir de mi cuenta</button>
+        <button class="btn btn-red btn-sm" type="button" id="cta-d-cotizar">Cotizar un viaje</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script src="config.js"></script>
 <script src="unidades.js"></script>
 <script src="lugares.js"></script>
@@ -3351,6 +3527,10 @@ window.IMGS = {
          descuido de aquí abra la cuenta de nadie.
          ============================================================ */
       var CUENTA = { dentro: false, correo: '' };
+      /* La llena el bloque del modal de la barra, más abajo, y la usa el
+         atendedor de la tecla de escape, más abajo todavía. Declarada aquí
+         para que las dos la vean. */
+      var cierraCuenta = function () {};
 
       function pideCuenta(accion, datos) {
         return fetch('/api/cuenta', {
@@ -3376,8 +3556,31 @@ window.IMGS = {
         byId('camino-cuenta').setAttribute('aria-pressed', String(cual === 'cuenta'));
       }
 
+      /* El botón de la barra dice lo que se puede hacer AHORITA: si no ha
+         entrado, «Iniciar sesión»; si ya, su nombre de pila. En pantalla
+         chica el texto se esconde y solo queda el monigote, así que la
+         etiqueta accesible tiene que llevar la frase completa: quien navega
+         con lector de pantalla no ve el dibujo. */
+      function pintaNav() {
+        var b = byId('nav-cuenta'), largo = byId('nav-cuenta-txt'), corto = byId('nav-cuenta-corto');
+        if (!b) return;
+        if (CUENTA.dentro) {
+          /* El nombre de pila, no el completo: en la barra no hay espacio y
+             «Tacho» se reconoce igual que «Tacho Jiménez». */
+          var pila = String(CUENTA.nombre || '').trim().split(/\s+/)[0] || 'Mi cuenta';
+          largo.textContent = pila;
+          corto.textContent = pila;
+          b.setAttribute('aria-label', 'Tu cuenta, ' + pila);
+        } else {
+          largo.textContent = 'Iniciar sesión';
+          corto.textContent = 'Entrar';
+          b.setAttribute('aria-label', 'Iniciar sesión o crear cuenta');
+        }
+      }
+
       /* Quien ya entró no ve la bifurcación: ve su nombre. */
       function pintaDentro() {
+        pintaNav();
         var hay = CUENTA.dentro;
         byId('caminos-dentro').style.display = hay ? '' : 'none';
         byId('caminos-par-caja').style.display = hay ? 'none' : '';
@@ -3574,10 +3777,16 @@ window.IMGS = {
         });
       });
 
-      /* ---- el código ---- */
-      (function () {
-        var casillas = [].slice.call(byId('cod-casillas').querySelectorAll('input'));
-        function leido() { return casillas.map(function (c) { return c.value; }).join(''); }
+      /* ------------------------------------------------------------
+         LAS SEIS CASILLAS DEL CODIGO
+         ------------------------------------------------------------
+         Se usan en DOS lados desde el 27-ago-2026: la pantalla de pago
+         y el modal que se abre desde la barra. El cableado vive aquí
+         una sola vez; lo que cambia entre los dos es de dónde sale el
+         correo, y eso lo pone quien las usa.
+         ------------------------------------------------------------ */
+      function armaCasillas(id) {
+        var casillas = [].slice.call(byId(id).querySelectorAll('input'));
 
         casillas.forEach(function (caja, i) {
           caja.addEventListener('input', function () {
@@ -3599,6 +3808,25 @@ window.IMGS = {
           });
         });
 
+        return {
+          leido: function () { return casillas.map(function (c) { return c.value; }).join(''); },
+          bien: function () { casillas.forEach(function (c) { c.classList.remove('mal'); }); },
+          mal: function () {
+            casillas.forEach(function (c) { c.classList.add('mal'); c.value = ''; });
+            casillas[0].focus();
+          },
+          enfoca: function () { casillas[0].focus(); },
+          vacia: function () {
+            casillas.forEach(function (c) { c.value = ''; c.classList.remove('mal'); });
+          }
+        };
+      }
+
+      /* ---- el código, en la pantalla de pago ---- */
+      (function () {
+        var CAS = armaCasillas('cod-casillas');
+        function leido() { return CAS.leido(); }
+
         byId('cod-confirmar').addEventListener('click', function () {
           var error = byId('cod-error'), boton = byId('cod-confirmar');
           var correo = (byId('f-mail').value || byId('ent-correo').value || '').trim();
@@ -3607,14 +3835,13 @@ window.IMGS = {
           pideCuenta('confirmar', { correo: correo, codigo: leido() }).then(function (r) {
             boton.disabled = false; boton.textContent = 'Confirmar';
             if (r.status === 200) {
-              casillas.forEach(function (c) { c.classList.remove('mal'); });
+              CAS.bien();
               return pideCuenta('yo').then(function (rr) {
                 CUENTA = rr.datos && rr.datos.dentro ? rr.datos : { dentro: true, correo: correo };
                 pintaDentro();
               });
             }
-            casillas.forEach(function (c) { c.classList.add('mal'); c.value = ''; });
-            casillas[0].focus();
+            CAS.mal();
             error.textContent = r.datos.aviso || 'Ese código no es.';
           }).catch(function () {
             boton.disabled = false; boton.textContent = 'Confirmar';
@@ -3640,6 +3867,223 @@ window.IMGS = {
           pintaDentro(); marcaCamino('invitado'); verCaja(null);
         });
       });
+
+      /* ============================================================
+         LA CUENTA DESDE LA BARRA
+         ------------------------------------------------------------
+         Pedido el 27-ago-2026: crear cuenta SIN comprar, o entrar si
+         ya se tiene un viaje.
+
+         Lo de «si ya tiene un viaje» sale gratis y conviene saber por
+         qué: quien compró como invitado ya existe como cliente en
+         Stripe, con su correo. Al crear la cuenta, el servidor
+         encuentra esa ficha y le monta la cuenta ENCIMA en vez de
+         hacer una nueva al lado. Así sus viajes viejos siguen siendo
+         suyos. Eso ya estaba y está probado; aquí solo se abre la
+         puerta.
+
+         Todo lo de este bloque es opcional: si algo falla, la página
+         sigue cotizando y cobrando igual.
+         ============================================================ */
+      (function () {
+        var modal = byId('cuentamodal');
+        var CAS = armaCasillas('cta-c-casillas');
+        var correoEnCurso = '';        // el del alta, para confirmar y reenviar
+        var googlePuesto = false;
+
+        function verPanel(cual) {
+          ['cta-p-entrar', 'cta-p-alta', 'cta-p-codigo', 'cta-p-dentro'].forEach(function (id) {
+            byId(id).style.display = (id === cual) ? '' : 'none';
+          });
+          var titulos = {
+            'cta-p-entrar': ['Entra a tu cuenta', 'Guarda tus viajes, mira tus saldos y abona sin buscar correos viejos.'],
+            'cta-p-alta': ['Crea tu cuenta', 'No necesitas comprar nada para abrirla. Cuando cotices un viaje, ya va a quedar guardado aquí.'],
+            'cta-p-codigo': ['Confirma tu correo', ''],
+            'cta-p-dentro': ['Tu cuenta', '']
+          };
+          byId('cta-titulo').textContent = titulos[cual][0];
+          var baj = byId('cta-bajada');
+          baj.textContent = titulos[cual][1];
+          baj.style.display = titulos[cual][1] ? '' : 'none';
+        }
+
+        function abre() {
+          /* Se pregunta al servidor en cada apertura, no se confía en lo que
+             quedó en memoria: la sesión dura ocho horas y puede haber vencido
+             con la pestaña abierta. */
+          pideCuenta('yo').then(function (r) {
+            CUENTA = r.datos && r.datos.dentro ? r.datos : { dentro: false };
+            pintaDentro();
+            enseña();
+          }).catch(function () { enseña(); });
+
+          function enseña() {
+            if (CUENTA.dentro) {
+              byId('cta-d-quien').textContent = CUENTA.nombre
+                ? 'Entraste como ' + CUENTA.nombre : 'Ya entraste a tu cuenta';
+              verPanel('cta-p-dentro');
+            } else {
+              verPanel('cta-p-entrar');
+            }
+            modal.classList.add('on');
+            document.body.style.overflow = 'hidden';
+            ponGoogle();
+          }
+        }
+
+        function cierra() {
+          modal.classList.remove('on');
+          document.body.style.overflow = '';
+          byId('cta-e-error').textContent = '';
+          byId('cta-a-error').textContent = '';
+          byId('cta-c-error').textContent = '';
+        }
+
+        /* El botón de Google se dibuja la primera vez que se abre el modal, no
+           al cargar la página: Google mide el contenedor para dibujarlo, y un
+           contenedor escondido mide cero. */
+        function ponGoogle() {
+          if (googlePuesto) return;
+          if (!window.google || !window.google.accounts || !window.google.accounts.id) return;
+          googlePuesto = true;
+          dibujaBoton('cta-g', 'cta-g-boton', 'signin_with');
+          dibujaBoton('cta-g2', 'cta-g2-boton', 'signup_with');
+        }
+
+        byId('nav-cuenta').addEventListener('click', abre);
+        modal.querySelectorAll('[data-cta-close]').forEach(function (el) {
+          el.addEventListener('click', cierra);
+        });
+
+        byId('cta-ir-alta').addEventListener('click', function () {
+          byId('cta-a-correo').value = (byId('cta-e-correo').value || '').trim();
+          verPanel('cta-p-alta');
+        });
+        byId('cta-ir-entrar').addEventListener('click', function () {
+          byId('cta-e-correo').value = (byId('cta-a-correo').value || '').trim();
+          verPanel('cta-p-entrar');
+        });
+
+        /* ---- entrar ---- */
+        byId('cta-e-entrar').addEventListener('click', function () {
+          var error = byId('cta-e-error'), boton = byId('cta-e-entrar');
+          var correo = (byId('cta-e-correo').value || '').trim();
+          error.textContent = ''; boton.disabled = true; boton.textContent = 'Entrando…';
+
+          pideCuenta('entrar', { correo: correo, contrasena: byId('cta-e-clave').value })
+            .then(function (r) {
+              boton.disabled = false; boton.textContent = 'Entrar';
+              if (r.status === 200) {
+                CUENTA = { dentro: true, nombre: r.datos.nombre, correo: r.datos.correo };
+                byId('cta-e-clave').value = '';
+                pintaDentro();
+                byId('cta-d-quien').textContent = CUENTA.nombre
+                  ? 'Entraste como ' + CUENTA.nombre : 'Ya entraste a tu cuenta';
+                verPanel('cta-p-dentro');
+                return;
+              }
+              /* Se registró y nunca tecleó el código: se le manda otro y se le
+                 enseña la caja, en vez de dejarlo con un «no puedes entrar». */
+              if (r.datos && r.datos.faltaConfirmar) {
+                correoEnCurso = correo;
+                pideCuenta('codigo', { correo: correo }).then(function (rr) {
+                  byId('cta-c-texto').textContent = 'Te falta confirmar tu correo. Te mandamos un código a ' +
+                    ((rr.datos && rr.datos.pista) || correo) + '.';
+                  CAS.vacia(); verPanel('cta-p-codigo'); CAS.enfoca();
+                });
+                return;
+              }
+              error.textContent = r.datos.aviso || 'No se pudo entrar.';
+            }).catch(function () {
+              boton.disabled = false; boton.textContent = 'Entrar';
+              error.textContent = 'No hubo conexión. Inténtalo en un momento.';
+            });
+        });
+
+        /* ---- crear ---- */
+        byId('cta-a-crear').addEventListener('click', function () {
+          var error = byId('cta-a-error'), boton = byId('cta-a-crear');
+          var correo = (byId('cta-a-correo').value || '').trim();
+          var nombre = (byId('cta-a-nombre').value || '').trim();
+
+          error.textContent = '';
+          if (!nombre) { error.textContent = 'Escribe tu nombre.'; return; }
+          if (!correo) { error.textContent = 'Escribe tu correo.'; return; }
+
+          boton.disabled = true; boton.textContent = 'Creando…';
+          pideCuenta('crear', {
+            correo: correo, nombre: nombre,
+            telefono: (byId('cta-a-tel').value || '').trim(),
+            contrasena: byId('cta-a-clave').value
+          }).then(function (r) {
+            boton.disabled = false; boton.textContent = 'Crear mi cuenta';
+            if (r.status !== 200) { error.textContent = r.datos.aviso || 'No se pudo. Inténtalo de nuevo.'; return; }
+            correoEnCurso = correo;
+            byId('cta-a-clave').value = '';
+            byId('cta-c-texto').textContent = 'Te mandamos un código a ' +
+              (r.datos.pista || correo) + '. Tecléalo para confirmar tu cuenta.';
+            CAS.vacia(); verPanel('cta-p-codigo'); CAS.enfoca();
+          }).catch(function () {
+            boton.disabled = false; boton.textContent = 'Crear mi cuenta';
+            error.textContent = 'No hubo conexión. Inténtalo en un momento.';
+          });
+        });
+
+        /* ---- el código ---- */
+        byId('cta-c-confirmar').addEventListener('click', function () {
+          var error = byId('cta-c-error'), boton = byId('cta-c-confirmar');
+          error.textContent = ''; boton.disabled = true; boton.textContent = 'Confirmando…';
+
+          pideCuenta('confirmar', { correo: correoEnCurso, codigo: CAS.leido() }).then(function (r) {
+            boton.disabled = false; boton.textContent = 'Confirmar';
+            if (r.status === 200) {
+              CAS.bien();
+              return pideCuenta('yo').then(function (rr) {
+                CUENTA = rr.datos && rr.datos.dentro ? rr.datos : { dentro: true, correo: correoEnCurso };
+                pintaDentro();
+                byId('cta-d-quien').textContent = CUENTA.nombre
+                  ? 'Entraste como ' + CUENTA.nombre : 'Ya entraste a tu cuenta';
+                verPanel('cta-p-dentro');
+              });
+            }
+            CAS.mal();
+            error.textContent = r.datos.aviso || 'Ese código no es.';
+          }).catch(function () {
+            boton.disabled = false; boton.textContent = 'Confirmar';
+            error.textContent = 'No hubo conexión. Inténtalo en un momento.';
+          });
+        });
+
+        byId('cta-c-otro').addEventListener('click', function () {
+          var error = byId('cta-c-error');
+          error.textContent = 'Mandando…';
+          pideCuenta('codigo', { correo: correoEnCurso }).then(function (r) {
+            error.textContent = r.status === 200
+              ? 'Listo, va otro código en camino.'
+              : (r.datos.aviso || 'No se pudo mandar.');
+          }).catch(function () { error.textContent = 'No hubo conexión.'; });
+        });
+
+        /* ---- ya dentro ---- */
+        byId('cta-d-salir').addEventListener('click', function () {
+          pideCuenta('salir').then(function () {
+            CUENTA = { dentro: false };
+            pintaDentro(); marcaCamino('invitado'); verCaja(null);
+            verPanel('cta-p-entrar');
+          });
+        });
+        byId('cta-d-cotizar').addEventListener('click', function () {
+          cierra();
+          byId('nav-cuenta').blur();
+          var ir = document.querySelector('[data-go="cotizar"]');
+          if (ir) ir.click();
+        });
+
+        /* La tecla de escape la atiende un solo sitio, al final del guion,
+           para que dos modales abiertos no se cierren los dos de un tecleo.
+           Se le pasa la función de cerrar por aquí. */
+        cierraCuenta = cierra;
+      })();
 
       byId('pago-ir').addEventListener('click', function () {
         var c = VIAJE.cotizacion;
@@ -4578,6 +5022,7 @@ window.IMGS = {
     document.addEventListener('keydown', function (e) {
       if (e.key !== 'Escape') return;
       if (locModal.classList.contains('on')) closeLoc();
+      else if (byId('cuentamodal').classList.contains('on')) cierraCuenta();
       else if (modal.classList.contains('on')) closeModal();
     });
 

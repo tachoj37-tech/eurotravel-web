@@ -96,11 +96,30 @@ PAGINAS.forEach(function (nombre) {
   });
   igual('la bifurcación de cuenta está completa', faltan, []);
 
-  /* seis casillas, ni cinco ni siete */
-  const bloque = html.slice(html.indexOf('id="cod-casillas"'));
-  const cierre = bloque.indexOf('</div>');
-  const casillas = (bloque.slice(0, cierre).match(/<input/g) || []).length;
-  igual('el código tiene sus seis casillas', casillas, 6);
+  /* --- la cuenta desde la barra, pedida el 27-ago-2026 ---
+     «Que alguien pueda crear cuenta sin la necesidad de comprar, o iniciar
+     sesión si ya tiene un viaje». Si se cae una pieza, el botón de la barra
+     abre un modal a medias y no truena: se ve mal y ya, que es peor. */
+  const DE_LA_BARRA = [
+    'nav-cuenta', 'nav-cuenta-txt', 'cuentamodal', 'cta-titulo', 'cta-bajada',
+    'cta-p-entrar', 'cta-e-correo', 'cta-e-clave', 'cta-e-entrar', 'cta-ir-alta',
+    'cta-p-alta', 'cta-a-nombre', 'cta-a-correo', 'cta-a-tel', 'cta-a-clave',
+    'cta-a-crear', 'cta-ir-entrar',
+    'cta-p-codigo', 'cta-c-casillas', 'cta-c-confirmar', 'cta-c-otro', 'cta-c-texto',
+    'cta-p-dentro', 'cta-d-quien', 'cta-d-salir', 'cta-d-cotizar',
+    'cta-g', 'cta-g-boton', 'cta-g2', 'cta-g2-boton'
+  ];
+  igual('la cuenta desde la barra está completa',
+    DE_LA_BARRA.filter(function (id) { return html.indexOf('id="' + id + '"') < 0; }), []);
+
+  /* seis casillas en las DOS pantallas del código, ni cinco ni siete */
+  function cuentaCasillas(id) {
+    const bloque = html.slice(html.indexOf('id="' + id + '"'));
+    return (bloque.slice(0, bloque.indexOf('</div>')).match(/<input/g) || []).length;
+  }
+  igual('el código de la pantalla de pago tiene sus seis casillas',
+    cuentaCasillas('cod-casillas'), 6);
+  igual('y el de la barra también', cuentaCasillas('cta-c-casillas'), 6);
 
   /* Y que la página ya NO prometa que no hay cuentas: ese texto se escribió
      cuando la liga era el único camino, y ahora sería mentira. Se mira lo que
