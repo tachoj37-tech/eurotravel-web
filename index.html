@@ -439,6 +439,50 @@
   .locbtn small { display: block; font-size: 11.5px; color: var(--muted); line-height: 1.3; margin-top: 2px; }
   .locbtn.empty b { color: #9a9a96; font-weight: 400; }
 
+  /* ================= los dos caminos antes de pagar ================= */
+  .caminos { border-bottom: 1px solid var(--line); padding: 20px 0 22px; margin-bottom: 4px; }
+  .caminos-pregunta { font-size: 14.5px; font-weight: 600; margin: 0 0 14px; }
+  .caminos-par { display: grid; gap: 10px; grid-template-columns: 1fr; }
+  @media (min-width: 620px) { .caminos-par { grid-template-columns: 1fr 1fr; } }
+  .camino {
+    text-align: left; background: #fff; border: 1px solid var(--line);
+    border-radius: var(--radius-sm); padding: 14px 15px; cursor: pointer; font: inherit;
+    display: block; transition: border-color 180ms var(--ease), box-shadow 180ms var(--ease);
+  }
+  .camino:hover { border-color: var(--ink); }
+  .camino b { display: block; font-size: 14.5px; margin-bottom: 4px; }
+  .camino small { display: block; font-size: 12.5px; color: var(--muted); line-height: 1.45; }
+  /* El elegido se marca con el rojo de la marca, no con un palomita suelta:
+     así se ve de un vistazo cuál está activo sin leer. */
+  .camino[aria-pressed="true"] {
+    border-color: var(--red); box-shadow: 0 0 0 3px rgba(219, 13, 13, 0.1);
+  }
+  .caminos-caja { margin-top: 16px; }
+  .caminos-caja .field { margin-bottom: 12px; }
+  .caminos-nota { font-size: 13px; color: var(--muted); margin: 0 0 14px; line-height: 1.5; }
+  .caminos-error { font-size: 13px; color: var(--red); margin: 12px 0 0; min-height: 1px; }
+  .caminos-dentro {
+    display: flex; align-items: center; gap: 9px; font-size: 14px;
+    background: var(--soft); border-radius: var(--radius-sm); padding: 12px 14px; margin: 0;
+  }
+  .caminos-dentro svg { width: 17px; height: 17px; color: var(--red); flex-shrink: 0; }
+  .enlace-sec {
+    background: none; border: none; padding: 0; margin-left: 14px; cursor: pointer;
+    font: inherit; font-size: 13px; color: var(--muted); text-decoration: underline;
+  }
+  .enlace-sec:hover { color: var(--ink); }
+  /* Las casillas del código: las mismas de viaje.html, para que el cliente que
+     ya vio una reconozca la otra. */
+  .casillas { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+  .casillas input {
+    width: 46px; height: 56px; text-align: center; font-size: 22px; font-weight: 600;
+    border: 1px solid var(--line); border-radius: var(--radius-sm); font-family: inherit;
+    color: var(--ink); background: #fff;
+  }
+  .casillas input:focus { outline: 2px solid var(--red); outline-offset: 1px; border-color: var(--red); }
+  .casillas input.mal { border-color: var(--red); background: #fdeaea; }
+  @media (max-width: 420px) { .casillas input { width: 42px; height: 52px; font-size: 20px; } }
+
   .stepper { display: flex; align-items: center; border: 1px solid var(--line); border-radius: var(--radius-sm); height: 44px; }
   .stepper button {
     width: 38px; height: 100%; border: none; background: none; cursor: pointer;
@@ -1694,7 +1738,11 @@ window.IMGS = {
   <div class="celular-texto">
     <h2>Tus viajes, en tu celular.</h2>
     <div class="celular-cuerpo">
-      <p>Cuando apartas tu viaje te llega un folio por correo o WhatsApp. Con ese folio entras desde el celular y ves todo lo tuyo: no hay que abrir cuenta ni recordar contraseñas.</p>
+      <!-- Este texto decía «no hay que abrir cuenta ni recordar contraseñas»,
+           y era cierto cuando la liga era el único camino. Sigue siéndolo para
+           quien compra como invitado, pero ya no es lo único: desde el
+           26-ago-2026 se puede crear cuenta antes de pagar. -->
+      <p>Cuando apartas tu viaje te llega un folio por correo o WhatsApp. Con ese folio entras desde el celular y ves todo lo tuyo, sin abrir cuenta. Y si prefieres tenerlos todos juntos, puedes crear una cuenta al pagar.</p>
       <ul class="celular-lista">
         <li><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><use href="#ei-escudo"/></svg>Cuánto llevas abonado y cuánto falta</li>
         <li><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><use href="#ei-gente"/></svg>Tu contrato y tus datos a la mano</li>
@@ -2156,8 +2204,95 @@ window.IMGS = {
                 <div><span>Queda por abonar</span><b id="pago-saldo">—</b></div>
               </div>
 
+              <!-- ===================================================
+                   LOS DOS CAMINOS, ANTES DE PAGAR
+                   ---------------------------------------------------
+                   Aquí decía «No necesitas crear cuenta», que era
+                   cierto cuando la liga era el único camino. Sigue
+                   siendo verdad —el de invitado no se tocó— pero ya
+                   no es lo único.
+
+                   La cuenta se ofrece con lo que de verdad se gana,
+                   no con adjetivos: hoy cada viaje llega en una liga
+                   suelta, y hay que buscar el correo de hace tres
+                   meses para ver un saldo. Con cuenta están todos
+                   juntos y se entra con contraseña.
+                   =================================================== -->
+              <!-- `cuenta-caminos` y no `caminos` a secas: ya hay una sección
+                   con ese id en la portada —«Tres caminos, la misma respuesta
+                   el mismo día»— y dos ids iguales no son un detalle de
+                   estilo: `getElementById` devuelve el PRIMERO, así que este
+                   guion le estaba hablando a la banda de la portada. Lo cazó
+                   una medición, no el ojo. -->
+              <div class="caminos" id="cuenta-caminos">
+                <p class="caminos-pregunta" id="caminos-pregunta">Antes de pagar, ¿cómo quieres seguir?</p>
+
+                <div class="caminos-par" id="caminos-par-caja">
+                  <button class="camino" type="button" id="camino-invitado" aria-pressed="true">
+                    <b>Continuar como invitado</b>
+                    <small>Te llega una liga propia por correo con tu folio y tu contrato. Sin contraseñas.</small>
+                  </button>
+                  <button class="camino" type="button" id="camino-cuenta" aria-pressed="false">
+                    <b>Crear cuenta</b>
+                    <small>Todos tus viajes en un lugar. Entras con tu contraseña y ves saldos y abonos sin buscar correos.</small>
+                  </button>
+                </div>
+
+                <!-- quien ya entró no ve nada de esto: ve su nombre -->
+                <p class="caminos-dentro" id="caminos-dentro" style="display: none">
+                  <svg aria-hidden="true"><use href="#i-shield" /></svg>
+                  <span id="caminos-quien"></span>
+                  <button class="enlace-sec" type="button" id="camino-salir">Salir</button>
+                </p>
+
+                <!-- ---- alta ---- -->
+                <div class="caminos-caja" id="caja-alta" style="display: none">
+                  <div class="field">
+                    <label for="cta-clave">Crea una contraseña</label>
+                    <input id="cta-clave" type="password" autocomplete="new-password"
+                           placeholder="Al menos 8 caracteres" />
+                    <span class="msg" id="cta-clave-msg">Al menos 8 caracteres.</span>
+                  </div>
+                  <p class="caminos-nota" id="cta-correo-nota"></p>
+                  <button class="btn btn-ink btn-sm" type="button" id="cta-crear">Crear mi cuenta</button>
+                  <button class="enlace-sec" type="button" id="cta-ya-tengo">Ya tengo cuenta</button>
+                  <p class="caminos-error" id="cta-error" role="alert"></p>
+                </div>
+
+                <!-- ---- entrar ---- -->
+                <div class="caminos-caja" id="caja-entrar" style="display: none">
+                  <div class="field">
+                    <label for="ent-correo">Tu correo</label>
+                    <input id="ent-correo" type="email" autocomplete="email" placeholder="tucorreo@ejemplo.com" />
+                  </div>
+                  <div class="field">
+                    <label for="ent-clave">Tu contraseña</label>
+                    <input id="ent-clave" type="password" autocomplete="current-password" />
+                  </div>
+                  <button class="btn btn-ink btn-sm" type="button" id="ent-entrar">Entrar</button>
+                  <button class="enlace-sec" type="button" id="ent-crear-mejor">Mejor crear una cuenta</button>
+                  <p class="caminos-error" id="ent-error" role="alert"></p>
+                </div>
+
+                <!-- ---- el código ---- -->
+                <div class="caminos-caja" id="caja-codigo" style="display: none">
+                  <p class="caminos-nota" id="cod-texto"></p>
+                  <div class="casillas" id="cod-casillas">
+                    <input type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="1" aria-label="Dígito 1" />
+                    <input type="text" inputmode="numeric" maxlength="1" aria-label="Dígito 2" />
+                    <input type="text" inputmode="numeric" maxlength="1" aria-label="Dígito 3" />
+                    <input type="text" inputmode="numeric" maxlength="1" aria-label="Dígito 4" />
+                    <input type="text" inputmode="numeric" maxlength="1" aria-label="Dígito 5" />
+                    <input type="text" inputmode="numeric" maxlength="1" aria-label="Dígito 6" />
+                  </div>
+                  <button class="btn btn-ink btn-sm" type="button" id="cod-confirmar">Confirmar</button>
+                  <button class="enlace-sec" type="button" id="cod-otro">No me llegó — mándame otro</button>
+                  <p class="caminos-error" id="cod-error" role="alert"></p>
+                </div>
+              </div>
+
               <div class="pago-cuerpo">
-                <p>No necesitas crear cuenta. ¿A dónde te mandamos el folio y las instrucciones para seguir abonando?</p>
+                <p id="pago-canal-texto">¿A dónde te mandamos el folio y las instrucciones para seguir abonando?</p>
                 <div class="pago-canal" id="pago-canal">
                   <label class="on"><input type="radio" name="canal" value="correo" checked /> A mi correo</label>
                   <label><input type="radio" name="canal" value="whatsapp" /> A mi WhatsApp</label>
@@ -3085,6 +3220,221 @@ window.IMGS = {
         byId('listo-titulo').textContent = 'Revisa y aparta tu viaje';
         caja.classList.add('on');
       };
+
+      /* ============================================================
+         LOS DOS CAMINOS ANTES DE PAGAR
+         ------------------------------------------------------------
+         Invitado o cuenta. El de invitado no cambió nada: sigue
+         pagando igual y le llega su liga.
+
+         TODO ESTO ES OPCIONAL A PROPOSITO. Si algo de la cuenta
+         falla —el correo no sale, Stripe no contesta— el cliente
+         tiene que poder pagar de todas formas. Un problema de
+         cuentas no puede costarle una venta al dueño.
+
+         La cookie de sesión la pone y la lee el SERVIDOR: este
+         guion nunca la toca, y por eso no hay forma de que un
+         descuido de aquí abra la cuenta de nadie.
+         ============================================================ */
+      var CUENTA = { dentro: false, correo: '' };
+
+      function pideCuenta(accion, datos) {
+        return fetch('/api/cuenta', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          /* la cookie de sesión viaja sola; `same-origin` es lo que hace
+             que el navegador la mande */
+          credentials: 'same-origin',
+          body: JSON.stringify(Object.assign({ accion: accion }, datos || {}))
+        }).then(function (r) {
+          return r.json().then(function (j) { return { status: r.status, datos: j }; });
+        });
+      }
+
+      function verCaja(cual) {
+        ['caja-alta', 'caja-entrar', 'caja-codigo'].forEach(function (id) {
+          byId(id).style.display = (id === cual) ? '' : 'none';
+        });
+      }
+
+      function marcaCamino(cual) {
+        byId('camino-invitado').setAttribute('aria-pressed', String(cual === 'invitado'));
+        byId('camino-cuenta').setAttribute('aria-pressed', String(cual === 'cuenta'));
+      }
+
+      /* Quien ya entró no ve la bifurcación: ve su nombre. */
+      function pintaDentro() {
+        var hay = CUENTA.dentro;
+        byId('caminos-dentro').style.display = hay ? '' : 'none';
+        byId('caminos-par-caja').style.display = hay ? 'none' : '';
+        if (hay) {
+          verCaja(null);
+          byId('caminos-quien').textContent = CUENTA.nombre
+            ? 'Entraste como ' + CUENTA.nombre : 'Ya entraste a tu cuenta';
+          byId('caminos-pregunta').style.display = 'none';
+          /* Su correo manda sobre lo que esté escrito arriba: es el de la
+             cuenta a la que va a quedar ligado el viaje. */
+          if (CUENTA.correo) byId('f-mail').value = CUENTA.correo;
+        } else {
+          byId('caminos-pregunta').style.display = '';
+        }
+      }
+
+      /* Al cargar, se pregunta al servidor si hay sesión. Si algo falla, se
+         sigue como invitado y ya: nunca se bloquea el pago por esto. */
+      pideCuenta('yo').then(function (r) {
+        CUENTA = r.datos && r.datos.dentro ? r.datos : { dentro: false };
+        pintaDentro();
+      }).catch(function () { /* sin cuenta, a pagar como invitado */ });
+
+      byId('camino-invitado').addEventListener('click', function () {
+        marcaCamino('invitado'); verCaja(null); byId('cta-error').textContent = '';
+      });
+
+      byId('camino-cuenta').addEventListener('click', function () {
+        marcaCamino('cuenta');
+        verCaja('caja-alta');
+        var correo = (byId('f-mail').value || '').trim();
+        byId('cta-correo-nota').textContent = correo
+          ? 'Tu cuenta será ' + correo + '. Te mandaremos un código ahí para confirmarlo.'
+          : 'Escribe tu correo arriba y creamos tu cuenta con ése.';
+      });
+
+      byId('cta-ya-tengo').addEventListener('click', function () {
+        verCaja('caja-entrar');
+        byId('ent-correo').value = (byId('f-mail').value || '').trim();
+      });
+      byId('ent-crear-mejor').addEventListener('click', function () {
+        byId('camino-cuenta').click();
+      });
+
+      /* ---- crear la cuenta ---- */
+      byId('cta-crear').addEventListener('click', function () {
+        var error = byId('cta-error');
+        var boton = byId('cta-crear');
+        var correo = (byId('f-mail').value || '').trim();
+        var nombre = (byId('f-nombre').value || '').trim();
+
+        error.textContent = '';
+        if (!correo) { error.textContent = 'Escribe tu correo arriba, en tus datos.'; return; }
+        if (!nombre) { error.textContent = 'Escribe tu nombre arriba, en tus datos.'; return; }
+
+        boton.disabled = true; boton.textContent = 'Creando…';
+        pideCuenta('crear', {
+          correo: correo, nombre: nombre,
+          telefono: (byId('f-tel').value || '').trim(),
+          contrasena: byId('cta-clave').value
+        }).then(function (r) {
+          boton.disabled = false; boton.textContent = 'Crear mi cuenta';
+          if (r.status !== 200) { error.textContent = r.datos.aviso || 'No se pudo. Inténtalo de nuevo.'; return; }
+          byId('cod-texto').textContent = 'Te mandamos un código a ' +
+            (r.datos.pista || correo) + '. Tecléalo para confirmar tu cuenta.';
+          verCaja('caja-codigo');
+          byId('cod-casillas').querySelector('input').focus();
+        }).catch(function () {
+          boton.disabled = false; boton.textContent = 'Crear mi cuenta';
+          error.textContent = 'No hubo conexión. Puedes pagar como invitado si prefieres.';
+        });
+      });
+
+      /* ---- entrar ---- */
+      byId('ent-entrar').addEventListener('click', function () {
+        var error = byId('ent-error'), boton = byId('ent-entrar');
+        error.textContent = ''; boton.disabled = true; boton.textContent = 'Entrando…';
+
+        pideCuenta('entrar', {
+          correo: (byId('ent-correo').value || '').trim(),
+          contrasena: byId('ent-clave').value
+        }).then(function (r) {
+          boton.disabled = false; boton.textContent = 'Entrar';
+          if (r.status === 200) {
+            CUENTA = { dentro: true, nombre: r.datos.nombre, correo: r.datos.correo };
+            pintaDentro();
+            return;
+          }
+          /* le falta confirmar: se le manda otro código y se le enseña la caja */
+          if (r.datos && r.datos.faltaConfirmar) {
+            var correo = (byId('ent-correo').value || '').trim();
+            pideCuenta('codigo', { correo: correo }).then(function (rr) {
+              byId('cod-texto').textContent = 'Te falta confirmar tu correo. Te mandamos un código a ' +
+                ((rr.datos && rr.datos.pista) || correo) + '.';
+              verCaja('caja-codigo');
+            });
+            return;
+          }
+          error.textContent = r.datos.aviso || 'No se pudo entrar.';
+        }).catch(function () {
+          boton.disabled = false; boton.textContent = 'Entrar';
+          error.textContent = 'No hubo conexión. Puedes pagar como invitado si prefieres.';
+        });
+      });
+
+      /* ---- el código ---- */
+      (function () {
+        var casillas = [].slice.call(byId('cod-casillas').querySelectorAll('input'));
+        function leido() { return casillas.map(function (c) { return c.value; }).join(''); }
+
+        casillas.forEach(function (caja, i) {
+          caja.addEventListener('input', function () {
+            /* Se acepta lo que la gente pega de verdad: los seis dígitos de
+               golpe en la primera casilla, con o sin espacios. */
+            var solo = (caja.value || '').replace(/\D/g, '');
+            if (solo.length > 1) {
+              solo.split('').slice(0, casillas.length - i).forEach(function (d, j) {
+                casillas[i + j].value = d;
+              });
+              casillas[Math.min(i + solo.length, casillas.length - 1)].focus();
+              return;
+            }
+            caja.value = solo;
+            if (solo && i < casillas.length - 1) casillas[i + 1].focus();
+          });
+          caja.addEventListener('keydown', function (e) {
+            if (e.key === 'Backspace' && !caja.value && i > 0) casillas[i - 1].focus();
+          });
+        });
+
+        byId('cod-confirmar').addEventListener('click', function () {
+          var error = byId('cod-error'), boton = byId('cod-confirmar');
+          var correo = (byId('f-mail').value || byId('ent-correo').value || '').trim();
+          error.textContent = ''; boton.disabled = true; boton.textContent = 'Confirmando…';
+
+          pideCuenta('confirmar', { correo: correo, codigo: leido() }).then(function (r) {
+            boton.disabled = false; boton.textContent = 'Confirmar';
+            if (r.status === 200) {
+              casillas.forEach(function (c) { c.classList.remove('mal'); });
+              return pideCuenta('yo').then(function (rr) {
+                CUENTA = rr.datos && rr.datos.dentro ? rr.datos : { dentro: true, correo: correo };
+                pintaDentro();
+              });
+            }
+            casillas.forEach(function (c) { c.classList.add('mal'); c.value = ''; });
+            casillas[0].focus();
+            error.textContent = r.datos.aviso || 'Ese código no es.';
+          }).catch(function () {
+            boton.disabled = false; boton.textContent = 'Confirmar';
+            error.textContent = 'No hubo conexión. Puedes pagar como invitado si prefieres.';
+          });
+        });
+
+        byId('cod-otro').addEventListener('click', function () {
+          var error = byId('cod-error');
+          var correo = (byId('f-mail').value || byId('ent-correo').value || '').trim();
+          error.textContent = 'Mandando…';
+          pideCuenta('codigo', { correo: correo }).then(function (r) {
+            error.textContent = r.status === 200
+              ? 'Listo, va otro código en camino.'
+              : (r.datos.aviso || 'No se pudo mandar.');
+          }).catch(function () { error.textContent = 'No hubo conexión.'; });
+        });
+      })();
+
+      byId('camino-salir').addEventListener('click', function () {
+        pideCuenta('salir').then(function () {
+          CUENTA = { dentro: false };
+          pintaDentro(); marcaCamino('invitado'); verCaja(null);
+        });
+      });
 
       byId('pago-ir').addEventListener('click', function () {
         var c = VIAJE.cotizacion;
