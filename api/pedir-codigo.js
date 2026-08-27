@@ -124,7 +124,12 @@ module.exports = async function handler(req, res) {
 
   /* ---- se arma, se guarda EL RESUMEN, y se manda ---- */
   const codigo = acceso.nuevoCodigo();
-  const guardado = await stripe.guardaEnCliente(idCliente, acceso.paraGuardar(codigo));
+  /* USO_LIGA: este código sirve para VER UN VIAJE y nada más. El dueño se lo
+     puede dictar a quien quiera —así está pensado— y por eso no puede valer
+     también para entrar a su cuenta ni para cambiarle la contraseña. Hasta la
+     revisión del 27-ago-2026 sí valía: era el mismo campo. */
+  const guardado = await stripe.guardaEnCliente(idCliente,
+    acceso.paraGuardar(codigo, null, acceso.USO_LIGA));
   if (guardado.error) {
     console.error('[pedir-codigo] no se pudo guardar el código: ' + guardado.error);
     res.status(503).json({ error: 'no se pudo preparar',

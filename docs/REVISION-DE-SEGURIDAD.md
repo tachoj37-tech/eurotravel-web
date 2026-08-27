@@ -3,8 +3,54 @@
 Sobre el sistema de cuentas completo, recién terminado: crear, entrar, Google,
 Mis viajes, Configuración y recuperar la contraseña.
 
-**Se encontraron dos defectos de la misma clase, y los dos están tapados.**
-Ninguno se veía leyendo el código: los dos salieron de medir.
+---
+
+## 0. LA GRAVE: se entraba a cualquier cuenta sabiendo solo el correo — TAPADO
+
+`confirmar` cortaba **antes de mirar el código** si la cuenta ya estaba
+verificada —y toda cuenta que sirve lo está— y en ese corte devolvía sesión:
+
+```js
+if (cuentas.estaVerificada(cliente.metadata || {})) {
+  return { status: 200, cuerpo: ok({ yaEstaba: true }),
+           sesionPara: cliente.id };          // <-- cookie de sesión
+}
+```
+
+O sea que esto:
+
+```
+POST /api/cuenta
+{"accion":"confirmar","correo":"victima@gmail.com","codigo":"000000"}
+```
+
+devolvía **una cookie de sesión buena por ocho horas**. Con ella: su nombre, su
+correo, **todos sus viajes**, y las **ligas firmadas de sus contratos**, que
+siguen sirviendo semanas después de que la sesión venza.
+
+Todo el cuidado de que los mensajes no delaten, de que el código sea de un solo
+uso, de que aguante cinco intentos: no servía de nada. Se entraba por al lado.
+
+**Comprobado, no supuesto** — se ejecutó el ataque completo y devolvió la
+sesión, la lista de viajes y la liga del contrato.
+
+**La regla que se rompió:** nunca se abre sesión en un camino que no comprobó
+un secreto.
+
+**Por qué se escapó.** La intención era buena y se leía bien: «le dieron dos
+veces al botón, no lo mandes a empezar de nuevo». Se lee como amabilidad, no
+como puerta.
+
+**Y la prueba lo daba por bueno.** Decía *«confirmar dos veces no truena, solo
+entra»* y verificaba que abriera sesión. Estaba escrita para confirmar la
+intención del código en vez de para atacar el camino. Una prueba que solo
+repite lo que el código quiso hacer no revisa nada.
+
+**Arreglo:** el código se revisa primero, siempre. El «le dieron dos veces» se
+resuelve con la verdad —el código es de un solo uso y el segundo intento recibe
+«ese código no es»—, y la pantalla ya apaga el botón mientras la petición va en
+camino. La prueba nueva hace el ataque completo con cinco variantes; al volver
+a abrir el hueco se ponen rojas tres aserciones.
 
 ---
 
@@ -71,6 +117,19 @@ al día por dirección— que es lo que de verdad impide barrer una lista larga.
 | **Texto del cliente en la pantalla** | `textContent` o `esc()`; ningún dato ajeno entra crudo a `innerHTML` |
 | **Registros del servidor** | ninguno escribe contraseñas, códigos, resúmenes ni llaves |
 | **Papeles de Google** | firma, algoritmo, **destinatario** y `email_verified`; probado con papeles forjados |
+
+### Lo que aprendí de la grave, y vale para todo lo que siga
+
+Las tres cosas que encontró esta revisión —la entrada libre y los dos relojes—
+tienen la misma forma: **el candado estaba bien puesto, y había un camino que
+no pasaba por él.** Ninguna se veía leyendo la función de frente; las tres
+salieron de preguntar «¿y si llego por otro lado?».
+
+Y la más grave la tapaba una prueba que decía que todo estaba bien. Cuando una
+prueba se escribe para confirmar lo que el código quiso hacer, hereda sus
+puntos ciegos. **Las pruebas de seguridad se escriben desde el lado de quien
+ataca**, y por eso las nuevas se llaman «con el correo de otro, NADA abre su
+sesión» y no «confirmar funciona».
 
 ---
 

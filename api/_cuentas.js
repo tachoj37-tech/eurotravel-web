@@ -159,6 +159,39 @@ function paraVerificar() {
   return m;
 }
 
+/* ------------------------------------------------------------
+   TIRAR UNA CONTRASEÑA QUE NADIE DEMOSTRO QUE ERA SUYA
+   ------------------------------------------------------------
+   Esto salió de la revisión de seguridad del 27-ago-2026, y del
+   ataque completo ejecutado, no de una sospecha.
+
+   Cualquiera puede pedir una cuenta con el correo de OTRA persona
+   y una contraseña propia. La cuenta nace sin verificar y no abre,
+   así que parecía inofensivo — al dueño del correo hasta se le
+   escribe «si no fuiste tú, no tienes que hacer nada: sin este
+   código la cuenta no se abre», y es verdad… mientras no se
+   verifique por otro lado.
+
+   El otro lado es Google. Cuando el dueño de verdad entraba con su
+   cuenta de Google, se le marcaba la cuenta como verificada —bien—
+   pero se le dejaba puesta la contraseña del que la plantó. Y con
+   eso el atacante entraba con SU contraseña a la cuenta de otro, y
+   veía todos sus viajes.
+
+   La regla: una contraseña que solo existe en una cuenta SIN
+   VERIFICAR no la puso nadie que haya demostrado ser el dueño del
+   buzón. Cuando alguien lo demuestra por otra puerta, esa
+   contraseña se tira. Si era del dueño, la vuelve a poner en dos
+   minutos con «olvidé mi contraseña»; si era de un extraño, se
+   acabó el asunto.
+   ------------------------------------------------------------ */
+function paraBorrarContrasena() {
+  const m = {};
+  m[CAMPO_HASH] = '';
+  m[CAMPO_SAL] = '';
+  return m;
+}
+
 /* La fecha de nacimiento de la cuenta, sin contraseña de por medio. La pone
    `paraCrear` para las cuentas con contraseña; ésta es para las que nacen de
    Google, que nunca tienen una. */
@@ -343,6 +376,7 @@ module.exports = {
   MINIMO, MAXIMO,
   porQueNoSirve, nuevaSal, resumen,
   paraCrear, paraCambiar, paraVerificar, paraNacer, paraLigarGoogle,
+  paraBorrarContrasena,
   tieneCuenta, tieneContrasena, estaVerificada, googleDe,
   contrasenaValida, gastaElMismoTiempo, normalizaCorreo, correoValido
 };

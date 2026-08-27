@@ -69,7 +69,8 @@ module.exports = async function handler(req, res) {
     return;
   }
 
-  const veredicto = acceso.revisaCodigo((ficha.cliente || {}).metadata, cuerpo.codigo);
+  const veredicto = acceso.revisaCodigo((ficha.cliente || {}).metadata, cuerpo.codigo,
+    null, acceso.USO_LIGA);
 
   if (!veredicto.ok) {
     /* Solo se sube el contador cuando el código EXISTIA y no cuadró. Si ya
@@ -103,7 +104,12 @@ module.exports = async function handler(req, res) {
   /* ---- cuadró: se quema el código y se abre la sesión ---- */
   await stripe.guardaEnCliente(idCliente, acceso.paraBorrar());
 
-  const token = acceso.firmaSesion(idCliente);
+  /* USO_LIGA: esta cookie deja ver los viajes de este cliente por la liga, y
+     NADA más. Antes salía sin marca y `/api/cuenta` la aceptaba como sesión
+     de cuenta: quien recibía el código dictado para ver un viaje se llevaba
+     de pilón «Mis viajes» entero y —en una cuenta de Google— podía ponerle
+     contraseña. Lo encontró la revisión del 27-ago-2026. */
+  const token = acceso.firmaSesion(idCliente, null, acceso.USO_LIGA);
   res.setHeader('Set-Cookie', acceso.cookieDeSesion(token));
 
   if (consulta.estado === 'sinPagar') {

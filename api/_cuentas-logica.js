@@ -80,7 +80,10 @@ function eligeCliente(lista) {
 async function mandaCodigo(cliente, ahoraMs) {
   const codigo = acceso.nuevoCodigo();
   const guardar = Object.assign(
-    acceso.paraGuardar(codigo, ahoraMs),
+    /* USO_CUENTA: este código vale para la CUENTA. Uno pedido para ver un
+       viaje —que el dueño le puede dictar a cualquiera— no cuadra aquí,
+       porque el uso va dentro del resumen. */
+    acceso.paraGuardar(codigo, ahoraMs, acceso.USO_CUENTA),
     cuentas.paraContarEnvio(cliente.metadata || {}, ahoraMs)
   );
 
@@ -195,28 +198,57 @@ async function reenviar(cuerpo, ahoraMs) {
   const hallados = await stripe.clientesPorCorreo(email);
   if (hallados.error) return no(503, 'No podemos mandarlo en este momento. Inténtalo más tarde.');
 
+  /* ------------------------------------------------------------
+     LA MISMA RESPUESTA EN TODOS LOS CAMINOS, ARMADA UNA SOLA VEZ
+     ------------------------------------------------------------
+     Encontrado en la revisión del 27-ago-2026. Esta función tenía
+     tres respuestas distintas:
+
+       sin cuenta o ya verificada → {ok, mandado}
+       sin verificar, se mandó    → {ok, mandado, pista}
+       sin verificar, frenado     → 429 con `segundos`
+
+     Un campo de diferencia, otra vez. Es EXACTAMENTE el defecto que
+     el comentario del alta —treinta líneas más arriba— dice que ya
+     se había pagado una vez: «un campo de diferencia bastaba para
+     saber si un correo ya estaba registrado». Se arregló allá y se
+     escribió igualito aquí.
+
+     Y encadenado con `crear` daba un oráculo completo: se pide el
+     alta y luego el reenvío; si sale `pista`, ese correo NO tenía
+     cuenta —se acaba de crear—; si no sale, es un cliente que ya
+     estaba. La lista entera, correo por correo.
+
+     La `pista` sale del correo que ESCRIBIO quien pregunta, así que
+     su valor no dice nada que él no supiera. Lo que delataba era su
+     PRESENCIA. Por eso ahora va siempre, como en `olvide`.
+     ------------------------------------------------------------ */
+  const igualParaTodos = {
+    status: 200,
+    cuerpo: ok({ mandado: true, pista: acceso.pistaDeCorreo(email) })
+  };
+
   const cliente = eligeCliente(hallados.clientes);
 
-  /* Sin cuenta, o ya verificada: se contesta lo MISMO que si hubiera salido.
-     Quien pregunta no se entera de nada. */
   if (!cliente || !cuentas.tieneCuenta(cliente.metadata || {}) ||
       cuentas.estaVerificada(cliente.metadata || {})) {
-    return { status: 200, cuerpo: ok({ mandado: true }) };
+    return igualParaTodos;
   }
 
   const puede = cuentas.puedeMandarCodigo(cliente.metadata || {}, ahoraMs);
   if (!puede.ok) {
-    return puede.motivo === 'muy seguido'
-      ? no(429, 'Espera ' + puede.segundos + ' segundos para pedir otro código.', { segundos: puede.segundos })
-      : no(429, 'Pediste demasiados códigos hoy. Inténtalo mañana o escríbenos.');
+    /* Frenado tampoco se nota: «espera 40 segundos» solo a los registrados
+       sería el delator. Se calla y se apunta en el registro. */
+    console.error('[cuentas] reenvío frenado (' + puede.motivo + ')');
+    return igualParaTodos;
   }
 
   const mandado = await mandaCodigo(cliente, ahoraMs);
   if (!mandado.ok) {
     console.error('[cuentas] reenvío fallido: ' + mandado.motivo);
-    return no(502, 'No pudimos mandarte el código. Inténtalo de nuevo en un momento.');
+    return igualParaTodos;
   }
-  return { status: 200, cuerpo: ok({ mandado: true, pista: acceso.pistaDeCorreo(email) }) };
+  return igualParaTodos;
 }
 
 /* ============================================================
@@ -277,7 +309,8 @@ async function confirmar(cuerpo, ahoraMs) {
      en camino, así que el caso casi no existe — y valía mucho menos
      que la puerta que costaba.
      ------------------------------------------------------------ */
-  const veredicto = acceso.revisaCodigo(cliente.metadata || {}, c.codigo, ahoraMs);
+  const veredicto = acceso.revisaCodigo(cliente.metadata || {}, c.codigo, ahoraMs,
+    acceso.USO_CUENTA);
   if (!veredicto.ok) {
     if (veredicto.gastado) {
       const m = {};
@@ -498,7 +531,40 @@ async function conGoogle(cuerpo, ahoraMs) {
     const m = cliente.metadata || {};
     const cambios = {};
     if (cuentas.googleDe(m) !== v.sub) Object.assign(cambios, cuentas.paraLigarGoogle(v.sub));
-    if (!cuentas.estaVerificada(m)) Object.assign(cambios, cuentas.paraVerificar());
+
+    if (!cuentas.estaVerificada(m)) {
+      Object.assign(cambios, cuentas.paraVerificar());
+      /* ------------------------------------------------------------
+         Y SE TIRA LA CONTRASEÑA QUE HUBIERA, si la había.
+         ------------------------------------------------------------
+         Encontrado en la revisión del 27-ago-2026 y comprobado con el
+         ataque completo:
+
+           1. Alguien pide una cuenta con el correo AJENO y una
+              contraseña suya. Nace sin verificar y no abre — al dueño
+              hasta se le escribe «si no fuiste tú, no tienes que hacer
+              nada», y es verdad mientras nadie la verifique.
+           2. Meses después el dueño entra con SU Google. Se le marca
+              verificada, bien… y se le dejaba puesta la contraseña del
+              extraño.
+           3. El extraño entra con SU contraseña, a la cuenta de otro, y
+              ve todos sus viajes.
+
+         La cabecera de esta función argumenta que ligar Google a una
+         cuenta con contraseña no abre ninguna puerta nueva. Eso es
+         cierto para una contraseña que puso el DUEÑO —quien controla el
+         buzón ya podía recuperarla— y falso para una que nunca nadie
+         demostró que fuera suya.
+
+         Se tira también el código pendiente: era del alta que no se
+         completó, y ya no tiene dueño conocido.
+         ------------------------------------------------------------ */
+      if (cuentas.tieneContrasena(m)) {
+        Object.assign(cambios, cuentas.paraBorrarContrasena(), acceso.paraBorrar());
+        console.error('[cuentas] Google verificó una cuenta que traía contraseña sin ' +
+          'confirmar; se tira. Si era del dueño, la repone con «olvidé mi contraseña».');
+      }
+    }
 
     if (Object.keys(cambios).length) {
       const escrito = await stripe.guardaEnCliente(cliente.id, cambios);
@@ -726,7 +792,10 @@ async function olvide(cuerpo, ahoraMs) {
 
   const codigo = acceso.nuevoCodigo();
   const guardar = Object.assign(
-    acceso.paraGuardar(codigo, ahoraMs),
+    /* USO_CUENTA: este código vale para la CUENTA. Uno pedido para ver un
+       viaje —que el dueño le puede dictar a cualquiera— no cuadra aquí,
+       porque el uso va dentro del resumen. */
+    acceso.paraGuardar(codigo, ahoraMs, acceso.USO_CUENTA),
     cuentas.paraContarEnvio(cliente.metadata || {}, ahoraMs)
   );
 
@@ -778,7 +847,8 @@ async function claveNueva(cuerpo, ahoraMs) {
   const cliente = eligeCliente(hallados.clientes);
   if (!cliente || !cuentas.tieneCuenta(cliente.metadata || {})) return no(422, generico);
 
-  const veredicto = acceso.revisaCodigo(cliente.metadata || {}, c.codigo, ahoraMs);
+  const veredicto = acceso.revisaCodigo(cliente.metadata || {}, c.codigo, ahoraMs,
+    acceso.USO_CUENTA);
   if (!veredicto.ok) {
     if (veredicto.gastado) {
       const m = {};

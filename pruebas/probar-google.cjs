@@ -438,8 +438,55 @@ const cuentas = require('../api/_cuentas.js');
     const r = await logica.conGoogle({ credencial: papel() }, AHORA);
     igual('pero con Google sí', r.status, 200);
     cierto('y le deja la cuenta verificada', cuentas.estaVerificada(FICHAS[0].metadata));
-    igual('así que ya entra con su contraseña también',
-      (await logica.entrar({ correo: 'ana@gmail.com', contrasena: 'una contraseña decente' })).status, 200);
+
+    /* ------------------------------------------------------------
+       ESTA ASERCION CAMBIO DE LADO, y era una toma de cuenta.
+
+       Decía: «así que ya entra con su contraseña también», y comprobaba que
+       después de entrar con Google la contraseña sin confirmar siguiera
+       sirviendo. Suena a comodidad. Es un agujero:
+
+         1. Cualquiera pide una cuenta con el correo AJENO y una contraseña
+            suya. Nace sin verificar y no abre — al dueño hasta se le escribe
+            «si no fuiste tú, no tienes que hacer nada».
+         2. Meses después el dueño entra con SU Google. Se verifica.
+         3. El extraño entra con SU contraseña, a la cuenta de otro.
+
+       Comprobado con el ataque completo, no supuesto. Una contraseña que solo
+       existe en una cuenta sin verificar no la puso nadie que haya demostrado
+       ser dueño del buzón: cuando alguien lo demuestra por otra puerta, esa
+       contraseña se tira.
+
+       Al dueño de verdad no le cuesta nada: entra con Google, o la repone en
+       dos minutos con «olvidé mi contraseña».
+       ------------------------------------------------------------ */
+    falso('la contraseña SIN CONFIRMAR se tira', cuentas.tieneContrasena(FICHAS[0].metadata));
+    igual('y ya no sirve para entrar',
+      (await logica.entrar({ correo: 'ana@gmail.com', contrasena: 'una contraseña decente' })).status, 401);
+    igual('pero con Google entra cuando quiera',
+      (await logica.conGoogle({ credencial: papel() }, AHORA)).status, 200);
+  }
+
+  /* ============ 15-bis. NO SE PLANTA UNA CONTRASEÑA EN CUENTA AJENA ============
+     El ataque completo, tal como se hacía. Es el defecto más caro que encontró
+     la revisión de seguridad del 27-ago-2026 después de la entrada libre. */
+  {
+    FICHAS = []; CORREOS = [];
+    const DEL_EXTRAÑO = 'la que puso el que no es';
+
+    /* 1 · el extraño pide cuenta con el correo de la víctima */
+    await logica.crear({ correo: 'ana@gmail.com', contrasena: DEL_EXTRAÑO, nombre: 'Quien Sea' }, AHORA);
+    igual('todavía no puede entrar',
+      (await logica.entrar({ correo: 'ana@gmail.com', contrasena: DEL_EXTRAÑO })).status, 403);
+
+    /* 2 · la víctima entra con SU Google, como cualquier día */
+    igual('la víctima entra con su Google',
+      (await logica.conGoogle({ credencial: papel() }, AHORA)).status, 200);
+
+    /* 3 · el extraño lo intenta otra vez */
+    const despues = await logica.entrar({ correo: 'ana@gmail.com', contrasena: DEL_EXTRAÑO });
+    igual('y DESPUES tampoco', despues.status, 401);
+    falso('sin abrirle sesión', despues.sesionPara);
   }
 
   /* ============ 16. QUIEN COMPRO DE INVITADO ============

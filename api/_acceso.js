@@ -74,12 +74,47 @@ function nuevoCodigo() {
   return String(crypto.randomInt(0, 1000000)).padStart(6, '0');
 }
 
+/* ------------------------------------------------------------
+   PARA QUE SIRVE CADA COSA — Y POR QUE HAY QUE DECIRLO
+   ------------------------------------------------------------
+   Aquí viven DOS permisos que se parecen y no valen lo mismo:
+
+     'liga'    ver UN viaje. El código se le dicta a quien sea:
+               así está pensado, y el dueño puede dárselo a su
+               esposa, a su agente o a quien le lleve el grupo.
+
+     'cuenta'  entrar a la CUENTA. Todos sus viajes, sus datos, y
+               cambiar su contraseña.
+
+   Hasta la revisión del 27-ago-2026 los dos usaban el MISMO campo
+   para el código y la MISMA cookie con el mismo contenido `{c,e}`.
+   O sea que el código que se le dicta a alguien para que vea un
+   viaje servía para resetear la contraseña de la cuenta, y la
+   cookie que salía de ver un viaje era una sesión de cuenta
+   completa —con «Mis viajes» y, en una cuenta de Google, poder
+   ponerle contraseña—.
+
+   No era un hueco de la cuenta ni de la liga: era que nadie
+   preguntaba de cuál de las dos venía el permiso.
+
+   Ahora el uso va DENTRO del sello, en los dos casos. Un permiso
+   de 'liga' no puede hacerse pasar por uno de 'cuenta' porque la
+   firma no cuadra, no porque alguien se acuerde de comprobarlo.
+   ------------------------------------------------------------ */
+const USO_LIGA = 'liga';
+const USO_CUENTA = 'cuenta';
+
 /* Se guarda el resumen, nunca el código. Va con el secreto adentro para que
    ni con la metadata en la mano se pueda armar una tabla de resúmenes de los
-   solo un millón de códigos posibles. */
-function resumen(codigo) {
+   solo un millón de códigos posibles.
+
+   Y con el USO adentro: un código pedido para ver un viaje no puede cuadrar
+   contra una comprobación de cuenta, ni al revés. Lo de antes por omisión es
+   `liga`, para que los códigos que ya andaban en el correo de alguien cuando
+   se desplegó esto siguieran sirviendo para lo que se pidieron. */
+function resumen(codigo, uso) {
   return crypto.createHmac('sha256', secreto())
-    .update(String(codigo || ''), 'utf8').digest('hex');
+    .update(String(uso || USO_LIGA) + '\n' + String(codigo || ''), 'utf8').digest('hex');
 }
 
 function igualesEnTiempoConstante(a, b) {
@@ -91,10 +126,10 @@ function igualesEnTiempoConstante(a, b) {
 
 /* Lo que hay que escribir en la ficha del cliente para dejar armado el
    código. Se devuelve en vez de escribirse aquí para poder probarlo sin red. */
-function paraGuardar(codigo, ahoraMs) {
+function paraGuardar(codigo, ahoraMs, uso) {
   const ahora = typeof ahoraMs === 'number' ? ahoraMs : Date.now();
   const m = {};
-  m[CAMPO_HASH] = resumen(codigo);
+  m[CAMPO_HASH] = resumen(codigo, uso);
   m[CAMPO_VENCE] = String(ahora + VIDA_CODIGO_MS);
   m[CAMPO_INTENTOS] = '0';
   return m;
@@ -126,7 +161,7 @@ function paraBorrar() {
    contador es de mejor esfuerzo. Queda dicho para que nadie lo
    descubra como sorpresa.
    ------------------------------------------------------------ */
-function revisaCodigo(metadataDelCliente, codigo, ahoraMs) {
+function revisaCodigo(metadataDelCliente, codigo, ahoraMs, uso) {
   if (!hayClave()) return { ok: false, motivo: 'sin LIGAS_SECRETO configurado' };
   const m = metadataDelCliente || {};
   const guardado = String(m[CAMPO_HASH] || '');
@@ -143,7 +178,7 @@ function revisaCodigo(metadataDelCliente, codigo, ahoraMs) {
   const limpio = String(codigo || '').replace(/\D/g, '');
   if (limpio.length < 6) return { ok: false, motivo: 'código incompleto', gastado: true, van: van + 1 };
 
-  if (!igualesEnTiempoConstante(resumen(limpio), guardado)) {
+  if (!igualesEnTiempoConstante(resumen(limpio, uso), guardado)) {
     return { ok: false, motivo: 'código incorrecto', gastado: true, van: van + 1 };
   }
   return { ok: true };
@@ -166,10 +201,15 @@ function sello(carga) {
   return aB64(crypto.createHmac('sha256', secreto()).update(carga, 'utf8').digest());
 }
 
-function firmaSesion(idCliente, ahoraMs) {
+/* `uso` dice de qué puerta salió esta sesión: 'liga' (vio un viaje) o
+   'cuenta' (entró a su cuenta). Va DENTRO de lo firmado, así que no se puede
+   ascender una en la otra. Por omisión, la débil. */
+function firmaSesion(idCliente, ahoraMs, uso) {
   if (!hayClave() || !idCliente) return '';
   const ahora = typeof ahoraMs === 'number' ? ahoraMs : Date.now();
-  const carga = aB64(JSON.stringify({ c: String(idCliente), e: ahora + VIDA_SESION_MS }));
+  const carga = aB64(JSON.stringify({
+    c: String(idCliente), e: ahora + VIDA_SESION_MS, u: String(uso || USO_LIGA)
+  }));
   return carga + '.' + sello(carga);
 }
 
@@ -244,7 +284,11 @@ function cookieBorrada() {
 
    Devuelve el identificador, o cadena vacia. Nunca revienta.
    ------------------------------------------------------------ */
-function clienteDeSesion(token, ahoraMs) {
+/* `usoExigido` es lo que hace que una cookie de ver-un-viaje NO sea una
+   sesión de cuenta. Quien pide 'cuenta' recibe cadena vacía si la cookie
+   nació de una liga — y una cookie vieja, de antes de que esto existiera,
+   tampoco pasa: sin `u` se trata como la débil. Falla cerrado. */
+function clienteDeSesion(token, ahoraMs, usoExigido) {
   if (!hayClave()) return '';
   const t = String(token || '');
   const punto = t.indexOf('.');
@@ -260,6 +304,10 @@ function clienteDeSesion(token, ahoraMs) {
 
   const ahora = typeof ahoraMs === 'number' ? ahoraMs : Date.now();
   if (ahora > d.e) return '';
+
+  /* El uso, al final y con el sello ya comprobado: `d.u` es dato firmado, no
+     dato de quien llama. Sin `u` —cookie de antes de esto— vale la débil. */
+  if (usoExigido && String(d.u || USO_LIGA) !== String(usoExigido)) return '';
   return d.c;
 }
 
@@ -292,6 +340,7 @@ function pistaDeCorreo(correo) {
 }
 
 module.exports = {
+  USO_LIGA, USO_CUENTA,
   VIDA_CODIGO_MS, INTENTOS, HORAS_SESION, VIDA_SESION_MS, COOKIE,
   CAMPO_HASH, CAMPO_VENCE, CAMPO_INTENTOS,
   hayClave, nuevoCodigo, paraGuardar, paraBorrar, revisaCodigo,

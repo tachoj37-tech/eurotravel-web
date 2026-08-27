@@ -120,7 +120,10 @@ const SIN_NADA = {
    puerta —cuatro por minuto, ciento cincuenta al día— que es lo
    que de verdad impide barrer una lista.
    ------------------------------------------------------------ */
-const PISO_MS = { olvide: 1200 };
+/* `codigo` va aquí por lo mismo que `olvide`: manda un correo cuando la
+   cuenta existe y no manda nada cuando no, así que sin piso el reloj vuelve a
+   decir quién tiene cuenta. */
+const PISO_MS = { olvide: 1200, codigo: 1200 };
 
 function esperaHasta(desde, ms) {
   const falta = ms - (Date.now() - desde);
@@ -152,12 +155,18 @@ module.exports = async function handler(req, res) {
     r = SIN_NADA[accion]();
   } else if (tiene(CON_SESION)) {
     /* El cliente sale de la COOKIE, ya comprobado el sello: nunca de lo que
-       manda el navegador en el cuerpo. Ahí estaría el hueco. */
-    r = await CON_SESION[accion](acceso.clienteDeSesion(acceso.sesionDe(req)));
+       manda el navegador en el cuerpo. Ahí estaría el hueco.
+
+       Y SE EXIGE QUE LA COOKIE SEA DE CUENTA. La misma cookie la reparte
+       `verificar-codigo` cuando alguien acierta el código de ver un viaje —un
+       código que el dueño le puede dictar a cualquiera, así está pensado—. Sin
+       exigir el uso, esa persona entraba a «Mis viajes» completo y, en una
+       cuenta de Google, podía ponerle contraseña. Encontrado el 27-ago-2026. */
+    r = await CON_SESION[accion](acceso.clienteDeSesion(acceso.sesionDe(req), null, acceso.USO_CUENTA));
   } else if (tiene(CON_AMBOS)) {
     /* El cuerpo va PRIMERO y la sesión después, en ese orden, para que nunca
        se pueda confundir uno con otro al leer la llamada. */
-    r = await CON_AMBOS[accion](cuerpo, acceso.clienteDeSesion(acceso.sesionDe(req)));
+    r = await CON_AMBOS[accion](cuerpo, acceso.clienteDeSesion(acceso.sesionDe(req), null, acceso.USO_CUENTA));
   } else {
     r = await CON_CUERPO[accion](cuerpo);
   }
@@ -169,7 +178,8 @@ module.exports = async function handler(req, res) {
   /* La cookie es cosa del transporte, y por eso se pone y se quita aquí y no
      en la lógica: así la lógica se prueba sin fingir un `res`. */
   if (r.sesionPara) {
-    res.setHeader('Set-Cookie', acceso.cookieDeSesion(acceso.firmaSesion(r.sesionPara)));
+    res.setHeader('Set-Cookie',
+      acceso.cookieDeSesion(acceso.firmaSesion(r.sesionPara, null, acceso.USO_CUENTA)));
   } else if (r.borrarSesion) {
     res.setHeader('Set-Cookie', acceso.cookieBorrada());
   }

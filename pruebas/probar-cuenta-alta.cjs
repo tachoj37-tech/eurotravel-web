@@ -235,11 +235,28 @@ function codigoDelCorreo() {
     await logica.crear({ correo: 'lento@ejemplo.mx', contrasena: CLAVE, nombre: 'Lento Uno' }, AHORA);
     igual('el alta manda el primero', CORREOS.length, 1);
 
-    /* de inmediato: no */
+    /* ------------------------------------------------------------
+       ESTAS DOS ASERCIONES CAMBIARON DE LADO, y por lo mismo que la del
+       «yaEstaba»: estaban escritas para confirmar que el freno funcionaba, y
+       de paso daban por buena una respuesta QUE DELATABA.
+
+       Decían que al frenarse contestara 429 con `segundos`. Pero un correo
+       sin cuenta contesta 200 y ya, así que ese 429 era la señal: si te
+       frenan, ese correo tiene cuenta sin verificar. Encadenado con el alta
+       daba la lista entera de clientes, correo por correo.
+
+       El freno SIGUE ahí —lo que se comprueba abajo es que no sale un correo
+       de más—; lo que cambió es que ya no se anuncia. */
     const seguido = await logica.reenviar({ correo: 'lento@ejemplo.mx' }, AHORA + 1000);
-    igual('otro de inmediato se frena', seguido.status, 429);
-    cierto('y dice cuántos segundos esperar', seguido.cuerpo.segundos > 0);
-    igual('no salió correo de más', CORREOS.length, 1);
+    igual('frenado contesta lo MISMO que si hubiera salido', seguido.status, 200);
+    igual('sin decir que hubo freno', seguido.cuerpo.segundos, undefined);
+    igual('pero NO salió correo de más', CORREOS.length, 1);
+
+    /* y es palabra por palabra lo mismo que le toca a un correo sin cuenta */
+    const inventado = await logica.reenviar({ correo: 'nohay@ejemplo.mx' }, AHORA + 1000);
+    igual('mismas llaves que un correo sin cuenta',
+      Object.keys(seguido.cuerpo).sort(), Object.keys(inventado.cuerpo).sort());
+    igual('y el mismo estado', seguido.status, inventado.status);
 
     /* pasado el minuto: sí */
     const luego = await logica.reenviar({ correo: 'lento@ejemplo.mx' }, AHORA + 61000);
