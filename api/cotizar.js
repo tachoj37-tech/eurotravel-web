@@ -71,6 +71,14 @@ module.exports = async function handler(req, res) {
     return;
   }
 
+  if (tarifa.regresoAntesDeSalida(cuerpo.salida, cuerpo.regreso)) {
+    res.status(422).json({
+      error: 'fechas invertidas',
+      aviso: 'La fecha de regreso es anterior a la de salida. Revísalas, por favor.'
+    });
+    return;
+  }
+
   const redondo = cuerpo.redondo !== false && !!cuerpo.regreso;
   const dias = tarifa.diasDeServicio(cuerpo.salida, cuerpo.regreso);
   const noches = tarifa.nochesDe(cuerpo.salida, cuerpo.regreso);
@@ -111,17 +119,18 @@ module.exports = async function handler(req, res) {
         return;
       }
 
-      // La vuelta se mide aparte: por sentidos únicos y entronques rara vez da igual que la ida
-      let vuelta = null;
-      if (redondo) {
-        vuelta = await rutas.mideTramo(destino, origen, clave);
-        if (!vuelta) {
-          res.status(422).json({
-            error: 'sin ruta de vuelta',
-            aviso: 'No encontramos la ruta de regreso entre esos dos puntos.'
-          });
-          return;
-        }
+      /* La vuelta se mide aparte —por sentidos únicos y entronques rara vez
+         da igual que la ida— y SIEMPRE, aunque sea solo ida: el precio de un
+         solo-ida es el 65% del precio REDONDO de un día, así que hace falta
+         la vuelta para saber cuál es ese precio redondo. En destinos de lista
+         esto no cuesta nada: ni siquiera se llega aquí, el precio es fijo. */
+      const vuelta = await rutas.mideTramo(destino, origen, clave);
+      if (!vuelta) {
+        res.status(422).json({
+          error: 'sin ruta de vuelta',
+          aviso: 'No encontramos la ruta de regreso entre esos dos puntos.'
+        });
+        return;
       }
 
       /* La conversión vive en _tarifa, no aquí: cotizar y cobrar TIENEN que
@@ -137,7 +146,8 @@ module.exports = async function handler(req, res) {
     const p = tarifa.calcula(kmTotal, dias, {
       noches: noches,
       movimientos: cuerpo.movimientos,
-      destino: cuerpo.destino
+      destino: cuerpo.destino,
+      redondo: redondo
     });
 
     /* Qué del precio puede salir NO se decide aquí: lo decide `_publico.js`,

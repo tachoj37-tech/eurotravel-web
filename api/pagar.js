@@ -145,6 +145,14 @@ module.exports = async function handler(req, res) {
     return;
   }
 
+  if (tarifa.regresoAntesDeSalida(cuerpo.salida, cuerpo.regreso)) {
+    res.status(422).json({
+      error: 'fechas invertidas',
+      aviso: 'La fecha de regreso es anterior a la de salida. Revísalas, por favor.'
+    });
+    return;
+  }
+
   const redondo = cuerpo.redondo !== false && !!cuerpo.regreso;
   const dias = tarifa.diasDeServicio(cuerpo.salida, cuerpo.regreso);
   const noches = tarifa.nochesDe(cuerpo.salida, cuerpo.regreso);
@@ -156,13 +164,12 @@ module.exports = async function handler(req, res) {
       res.status(422).json({ error: 'sin ruta', aviso: 'No encontramos la ruta de ese viaje.' });
       return;
     }
-    let vuelta = null;
-    if (redondo) {
-      vuelta = await rutas.mideTramo(destino, origen, claveRutas);
-      if (!vuelta) {
-        res.status(422).json({ error: 'sin ruta de vuelta', aviso: 'No encontramos la ruta de regreso.' });
-        return;
-      }
+    /* Siempre se mide la vuelta, aun en solo ida: el precio de un solo-ida es
+       el 65% del precio REDONDO de un día. Igual que en cotizar. */
+    const vuelta = await rutas.mideTramo(destino, origen, claveRutas);
+    if (!vuelta) {
+      res.status(422).json({ error: 'sin ruta de vuelta', aviso: 'No encontramos la ruta de regreso.' });
+      return;
     }
 
     /* Misma función que usa /api/cotizar: es lo que garantiza que aquí no
@@ -174,7 +181,8 @@ module.exports = async function handler(req, res) {
     const p = tarifa.calcula(kmTotal, dias, {
       noches: noches,
       movimientos: cuerpo.movimientos,
-      destino: cuerpo.destino
+      destino: cuerpo.destino,
+      redondo: redondo
     });
 
     /* ------------------------------------------------------------

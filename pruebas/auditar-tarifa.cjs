@@ -328,6 +328,47 @@ const SU_LISTA = [
   igual('la capital sí sigue cayendo en su renglón',
     t.calcula(708, 1, { destino: { direccion: 'Zacatecas, Zacatecas, México' } })
       .interno.destinoDeLista, 'Zacatecas');
+
+  /* --- SOLO IDA: 65% del precio de un día sin movimientos (26-ago-2026) ---
+     Antes un solo-ida a un destino de lista cobraba lo mismo que el redondo:
+     `redondo` se calculaba en cotizar y NUNCA llegaba a calcula. */
+  function soloIda(direccion, dias, extra) {
+    return t.calcula(999, dias || 1, Object.assign({
+      destino: { direccion: direccion }, noches: 0, movimientos: [], redondo: false
+    }, extra || {})).total;
+  }
+  /* Chapala 1 día son $6,500 → solo ida = floor(0.65×6500 /100)×100 = 4,200 */
+  igual('Chapala solo ida: 65% de 6,500 = 4,200', soloIda('Chapala, Jalisco, México'), 4200);
+  igual('Chapala redondo sigue en 6,500', sinMov('Chapala, Jalisco, México', 1), 6500);
+  /* Tequila 7,000 → 0.65×7000 = 4,550 → floor a 4,500 */
+  igual('Tequila solo ida: 4,500', soloIda('Tequila, Jalisco, México'), 4500);
+  /* Un solo-ida IGNORA días, noches y movimientos: aunque le manden 5 días y
+     movimientos, sigue siendo el 65% del precio de UN día. */
+  igual('solo ida ignora los días extra',
+    soloIda('Chapala, Jalisco, México', 5, { noches: 4 }), 4200);
+  igual('solo ida ignora los movimientos',
+    soloIda('Chapala, Jalisco, México', 3, { movimientos: [
+      { horaInicio: '08:00', horaFin: '16:00' }, { horaInicio: '08:00', horaFin: '16:00' }] }), 4200);
+  /* Un destino de fórmula: 65% de su precio redondo de un día. A 999 km el
+     redondo de 1 día es floor((6500 + 22×999)/100)×100 = 28,400 → 0.65 =
+     18,460 → floor a 18,400. */
+  const redondoFormula = t.calcula(999, 1, { destino: { direccion: 'un pueblo cualquiera' }, noches: 0, movimientos: [] }).total;
+  igual('la fórmula redonda de referencia', redondoFormula, 28400);
+  igual('fórmula solo ida: 65% de ese redondo', soloIda('un pueblo cualquiera'), 18400);
+
+  /* --- fechas invertidas (26-ago-2026) ---
+     El `Math.max(1, …)` de diasDeServicio tragaba un regreso anterior a la
+     salida como un viaje de un día y lo cotizaba sin avisar. */
+  igual('regreso ANTES que salida se detecta',
+    t.regresoAntesDeSalida('2026-09-10', '2026-09-05'), true);
+  igual('mismo día no es invertido',
+    t.regresoAntesDeSalida('2026-09-10', '2026-09-10'), false);
+  igual('un viaje normal tampoco',
+    t.regresoAntesDeSalida('2026-09-10', '2026-09-12'), false);
+  igual('sin regreso no es invertido (es solo ida)',
+    t.regresoAntesDeSalida('2026-09-10', ''), false);
+  igual('con fechas ilegibles no inventa un error de orden',
+    t.regresoAntesDeSalida('no-es-fecha', 'tampoco'), false);
 })();
 
 /* ============ 4. LA FORMULA DE RESPALDO, KILOMETRO POR KILOMETRO ============ */

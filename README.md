@@ -131,11 +131,16 @@ sitio no se rompe si Google falla o si se agota la cuota.
 ### Comprobar que las claves funcionan
 
 ```
-POST /api/diagnostico
+POST /api/diagnostico    { "clave": "…" }
 ```
 
 Devuelve si cada variable está configurada y si Google acepta la clave, sin
-revelar su valor. Solo responde desde el dominio del sitio.
+revelar su valor.
+
+**Pide `CLAVE_DIAGNOSTICO` y falla cerrada**: sin esa variable en Vercel no
+abre para nadie. La cabecera de origen no bastaba — dice si Stripe está en
+producción y gasta cuota de Google y correos, y quien llama con curl escribe
+la cabecera que quiera.
 
 Respuesta sana:
 
@@ -157,7 +162,7 @@ verificado o porque el destinatario no es el de la cuenta de Resend. La única
 forma de saberlo es mandar uno:
 
 ```
-POST /api/diagnostico    { "probarCorreo": true }
+POST /api/diagnostico    { "clave": "…", "probarCorreo": true }
 ```
 
 Manda un correo real **a `AVISOS_A`** —nunca a una dirección que venga en la

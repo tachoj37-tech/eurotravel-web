@@ -256,6 +256,13 @@ const ANTICIPO = 0.20;                // 20% para apartar la unidad
 const NOCHES_INCLUIDAS = 3;
 const EXTRA_POR_NOCHE = 1000;
 
+/* SOLO IDA. Dictado por el dueño el 26-ago-2026: un viaje de un solo sentido
+   cuesta el 65% de un viaje de UN DÍA sin movimientos de ese mismo destino.
+   No lleva noches ni movimientos —es dejar y ya—. Antes esto no se cobraba
+   distinto: `redondo` se calculaba en cotizar pero nunca llegaba aquí, así
+   que un solo-ida a un destino de lista cobraba lo mismo que el redondo. */
+const FRACCION_UN_SENTIDO = 0.65;
+
 /* ------------------------------------------------------------
    LOS MOVIMIENTOS EN DESTINO
    ------------------------------------------------------------
@@ -461,6 +468,17 @@ function diasDeServicio(salida, regreso) {
   return Math.max(1, Math.round((b - a) / 86400000) + 1);
 }
 
+/* ¿El regreso es ANTES que la salida? El `Math.max(1, …)` de arriba lo tragaba
+   en silencio como un viaje de un día; quien llama usa esto para avisar
+   «fecha inválida» en vez de cotizar un viaje imposible. Con fechas ilegibles
+   NO es este error (de eso se encarga otra validación). */
+function regresoAntesDeSalida(salida, regreso) {
+  const a = aDia(salida);
+  const b = aDia(regreso);
+  if (!isFinite(a) || !isFinite(b)) return false;
+  return b < a;
+}
+
 /* Noches en destino: la RESTA, no la cuenta inclusive. Salir el 20 y regresar
    el 22 son 3 días de servicio pero 2 noches. Confundirlas cobra mil pesos de
    más en cada viaje, así que van en funciones distintas y con nombres
@@ -556,6 +574,11 @@ function calcula(kmTotal, dias, extras) {
      ---------------------------------------------------------- */
   if (km.requiereAsesor) return sinPrecio(km, dias, extras);
 
+  /* Solo ida: se resuelve como un caso aparte. No hay estadía ni movimientos
+     que sumar —la unidad deja al grupo y se regresa—, así que se ignoran los
+     días, las noches y los movimientos que vengan. Ver FRACCION_UN_SENTIDO. */
+  const unSentido = extras.redondo === false;
+
   /* ----------------------------------------------------------
      EL MINIMO DEFIENDE TAMBIEN A LOS PRECIOS DE LA LISTA
 
@@ -602,7 +625,8 @@ function calcula(kmTotal, dias, extras) {
      dejaba fuera el último día y cobraba $3,000 de menos. Lo cazó la prueba
      que reconstruye «CDMX 3 días» de la lista real. */
   const regla = reglaDeDestino(extras.destino);
-  const movimientos = movimientosDe(extras.movimientos, dias, regla);
+  /* Un solo-ida no se mueve: se ignoran los movimientos que lleguen. */
+  const movimientos = unSentido ? [] : movimientosDe(extras.movimientos, dias, regla);
   const importeMovimientos = precioMovimientos(movimientos);
   const conMovimientos = movimientos.length > 0;
 
@@ -660,6 +684,18 @@ function calcula(kmTotal, dias, extras) {
   let cobroMovimientos = importeMovimientos;
   if (km.precioConMovimientos && conMovimientos) {
     cobroTraslado = Math.floor(Math.max(km.precioConMovimientos, minimo) / REDONDEO) * REDONDEO;
+    cobroNoches = 0;
+    cobroMovimientos = 0;
+  }
+
+  /* SOLO IDA manda sobre todo lo demás: 65% del precio de UN DÍA sin
+     movimientos —o sea del traslado de lista o de fórmula, sin piso por
+     varios días, sin noches, sin bandas—. Va al final para que ni la regla
+     R5 ni la estadía se le cuelen. Hacia abajo al múltiplo de 100, como
+     todo aquí, a favor del cliente. */
+  if (unSentido) {
+    const base1dia = Math.floor(km.total / REDONDEO) * REDONDEO;
+    cobroTraslado = Math.floor(FRACCION_UN_SENTIDO * base1dia / REDONDEO) * REDONDEO;
     cobroNoches = 0;
     cobroMovimientos = 0;
   }
@@ -752,7 +788,7 @@ module.exports = {
   NOCHES_INCLUIDAS, EXTRA_POR_NOCHE, BANDAS_MOVIMIENTO, TOPE_DIAS_MOVIMIENTO,
   DESTINOS_CON_REGLA,
   UNIDADES_QUE_COTIZAN, claveDeUnidad, seSabeCotizar, necesitaMedirse,
-  kmDe, diasDeServicio, nochesDe, trasladoDe, reglaDeDestino,
+  kmDe, diasDeServicio, nochesDe, regresoAntesDeSalida, trasladoDe, reglaDeDestino,
   horasDe, bandaDe, movimientosDe, precioMovimientos,
   calcula
 };

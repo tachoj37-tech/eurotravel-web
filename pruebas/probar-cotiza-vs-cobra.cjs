@@ -496,8 +496,12 @@ function dia(fecha, inicio, fin) {
     igual('el que no está en la lista SÍ se mide', bernal.llamadas, 2);
     igual('y se cotiza por fórmula', bernal.json.total > 0, true);
 
-    /* Solo ida: una llamada, no dos */
-    METROS_IDA = 311400; METROS_VUELTA = 0;
+    /* Solo ida y fuera de la lista: DOS llamadas, no una.
+       Cambió de lado el 26-ago-2026. Antes un solo-ida medía solo la ida y
+       cobraba medio viaje. El dueño dictó que un solo-ida cuesta el 65% del
+       precio REDONDO de un día — y ese precio redondo necesita la vuelta.
+       Así que ahora se mide también la vuelta, y son dos llamadas. */
+    METROS_IDA = 311400; METROS_VUELTA = 288000;
     const espia = conteoDeGoogle();
     const soloIda = res();
     await cotizar({ method: 'POST', headers: cabecerasDe(++corrida), body: {
@@ -506,7 +510,14 @@ function dia(fecha, inicio, fin) {
                                             direccion: 'Bernal, Querétaro, México' }),
       salida: '2026-09-03T08:00', regreso: '', redondo: false } }, soloIda);
     const nIda = espia.cuantas(); espia.suelta();
-    igual('solo ida y fuera de la lista: una sola llamada', nIda, 1);
+    igual('solo ida fuera de la lista: dos llamadas (necesita el redondo)', nIda, 2);
+    /* y el precio es el 65% del redondo de un día, no medio viaje */
+    igual('solo ida cobra el 65% del redondo, redondeado a favor del cliente',
+      soloIda._json && soloIda._json.total, (function () {
+        const kmRedondo = (311400 + 288000) / 1000;
+        const redondo1dia = Math.floor((6500 + 22 * kmRedondo) / 100) * 100;
+        return Math.floor(0.65 * redondo1dia / 100) * 100;
+      })());
 
     /* ---- Y SIN CLAVE DE GOOGLE, la lista sigue cotizando ----
        Antes /api/cotizar contestaba 503 antes de mirar nada. Ahora la clave

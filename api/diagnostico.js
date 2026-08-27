@@ -5,10 +5,31 @@
    las acepte. NUNCA devuelve el valor de una clave: solo si
    existe, cuántos caracteres mide y qué contestó Google.
 
-   Uso: POST /api/diagnostico desde el propio dominio.
+   Uso: POST /api/diagnostico  { "clave": "…" }  desde el propio dominio.
+
+   POR QUÉ PIDE CLAVE
+   ------------------
+   Esta puerta dice si Stripe está en modo producción, cuánto miden las
+   claves y si traen espacios, y además gasta cuota de Google y correos. La
+   cabecera de origen NO la protege de quien llama con curl a mano —el propio
+   código lo admite—. Una tanda de clientes de prueba lo confirmó el
+   26-ago-2026. Así que va con clave, igual que la pantalla de prueba, y
+   falla CERRADA: sin `CLAVE_DIAGNOSTICO` configurada, no abre para nadie.
    ============================================================ */
 
+const crypto = require('crypto');
 const defensas = require('./_defensas');   // origen y freno, en un lugar
+
+/* La clave, comparada en tiempo constante (un === se corta en la primera
+   letra distinta y ese tiempo delata la clave). Devuelve null si no está
+   configurada, para poder distinguir «cerrada» de «clave incorrecta». */
+function claveValida(dio) {
+  const buena = process.env.CLAVE_DIAGNOSTICO;
+  if (!buena) return null;
+  const a = crypto.createHash('sha256').update(String(dio || '')).digest();
+  const b = crypto.createHash('sha256').update(String(buena)).digest();
+  return crypto.timingSafeEqual(a, b);
+}
 
 /* Este endpoint prueba las claves contra Google, así que cada llamada gasta
    cuota real. El freno es apretado a propósito: es una herramienta de
@@ -70,6 +91,20 @@ module.exports = async function handler(req, res) {
      de Places y una de Routes, que se pagan.
      Para revisarlo hay el guion de pruebas; abrirlo en la barra ya no. */
   if (defensas.puerta(req, res)) return;
+
+  /* La clave, antes de gastar un solo recurso. */
+  const ok = claveValida(req.body && req.body.clave);
+  if (ok === null) {
+    res.status(401).json({
+      error: 'sin clave',
+      aviso: 'Falta configurar CLAVE_DIAGNOSTICO en Vercel. Sin ella esta puerta no abre.'
+    });
+    return;
+  }
+  if (!ok) {
+    res.status(401).json({ error: 'clave incorrecta' });
+    return;
+  }
 
   const frenado = freno(req);
   if (frenado) { res.status(frenado.status).json({ error: frenado.error }); return; }
