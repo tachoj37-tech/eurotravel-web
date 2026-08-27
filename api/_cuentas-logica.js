@@ -488,7 +488,14 @@ async function conGoogle(cuerpo, ahoraMs) {
    botón: más vale no ofrecerlo que ofrecerlo roto.
    ============================================================ */
 function config() {
-  return { status: 200, cuerpo: { google: google.idDeCliente() } };
+  const id = google.idDeCliente();
+  const cuerpo = { google: id };
+  /* Si está apagado, se dice POR QUE: «sin-poner» o «mala-forma». No enseña
+     el valor, y el id es público de todas formas. Sin esto, desde fuera no
+     hay manera de distinguir «falta el redespliegue» de «se pegó mal», que
+     son dos arreglos distintos. */
+  if (!id) cuerpo.porque = google.porQueNoHayGoogle();
+  return { status: 200, cuerpo: cuerpo };
 }
 
 module.exports = {

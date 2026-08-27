@@ -497,9 +497,36 @@ const cuentas = require('../api/_cuentas.js');
     cierto('y le dice qué hacer', /correo y contrase/i.test(r.cuerpo.aviso));
 
     igual('la pantalla se entera de que no hay Google', logica.config().cuerpo.google, '');
+    igual('y se dice que es porque falta ponerla', logica.config().cuerpo.porque, 'sin-poner');
+
+    /* La diferencia entre estas dos es la diferencia entre «te falta
+       redesplegar» y «lo pegaste mal», que son arreglos distintos. Sin esto,
+       desde fuera las dos se ven igual: `{"google":""}`. */
+    process.env.GOOGLE_CLIENT_ID = 'GOCSPX-esto-es-el-secreto-no-el-id';
+    igual('con el SECRETO pegado por error, también apagado', logica.config().cuerpo.google, '');
+    igual('pero se distingue de la otra', logica.config().cuerpo.porque, 'mala-forma');
+
+    process.env.GOOGLE_CLIENT_ID = '"' + NUESTRO_ID + '"';
+    igual('pegado con comillas, apagado y se sabe', logica.config().cuerpo.porque, 'mala-forma');
 
     process.env.GOOGLE_CLIENT_ID = antes;
-    igual('con el id puesto, la pantalla lo recibe', logica.config().cuerpo.google, NUESTRO_ID);
+    igual('con el id bueno, la pantalla lo recibe', logica.config().cuerpo.google, NUESTRO_ID);
+    igual('y ya no hay nada que explicar', logica.config().cuerpo.porque, undefined);
+
+    /* La comprobación de forma se aflojó a propósito: no adivina cómo
+       escribe Google la parte de adelante, solo exige la cola. Que no
+       rechace ids con forma rara pero legítima. */
+    const buenos = [
+      '407408718192-26mb2m6t3vk7pc0h6bkvbgu4hg.apps.googleusercontent.com',
+      '1-a.apps.googleusercontent.com',
+      '999999999999-AbC_dEf.xyz.apps.googleusercontent.com'
+    ];
+    const rechazados = buenos.filter(function (b) {
+      process.env.GOOGLE_CLIENT_ID = b;
+      return google.idDeCliente() !== b;
+    });
+    igual('ningún id con la cola buena se rechaza', rechazados, []);
+    process.env.GOOGLE_CLIENT_ID = antes;
   }
 
   console.log('\n' + buenas + ' buenas, ' + malas + ' malas');

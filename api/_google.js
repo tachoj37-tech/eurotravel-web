@@ -95,16 +95,45 @@ let cache = { llaves: null, hasta: 0 };
    Se exige la forma completa. Un id a medias —copiado sin la cola,
    que pasa— dejaría a Google a medio configurar sin que nadie se
    entere: el botón saldría y no entraría nadie.
+
+   ------------------------------------------------------------
+   LA COMPROBACION DE FORMA ES A PROPOSITO FLOJA
+   ------------------------------------------------------------
+   La primera versión exigía `^[A-Za-z0-9-]+\.apps\...$`, o sea
+   que adivinaba cómo escribe Google la parte de adelante. Eso es
+   apostar: si algún día Google emite un id con un carácter que no
+   está en esa lista, NUESTRA comprobación apaga el botón y el
+   dueño busca el error en Google, donde no está.
+
+   Lo que sí es cierto siempre: termina en
+   `.apps.googleusercontent.com`, no trae espacios, y mide más que
+   un puñado de letras. Con eso basta para cazar los tres errores
+   reales —pegar el SECRETO en vez del id, pegar con comillas, o
+   dejarlo a medias— sin inventarse reglas sobre lo que no
+   sabemos.
    ------------------------------------------------------------ */
+const COLA = '.apps.googleusercontent.com';
+
 function idDeCliente() {
   const id = String(process.env.GOOGLE_CLIENT_ID || '').trim();
   if (!id) return '';
-  if (!/^[A-Za-z0-9-]+\.apps\.googleusercontent\.com$/.test(id)) {
+  const bien = id.length > COLA.length && !/\s/.test(id) &&
+    id.slice(-COLA.length) === COLA;
+  if (!bien) {
     /* Regla 9: esto lo lee un programador en el registro, nunca un cliente. */
     console.error('[google] GOOGLE_CLIENT_ID con mala forma; el botón queda apagado');
     return '';
   }
   return id;
+}
+
+/* Por qué está apagado, para poder distinguir desde fuera «no la pusieron»
+   de «la pusieron mal». NO enseña el valor, y de todas formas el id es
+   público: va escrito en la página. Existe porque la primera vez que el dueño
+   configuró esto se pasaron veinte minutos adivinando cuál de las dos era. */
+function porQueNoHayGoogle() {
+  if (idDeCliente()) return '';
+  return String(process.env.GOOGLE_CLIENT_ID || '').trim() ? 'mala-forma' : 'sin-poner';
 }
 
 /* Si esto es falso, la página ni siquiera enseña el botón. Vale más no
@@ -267,7 +296,7 @@ async function verifica(credencial, ahoraMs) {
 }
 
 module.exports = {
-  idDeCliente, hayGoogle, verifica,
+  idDeCliente, hayGoogle, porQueNoHayGoogle, verifica,
   llavesDeGoogle, olvidaLlaves,
   EMISORES, HOLGURA_MS, LARGO_MAXIMO
 };
