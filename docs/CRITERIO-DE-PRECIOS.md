@@ -10,13 +10,38 @@ para obedecerla. **Se lee antes de tocar cualquier cálculo de dinero.**
 que poderse reconstruir desde un renglón de ese Excel. Si un cálculo da algo
 que no está ahí, el cálculo está mal, no el Excel.
 
-De ahí se siguen dos reglas de conducta:
+De ahí se siguen tres reglas de conducta:
 
 1. **No inventar modelos.** El error más caro hasta hoy no fue un número mal
    copiado: fue una regla inventada (ver el error nº 1).
 2. **Calibrar contra TODOS los datos, no contra los que cuadran.** Si el Excel
    trae nueve destinos con varias duraciones, el modelo se prueba contra los
    nueve. Elegir dos y ajustar perillas hasta que cuadren es autoengaño.
+3. **Yo no propongo precios** (R12). Enseño qué cobraría la página y señalo lo
+   que huela raro; el número lo dicta el dueño.
+
+---
+
+## De un vistazo
+
+| | regla | en una línea |
+|---|---|---|
+| **R1** | precio por destino y duración | el Excel puede traer varios precios del mismo destino |
+| **R2** | los paquetes incluyen sus días | dentro de esa duración no se suma una noche |
+| **R3** | CDMX y Huasteca, por día | su precio es un traslado de un día, no un paquete |
+| **R4** | Talpa Burrita es otro producto | es la peregrinación, no «Talpa 4 días» |
+| **R5** | el Excel puede traer el precio CON movimientos | esa columna manda sobre cualquier suma |
+| **R6** | el paso entre escalones NO es el día extra | un día extra deducido se propone, no se aplica |
+| **R7** | Guayabitos | hasta 4 días su precio; +$1,000 la noche extra |
+| **R8** | Puebla y Zacatlán | día extra $2,000 |
+| **R9** | Mariposa/Azufres/Pátzcuaro | recorrido propio, $29,000 |
+| **R11** | el vecino se ancla a la lista | la fórmula es solo para destinos sin ancla |
+| **R12** | **yo no propongo precios** | el número lo dicta el dueño, siempre |
+| **R13** | estadía y movimiento se SUMAN | $1,000 la noche de más + $3,000 el día movido |
+| **R14** | el día de un paquete corre en los dos sentidos | Cancún baja $4,000 por día menos |
+| **R15** | la medición depende de la salida | las tandas salen del centro de Guadalajara |
+| **R16** | arriba de 1,400 km ya se cotiza solo | $36 el km, y menos fiable — saberlo |
+| **R10** | *pendiente:* el precio depende del origen | la fila de Ocotlán, ignorada por ahora |
 
 ---
 
@@ -68,16 +93,19 @@ nombre de quien la hizo.
 Un destino puede tener varios precios según los días. Van en `porDias` en el
 catálogo, copiados del Excel tal cual:
 
-| destino | del Excel |
-|---|---|
-| Talpa | 1 día $15,000 · 2 días $16,500 · día extra $1,500 (fila 10) |
-| Tlalpujahua | 1 día $23,500 · 2 días $26,500 |
-| El Manto | 1 día $14,000 · 3 días $19,000 |
-| Guanajuato | mismo día $19,000 · 3 días sin mov $24,500 |
+| destino | del Excel | día extra |
+|---|---|---|
+| Talpa | 1 día $15,000 · 2 días $16,500 | **$1,500** (fila 10) |
+| Tlalpujahua | 1 día $23,500 · 2 días $26,500 | **$1,500** (dictado) |
+| El Manto | 1 día $14,000 · 3 días $19,000 | **$1,500** (dictado) |
+| Guanajuato | mismo día $19,000 · 3 días sin mov $24,500 | **$1,500** (dictado) |
+| Puebla | 2 días $36,500 | **$2,000** (dictado) |
+| Puebla con Zacatlán | 2 días $39,500 | **$2,000** (dictado) |
+| Cancún | 17 días $145,000 | **$4,000** (dictado, y baja — R14) |
 
 Entre duraciones o más allá de la última, se avanza con el `diaExtra` propio
-del destino (el de la fila 10 si existe; si no, el que se deduce de sus
-propios escalones).
+del destino. **Ese número lo dicta el dueño o sale de la fila 10 del Excel —
+NUNCA se deduce del paso entre escalones**, que fue el error de R6.
 
 ### R2 · Los paquetes incluyen sus días (26-ago-2026)
 
@@ -85,7 +113,7 @@ Una columna con la duración en el nombre —CANCUN 17 DIAS $145,000, CHIAPAS 8
 DIAS $85,000— es un paquete completo. **Dentro de esa duración no se suma ni
 una noche.** Van con `diasIncluidos` en el catálogo.
 
-### R3 · CDMX, Huasteca y Puebla se cobran por día (confirmada 26-ago-2026)
+### R3 · CDMX y la Huasteca se cobran por día (confirmada 26-ago-2026)
 
 Palabras del dueño: *«son cuatro mil por día extra, pero con movimientos. Si
 no tiene movimientos, nomás vas a cobrar mil.»*
@@ -95,6 +123,17 @@ no tiene movimientos, nomás vas a cobrar mil.»*
   Huasteca 3/4 días del Excel.
 - **Sin movimientos: base + $1,000 por día.** (Antes las noches salían gratis
   hasta 3 — eso era el modelo inventado.)
+
+> **PUEBLA NO ENTRA AQUÍ**, aunque el dueño la nombró junto a las otras dos.
+> Su renglón del Excel guarda el precio completo de 2 días ($36,500), no una
+> base a la que se le suman días; su día extra son $2,000 y va por R8.
+> Comprobado: Puebla 2 días cotiza $36,500 exactos, y en el código solo CDMX
+> y la Huasteca llevan `estadiaPorDia`.
+>
+> El título de esta regla decía «y Puebla» y se corrigió el 26-ago-2026 al
+> releer el documento: contradecía a R8 y al código. **Lección: dos reglas
+> que se contradicen en el cerebro son un error esperando salir; este
+> documento se relee entero cada tanto, no solo se le agrega al final.**
 
 ### R4 · Talpa Burrita es OTRO producto (26-ago-2026)
 
@@ -189,16 +228,7 @@ Zacoalco $5,000 (136 km medidos) y Tequila vale $7,000 a los mismos 136 km.
 El precio no es función del kilómetro ni ahí: cada ruta tiene su historia
 (cuota, competencia, años de ajustes). Por eso no se extrapola.
 
-### R10 · El precio depende del origen — PENDIENTE, ignorar por ahora
-
-El Excel tiene una fila «SPRINTER OCOTLAN» con precios más altos saliendo de
-Ocotlán. El dueño pidió ignorarla de momento (26-ago-2026). La página hoy
-cobra precio de Guadalajara salga de donde salga. **Retomar antes del
-lanzamiento.**
-
----
-
-## La medición depende de la SALIDA, no solo del destino (26-ago-2026)
+### R15 · La medición depende de la SALIDA, no solo del destino (26-ago-2026)
 
 Con origen «Guadalajara, Jalisco, México» a secas, Google resolvía mal la
 pareja y salían mediciones absurdas: Tecolotlán a 1,000 km, Colotlán a 4,
@@ -266,7 +296,37 @@ Y de ahí una lección sobre el trabajo, no sobre precios: **un caso absurdo que
 nadie va a pedir no merece código.** Yo iba a inventar un piso; el dueño
 prefirió no cargar la regla con una defensa para un cliente que no existe.
 
-## Preguntas abiertas (lanzarlas al dueño en la siguiente ronda)
+### R16 · Arriba de 1,400 km ya se cotiza solo (26-ago-2026)
+
+*«Que no haya asesor, anímate a cotizar tú.»* Antes, un destino más lejos que
+1,400 km no daba precio: se contestaba «lo cotiza un asesor».
+
+Ahora hay un segundo tramo de la fórmula, **$36 el kilómetro** contra los $22
+del corto, anclado en lo que vale el tramo corto justo en los 1,400 km
+($37,300) para que no haya escalón — 1,400 km da $37,300 y 1,401 da $37,336.
+
+**Este tramo es mucho menos fiable que el corto, y hay que saberlo:** error
+promedio de $9,800 contra los $1,534 del corto. No está mal ajustado; es que
+los precios largos del dueño no son función del kilómetro — **Oaxaca son
+$75,000 a 1,988 km y Barrancas los mismos $75,000 a 2,882 km**. Los cinco
+destinos que sirvieron de guía están todos EN la lista, así que la fórmula
+nunca los cotiza: el día que el dueño le ponga precio a uno lejano, entra al
+catálogo y deja de estimarse.
+
+---
+
+## Lo pendiente
+
+### R10 · El precio depende del origen — ignorar por ahora
+
+El Excel tiene una fila «SPRINTER OCOTLAN» con precios más altos saliendo de
+Ocotlán: Vallarta $25,000 contra $19,000 desde Guadalajara, Chapala $11,000
+contra $6,500. El dueño pidió ignorarla de momento (26-ago-2026). La página
+hoy cobra precio de Guadalajara salga de donde salga, así que **un cliente
+que salga de Ocotlán paga entre $3,500 y $6,000 de menos. Retomar antes del
+lanzamiento.**
+
+### Preguntas abiertas (lanzarlas al dueño en la siguiente ronda)
 
 - Chiapas 8 días y Acapulco 4 días: ¿su día extra también vale $4,000, o solo
   el de Cancún? Hoy siguen con $1,000 la noche.
