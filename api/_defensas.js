@@ -28,14 +28,86 @@
    cercano a nosotros. El primero jamas.
    ============================================================ */
 
-const PERMITIDOS = ['https://eurotravel-web.vercel.app'];
+/* ------------------------------------------------------------
+   EL DOMINIO DEL SITIO VIVE EN UNA VARIABLE, NO EN EL CODIGO
+   ------------------------------------------------------------
+   Esta lista decide TRES cosas, y conviene tenerlas juntas en la
+   cabeza porque no es evidente que sean la misma:
 
-/* El origen de desarrollo NO viaja a producción. Antes estaba fijo en la lista
-   y se publicaba con el sitio: una entrada más que defender a cambio de nada,
-   porque en producción nadie legítimo llega desde localhost. */
-if (process.env.VERCEL_ENV !== 'production') {
-  PERMITIDOS.push('http://localhost:5175');
+     1. quién puede llamar a las APIs (`origenValido`)
+     2. a dónde regresa Stripe después de pagar (`sitioDe`)
+     3. LA LIGA PROPIA QUE VA EN EL CORREO DEL CONTRATO — el
+        webhook la arma con `PERMITIDOS[0]`, porque Stripe llama de
+        servidor a servidor y no manda `Origin`. No hay cabecera de
+        dónde sacarlo: sale de aquí o no sale.
+
+   Estaba fija en `https://eurotravel-web.vercel.app`. El día que
+   entre el dominio de verdad eso significa, en este orden: cotizar
+   y pagar contestando 403 desde el primer minuto, y los correos de
+   los contratos mandando al cliente al dominio viejo.
+
+   Así que el dominio se pone en Vercel y no se toca código:
+
+     SITIO_URL       el dominio bueno — el que sale en los correos
+     ORIGENES_EXTRA  otros que también pueden llamar, con coma en
+                     medio. Para el `www.` y para el día del cambio.
+
+   El `.vercel.app` se queda SIEMPRE en la lista aunque haya
+   dominio nuevo: Vercel no lo apaga, las ligas ya mandadas siguen
+   apuntando ahí, y un cliente que abra un correo viejo tiene que
+   poder entrar.
+   ------------------------------------------------------------ */
+const SITIO_POR_OMISION = 'https://eurotravel-web.vercel.app';
+
+/* Un origen es `https://algo`, sin ruta, sin barra al final y sin nada más.
+   Lo que no cumpla se TIRA: un `SITIO_URL` mal tecleado —con `/` al final, o
+   con la ruta pegada— no puede acabar armando ligas rotas ni abriendo la
+   puerta a un origen que no es. Vale más quedarse con el de siempre. */
+function origenLimpio(texto) {
+  const t = String(texto == null ? '' : texto).trim();
+  if (!t) return '';
+  let u;
+  try { u = new URL(t); } catch (e) { return ''; }
+  if (u.protocol !== 'https:' && u.protocol !== 'http:') return '';
+  /* En producción solo https. Un `http://` en la lista sería un correo
+     mandando al cliente por una liga sin candado. */
+  if (u.protocol === 'http:' && !/^(localhost|127\.0\.0\.1)(:|$)/.test(u.host)) return '';
+  if (u.pathname !== '/' || u.search || u.hash) return '';
+  return u.origin;
 }
+
+function listaDeOrigenes() {
+  const fuera = [];
+
+  /* El canónico va PRIMERO: de ahí salen las ligas de los correos. */
+  const canonico = origenLimpio(process.env.SITIO_URL);
+  if (process.env.SITIO_URL && !canonico) {
+    /* Regla 9: esto lo lee un programador en el registro, no un cliente. */
+    console.error('[defensas] SITIO_URL con mala forma, se ignora: ' +
+      JSON.stringify(String(process.env.SITIO_URL).slice(0, 120)));
+  }
+  fuera.push(canonico || SITIO_POR_OMISION);
+
+  String(process.env.ORIGENES_EXTRA || '').split(',').forEach(function (trozo) {
+    const o = origenLimpio(trozo);
+    if (o) fuera.push(o);
+  });
+
+  /* El de Vercel nunca se cae de la lista: ver la nota de arriba. */
+  fuera.push(SITIO_POR_OMISION);
+
+  /* El origen de desarrollo NO viaja a producción. Antes estaba fijo en la
+     lista y se publicaba con el sitio: una entrada más que defender a cambio
+     de nada, porque en producción nadie legítimo llega desde localhost. */
+  if (process.env.VERCEL_ENV !== 'production') {
+    fuera.push('http://localhost:5175');
+  }
+
+  /* Sin repetidos, y respetando el orden: el primero manda. */
+  return fuera.filter(function (o, i) { return fuera.indexOf(o) === i; });
+}
+
+const PERMITIDOS = listaDeOrigenes();
 
 /* ------------------------------------------------------------
    COMPARAR ORÍGENES ENTEROS, NUNCA POR PREFIJO
@@ -184,6 +256,11 @@ function cuerpoJSON(req) {
 
 module.exports = {
   PERMITIDOS,
+  SITIO_POR_OMISION,
+  /* Las dos de abajo se exportan para poder probar el cambio de dominio sin
+     tener que recargar el módulo con otras variables de entorno. */
+  origenLimpio,
+  listaDeOrigenes,
   origenValido,
   sitioDe,
   ipDeConfianza,

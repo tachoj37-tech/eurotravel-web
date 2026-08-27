@@ -471,6 +471,25 @@
     font: inherit; font-size: 13px; color: var(--muted); text-decoration: underline;
   }
   .enlace-sec:hover { color: var(--ink); }
+
+  /* ---- «o continúa con Google» ----
+     El botón lo dibuja Google, no nosotros: su marca tiene reglas de uso y
+     además el cliente reconoce ese botón de otros sitios, que es medio punto
+     de confianza regalado. Lo que sí es nuestro es el «o» de en medio, para
+     que se lea como una alternativa y no como el camino principal: la mayoría
+     va a usar su correo. */
+  .google-zona { margin-top: 18px; }
+  .google-o {
+    display: flex; align-items: center; gap: 12px; margin-bottom: 14px;
+    font-size: 12.5px; color: var(--muted); text-transform: lowercase;
+  }
+  .google-o::before, .google-o::after {
+    content: ''; flex: 1; height: 1px; background: var(--line);
+  }
+  /* Google dibuja el botón dentro de un iframe con ancho fijo. Se centra en
+     vez de estirarlo: estirarlo lo deforma. */
+  .google-zona > div { display: flex; justify-content: center; min-height: 40px; }
+
   /* Las casillas del código: las mismas de viaje.html, para que el cliente que
      ya vio una reconozca la otra. */
   .casillas { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
@@ -2257,6 +2276,14 @@ window.IMGS = {
                   <button class="btn btn-ink btn-sm" type="button" id="cta-crear">Crear mi cuenta</button>
                   <button class="enlace-sec" type="button" id="cta-ya-tengo">Ya tengo cuenta</button>
                   <p class="caminos-error" id="cta-error" role="alert"></p>
+
+                  <!-- Google. Nace ESCONDIDO y solo aparece si el servidor
+                       contesta que hay un id configurado: más vale no
+                       ofrecerlo que ofrecerlo roto. -->
+                  <div class="google-zona" id="g-alta" style="display: none">
+                    <span class="google-o">o</span>
+                    <div id="g-alta-boton"></div>
+                  </div>
                 </div>
 
                 <!-- ---- entrar ---- -->
@@ -2272,6 +2299,11 @@ window.IMGS = {
                   <button class="btn btn-ink btn-sm" type="button" id="ent-entrar">Entrar</button>
                   <button class="enlace-sec" type="button" id="ent-crear-mejor">Mejor crear una cuenta</button>
                   <p class="caminos-error" id="ent-error" role="alert"></p>
+
+                  <div class="google-zona" id="g-entrar" style="display: none">
+                    <span class="google-o">o</span>
+                    <div id="g-entrar-boton"></div>
+                  </div>
                 </div>
 
                 <!-- ---- el código ---- -->
@@ -3286,6 +3318,97 @@ window.IMGS = {
         CUENTA = r.datos && r.datos.dentro ? r.datos : { dentro: false };
         pintaDentro();
       }).catch(function () { /* sin cuenta, a pagar como invitado */ });
+
+      /* ============================================================
+         CONTINUAR CON GOOGLE
+         ------------------------------------------------------------
+         El id de cliente NO está escrito aquí: se le pregunta al
+         servidor. Así, el día que se pegue en Vercel, el botón
+         aparece solo —sin tocar este archivo ni volver a desplegar—.
+
+         Y TODO ESTO SE CAE SIN HACER RUIDO. Si el servidor no
+         contesta, si Google no carga, si el navegador bloquea su
+         guion: no pasa nada visible. Las cajas de Google nacen
+         escondidas y solo se enseñan cuando el botón ya está
+         dibujado. Lo que nunca puede pasar es que un problema de
+         Google impida pagar.
+         ============================================================ */
+      function arrancaGoogle() {
+        pideCuenta('config').then(function (r) {
+          var id = r.datos && r.datos.google;
+          if (!id) return;                       // no configurado: ni se menciona
+
+          var guion = document.createElement('script');
+          guion.src = 'https://accounts.google.com/gsi/client';
+          guion.async = true;
+          guion.onerror = function () { /* sin Google; queda el correo */ };
+          guion.onload = function () {
+            if (!window.google || !window.google.accounts || !window.google.accounts.id) return;
+            try {
+              window.google.accounts.id.initialize({
+                client_id: id,
+                callback: entraConGoogle,
+                /* NADA de One Tap: el cuadro que sale solo encima de la
+                   página es intrusivo y aquí caería justo cuando el cliente
+                   está por pagar. El botón se pica cuando se quiere. */
+                auto_select: false,
+                cancel_on_tap_outside: true
+              });
+              dibujaBoton('g-alta', 'g-alta-boton', 'signup_with');
+              dibujaBoton('g-entrar', 'g-entrar-boton', 'signin_with');
+            } catch (e) { /* si Google cambia su interfaz, se sigue sin él */ }
+          };
+          document.head.appendChild(guion);
+        }).catch(function () { /* sin Google; queda el correo y la contraseña */ });
+      }
+
+      /* ------------------------------------------------------------
+         SE ENSEÑA CUANDO YA HAY BOTON, NO ANTES
+         ------------------------------------------------------------
+         `renderButton` no truena cuando Google se niega —origen no
+         autorizado, cuenta mal configurada—: simplemente no dibuja
+         nada. Enseñar la caja al llamarlo dejaría un «o» solo, con
+         un hueco debajo, que se lee como una página rota.
+
+         Así que se mira si de verdad quedó algo dentro. Google
+         dibuja dentro de un iframe y a veces tarda un momento, por
+         eso se revisa unas cuantas veces y no una sola.
+         ------------------------------------------------------------ */
+      function dibujaBoton(zona, caja, texto) {
+        try {
+          window.google.accounts.id.renderButton(byId(caja), {
+            type: 'standard', theme: 'outline', size: 'large',
+            text: texto, shape: 'rectangular', logo_alignment: 'left',
+            locale: 'es-419'
+          });
+        } catch (e) { return; }                  // que se quede escondida
+
+        var intentos = 0;
+        (function revisa() {
+          if (byId(caja).childElementCount > 0) { byId(zona).style.display = ''; return; }
+          if (++intentos < 10) setTimeout(revisa, 250);
+        })();
+      }
+
+      function entraConGoogle(respuesta) {
+        var error = byId(byId('caja-entrar').style.display === 'none' ? 'cta-error' : 'ent-error');
+        error.textContent = '';
+
+        pideCuenta('google', { credencial: (respuesta && respuesta.credential) || '' })
+          .then(function (r) {
+            if (r.status === 200) {
+              CUENTA = { dentro: true, nombre: r.datos.nombre, correo: r.datos.correo };
+              pintaDentro();
+              return;
+            }
+            error.textContent = r.datos.aviso || 'No se pudo entrar con Google.';
+          })
+          .catch(function () {
+            error.textContent = 'No hubo conexión. Puedes pagar como invitado si prefieres.';
+          });
+      }
+
+      arrancaGoogle();
 
       byId('camino-invitado').addEventListener('click', function () {
         marcaCamino('invitado'); verCaja(null); byId('cta-error').textContent = '';

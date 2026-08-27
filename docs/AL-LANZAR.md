@@ -88,6 +88,19 @@ Tiene que decir `"ok": true` y enseñar a dónde llegó.
 
 ---
 
+## 4-bis. El dominio de verdad
+
+Tiene su propio documento, porque son varios lados y uno de ellos se rompe en
+silencio: **[CAMBIO-DE-DOMINIO.md](CAMBIO-DE-DOMINIO.md)**.
+
+En corto: se pone `SITIO_URL` en Vercel y se redespliega. De esa variable
+salen las tres cosas que dependen del dominio —quién puede llamar a las APIs,
+a dónde regresa Stripe, y la liga que va en el correo del contrato—. Y hay que
+darle de alta el origen nuevo a Google, o el botón de «Continuar con Google»
+deja de funcionar.
+
+---
+
 ## 5. Vercel: el plan
 
 El equipo está en **Hobby**, y el plan Hobby de Vercel es **para uso no

@@ -42,7 +42,15 @@ const FRENOS = {
      atacante le puede cerrar a otro no es un candado—. */
   entrar: defensas.creaFreno({ porMinuto: 8, porDia: 300 }),
   salir: defensas.creaFreno({ porMinuto: 20, porDia: 500 }),
-  yo: defensas.creaFreno({ porMinuto: 40, porDia: 2000 })
+  yo: defensas.creaFreno({ porMinuto: 40, porDia: 2000 }),
+  /* Google es barato de comprobar —una firma, y las llaves están en memoria—
+     pero cada intento fallido nos hace hablar con Stripe. El freno es contra
+     la ráfaga; el de fondo es que sin un papel firmado por Google no se pasa
+     de la primera comprobación. */
+  google: defensas.creaFreno({ porMinuto: 10, porDia: 400 }),
+  /* Ésta la pregunta la pantalla al abrir la bifurcación, y no cuesta nada:
+     devuelve un id que ya es público. */
+  config: defensas.creaFreno({ porMinuto: 40, porDia: 2000 })
 };
 
 /* Las que necesitan saber QUIEN está dentro reciben el id sacado de la
@@ -52,10 +60,16 @@ const CON_CUERPO = {
   crear: logica.crear,
   codigo: logica.reenviar,
   confirmar: logica.confirmar,
-  entrar: logica.entrar
+  entrar: logica.entrar,
+  google: logica.conGoogle
 };
 const CON_SESION = {
   yo: logica.yo
+};
+/* Las que no miran ni el cuerpo ni la sesión. `config` solo devuelve el id
+   de cliente de Google, que ya es público y va escrito en la página. */
+const SIN_NADA = {
+  config: logica.config
 };
 
 module.exports = async function handler(req, res) {
@@ -65,7 +79,7 @@ module.exports = async function handler(req, res) {
   const accion = String((cuerpo && cuerpo.accion) || '').trim();
 
   const tiene = function (o) { return Object.prototype.hasOwnProperty.call(o, accion); };
-  if (!tiene(CON_CUERPO) && !tiene(CON_SESION) && accion !== 'salir') {
+  if (!tiene(CON_CUERPO) && !tiene(CON_SESION) && !tiene(SIN_NADA) && accion !== 'salir') {
     res.status(400).json({ error: true, aviso: 'No entendimos qué querías hacer.' });
     return;
   }
@@ -76,6 +90,8 @@ module.exports = async function handler(req, res) {
   let r;
   if (accion === 'salir') {
     r = logica.salir();
+  } else if (tiene(SIN_NADA)) {
+    r = SIN_NADA[accion]();
   } else if (tiene(CON_SESION)) {
     /* El cliente sale de la COOKIE, ya comprobado el sello: nunca de lo que
        manda el navegador en el cuerpo. Ahí estaría el hueco. */

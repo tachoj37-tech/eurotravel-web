@@ -32,6 +32,7 @@ const cuentas = require('./_cuentas');
 const acceso = require('./_acceso');
 const stripe = require('./_stripe');
 const correo = require('./_correo');
+const google = require('./_google');
 
 /* Lo que la pantalla puede enseñar. NUNCA se devuelve el id del cliente ni
    nada de la ficha: la pantalla no lo necesita y la cookie ya lo lleva. */
@@ -369,4 +370,129 @@ async function yo(idCliente) {
   };
 }
 
-module.exports = { crear, reenviar, confirmar, entrar, salir, yo, eligeCliente, mandaCodigo };
+/* ============================================================
+   CONTINUAR CON GOOGLE
+   ------------------------------------------------------------
+   Lo pidió el dueño junto con las cuentas. La comprobación del
+   papel firmado vive en `_google.js`, con el detalle de por qué
+   se revisa cada cosa; aquí solo está lo que se hace DESPUES.
+
+   LA REGLA: EL CORREO ES LA PERSONA.
+
+   Si el correo que trae Google ya tiene cuenta, se LIGA a la que
+   hay. No se crea una segunda. Da igual que la de antes se hiciera
+   con contraseña: quedan las dos formas de entrar y el cliente
+   escoge. Duplicar sería partirle el historial de viajes en dos
+   sin que él se entere.
+
+   Y SI YA TENIA CONTRASEÑA, ¿NO ES UN HUECO?
+
+   No, y conviene tenerlo claro porque parece que sí. Google no
+   dice «esta persona se llama así»: dice «esta persona demostró
+   que ese buzón es suyo» —eso es `email_verified`, y sin él no se
+   pasa de `_google.js`—. Quien controla el buzón ya puede entrar
+   por «olvidé mi contraseña», que manda un código a ese mismo
+   buzón. O sea que no abre ninguna puerta que no estuviera
+   abierta. Lo que sí sería un hueco es aceptar el correo SIN que
+   Google lo haya verificado, y eso está cerrado allá.
+
+   ADEMAS QUEDA VERIFICADA. Si el cliente se había registrado con
+   contraseña y nunca tecleó el código, entrar con Google le sirve
+   de confirmación: Google acaba de comprobar el mismo buzón al
+   que le mandamos ese código.
+   ============================================================ */
+async function conGoogle(cuerpo, ahoraMs) {
+  if (!google.hayGoogle()) {
+    console.error('[cuentas] entraron por Google sin GOOGLE_CLIENT_ID configurado');
+    return no(503, 'Entrar con Google no está disponible ahora mismo. Usa tu correo y contraseña.');
+  }
+
+  if (!acceso.hayClave()) {
+    console.error('[cuentas] sin LIGAS_SECRETO: no se puede firmar la sesión');
+    return no(503, 'No podemos entrar en este momento. Inténtalo más tarde.');
+  }
+
+  const v = await google.verifica((cuerpo || {}).credencial, ahoraMs);
+  if (!v.ok) {
+    /* El motivo va al registro, NUNCA a la pantalla: decir cuál de las
+       comprobaciones falló le enseña a quien ataca qué arreglar. */
+    console.error('[cuentas] Google rechazado: ' + v.motivo);
+    return v.reintentar
+      ? no(503, 'No pudimos comprobarlo ahora mismo. Inténtalo en un momento.')
+      : no(401, 'No pudimos comprobar tu cuenta de Google. Entra con tu correo y contraseña.');
+  }
+
+  const email = cuentas.normalizaCorreo(v.correo);
+  if (!cuentas.correoValido(email)) {
+    console.error('[cuentas] Google mandó un correo con mala forma');
+    return no(401, 'No pudimos comprobar tu cuenta de Google. Entra con tu correo y contraseña.');
+  }
+
+  const hallados = await stripe.clientesPorCorreo(email);
+  if (hallados.error) {
+    console.error('[cuentas] no se pudo consultar a Stripe con Google: ' + hallados.error);
+    return no(503, 'No pudimos entrar ahora mismo. Inténtalo en un momento.');
+  }
+
+  let cliente = eligeCliente(hallados.clientes);
+
+  if (cliente) {
+    /* Se escribe solo lo que falte: si ya estaba ligada y verificada, no se
+       toca la ficha en cada entrada. */
+    const m = cliente.metadata || {};
+    const cambios = {};
+    if (cuentas.googleDe(m) !== v.sub) Object.assign(cambios, cuentas.paraLigarGoogle(v.sub));
+    if (!cuentas.estaVerificada(m)) Object.assign(cambios, cuentas.paraVerificar());
+
+    if (Object.keys(cambios).length) {
+      const escrito = await stripe.guardaEnCliente(cliente.id, cambios);
+      if (escrito.error) {
+        console.error('[cuentas] no se pudo ligar Google: ' + escrito.error);
+        return no(503, 'No pudimos entrar ahora mismo. Inténtalo en un momento.');
+      }
+      cliente = Object.assign({}, cliente, { metadata: Object.assign({}, m, cambios) });
+    }
+  } else {
+    /* Cuenta nueva, y nace VERIFICADA: el código de seis dígitos existe para
+       comprobar que el buzón es suyo, y Google acaba de comprobarlo. Mandarle
+       un código sería pedirle dos veces lo mismo. */
+    const nueva = Object.assign(
+      cuentas.paraLigarGoogle(v.sub),
+      cuentas.paraVerificar(),
+      cuentas.paraNacer(ahoraMs)
+    );
+    const creado = await stripe.creaCliente({ email: email, name: v.nombre, metadata: nueva });
+    if (creado.error) {
+      console.error('[cuentas] no se pudo crear el cliente con Google: ' + creado.error);
+      return no(503, 'No pudimos entrar ahora mismo. Inténtalo en un momento.');
+    }
+    cliente = creado.cliente;
+  }
+
+  return {
+    status: 200,
+    cuerpo: ok({ nombre: String(cliente.name || v.nombre || '').trim(), correo: email }),
+    sesionPara: cliente.id
+  };
+}
+
+/* ============================================================
+   LO QUE LA PANTALLA NECESITA SABER ANTES DE DIBUJARSE
+   ------------------------------------------------------------
+   Hoy solo el id de Google. Se pregunta en vez de escribirlo en
+   el HTML para que el día que el dueño lo pegue en Vercel el
+   botón aparezca solo, sin tocar código ni volver a desplegar.
+
+   El id NO es secreto —va en la página, cualquiera lo ve—. Si no
+   está configurado se devuelve vacío y la pantalla no enseña el
+   botón: más vale no ofrecerlo que ofrecerlo roto.
+   ============================================================ */
+function config() {
+  return { status: 200, cuerpo: { google: google.idDeCliente() } };
+}
+
+module.exports = {
+  crear, reenviar, confirmar, entrar, salir, yo,
+  conGoogle, config,
+  eligeCliente, mandaCodigo
+};

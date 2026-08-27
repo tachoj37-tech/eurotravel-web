@@ -85,7 +85,11 @@ PAGINAS.forEach(function (nombre) {
     'cuenta-caminos', 'camino-invitado', 'camino-cuenta', 'caminos-dentro',
     'caja-alta', 'cta-clave', 'cta-crear', 'caja-entrar', 'ent-correo',
     'ent-clave', 'ent-entrar', 'caja-codigo', 'cod-casillas', 'cod-confirmar',
-    'cod-otro', 'camino-salir'
+    'cod-otro', 'camino-salir',
+    /* Google. Las cajas tienen que existir aunque nazcan escondidas: si
+       alguien las borra, el botón no se dibuja y nadie se entera hasta que
+       un cliente pregunte por qué no ve Google. */
+    'g-alta', 'g-alta-boton', 'g-entrar', 'g-entrar-boton'
   ];
   const faltan = necesarios.filter(function (id) {
     return html.indexOf('id="' + id + '"') < 0;

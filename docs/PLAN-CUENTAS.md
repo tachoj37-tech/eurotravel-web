@@ -84,14 +84,22 @@ Sin correo de por medio: es lo que pidió el dueño.
 
 El único correo que recibe una cuenta ya confirmada.
 
-### Paso 7 · Continuar con Google
+### Paso 7 · Continuar con Google — ✅ HECHO (27-ago-2026)
 
-- Verificar el token de Google **sin dependencias**: se piden sus llaves
-  públicas y se comprueba la firma con el `crypto` de Node.
-- Si el correo de Google ya tiene cuenta, se liga en vez de duplicar.
-- Hay que abrir la CSP para `accounts.google.com`, que hoy está cerrada.
+`api/_google.js` y sus 85 pruebas. La firma se comprueba con las llaves
+públicas de Google y el `crypto` de Node, sin dependencias. Se revisan las
+cuatro cosas: firma, algoritmo —`alg:none` no pasa—, **destinatario** —un
+papel bueno de Google pero emitido para otra aplicación no entra— y
+`email_verified`. La CSP se abrió solo para `accounts.google.com/gsi/`.
 
-**Necesita el ID de cliente del dueño.**
+Si el correo de Google ya tiene cuenta **se liga, no se duplica**: la
+contraseña anterior sigue sirviendo y el historial de viajes no se parte en
+dos. Y una cuenta que quedó sin confirmar se completa al entrar con Google,
+porque Google acaba de comprobar ese mismo buzón.
+
+**Falta que el dueño pegue `GOOGLE_CLIENT_ID` en Vercel.** Mientras no esté,
+el botón no aparece y todo lo demás funciona igual — es a propósito: más vale
+no ofrecerlo que ofrecerlo roto. El id no es secreto: va escrito en la página.
 
 ### Paso 8 · Probarlo de punta a punta
 

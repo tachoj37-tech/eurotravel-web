@@ -159,6 +159,15 @@ function paraVerificar() {
   return m;
 }
 
+/* La fecha de nacimiento de la cuenta, sin contraseña de por medio. La pone
+   `paraCrear` para las cuentas con contraseña; ésta es para las que nacen de
+   Google, que nunca tienen una. */
+function paraNacer(ahoraMs) {
+  const m = {};
+  m[CAMPO_CREADA] = String(typeof ahoraMs === 'number' ? ahoraMs : Date.now());
+  return m;
+}
+
 function paraLigarGoogle(sub) {
   const m = {};
   m[CAMPO_GOOGLE] = String(sub || '').slice(0, 64);
@@ -305,7 +314,7 @@ module.exports = {
   puedeMandarCodigo, paraContarEnvio, paraBorrarEnvios,
   MINIMO, MAXIMO,
   porQueNoSirve, nuevaSal, resumen,
-  paraCrear, paraCambiar, paraVerificar, paraLigarGoogle,
+  paraCrear, paraCambiar, paraVerificar, paraNacer, paraLigarGoogle,
   tieneCuenta, tieneContrasena, estaVerificada, googleDe,
   contrasenaValida, normalizaCorreo, correoValido
 };
