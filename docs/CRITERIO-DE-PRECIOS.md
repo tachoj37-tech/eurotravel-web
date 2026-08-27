@@ -198,17 +198,21 @@ lanzamiento.**
 
 ---
 
-## Riesgo detectado: el texto suelto se geocodifica mal (26-ago-2026)
+## La medición depende de la SALIDA, no solo del destino (26-ago-2026)
 
-Al cotizar por texto libre, Google a veces encuentra OTRO lugar con ese
-nombre: Tecolotlán midió como si estuviera a 1,000 km, Colotlán como a 4,
-y **Cihuatlán —pegado a Melaque, $20,500— cotizó $9,000**. Ese último es
-dinero: un cobro de menos de $11,000 en un viaje a la costa.
+Con origen «Guadalajara, Jalisco, México» a secas, Google resolvía mal la
+pareja y salían mediciones absurdas: Tecolotlán a 1,000 km, Colotlán a 4,
+Cihuatlán (pegado a Melaque) en $9,000, Querétaro «sin ruta». El dueño dio
+la corrección: *«ajusta las salidas desde el centro de Guadalajara para
+conseguir los kilometrajes»* — y con «Centro Histórico, Guadalajara» los
+cuatro midieron bien al primer intento (Tecolotlán $11,400, Colotlán
+$15,600, Cihuatlán $21,000, Querétaro $22,100).
 
-En la página real el cliente elige del autocompletado (que manda el lugar
-exacto), así que el riesgo vive en el texto tecleado sin elegir sugerencia.
-**Defensa pendiente de construir**: desconfiar de una medición absurdamente
-corta o larga para un texto desconocido.
+**Regla para evaluar precios:** las tandas de prueba SIEMPRE salen del
+centro de Guadalajara. En la página real el cliente elige del autocompletado
+(lugar exacto), así que el riesgo vive en el texto tecleado sin elegir
+sugerencia con un origen igual de vago. Defensa pendiente: desconfiar de una
+medición absurdamente corta o larga para un texto desconocido.
 
 ## Preguntas abiertas (lanzarlas al dueño en la siguiente ronda)
 
