@@ -257,13 +257,17 @@ Antes el día 18 sumaba $1,000 y pedir menos días no descontaba nada.
 **Lección:** cuando el dueño da una tarifa de día, preguntar SIEMPRE si baja
 además de subir. La mitad hacia abajo no se deduce sola.
 
+**Sin piso, y a sabiendas.** Le señalé que así, Cancún a 1 día cotiza $81,000
+para un viaje de 4,282 km. Su respuesta: *«no pasa nada, nadie va a Cancún un
+día, así déjalo»*. Queda como decisión suya, no como descuido: el descuento
+corre sin tope hacia abajo.
+
+Y de ahí una lección sobre el trabajo, no sobre precios: **un caso absurdo que
+nadie va a pedir no merece código.** Yo iba a inventar un piso; el dueño
+prefirió no cargar la regla con una defensa para un cliente que no existe.
+
 ## Preguntas abiertas (lanzarlas al dueño en la siguiente ronda)
 
-- **¿HASTA DÓNDE BAJA EL DESCUENTO DE UN PAQUETE?** Con R14 tal cual, Cancún
-  a 1 día cotiza **$81,000** (145,000 − 16×4,000) para un viaje de 4,282 km.
-  Eso es cobrar de menos. El dueño habló de 15 días (dos abajo de 17), no de
-  uno. **Falta el piso**: abajo de X días, ¿se manda con asesor? Aplica igual
-  a Chiapas (8 días) y a Talpa Burrita (4 días).
 - Chiapas 8 días y Acapulco 4 días: ¿su día extra también vale $4,000, o solo
   el de Cancún? Hoy siguen con $1,000 la noche.
 - Un paquete con movimientos (Cancún moviéndose allá): hoy suma las bandas
