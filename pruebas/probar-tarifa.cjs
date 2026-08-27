@@ -186,6 +186,18 @@ function en(direccion, placeId) { return { direccion: direccion, placeId: placeI
     !t.trasladoDe(1400.001, null).requiereAsesor);
   cierto('y se marca como tramo largo', t.trasladoDe(2000, null).tramoLargo === true);
 
+  /* LA TARIFA MISMA, fijada. Se descubrio probando en rojo: bajando el
+     tramo largo de $36 a $22 NO se caia ni una asercion, porque todas
+     miraban la forma —sin escalon, siempre subiendo, partes que cuadran—
+     y ninguna el numero. Una tarifa de dinero sin prueba que la fije se
+     puede cambiar por accidente y nadie se entera. */
+  igual('el tramo largo cobra $36 el kilómetro', t.POR_KM_LARGO, 36);
+  igual('y el corto sigue en $22', t.POR_KM, 22);
+  igual('2,000 km: 37,300 del ancla + 600 × 36',
+    t.trasladoDe(2000, null).total, 37300 + 600 * 36);
+  igual('4,282 km (lo que mide Cancún): el ancla + 2,882 × 36',
+    t.trasladoDe(4282, null).total, 37300 + 2882 * 36);
+
   const justoAntes = t.trasladoDe(1400, null).total;
   const justoDespues = t.trasladoDe(1401, null).total;
   igual('en los 1,400 justos vale lo de siempre', justoAntes, 37300);
