@@ -40,49 +40,71 @@ origen `https://eurotravel-web.vercel.app`.
 sal propia por cliente, nunca en claro; una cuenta nace **sin verificar**;
 equivocarse no dice si la cuenta existe. Probado en rojo de cuatro formas.
 
-### Paso 2 · Crear cuenta y confirmar el correo
+### Paso 2 · Crear cuenta y confirmar el correo — ✅ HECHO (26-ago-2026)
 
-- `POST /api/cuenta-crear` — correo, contraseña, nombre, teléfono. Crea el
-  cliente en Stripe y manda el código de 6 dígitos.
-- `POST /api/cuenta-codigo` — reenvía el código, **las veces que haga falta**
-  hasta que confirme.
-- `POST /api/cuenta-confirmar` — el código; marca verificada y abre sesión.
+Crear, reenviar el código «las veces que haga falta» y confirmar. **Todo por
+una sola puerta**, `POST /api/cuenta` con un campo `accion`: el plan Hobby de
+Vercel publica un máximo de doce funciones y una por acción no cabía.
 
-Lo que hay que cuidar: que dos altas del mismo correo no hagan dos cuentas
-(Stripe no lo impide); freno por correo **y** por quien ataca, para que nadie
-pueda dejar fuera a otro; y que nada de esto diga si un correo ya existe.
+Dos altas del mismo correo no hacen dos cuentas —Stripe no lo impide, se cuida
+aquí—; el freno cuenta por correo **y** por quien ataca; y nada de esto dice si
+un correo ya existe: quien ya la tiene recibe un aviso a su buzón, que es a
+quien le importa.
 
-### Paso 3 · Entrar y salir
+### Paso 3 · Entrar y salir — ✅ HECHO (26-ago-2026)
 
-- `POST /api/cuenta-entrar` — correo y contraseña → sesión de 8 horas, la
-  misma cookie firmada que ya usa la liga.
-- `POST /api/cuenta-salir`
-- `POST /api/cuenta-yo` — quién está dentro, para que la pantalla lo sepa.
+Correo y contraseña → sesión firmada de 8 horas. **Sin correo de por medio**,
+que es lo que pidió el dueño. Equivocarse no dice si la cuenta existe.
 
-Sin correo de por medio: es lo que pidió el dueño.
+### Paso 4 · Las dos pantallas, antes de pagar — ✅ HECHO (26-ago-2026)
 
-### Paso 4 · Las dos pantallas, antes de pagar
+La bifurcación invitado / crear cuenta, sus tres formularios, y los textos
+viejos que prometían lo contrario, corregidos. Si el servidor de cuentas se
+cae, **el botón de pagar sigue vivo**: un problema de cuentas no puede costarle
+una venta al dueño.
 
-- La bifurcación **invitado / crear cuenta**, con el texto diciendo lo que de
-  verdad se gana: hoy cada viaje es una liga suelta; con cuenta, todos en un
-  lugar y sin buscar correos viejos.
-- Formulario de alta, formulario de entrada, pantalla del código.
-- Al pagar con sesión abierta, el viaje queda ligado a la cuenta.
-- **Y cambiar los textos que hoy prometen lo contrario**: `index.html` dice
-  «no hay que abrir cuenta ni recordar contraseñas» y «No necesitas crear
-  cuenta». No están mal — se escribieron cuando la liga era el único camino.
+### Paso 5 · Mis viajes — ✅ HECHO (27-ago-2026)
 
-### Paso 5 · Mis viajes
+`accion: 'mis-viajes'`. No hay base de datos: los viajes **son** las sesiones
+de cobro de Stripe. Cada renglón trae destino, folio, fecha, saldo y **su liga
+firmada** —la misma del correo—, así que picarle abre la pantalla del viaje que
+ya existe, con su contrato y su botón de abonar. No hubo pantalla nueva que
+mantener.
 
-- `POST /api/mis-viajes` — los viajes del cliente, sacados de Stripe.
-- La pantalla, con saldos y el botón de abonar.
+Los cobros sin folio no aparecen: no llegaron a contrato, y enseñarlos haría
+creer al cliente que tiene un viaje que no tiene.
 
-### Paso 6 · Olvidé mi contraseña
+El filtro por cliente se hace en Stripe **y otra vez aquí**. Si algún día
+Stripe ignorara ese parámetro, sin la segunda revisión cada cliente vería los
+viajes de la empresa entera y nada en la pantalla lo delataría.
 
-- `POST /api/cuenta-olvide` — manda un código al correo.
-- `POST /api/cuenta-nueva` — código + contraseña nueva.
+### Paso 5-bis · La cuenta desde la barra — ✅ HECHO (27-ago-2026)
 
-El único correo que recibe una cuenta ya confirmada.
+No estaba en el plan; lo pidió el dueño ese día. Botón arriba a la derecha:
+crear cuenta **sin comprar nada**, o entrar si ya se tiene un viaje. Ya dentro
+se queda el puro monigote y despliega **Mis viajes**, **Configuración** y
+**Cerrar sesión**.
+
+Quien compró como invitado ya existe como cliente en Stripe: al crear su
+cuenta, se le monta **encima** de esa ficha y sus viajes viejos siguen siendo
+suyos.
+
+Configuración enseña nombre y correo y **cambia la contraseña**, pidiendo la de
+ahorita: una sesión abierta en un teléfono prestado podría, si no, dejar al
+dueño fuera de su cuenta para siempre.
+
+### Paso 6 · Olvidé mi contraseña — PENDIENTE
+
+- `accion: 'olvide'` — manda un código al correo.
+- `accion: 'clave-nueva'` — código + contraseña nueva.
+
+El único correo que recibe una cuenta ya confirmada. **Hoy quien la olvide no
+tiene salida**: es lo que falta para que el camino de la contraseña esté
+completo.
+
+Casi todo está hecho ya: el código de seis dígitos, su freno, su vida de diez
+minutos y sus cinco intentos son los mismos del alta; y `paraCambiar` —con sal
+nueva— ya se usa en Configuración. Falta la puerta y su pantalla.
 
 ### Paso 7 · Continuar con Google — ✅ HECHO (27-ago-2026)
 
@@ -97,15 +119,29 @@ contraseña anterior sigue sirviendo y el historial de viajes no se parte en
 dos. Y una cuenta que quedó sin confirmar se completa al entrar con Google,
 porque Google acaba de comprobar ese mismo buzón.
 
-**Falta que el dueño pegue `GOOGLE_CLIENT_ID` en Vercel.** Mientras no esté,
-el botón no aparece y todo lo demás funciona igual — es a propósito: más vale
-no ofrecerlo que ofrecerlo roto. El id no es secreto: va escrito en la página.
+`GOOGLE_CLIENT_ID` ya está puesto en Vercel (27-ago-2026) y el botón sale en
+las dos pantallas. **Falta lo único que no se puede probar sin ser él: que el
+dueño le pique con su cuenta de Google de verdad.** Si sale «Acceso
+bloqueado», es que falta darle a *Publicar aplicación* en la consola de
+Google.
 
-### Paso 8 · Probarlo de punta a punta
+### Paso 8 · Probarlo de punta a punta — A MEDIAS
 
-Crear una cuenta de verdad, confirmarla, salir, entrar con la contraseña,
-pagar un viaje y verlo aparecer en «Mis viajes». Con la regla del proyecto:
-no se da por terminado hasta hacer la operación completa.
+Hecho, con Stripe y el correo fingidos: crear cuenta sin comprar, código,
+confirmar, ver el aviso, menú, listar viajes con sus saldos, cambiar
+contraseña, salir y volver a entrar. Y el sitio publicado se atacó con
+credenciales de Google forjadas: ninguna entra.
+
+**Falta la mitad que necesita cosas del dueño**, y no es un detalle:
+
+| Falta | Sin eso |
+|---|---|
+| Verificar `eurotravel.com.mx` en Resend | a un cliente real **no le llega el código**, así que hoy nadie más que el dueño puede crear cuenta |
+| Pagar un viaje de verdad | no se ha visto un viaje aparecer en «Mis viajes» con datos reales |
+| Entrar con Google con su cuenta | es lo único del paso 7 que no se puede probar por él |
+
+Con la regla del proyecto: **esto no se da por terminado hasta hacer la
+operación completa con datos de verdad.**
 
 ---
 
