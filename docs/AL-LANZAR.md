@@ -88,6 +88,47 @@ Tiene que decir `"ok": true` y enseñar a dónde llegó.
 
 ---
 
+## 3-bis. Los correos y las cuentas que cambian de dueño
+
+El dueño avisó el 27-ago-2026 que al lanzar va a cambiar «este correo»: hoy
+todo cuelga de su Gmail personal y va a pasar a uno de la empresa.
+
+«El correo» son cinco cosas distintas y **no todas cuestan lo mismo**.
+
+### Se cambian cuando sea, sin consecuencias
+
+| Qué | Dónde | Por qué no pasa nada |
+|---|---|---|
+| Correo de asistencia y de contacto del desarrollador | Pantalla de consentimiento de Google | Es solo lo que el cliente lee cuando Google le pide permiso. El ID de cliente NO cambia. |
+| `AVISOS_A` | Vercel | Es a dónde llegan las alarmas de reversa. Acepta varios con coma. |
+| `RESEND_DE` | Vercel | De quién sale el correo. Cambia igual al verificar el dominio. |
+
+### Se cambian CON CUIDADO
+
+**La cuenta de Google dueña del proyecto de Google Cloud.**
+
+Si se rehace el proyecto en vez de traspasarlo, se rompen tres cosas a la vez:
+
+- cambian `GOOGLE_PLACES_KEY` y `GOOGLE_ROUTES_KEY` — la página deja de buscar
+  direcciones y de medir kilómetros
+- cambia `GOOGLE_CLIENT_ID` — el botón de Google deja de funcionar
+- hay que volver a poner las tres variables en Vercel y redesplegar
+
+**Lo correcto:** IAM y administración → Otorgar acceso → el correo nuevo con
+rol **Propietario**, sobre el proyecto que YA existe. Después, si se quiere, se
+le quita el acceso al viejo. Las llaves no se enteran.
+
+**La cuenta de Resend.** Si se abre una cuenta nueva, cambia `RESEND_API_KEY` y
+hay que volver a verificar el dominio desde cero. Mejor invitar al correo nuevo
+a la cuenta que ya está.
+
+**La cuenta de Stripe.** Ésta ya estaba dicha en la sección 2 y es la más cara
+de todas: modo real y modo prueba son dos mundos separados, y una cuenta nueva
+empieza sin webhook, sin eventos y sin los clientes que ya existen —que es
+donde viven las cuentas de los clientes de la página—.
+
+---
+
 ## 4-bis. El dominio de verdad
 
 Tiene su propio documento, porque son varios lados y uno de ellos se rompe en
