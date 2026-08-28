@@ -468,6 +468,64 @@ async function procesa(crudo, cabeceraFirma) {
     return { status: 200, cuerpo: { recibido: true, pendiente: true } };
   }
 
+
+  /* ------------------------------------------------------------
+     UN PAGO DE PRUEBA NO SE REGISTRA COMO CONTRATO
+     ------------------------------------------------------------
+     El dueño necesita poder recorrer la compra completa —pagar, ver
+     su correo, ver su viaje en «Mis viajes»— ANTES de lanzar. Hasta
+     hoy eso le costaba caro sin avisarle: una tarjeta de prueba de
+     Stripe creaba un contrato DE VERDAD en EuroSystem y le quemaba
+     un folio del consecutivo. Y no es una vez: es cada vez que
+     quiera probar.
+
+     Se puede separar limpio porque EL FOLIO QUE VE EL CLIENTE LO
+     GENERA LA PAGINA, no EuroSystem. Así que en una prueba sigue
+     pasando casi todo: el correo sale con su folio y con su liga, y
+     el viaje aparece en «Mis viajes». Lo único que falta es el PDF
+     del contrato, que sí lo hace EuroSystem.
+
+     LA POLARIDAD IMPORTA MAS QUE LA REGLA. Solo se salta cuando
+     Stripe dice, EXPRESAMENTE, que el pago no es real. Si el campo
+     no viene, o viene raro, se registra como siempre: equivocarse
+     hacia «registrar» cuesta un contrato de más que se borra;
+     equivocarse hacia «saltar» pierde una venta en silencio.
+
+     Y el dato sale de la sesión que se le PREGUNTO a Stripe, no del
+     aviso: un aviso inventado no puede decir «esto era una prueba»
+     para que no se registre un cobro real.
+
+     Al poner la clave `sk_live_`, `livemode` es cierto y esto no
+     vuelve a entrar.
+     ------------------------------------------------------------ */
+  if (sesion.livemode === false) {
+    const liga = ligas.ligaDelViaje(defensas.PERMITIDOS[0], sesion.id,
+      (sesion.metadata || {}).regreso);
+    const envio = await correo.mandaContrato(sesion.metadata || {}, null, liga);
+
+    console.log('[webhook] PAGO DE PRUEBA (' + sesion.id + '): no se registra en ' +
+      'EuroSystem y no se quema folio. Correo ' + (envio.ok ? 'enviado' : 'NO enviado'));
+
+    await correo.mandaALaOficina(
+      'Pago de PRUEBA en la página — no se registró contrato',
+      [
+        'Alguien completó una compra con una tarjeta de prueba de Stripe.',
+        '',
+        'NO se registró contrato en EuroSystem y NO se quemó folio: el pago no',
+        'es real. Esto es lo normal mientras la página siga con la clave de',
+        'pruebas.',
+        '',
+        'Folio de la página: ' + String((sesion.metadata || {}).folio || 'sin folio'),
+        'Sesión de Stripe:   ' + String(sesion.id || ''),
+        'Correo del cliente: ' + String((sesion.metadata || {}).correo || ''),
+        '',
+        'Si esto llega DESPUES del lanzamiento, algo está mal: quiere decir que',
+        'la página sigue cobrando con la clave de pruebas y NADIE está pagando.'
+      ].join('\n')
+    );
+
+    return { status: 200, cuerpo: { recibido: true, prueba: true, correo: !!envio.ok } };
+  }
   const llave = (process.env.CONTRATOS_API_KEY || '').trim();
   if (!llave) {
     /* 500 a proposito: Stripe reintenta hasta tres dias, y eso le da a la
