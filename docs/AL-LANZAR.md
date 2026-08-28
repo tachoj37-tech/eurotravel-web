@@ -166,6 +166,26 @@ pruebas/probar-prueba-cotizador.cjs
 
 ---
 
+## 7. Probar la compra ANTES de lanzar, sin quemar folios
+
+Desde el 27-ago-2026 se puede: **un pago con tarjeta de prueba de Stripe ya no
+registra contrato en EuroSystem ni quema folio.** Antes sí lo hacía, y cada
+prueba costaba un folio del consecutivo.
+
+En una compra de prueba sigue pasando casi todo —el correo sale con su folio y
+su liga, y el viaje aparece en «Mis viajes»—; lo único que falta es el PDF del
+contrato, porque ése lo hace EuroSystem. Y la oficina recibe un aviso diciendo
+que fue prueba.
+
+Tarjeta de prueba de Stripe: `4242 4242 4242 4242`, cualquier fecha futura,
+cualquier CVC.
+
+> **Después del lanzamiento, ese aviso de «pago de PRUEBA» no debe volver a
+> llegar.** Si llega, quiere decir que la página sigue cobrando con la clave de
+> pruebas y **nadie está pagando de verdad**.
+
+---
+
 ## Orden sugerido
 
 1. Verificar el dominio en Resend, y probar el correo.
