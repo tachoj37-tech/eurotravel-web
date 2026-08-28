@@ -1,0 +1,13 @@
+# Que git NO les toque los saltos de linea a los archivos binarios.
+#
+# Al guardar el PDF de los destinos, git avisó que iba a cambiar LF por CRLF.
+# Esta vez no lo hizo —detectó que era binario— pero un PDF con los saltos
+# cambiados NO ABRE, y no avisa: se ve como un archivo corrupto y ya. Mas vale
+# decírselo de frente que confiar en que lo adivine.
+
+*.pdf   binary
+*.png   binary
+*.jpg   binary
+*.jpeg  binary
+*.webp  binary
+*.ico   binary
