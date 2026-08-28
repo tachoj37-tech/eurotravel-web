@@ -42,6 +42,7 @@ De ahí se siguen tres reglas de conducta:
 | **R15** | la medición depende de la salida | las tandas salen del centro de Guadalajara |
 | **R16** | arriba de 1,400 km ya se cotiza solo | $36 el km, y menos fiable — saberlo |
 | **R17** | hay destinos donde moverse no cuesta | Barrancas: $3,000 el día, se mueva o no |
+| **R18** | hay destinos donde el día no es gratis | Ocotlán, Comala y Autlán $500 · Bernal $1,000 |
 | **R10** | *pendiente:* el precio depende del origen | la fila de Ocotlán, ignorada por ahora |
 
 ---
@@ -367,6 +368,61 @@ catálogo y deja de estimarse.
 
 ---
 
+
+### R18 · Hay destinos donde el día NO es gratis
+
+**Dictado por el dueño el 28-ago-2026**, mirando la lista de los 50 casos que
+la página cotiza sola:
+
+> «súbeles 500, el día, a los 4 de abajo»
+> «a Bernal 1000 el día»
+
+Los cuatro eran **Ocotlán, Comala y Autlán de Navarro** a 3 y 4 días, y
+**Bernal** a 3. Salieron en la lista porque tres y cuatro días costaban
+**exactamente lo mismo** que dos: las tres noches de `NOCHES_INCLUIDAS` se los
+comían.
+
+| | 2 días | 3 días | 4 días |
+|---|---|---|---|
+| Ocotlán | $10,000 | $10,500 | $13,000 · le gana el piso |
+| Comala | $16,200 | $16,700 | $17,200 |
+| Autlán de Navarro | $15,800 | $16,300 | $16,800 |
+| Bernal | $24,400 | $25,400 | $26,400 |
+
+#### Se cobran los días que salían gratis, no todos
+
+Ésta es la parte que hay que entender antes de tocar nada.
+
+**El viaje de dos días no se movió**, y no podía moverse: el dueño no pidió
+subirlo. Un viaje de dos días trae **una** noche, y ésa sigue incluida; se
+cobra de la segunda en adelante. Por eso la regla es `nochesIncluidas: 1` con
+`nocheExtra`, y **no** `estadiaPorDia`, que es lo que usan CDMX y la Huasteca.
+
+Aquéllas cobran desde el primer día porque **su base es un traslado de un
+día**. La de un destino de fórmula es un viaje redondo que ya cubre dos días:
+cobrarle el día uno sería cobrarlo dos veces.
+
+Si alguien lo cambia a cobrar desde el primer día, tres aserciones de
+`probar-dia-no-gratis.cjs` se ponen rojas — está comprobado rompiéndolo.
+
+#### El piso por día sigue mandando encima
+
+Ocotlán a 4 días no da $10,500 + $1,000 sino **$13,000**: le gana el piso de
+$3,000 por día ($12,000), y las dos noches se suman encima. El piso defiende
+al **traslado**, no al total.
+
+#### Lo que esto NO resuelve
+
+Esta regla es de **cuatro destinos**, no de todos. Cualquier otro sigue
+regalando hasta tres noches: Tequisquiapan a 3 días cuesta lo mismo que a 2, y
+así los demás.
+
+**Está pendiente que el dueño diga si el $500 es el nuevo normal** o si cada
+destino lleva el suyo. Mientras no lo diga, la regla se queda en los cuatro que
+dictó — porque inventarle un día a los demás sería ponerle precios, y eso es
+justo lo que R12 prohíbe.
+
+---
 ## Lo pendiente
 
 ### R10 · El precio depende del origen — ignorar por ahora

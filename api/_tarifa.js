@@ -412,6 +412,47 @@ const DESTINOS_CON_REGLA = [
     nombre: 'Barrancas del Cobre',
     enTexto: /barranca|creel/i,
     movimientoPorDia: 0
+  },
+
+  /* ------------------------------------------------------------
+     R18 · LOS CUATRO DONDE EL DIA NO ES GRATIS
+     ------------------------------------------------------------
+     Dictado por el dueño el 28-ago-2026 sobre la lista de los 50
+     casos: «súbeles 500, el día, a los 4 de abajo» y «a Bernal
+     1000 el día».
+
+     Los cuatro salieron en la lista porque tres y cuatro días
+     costaban lo mismo que dos. `nochesIncluidas: 1` deja incluida
+     la noche del viaje de dos días —que él no pidió mover— y cobra
+     de la segunda en adelante.
+
+     NO ESTAN EN LA TABLA, y por eso van aquí y no allá: la tabla
+     es del dueño y sus precios están por algo (R12). Esto no es un
+     precio: es cómo se cobra el día que la tabla no menciona.
+     ------------------------------------------------------------ */
+  {
+    nombre: 'Ocotlán',
+    enTexto: /ocotl[aá]n/i,
+    nochesIncluidas: 1,
+    nocheExtra: 500
+  },
+  {
+    nombre: 'Comala',
+    enTexto: /comala/i,
+    nochesIncluidas: 1,
+    nocheExtra: 500
+  },
+  {
+    nombre: 'Autlán de Navarro',
+    enTexto: /autl[aá]n/i,
+    nochesIncluidas: 1,
+    nocheExtra: 500
+  },
+  {
+    nombre: 'Bernal',
+    enTexto: /bernal/i,
+    nochesIncluidas: 1,
+    nocheExtra: 1000
   }
 ];
 
@@ -726,9 +767,37 @@ function calcula(kmTotal, dias, extras) {
      dictó el dueño el 26-ago-2026 («4»). Quitar el piso no mueve a ningún
      otro: Talpa Burrita incluye 4 días (3 noches, igual que el piso),
      Chiapas 8 y Cancún 17. */
-  const nochesIncluidas = km.diasIncluidos
-    ? Math.max(0, km.diasIncluidos - 1)
-    : NOCHES_INCLUIDAS;
+  /* ----------------------------------------------------------
+     R18 · DESTINOS DONDE EL DIA NO ES GRATIS
+
+     Dictado por el dueño el 28-ago-2026, mirando los 50 casos que
+     la página cotiza sola: «súbeles 500, el día, a los 4 de abajo»
+     y «a Bernal 1000 el día».
+
+     Los cuatro eran Ocotlán, Comala y Autlán a 3 y 4 días, y
+     Bernal a 3, y salieron porque los tres días y los cuatro
+     costaban EXACTAMENTE lo mismo que dos: las tres noches de
+     `NOCHES_INCLUIDAS` se las comían.
+
+     SE COBRAN LOS DIAS QUE HOY SALEN GRATIS, NO TODOS. Un viaje de
+     dos días trae una noche y ésa sigue incluida —el dueño no pidió
+     mover el precio de dos días, y cobrarla subiría también ése—.
+     Por eso es `nochesIncluidas: 1` y no `estadiaPorDia`, que es lo
+     que usan CDMX y la Huasteca: aquéllas cobran desde el primer
+     día porque su base es un traslado de UN día, no de dos.
+
+     Queda entonces:  3 días = +una noche · 4 días = +dos noches.
+     ---------------------------------------------------------- */
+  const nochesIncluidas = (regla && typeof regla.nochesIncluidas === 'number')
+    ? regla.nochesIncluidas
+    : (km.diasIncluidos ? Math.max(0, km.diasIncluidos - 1) : NOCHES_INCLUIDAS);
+
+  /* Lo que vale cada noche de más. Por destino cuando el dueño lo dictó; si
+     no, la de siempre. `typeof` y no `||`: una noche de cero pesos sería un
+     valor válido y con `||` se caería a los mil. */
+  const porNoche = (regla && typeof regla.nocheExtra === 'number')
+    ? regla.nocheExtra
+    : EXTRA_POR_NOCHE;
   /* Las noches incluidas NO se pierden por moverse. Corrección del dueño el
      26-ago-2026: «la playa es sencillo: cada noche que supere las 3 noches
      por defecto son 1000, y si tiene movimientos son 3000 por día — o sea que
@@ -752,7 +821,7 @@ function calcula(kmTotal, dias, extras) {
        al peso ($4,000 el día con movimiento = 1,000 + 3,000). */
     importeNoches = dias * EXTRA_POR_NOCHE;
   } else {
-    importeNoches = nochesExtra * EXTRA_POR_NOCHE;
+    importeNoches = nochesExtra * porNoche;
   }
 
   /* ----------------------------------------------------------

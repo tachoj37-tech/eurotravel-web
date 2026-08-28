@@ -174,10 +174,21 @@ async function pide(cuerpo) {
   }
 
   {
-    /* --- 4c. un lugar escrito a mano que NO esta en ninguna lista --- */
+    /* --- 4c. un lugar escrito a mano que NO esta en ninguna lista ---
+
+       ESTE CASO USABA BERNAL, y dejo de servir el 28-ago-2026: el dueño le
+       dicto a Bernal su propia regla —«a Bernal 1000 el dia»— asi que ya no
+       es un destino «fuera de todo», que es justo lo que este caso existe
+       para probar. Se cambio a Tequisquiapan, que sigue sin regla.
+
+       No se ajusto el numero esperado para que pasara: se cambio el EJEMPLO,
+       porque lo que la prueba vigila —que un destino sin lista ni regla se
+       cotice por formula pelona— sigue siendo cierto y hay que seguir
+       vigilandolo. El caso de Bernal con su regla se prueba aparte, en
+       probar-dia-no-gratis.cjs. */
     METROS = 250000;                                     // 500 km ida y vuelta
     const r = await pide({ clave: CLAVE, dias: 3,
-      destino: { direccion: 'Jardín Principal, Bernal, Querétaro' } });
+      destino: { direccion: 'Centro, Tequisquiapan, Querétaro' } });
     igual('un destino fuera de la lista se cotiza por formula',
       r._json.traslado.porFormula, true);
     //  6,500 + 500 × 22 = 17,500  ·  minimo 3 × 3,000 = 9,000  ·  gana la formula
