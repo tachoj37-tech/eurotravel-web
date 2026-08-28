@@ -73,15 +73,41 @@ const ORIGENES = [
     /* Fila 11 del Excel, «SPRINTER OCOTLAN». Leída el 28-ago-2026. */
     fila: 11,
 
-    /* Ocotlán, Jalisco. El radio alcanza la ribera este del lago —Poncitlán,
-       Jamay, La Barca, Atotonilco—: mismo rumbo y misma distancia, así que
-       el desvío es prácticamente el mismo. */
+    /* Ocotlán, Jalisco. El radio alcanza la ribera este del lago: mismo rumbo
+       y misma distancia, así que el desvío es prácticamente el mismo. */
     lat: 20.3529, lng: -102.7745, radioKm: 25,
 
-    /* Cuando el cliente escribe la dirección a mano no llegan coordenadas
-       —la página manda lat y lng en null—, así que hace falta el texto.
-       Pide Jalisco a propósito: hay otro Ocotlán en Oaxaca. */
-    busca: /(ocotl[aá]n|poncitl[aá]n|jamay|la\s+barca|atotonilco)[\s\S]*\bjal/i,
+    /* --------------------------------------------------------
+       LOS PUEBLOS VAN CON SUS COORDENADAS, NO SUELTOS
+
+       Cuando el cliente escribe la dirección a mano no llegan
+       coordenadas —la página manda lat y lng en null—, así que
+       hace falta reconocerlo por el texto. Y ahí estuvo un
+       defecto que duró lo que tardé en medirlo:
+
+       la lista de nombres y el radio decían cosas distintas.
+       Atotonilco el Alto está a 35 km y el texto lo aceptaba;
+       Zapotlán del Rey y Tototlán están a 18 y 21 km y el texto
+       los rechazaba. O sea que el MISMO cliente pagaba distinto
+       según si Google le devolvió coordenadas o no.
+
+       Por eso cada pueblo va con su punto y el buscador de texto
+       se arma de esta lista: no hay dos verdades que puedan
+       separarse. `probar-origenes.cjs` mide cada uno contra el
+       radio, así que un pueblo agregado a ojo se pone rojo.
+       -------------------------------------------------------- */
+    pueblos: [
+      { n: 'Ocotlán',           busca: /ocotl[aá]n/i,        lat: 20.3529, lng: -102.7745 },
+      { n: 'Jamay',             busca: /jamay/i,             lat: 20.2939, lng: -102.7086 },
+      { n: 'Poncitlán',         busca: /poncitl[aá]n/i,      lat: 20.3833, lng: -102.9167 },
+      { n: 'Zapotlán del Rey',  busca: /zapotl[aá]n\s+del\s+rey/i, lat: 20.4667, lng: -102.9000 },
+      { n: 'Tototlán',          busca: /tototl[aá]n/i,       lat: 20.5453, lng: -102.7975 },
+      { n: 'La Barca',          busca: /la\s+barca/i,        lat: 20.2917, lng: -102.5528 }
+    ],
+
+    /* Pide Jalisco a propósito: hay otro Ocotlán en Oaxaca, y otro Zapotlán
+       —el Grande, Ciudad Guzmán— que no es este. */
+    enJalisco: /\bjal(isco)?\b/i,
 
     /* --------------------------------------------------------
        LO QUE SUBE, DESTINO POR DESTINO
@@ -192,8 +218,11 @@ function buscaOrigen(origen) {
     const o = ORIGENES[i];
     if (hayPunto) {
       if (lejosEnKm(lat, lng, o.lat, o.lng) <= o.radioKm) return o;
-    } else if (texto && o.busca.test(texto)) {
-      return o;
+      continue;
+    }
+    if (!texto || !o.enJalisco.test(texto)) continue;
+    for (let j = 0; j < o.pueblos.length; j++) {
+      if (o.pueblos[j].busca.test(texto)) return o;
     }
   }
   return null;

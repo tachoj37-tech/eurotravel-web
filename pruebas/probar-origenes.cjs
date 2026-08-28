@@ -275,6 +275,35 @@ ok('Villa Corona desde Ocotlán y desde Guadalajara, a los mismos km, cuestan ig
 ok('y su recargo es cero', porFormula.interno.recargoSalida, 0);
 
 /* ------------------------------------------------------------
+   6-bis. EL TEXTO Y EL RADIO TIENEN QUE DECIR LO MISMO
+
+   Esto nació de un defecto medido el 28-ago-2026: la lista de
+   pueblos aceptaba Atotonilco el Alto, que está a 35 km, y
+   rechazaba Zapotlán del Rey y Tototlán, que están a 18 y 21. O
+   sea que el MISMO cliente pagaba distinto según si Google le
+   devolvió coordenadas o no.
+
+   Cada pueblo lleva ahora su punto, y aquí se mide contra el
+   radio. Un pueblo agregado a ojo se pone rojo.
+   ------------------------------------------------------------ */
+titulo('Cada pueblo listado cae de verdad dentro del radio');
+origenes.ORIGENES.forEach(function (o) {
+  o.pueblos.forEach(function (p) {
+    const km = origenes.lejosEnKm(p.lat, p.lng, o.lat, o.lng);
+    ok(p.n + ' está a ' + km.toFixed(1) + ' km, dentro de los ' + o.radioKm, km <= o.radioKm, true);
+    /* Y las dos puertas —punto y texto— tienen que dar el mismo veredicto */
+    const porPunto = (origenes.buscaOrigen({ lat: p.lat, lng: p.lng }) || {}).nombre || null;
+    const porTexto = (origenes.buscaOrigen({ direccion: p.n + ', Jal., México' }) || {}).nombre || null;
+    ok(p.n + ': coordenadas y texto coinciden', porPunto, porTexto);
+  });
+});
+/* Y el que se cayó de la lista: por texto tampoco debe entrar */
+ok('Atotonilco el Alto (35 km) ya no entra por texto',
+  origenes.buscaOrigen({ direccion: 'Atotonilco el Alto, Jal., México' }), null);
+ok('ni por coordenadas',
+  origenes.buscaOrigen({ lat: 20.5497, lng: -102.5097 }), null);
+
+/* ------------------------------------------------------------
    7. EL OTRO OCOTLAN
    ------------------------------------------------------------ */
 titulo('Ocotlán de Morelos, Oaxaca, no es este Ocotlán');
