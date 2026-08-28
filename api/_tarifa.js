@@ -311,6 +311,29 @@ const ANTICIPO = 0.20;                // 20% para apartar la unidad
 const NOCHES_INCLUIDAS = 3;
 const EXTRA_POR_NOCHE = 1000;
 
+/* ------------------------------------------------------------
+   R18 · ABAJO DE $15,000, EL DIA NO ES GRATIS
+   ------------------------------------------------------------
+   Dictado por el dueño el 28-ago-2026: «esos 500 exclusivamente a
+   destinos abajo de 15,000 en precio normal».
+
+   Venía de ver que en los viajes cercanos tres y cuatro días
+   costaban EXACTAMENTE lo mismo que dos: las tres noches de
+   `NOCHES_INCLUIDAS` se los comían enteros.
+
+   EL CORTE ES POR PRECIO, NO POR DISTANCIA NI POR ESTAR EN LA
+   TABLA. «Precio normal» es lo que cuesta el viaje de dos días —el
+   de la tabla si está, el de la fórmula si no—. Así que esta regla
+   alcanza también a los renglones baratos de la tabla, que es lo
+   que el dueño dijo.
+
+   Se cobra de la SEGUNDA noche en adelante: un viaje de dos días
+   trae una noche y ésa sigue incluida. Cobrarla subiría el precio
+   de dos días, y eso él no lo pidió.
+   ------------------------------------------------------------ */
+const TOPE_DIA_BARATO = 15000;
+const DIA_BARATO = 500;
+
 /* SOLO IDA. Dictado por el dueño el 26-ago-2026: un viaje de un solo sentido
    cuesta el 65% de un viaje de UN DÍA sin movimientos de ese mismo destino.
    No lleva noches ni movimientos —es dejar y ya—. Antes esto no se cobraba
@@ -430,12 +453,6 @@ const DESTINOS_CON_REGLA = [
      es del dueño y sus precios están por algo (R12). Esto no es un
      precio: es cómo se cobra el día que la tabla no menciona.
      ------------------------------------------------------------ */
-  {
-    nombre: 'Ocotlán',
-    enTexto: /ocotl[aá]n/i,
-    nochesIncluidas: 1,
-    nocheExtra: 500
-  },
   {
     nombre: 'Comala',
     enTexto: /comala/i,
@@ -788,16 +805,62 @@ function calcula(kmTotal, dias, extras) {
 
      Queda entonces:  3 días = +una noche · 4 días = +dos noches.
      ---------------------------------------------------------- */
+  /* ¿Este destino cae en la regla del día barato? El corte lo hace el precio
+     normal —el traslado de dos días, de lista o de fórmula—, NO la distancia
+     ni si está en la tabla. Un paquete con días propios queda fuera: ésos ya
+     traen su duración en el precio y su día extra tiene su propia regla. */
+  const esBarato = !km.diasIncluidos && !km.porDuracion && km.total < TOPE_DIA_BARATO;
+
   const nochesIncluidas = (regla && typeof regla.nochesIncluidas === 'number')
     ? regla.nochesIncluidas
-    : (km.diasIncluidos ? Math.max(0, km.diasIncluidos - 1) : NOCHES_INCLUIDAS);
+    : (km.diasIncluidos ? Math.max(0, km.diasIncluidos - 1)
+                        : (esBarato ? 1 : NOCHES_INCLUIDAS));
 
-  /* Lo que vale cada noche de más. Por destino cuando el dueño lo dictó; si
-     no, la de siempre. `typeof` y no `||`: una noche de cero pesos sería un
-     valor válido y con `||` se caería a los mil. */
+  /* Lo que vale cada noche de más, cuando todas valen igual: la que el dueño
+     le dictó al destino, o la de siempre.
+
+     `typeof` y no `||`: una noche de cero pesos sería un valor válido y con
+     `||` se caería a los mil. */
   const porNoche = (regla && typeof regla.nocheExtra === 'number')
     ? regla.nocheExtra
     : EXTRA_POR_NOCHE;
+
+  /* ------------------------------------------------------------
+     COBRAR UNA NOCHE QUE ERA GRATIS NO PUEDE ABARATAR LAS DEMAS
+     ------------------------------------------------------------
+     Aquí estuvo un defecto mío, DOS VECES, y las dos las cazó medir
+     el cambio contra el código anterior en vez de confiar en que
+     hacía lo que yo creía.
+
+     La primera versión cobraba los $500 en TODAS las noches. Para
+     tres y cuatro días daba lo que el dueño pidió, pero para siete
+     el viaje salía MAS BARATO —Chapala de $24,000 a $23,500—
+     porque las noches que ya se cobraban a $1,000 bajaban a $500.
+
+     Lo arreglé solo para la regla general, y quedó igual de mal en
+     los destinos con tarifa dictada: Comala y Autlán a diez días
+     pasaban de $36,000 a $34,000.
+
+     LA REGLA, ENTONCES, ES UNA SOLA: la tarifa rebajada vale para
+     las noches que ANTES VENIAN INCLUIDAS, y de ahí en adelante
+     manda la de siempre. El dueño pidió cobrar los días que salían
+     gratis, no descontar los que ya se cobraban.
+     ------------------------------------------------------------ */
+  const tarifaPropia = esBarato && !(regla && typeof regla.nocheExtra === 'number')
+    ? DIA_BARATO
+    : porNoche;
+
+  function cobraNoches(cuantas) {
+    /* Este destino no rebajó nada: todas sus noches valen igual. */
+    if (nochesIncluidas >= NOCHES_INCLUIDAS) return cuantas * tarifaPropia;
+
+    /* Sí rebajó: las que se destaparon van a su tarifa, y el resto a la de
+       siempre —o a la propia si resultara más cara, para que una tarifa
+       dictada alta no se caiga a los mil—. */
+    const destapadas = Math.min(cuantas, NOCHES_INCLUIDAS - nochesIncluidas);
+    return destapadas * tarifaPropia +
+      (cuantas - destapadas) * Math.max(tarifaPropia, EXTRA_POR_NOCHE);
+  }
   /* Las noches incluidas NO se pierden por moverse. Corrección del dueño el
      26-ago-2026: «la playa es sencillo: cada noche que supere las 3 noches
      por defecto son 1000, y si tiene movimientos son 3000 por día — o sea que
@@ -821,7 +884,7 @@ function calcula(kmTotal, dias, extras) {
        al peso ($4,000 el día con movimiento = 1,000 + 3,000). */
     importeNoches = dias * EXTRA_POR_NOCHE;
   } else {
-    importeNoches = nochesExtra * porNoche;
+    importeNoches = cobraNoches(nochesExtra);
   }
 
   /* ----------------------------------------------------------
@@ -952,7 +1015,7 @@ function calcula(kmTotal, dias, extras) {
 module.exports = {
   BASE_TRASLADO, POR_KM, TOPE_FORMULA_KM, POR_KM_LARGO,
   MINIMO_POR_DIA, REDONDEO, TASA_IVA, ANTICIPO,
-  NOCHES_INCLUIDAS, EXTRA_POR_NOCHE, BANDAS_MOVIMIENTO, TOPE_DIAS_MOVIMIENTO,
+  NOCHES_INCLUIDAS, EXTRA_POR_NOCHE, TOPE_DIA_BARATO, DIA_BARATO, BANDAS_MOVIMIENTO, TOPE_DIAS_MOVIMIENTO,
   DESTINOS_CON_REGLA,
   UNIDADES_QUE_COTIZAN, claveDeUnidad, seSabeCotizar, necesitaMedirse,
   kmDe, diasDeServicio, nochesDe, regresoAntesDeSalida, trasladoDe, reglaDeDestino,

@@ -283,9 +283,19 @@ igual('cruzando de mes: 3 días', t.diasDeServicio('2026-10-31', '2026-11-02'), 
 (function () {
   igual('Chapala un día: su precio de lista, 6,500',
     t.calcula(100, 1, { destino: en('Chapala, Jalisco, México') }).total, 6500);
-  //  minimo 5 × 3,000 = 15,000 gana a los 6,500  ·  4 noches -> 1 extra = 1,000
-  igual('Chapala cinco días: manda el mínimo, 15,000 + 1,000',
-    t.calcula(100, 5, { destino: en('Chapala, Jalisco, México'), noches: 4 }).total, 16000);
+  /* ESTA ASERCION CAMBIO DE LADO EL 28-ago-2026, y no por un arreglo: por una
+     decision del dueño. Esperaba $16,000 —minimo 15,000 + UNA noche extra de
+     mil, porque Chapala traia tres noches incluidas—.
+
+     Ese dia dicto R18: «esos 500 exclusivamente a destinos abajo de 15,000 en
+     precio normal». Chapala son $6,500, asi que entra: ahora solo trae UNA
+     noche incluida y las dos que se destaparon valen $500 cada una.
+
+         minimo 5 × 3,000 = 15,000 gana a los 6,500
+         4 noches - 1 incluida = 3 extra
+         las dos destapadas a 500 + la cuarta a los mil de siempre = 2,000 */
+  igual('Chapala cinco días: manda el mínimo, 15,000 + 2,000 de noches',
+    t.calcula(100, 5, { destino: en('Chapala, Jalisco, México'), noches: 4 }).total, 17000);
   /* y a un precio de lista que ya pasa el piso, el piso no le hace nada */
   igual('Vallarta cuatro días: sus 19,000, el piso ni se asoma',
     t.calcula(620, 4, { destino: en('Puerto Vallarta, Jalisco, México'), noches: 3 }).total, 19000);

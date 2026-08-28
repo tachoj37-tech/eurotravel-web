@@ -42,7 +42,7 @@ De ahí se siguen tres reglas de conducta:
 | **R15** | la medición depende de la salida | las tandas salen del centro de Guadalajara |
 | **R16** | arriba de 1,400 km ya se cotiza solo | $36 el km, y menos fiable — saberlo |
 | **R17** | hay destinos donde moverse no cuesta | Barrancas: $3,000 el día, se mueva o no |
-| **R18** | hay destinos donde el día no es gratis | Ocotlán, Comala y Autlán $500 · Bernal $1,000 |
+| **R18** | abajo de $15,000 el día no es gratis | $500 la noche destapada; de la 4ª, los mil de siempre |
 | **R10** | *pendiente:* el precio depende del origen | la fila de Ocotlán, ignorada por ahora |
 
 ---
@@ -369,58 +369,66 @@ catálogo y deja de estimarse.
 ---
 
 
-### R18 · Hay destinos donde el día NO es gratis
 
-**Dictado por el dueño el 28-ago-2026**, mirando la lista de los 50 casos que
-la página cotiza sola:
+### R18 · Abajo de $15,000, el día no es gratis
+
+**Dictado por el dueño el 28-ago-2026**, en dos tiempos, mirando la lista de
+los 50 casos que la página cotiza sola:
 
 > «súbeles 500, el día, a los 4 de abajo»
 > «a Bernal 1000 el día»
+> «esos 500 exclusivamente a destinos **abajo de 15,000 en precio normal**»
 
-Los cuatro eran **Ocotlán, Comala y Autlán de Navarro** a 3 y 4 días, y
-**Bernal** a 3. Salieron en la lista porque tres y cuatro días costaban
-**exactamente lo mismo** que dos: las tres noches de `NOCHES_INCLUIDAS` se los
-comían.
+Venía de que tres y cuatro días costaban **exactamente lo mismo** que dos: las
+tres noches de `NOCHES_INCLUIDAS` se los comían enteros.
 
-| | 2 días | 3 días | 4 días |
-|---|---|---|---|
-| Ocotlán | $10,000 | $10,500 | $13,000 · le gana el piso |
-| Comala | $16,200 | $16,700 | $17,200 |
-| Autlán de Navarro | $15,800 | $16,300 | $16,800 |
-| Bernal | $24,400 | $25,400 | $26,400 |
+#### El corte lo hace el PRECIO, no la distancia ni estar en la tabla
 
-#### Se cobran los días que salían gratis, no todos
+«Precio normal» es lo que cuesta el viaje de dos días — el de la tabla si el
+destino está, el de la fórmula si no. Así que la regla alcanza también a los
+renglones baratos de la tabla, y son 12: Chapala, Tala, Tequila, Zacoalco,
+Cocula, Magdalena, San Juan Cosalá, Tapalpa, Mazamitla, San Juan de los Lagos,
+Camécuaro y El Manto.
 
-Ésta es la parte que hay que entender antes de tocar nada.
+**Comala ($16,200), Autlán ($15,800) y Bernal ($24,400) están arriba del tope**
+pero el dueño los nombró uno por uno, así que llevan la suya: $500 los dos
+primeros, $1,000 Bernal.
 
-**El viaje de dos días no se movió**, y no podía moverse: el dueño no pidió
-subirlo. Un viaje de dos días trae **una** noche, y ésa sigue incluida; se
-cobra de la segunda en adelante. Por eso la regla es `nochesIncluidas: 1` con
-`nocheExtra`, y **no** `estadiaPorDia`, que es lo que usan CDMX y la Huasteca.
+#### Se cobran las noches que salían gratis, no todas
 
-Aquéllas cobran desde el primer día porque **su base es un traslado de un
-día**. La de un destino de fórmula es un viaje redondo que ya cubre dos días:
-cobrarle el día uno sería cobrarlo dos veces.
+El viaje de dos días **no se movió**, y no podía: él no pidió subirlo. Un
+viaje de dos días trae una noche y ésa sigue incluida.
 
-Si alguien lo cambia a cobrar desde el primer día, tres aserciones de
-`probar-dia-no-gratis.cjs` se ponen rojas — está comprobado rompiéndolo.
+Y **de la cuarta noche en adelante manda la de siempre, $1,000**. Ésa es la
+parte que me costó dos intentos:
 
-#### El piso por día sigue mandando encima
+| | primer intento | y luego |
+|---|---|---|
+| Chapala 7 días | $24,000 → **$23,500** | Comala 10 días $36,000 → **$34,000** |
 
-Ocotlán a 4 días no da $10,500 + $1,000 sino **$13,000**: le gana el piso de
-$3,000 por día ($12,000), y las dos noches se suman encima. El piso defiende
-al **traslado**, no al total.
+Cobrando los $500 en *todas* las noches, los viajes largos salían **más
+baratos** que antes, porque las noches que ya se cobraban a mil bajaban a
+quinientos. El dueño pidió cobrar los días que salían gratis, **no descontar
+los que ya se cobraban**.
 
-#### Lo que esto NO resuelve
+Las dos veces lo cazó medir el cambio contra el código anterior, no razonarlo.
+Hoy `probar-dia-no-gratis.cjs` compara **570 combinaciones** de destino y días
+contra los precios congelados de antes de la regla: si una sola baja, se pone
+roja. Al reabrir el defecto, se ponen rojas 56.
 
-Esta regla es de **cuatro destinos**, no de todos. Cualquier otro sigue
-regalando hasta tres noches: Tequisquiapan a 3 días cuesta lo mismo que a 2, y
-así los demás.
+#### Lo que la regla NO tocó
 
-**Está pendiente que el dueño diga si el $500 es el nuevo normal** o si cada
-destino lleva el suyo. Mientras no lo diga, la regla se queda en los cuatro que
-dictó — porque inventarle un día a los demás sería ponerle precios, y eso es
-justo lo que R12 prohíbe.
+A los 31 destinos caros de la tabla **no les movió ni un peso**, y eso también
+se comprueba contra los precios congelados. Varios de ellos ya cobraban el día
+antes de esto —CDMX y la Huasteca por su `estadiaPorDia`, otros por el
+`diaExtra` de su propio renglón—, y eso no es cosa de esta regla.
+
+#### Lo que queda pendiente
+
+Comala y Autlán están **$800 y $1,200 arriba del tope** y llevan el $500 por
+haberlos nombrado. Si el tope es la regla buena, quizá deberían llevar $1,000
+como Bernal; si son excepciones a propósito, están bien. **No se movieron
+porque el dueño los dictó, y su palabra manda sobre mi simetría.**
 
 ---
 ## Lo pendiente

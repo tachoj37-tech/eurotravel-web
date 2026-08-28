@@ -66,9 +66,27 @@ function trasladoAMano(precioBase, dias) {
 
    `porDia` (CDMX y Huasteca) sigue igual: su precio es un traslado de un dia,
    no un paquete, asi que ahi si se cobra desde el primer dia. */
-function estadiaAMano(dias, noches, cuantosMovimientos, porDia) {
+/* CAMBIO DE LADO OTRA VEZ el 28-ago-2026, y tampoco por un arreglo: por una
+   decision del dueño. Antes decia:
+
+       return Math.max(0, noches - 3) * 1000;
+
+   o sea tres noches incluidas para todos. Ese dia dicto R18: «esos 500
+   exclusivamente a destinos abajo de 15,000 en precio normal». Abajo de ese
+   precio ya solo viene UNA noche incluida, y las dos que se destaparon valen
+   $500 — pero de la cuarta en adelante manda la de mil, porque esas ya se
+   cobraban y cobrar una noche gratis no puede abaratar las demas.
+
+   `precioNormal` es el traslado ANTES del piso y del corte: el corte de los
+   15,000 lo hace el precio del viaje, no el de la lista ni la distancia. */
+function estadiaAMano(dias, noches, cuantosMovimientos, porDia, precioNormal) {
   if (porDia) return dias * 1000;                      // CDMX y Huasteca: dia por dia
-  return Math.max(0, noches - 3) * 1000;               // paquete de 3 noches, se mueva o no
+  const barato = precioNormal < 15000;
+  const incluidas = barato ? 1 : 3;
+  const extra = Math.max(0, noches - incluidas);
+  if (!barato) return extra * 1000;
+  const destapadas = Math.min(extra, 3 - incluidas);   // la segunda y la tercera
+  return destapadas * 500 + (extra - destapadas) * 1000;
 }
 
 /* El precio por duracion de los destinos que el Excel trae con varios dias
@@ -626,7 +644,7 @@ const SU_LISTA = [
           /* La Huasteca cobra su estadia por dia SIEMPRE (criterio R3);
              el destino cualquiera sigue con el paquete de 3 noches. */
           const esperado = trasladoAMano(formulaAMano(km), dias) +
-            estadiaAMano(dias, noches, cuantos, esHuasteca) + movAMano;
+            estadiaAMano(dias, noches, cuantos, esHuasteca, formulaAMano(km)) + movAMano;
 
           // --- lo que hace la pagina ---
           const p = t.calcula(km, dias, { noches: noches, movimientos: movs, destino: destino });
@@ -711,7 +729,10 @@ const SU_LISTA = [
           const gratis = reglaExcel.diasIncluidos - 1;
           esperado = trasladoAMano(fila[1], dias) + Math.max(0, noches - gratis) * 1000 + movAMano;
         } else {
-          esperado = trasladoAMano(fila[1], dias) + estadiaAMano(dias, noches, cuantos, false) + movAMano;
+          /* El precio de lista ES el precio normal de este destino, así que
+             es él quien decide si cae abajo de los 15,000 de R18. */
+          esperado = trasladoAMano(fila[1], dias) +
+            estadiaAMano(dias, noches, cuantos, false, fila[1]) + movAMano;
         }
 
         const p = t.calcula(999, dias, {
