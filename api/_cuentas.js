@@ -106,15 +106,41 @@ function porQueNoSirve(contrasena) {
 
 function nuevaSal() { return crypto.randomBytes(LARGO_SAL).toString('hex'); }
 
-/* El resumen. Devuelve una promesa porque `scrypt` tarda a propósito y
-   bloquear el hilo cien milisegundos por intento dejaría al servidor sordo
-   mientras tanto. */
-function resumen(contrasena, sal) {
+/* ------------------------------------------------------------
+   EL RESUMEN, CON UN SEGUNDO INTENTO
+   ------------------------------------------------------------
+   Devuelve una promesa porque `scrypt` tarda a propósito y
+   bloquear el hilo cien milisegundos por intento dejaría al
+   servidor sordo mientras tanto.
+
+   Y REINTENTA UNA VEZ, porque el 27-ago-2026 esto falló de verdad
+   —no en teoría— corriendo la batería en esta máquina:
+
+       [Error: Deriving bits failed]
+
+   Es lo que contesta cuando no le alcanza la memoria: cada llamada
+   pide 16 MB (128 × N × r) y la máquina anda corta. Un tropiezo así
+   no es un «no»: es un «no pude». Se le da un respiro de veinte
+   milisegundos y se vuelve a intentar, que es lo que arregla un
+   bache momentáneo. Si al segundo tampoco, ahí sí truena — y quien
+   llame decidirá qué decirle al cliente.
+   ------------------------------------------------------------ */
+function unIntento(contrasena, sal) {
   return new Promise(function (listo, falla) {
     crypto.scrypt(String(contrasena), String(sal), LARGO_HASH, SCRYPT, function (e, clave) {
       if (e) falla(e); else listo(clave.toString('hex'));
     });
   });
+}
+
+async function resumen(contrasena, sal) {
+  try {
+    return await unIntento(contrasena, sal);
+  } catch (e) {
+    console.error('[cuentas] scrypt falló, se reintenta: ' + ((e && e.message) || e));
+    await new Promise(function (listo) { setTimeout(listo, 20); });
+    return unIntento(contrasena, sal);
+  }
 }
 
 function igualesEnTiempoConstante(a, b) {
@@ -241,8 +267,24 @@ async function contrasenaValida(metadata, contrasena) {
   const sal = String(m[CAMPO_SAL] || '');
   const c = String(contrasena == null ? '' : contrasena);
   if (!guardado || !sal || !c || c.length > MAXIMO) return false;
-  let calculado;
-  try { calculado = await resumen(c, sal); } catch (e) { return false; }
+
+  /* ------------------------------------------------------------
+     «NO PUDE COMPROBAR» NO ES «ESTA MAL»
+     ------------------------------------------------------------
+     Aquí había un `try { … } catch (e) { return false; }`. O sea
+     que si `scrypt` fallaba por falta de memoria —cosa que pasó de
+     verdad el 27-ago-2026— a un cliente con su contraseña BUENA se
+     le contestaba «ese correo o esa contraseña no son».
+
+     Y lo peor no es el rato perdido: es que la persona concluye que
+     se le olvidó, se va a «olvidé mi contraseña», y cambia una
+     contraseña que estaba perfecta. Un error del servidor
+     disfrazado de error del cliente.
+
+     Ahora el fallo sube. Arriba, la cáscara lo convierte en «algo
+     falló de nuestro lado, inténtalo otra vez», que es la verdad.
+     ------------------------------------------------------------ */
+  const calculado = await resumen(c, sal);
   return igualesEnTiempoConstante(calculado, guardado);
 }
 

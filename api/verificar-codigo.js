@@ -29,7 +29,10 @@ const publico = require('./_publico');
    mismo para todas las máquinas. */
 const freno = defensas.creaFreno({ porMinuto: 10, porDia: 120 });
 
-module.exports = async function handler(req, res) {
+module.exports = defensas.aPruebaDeTronadas('verificar-codigo',
+  'No pudimos comprobar el código ahora mismo. Inténtalo en un momento; ' +
+  'el que tienes sigue sirviendo.',
+  async function handler(req, res) {
   if (defensas.puerta(req, res)) return;
 
   const frenado = freno(req);
@@ -118,4 +121,4 @@ module.exports = async function handler(req, res) {
     return;
   }
   res.status(200).json(publico.viaje(sesion.metadata || {}, consulta.estado));
-};
+});

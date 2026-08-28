@@ -36,7 +36,10 @@ const publico = require('./_publico');
    una consulta a Stripe. */
 const freno = defensas.creaFreno({ porMinuto: 20, porDia: 800 });
 
-module.exports = async function handler(req, res) {
+module.exports = defensas.aPruebaDeTronadas('viaje',
+  'No pudimos abrir tu viaje ahora mismo. Inténtalo en un momento; ' +
+  'tu liga sigue sirviendo.',
+  async function handler(req, res) {
   if (defensas.puerta(req, res)) return;
 
   const frenado = freno(req);
@@ -127,4 +130,4 @@ module.exports = async function handler(req, res) {
 
   /* ---- 3. LO QUE PUEDE VER, Y NADA MÁS ---- */
   res.status(200).json(publico.viaje(sesion.metadata || {}, consulta.estado));
-};
+});

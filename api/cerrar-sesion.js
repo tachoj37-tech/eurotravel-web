@@ -20,11 +20,13 @@
 const defensas = require('./_defensas');
 const acceso = require('./_acceso');
 
-module.exports = async function handler(req, res) {
+module.exports = defensas.aPruebaDeTronadas('cerrar-sesion',
+  'No pudimos cerrar la sesión. Cierra el navegador y vuelve a abrirlo.',
+  async function handler(req, res) {
   if (defensas.puerta(req, res)) return;
 
   /* Sin frenos ni comprobaciones: cerrar sesión SIEMPRE tiene que poder.
      Un candado que a veces no deja salir no es un candado, es una trampa. */
   res.setHeader('Set-Cookie', acceso.cookieBorrada());
   res.status(200).json({ cerrada: true });
-};
+});

@@ -33,7 +33,13 @@ const publico = require('./_publico');
    se frena igual. Alto para que quien pago pueda recargar sin topar. */
 const freno = defensas.creaFreno({ porMinuto: 20, porDia: 800 });
 
-module.exports = async function handler(req, res) {
+/* El aviso importa más aquí que en ningún otro: quien llega a esta puerta
+   ACABA DE PAGAR. Si algo revienta, lo primero que tiene que leer es que su
+   cobro no se perdió. */
+module.exports = defensas.aPruebaDeTronadas('confirmar',
+  'Tu pago sí se hizo. No pudimos enseñarte el resumen ahora mismo, pero tu ' +
+  'contrato va en camino a tu correo. Si en unos minutos no llega, llámanos.',
+  async function handler(req, res) {
   if (defensas.puerta(req, res)) return;
 
   const frenado = freno(req);
@@ -77,4 +83,4 @@ module.exports = async function handler(req, res) {
      METADATA DE STRIPE, no de lo que mando el navegador — y en esa metadata
      tambien esta `km`, que de ahi no pasa. */
   res.status(200).json(publico.confirmacion(m, estado));
-};
+});

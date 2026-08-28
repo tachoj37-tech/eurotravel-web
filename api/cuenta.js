@@ -131,7 +131,13 @@ function esperaHasta(desde, ms) {
   return new Promise(function (listo) { setTimeout(listo, falta); });
 }
 
-module.exports = async function handler(req, res) {
+/* Envuelto para que nada se quede sin respuesta: ver el porqué en
+   `_defensas.aPruebaDeTronadas`, que salió de medir qué pasaba cuando
+   `scrypt` se queda sin memoria a media alta. */
+module.exports = defensas.aPruebaDeTronadas('cuenta',
+  'Algo falló de nuestro lado. Inténtalo otra vez en un momento; ' +
+  'si tienes prisa, puedes pagar tu viaje como invitado.',
+  async function (req, res) {
   if (defensas.puerta(req, res)) return;
 
   const arranco = Date.now();
@@ -184,4 +190,4 @@ module.exports = async function handler(req, res) {
     res.setHeader('Set-Cookie', acceso.cookieBorrada());
   }
   res.status(r.status).json(r.cuerpo);
-};
+});

@@ -39,7 +39,9 @@ const correo = require('./_correo');
    ------------------------------------------------------------ */
 const freno = defensas.creaFreno({ porMinuto: 5, porDia: 60 });
 
-module.exports = async function handler(req, res) {
+module.exports = defensas.aPruebaDeTronadas('pedir-codigo',
+  'No pudimos mandarte el código ahora mismo. Inténtalo en un momento.',
+  async function handler(req, res) {
   if (defensas.puerta(req, res)) return;
 
   const frenado = freno(req);
@@ -147,4 +149,4 @@ module.exports = async function handler(req, res) {
   }
 
   res.status(200).json({ mandado: true, correo: acceso.pistaDeCorreo(aDonde) });
-};
+});

@@ -244,6 +244,42 @@ function puerta(req, res, opciones) {
   return false;
 }
 
+/* ------------------------------------------------------------
+   NADIE SE QUEDA SIN RESPUESTA
+   ------------------------------------------------------------
+   Comprobado el 27-ago-2026, y no era hipotético: la propia batería
+   de pruebas de esta máquina tiró «Deriving bits failed» —`scrypt`
+   sin memoria— en medio de una corrida.
+
+   Si eso pasa mientras un cliente crea su cuenta, la función
+   revienta y sin esto no hay nada que lo ataje. El resultado,
+   medido: un rechazo no atendido, el cliente SIN RESPUESTA, y la
+   pantalla diciéndole «no hubo conexión» — que es mentira, sí
+   hubo: el que falló fue el servidor. Además, un rechazo no
+   atendido puede tumbar la instancia y llevarse por delante a los
+   que estaban a media compra.
+
+   Lo que se le dice al cliente NO nombra lo que pasó: eso va al
+   registro, que es donde lo lee un programador (regla 9). A él se
+   le dice lo único que le sirve.
+
+   Y el `catch` de adentro NO es paranoia de más: si lo que reventó
+   fue después de contestar, volver a contestar tira otro error y
+   estaríamos en las mismas.
+   ------------------------------------------------------------ */
+function aPruebaDeTronadas(nombre, aviso, handler) {
+  return async function (req, res) {
+    try {
+      await handler(req, res);
+    } catch (e) {
+      console.error('[' + nombre + '] reventó: ' + ((e && e.stack) || e));
+      try {
+        res.status(503).json({ error: true, aviso: aviso });
+      } catch (e2) { /* ya se había contestado; no hay nada más que hacer */ }
+    }
+  };
+}
+
 /* Lee y parsea el cuerpo JSON con tolerancia: Vercel a veces lo entrega ya
    como objeto, a veces como texto. Nunca revienta. */
 function cuerpoJSON(req) {
@@ -266,5 +302,6 @@ module.exports = {
   ipDeConfianza,
   creaFreno,
   puerta,
+  aPruebaDeTronadas,
   cuerpoJSON
 };
