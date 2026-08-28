@@ -96,15 +96,31 @@ navegador, y no tienen restricción de sitio web.
 
 ---
 
-## 5. Resend
+## 5. Resend — ESTO NO HAY QUE ESPERARLO
 
-Ver [AL-LANZAR.md](AL-LANZAR.md), sección 3. En corto:
+**El correo y la página son dos trámites independientes**, y conviene tenerlo
+claro porque parece que van juntos y no:
 
-1. Verificar `eurotravel.com.mx`.
-2. `RESEND_DE` = `Eurotravel <ventas@eurotravel.com.mx>`.
+| | Registros | Qué mueve |
+|---|---|---|
+| **Resend** | `MX` y `TXT` en `send.` y `resend._domainkey.` | de dónde **sale** el correo |
+| **Vercel** | `A` en la raíz, `CNAME` en `www` | dónde **vive** la página |
 
-Hasta que eso pase, **a un cliente no le llega nada**: ni el código de
-confirmación de su cuenta, ni su contrato, ni su liga.
+No se estorban ni se enteran uno del otro. Así que **verificar el dominio en
+Resend se puede hacer hoy, sin mover la página** — y conviene, porque es lo
+único que impide que un cliente real reciba su código y su contrato.
+
+Mientras `SITIO_URL` siga sin poner, las ligas de los correos seguirán
+apuntando al `.vercel.app`. Eso está bien y es lo correcto hasta el día del
+cambio: el correo saldrá de `ventas@eurotravel.com.mx` con una liga al
+`.vercel.app`, que se ve un poco desparejo pero funciona.
+
+1. Verificar `eurotravel.com.mx` en Resend.
+2. `RESEND_DE` = `Eurotravel <ventas@eurotravel.com.mx>` y redesplegar.
+
+**Y una advertencia del DNS:** el `MX` que pide Resend va en el subdominio
+`send`, **no** en la raíz. Si se reemplaza el de la raíz, se deja de recibir
+correo en `ventas@eurotravel.com.mx` — y eso se nota el mismo día.
 
 ---
 
