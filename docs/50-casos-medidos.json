@@ -1,373 +1,177 @@
 [
  {
   "grupo": "No está en la tabla",
-  "que": "Ajijic",
-  "detalle": "2 días, sin movimientos",
   "buscar": "Ajijic, Jalisco",
+  "que": "Ajijic",
+  "detalle": "1 día con 1 movimiento",
   "salida": "2026-10-03T08:00",
-  "regreso": "2026-10-04T18:00",
-  "movimientos": [],
-  "total": 6500,
-  "dias": 2,
-  "mov": 0,
-  "importeMov": 0,
-  "servicio": 6500
+  "regreso": "2026-10-03T18:00",
+  "movimientos": [
+   {
+    "horaInicio": "09:00",
+    "horaFin": "15:00"
+   }
+  ],
+  "idUsado": "ChIJtSinkExBL4QRY52kBXEK1rg",
+  "total": 9500,
+  "servicio": 6500,
+  "importeMov": 3000,
+  "diasMov": 1
  },
  {
   "grupo": "No está en la tabla",
-  "que": "Tepatitlán de Morelos",
-  "detalle": "2 días, sin movimientos",
   "buscar": "Tepatitlán de Morelos, Jalisco",
+  "que": "Tepatitlán",
+  "detalle": "1 día",
   "salida": "2026-10-03T08:00",
-  "regreso": "2026-10-04T18:00",
+  "regreso": "2026-10-03T18:00",
   "movimientos": [],
+  "idUsado": "ChIJ67FvzdYnKYQR18NEtpQxn8A",
   "total": 9600,
-  "dias": 2,
-  "mov": 0,
+  "servicio": 9600,
   "importeMov": 0,
-  "servicio": 9600
+  "diasMov": 0
  },
  {
   "grupo": "No está en la tabla",
-  "que": "Ocotlán",
-  "detalle": "2 días, sin movimientos",
   "buscar": "Ocotlán, Jalisco",
+  "que": "Ocotlán",
+  "detalle": "3 días",
   "salida": "2026-10-03T08:00",
-  "regreso": "2026-10-04T18:00",
+  "regreso": "2026-10-05T18:00",
   "movimientos": [],
+  "idUsado": "ChIJ72_Ex9rYLoQRfy4rbS4GEgM",
   "total": 10000,
-  "dias": 2,
-  "mov": 0,
+  "servicio": 10000,
   "importeMov": 0,
-  "servicio": 10000
+  "diasMov": 0
  },
  {
   "grupo": "No está en la tabla",
-  "que": "Ciudad Guzmán",
-  "detalle": "2 días, sin movimientos",
   "buscar": "Ciudad Guzmán, Jalisco",
+  "que": "Ciudad Guzmán",
+  "detalle": "2 días con 1 movimiento",
   "salida": "2026-10-03T08:00",
   "regreso": "2026-10-04T18:00",
-  "movimientos": [],
-  "total": 13100,
-  "dias": 2,
-  "mov": 0,
-  "importeMov": 0,
-  "servicio": 13100
+  "movimientos": [
+   {
+    "horaInicio": "09:00",
+    "horaFin": "15:00"
+   }
+  ],
+  "idUsado": "ChIJM_AHSjKBL4QRhIdfjn_3sJg",
+  "total": 16100,
+  "servicio": 13100,
+  "importeMov": 3000,
+  "diasMov": 1
  },
  {
   "grupo": "No está en la tabla",
-  "que": "Autlán de Navarro",
-  "detalle": "2 días, sin movimientos",
   "buscar": "Autlán de Navarro, Jalisco",
+  "que": "Autlán de Navarro",
+  "detalle": "4 días",
   "salida": "2026-10-03T08:00",
-  "regreso": "2026-10-04T18:00",
+  "regreso": "2026-10-06T18:00",
   "movimientos": [],
+  "idUsado": "ChIJTXMbPc5VJIQRH2IMFVFitDQ",
   "total": 15800,
-  "dias": 2,
-  "mov": 0,
+  "servicio": 15800,
   "importeMov": 0,
-  "servicio": 15800
+  "diasMov": 0
  },
  {
   "grupo": "No está en la tabla",
-  "que": "Mascota",
-  "detalle": "2 días, sin movimientos",
   "buscar": "Mascota, Jalisco",
+  "que": "Mascota",
+  "detalle": "3 días con 2 movimientos",
   "salida": "2026-10-03T08:00",
-  "regreso": "2026-10-04T18:00",
-  "movimientos": [],
-  "total": 15900,
-  "dias": 2,
-  "mov": 0,
-  "importeMov": 0,
-  "servicio": 15900
- },
- {
-  "grupo": "No está en la tabla",
-  "que": "San Sebastián del Oeste",
-  "detalle": "2 días, sin movimientos",
-  "buscar": "San Sebastián del Oeste, Jalisco",
-  "salida": "2026-10-03T08:00",
-  "regreso": "2026-10-04T18:00",
-  "movimientos": [],
-  "total": 18000,
-  "dias": 2,
-  "mov": 0,
-  "importeMov": 0,
-  "servicio": 18000
- },
- {
-  "grupo": "No está en la tabla",
-  "que": "Colima",
-  "detalle": "2 días, sin movimientos",
-  "buscar": "Colima, Colima",
-  "salida": "2026-10-03T08:00",
-  "regreso": "2026-10-04T18:00",
-  "movimientos": [],
-  "total": 15900,
-  "dias": 2,
-  "mov": 0,
-  "importeMov": 0,
-  "servicio": 15900
- },
- {
-  "grupo": "No está en la tabla",
-  "que": "Comala",
-  "detalle": "2 días, sin movimientos",
-  "buscar": "Comala, Colima",
-  "salida": "2026-10-03T08:00",
-  "regreso": "2026-10-04T18:00",
-  "movimientos": [],
-  "total": 16200,
-  "dias": 2,
-  "mov": 0,
-  "importeMov": 0,
-  "servicio": 16200
- },
- {
-  "grupo": "No está en la tabla",
-  "que": "Cuyutlán",
-  "detalle": "2 días, sin movimientos",
-  "buscar": "Cuyutlán, Colima",
-  "salida": "2026-10-03T08:00",
-  "regreso": "2026-10-04T18:00",
-  "movimientos": [],
-  "total": 18700,
-  "dias": 2,
-  "mov": 0,
-  "importeMov": 0,
-  "servicio": 18700
- },
- {
-  "grupo": "No está en la tabla",
-  "que": "Sahuayo",
-  "detalle": "2 días, sin movimientos",
-  "buscar": "Sahuayo, Michoacán",
-  "salida": "2026-10-03T08:00",
-  "regreso": "2026-10-04T18:00",
-  "movimientos": [],
-  "total": 12100,
-  "dias": 2,
-  "mov": 0,
-  "importeMov": 0,
-  "servicio": 12100
- },
- {
-  "grupo": "No está en la tabla",
-  "que": "Santa Clara del Cobre",
-  "detalle": "2 días, sin movimientos",
-  "buscar": "Santa Clara del Cobre, Michoacán",
-  "salida": "2026-10-03T08:00",
-  "regreso": "2026-10-04T18:00",
-  "movimientos": [],
-  "total": 21200,
-  "dias": 2,
-  "mov": 0,
-  "importeMov": 0,
-  "servicio": 21200
- },
- {
-  "grupo": "No está en la tabla",
-  "que": "Angangueo",
-  "detalle": "2 días, sin movimientos",
-  "buscar": "Angangueo, Michoacán",
-  "salida": "2026-10-03T08:00",
-  "regreso": "2026-10-04T18:00",
-  "movimientos": [],
-  "total": 23000,
-  "dias": 2,
-  "mov": 0,
-  "importeMov": 0,
-  "servicio": 23000
- },
- {
-  "grupo": "No está en la tabla",
-  "que": "Aguascalientes",
-  "detalle": "2 días, sin movimientos",
-  "buscar": "Aguascalientes, Aguascalientes",
-  "salida": "2026-10-03T08:00",
-  "regreso": "2026-10-04T18:00",
-  "movimientos": [],
-  "total": 16000,
-  "dias": 2,
-  "mov": 0,
-  "importeMov": 0,
-  "servicio": 16000
- },
- {
-  "grupo": "No está en la tabla",
-  "que": "Querétaro",
-  "detalle": "2 días, sin movimientos",
-  "buscar": "Querétaro, Querétaro",
-  "salida": "2026-10-03T08:00",
-  "regreso": "2026-10-04T18:00",
-  "movimientos": [],
+  "regreso": "2026-10-05T18:00",
+  "movimientos": [
+   {
+    "horaInicio": "09:00",
+    "horaFin": "15:00"
+   },
+   {
+    "horaInicio": "09:00",
+    "horaFin": "15:00"
+   }
+  ],
+  "idUsado": "ChIJSa0Wg3CmJoQRHo2jEJAdPRk",
   "total": 21900,
-  "dias": 2,
-  "mov": 0,
-  "importeMov": 0,
-  "servicio": 21900
+  "servicio": 15900,
+  "importeMov": 6000,
+  "diasMov": 2
  },
  {
   "grupo": "No está en la tabla",
-  "que": "Bernal",
-  "detalle": "2 días, sin movimientos",
-  "buscar": "Bernal, Querétaro",
-  "salida": "2026-10-03T08:00",
-  "regreso": "2026-10-04T18:00",
-  "movimientos": [],
-  "total": 24400,
-  "dias": 2,
-  "mov": 0,
-  "importeMov": 0,
-  "servicio": 24400
- },
- {
-  "grupo": "No está en la tabla",
-  "que": "Tequisquiapan",
-  "detalle": "2 días, sin movimientos",
-  "buscar": "Tequisquiapan, Querétaro",
-  "salida": "2026-10-03T08:00",
-  "regreso": "2026-10-04T18:00",
-  "movimientos": [],
-  "total": 24500,
-  "dias": 2,
-  "mov": 0,
-  "importeMov": 0,
-  "servicio": 24500
- },
- {
-  "grupo": "No está en la tabla",
-  "que": "Dolores Hidalgo",
-  "detalle": "2 días, sin movimientos",
-  "buscar": "Dolores Hidalgo, Guanajuato",
-  "salida": "2026-10-03T08:00",
-  "regreso": "2026-10-04T18:00",
-  "movimientos": [],
-  "total": 20600,
-  "dias": 2,
-  "mov": 0,
-  "importeMov": 0,
-  "servicio": 20600
- },
- {
-  "grupo": "No está en la tabla",
-  "que": "San Blas",
-  "detalle": "2 días, sin movimientos",
-  "buscar": "San Blas, Nayarit",
-  "salida": "2026-10-03T08:00",
-  "regreso": "2026-10-04T18:00",
-  "movimientos": [],
-  "total": 19000,
-  "dias": 2,
-  "mov": 0,
-  "importeMov": 0,
-  "servicio": 19000
- },
- {
-  "grupo": "No está en la tabla",
-  "que": "Toluca",
-  "detalle": "2 días, sin movimientos",
-  "buscar": "Toluca, Estado de México",
-  "salida": "2026-10-03T08:00",
-  "regreso": "2026-10-04T18:00",
-  "movimientos": [],
-  "total": 32000,
-  "dias": 2,
-  "mov": 0,
-  "importeMov": 0,
-  "servicio": 32000
- },
- {
-  "grupo": "No está en la tabla",
-  "que": "Teotihuacán",
-  "detalle": "2 días, sin movimientos",
-  "buscar": "Teotihuacán, Estado de México",
-  "salida": "2026-10-03T08:00",
-  "regreso": "2026-10-04T18:00",
-  "movimientos": [],
-  "total": 30500,
-  "dias": 2,
-  "mov": 0,
-  "importeMov": 0,
-  "servicio": 30500
- },
- {
-  "grupo": "No está en la tabla",
-  "que": "Cuernavaca",
-  "detalle": "2 días, sin movimientos",
-  "buscar": "Cuernavaca, Morelos",
-  "salida": "2026-10-03T08:00",
-  "regreso": "2026-10-04T18:00",
-  "movimientos": [],
-  "total": 33000,
-  "dias": 2,
-  "mov": 0,
-  "importeMov": 0,
-  "servicio": 33000
- },
- {
-  "grupo": "No está en la tabla",
-  "que": "Taxco",
-  "detalle": "2 días, sin movimientos",
-  "buscar": "Taxco, Guerrero",
-  "salida": "2026-10-03T08:00",
-  "regreso": "2026-10-04T18:00",
-  "movimientos": [],
-  "total": 33400,
-  "dias": 2,
-  "mov": 0,
-  "importeMov": 0,
-  "servicio": 33400
- },
- {
-  "grupo": "No está en la tabla",
-  "que": "San Luis Potosí",
-  "detalle": "2 días, sin movimientos",
-  "buscar": "San Luis Potosí, San Luis Potosí",
-  "salida": "2026-10-03T08:00",
-  "regreso": "2026-10-04T18:00",
-  "movimientos": [],
-  "total": 21000,
-  "dias": 2,
-  "mov": 0,
-  "importeMov": 0,
-  "servicio": 21000
- },
- {
-  "grupo": "No está en la tabla",
-  "que": "Monterrey",
-  "detalle": "2 días, sin movimientos",
-  "buscar": "Monterrey, Nuevo León",
-  "salida": "2026-10-03T08:00",
-  "regreso": "2026-10-04T18:00",
-  "movimientos": [],
-  "total": 44600,
-  "dias": 2,
-  "mov": 0,
-  "importeMov": 0,
-  "servicio": 44600
- },
- {
-  "grupo": "Está en la tabla, pero así no",
-  "que": "Chapala",
+  "buscar": "San Sebastián del Oeste, Jalisco",
+  "que": "San Sebastián del Oeste",
   "detalle": "solo ida",
-  "buscar": "Chapala, Jalisco",
   "salida": "2026-10-03T08:00",
   "regreso": null,
   "movimientos": [],
-  "total": 4200,
-  "dias": 1,
-  "mov": 0,
+  "idUsado": "ChIJ6_SunGS3JoQRX2hCj0vAFtk",
+  "total": 11700,
+  "servicio": 11700,
   "importeMov": 0,
-  "servicio": 4200
+  "diasMov": 0
  },
  {
-  "grupo": "Está en la tabla, pero así no",
-  "que": "Chapala",
+  "grupo": "No está en la tabla",
+  "buscar": "Colima, Colima",
+  "que": "Colima",
+  "detalle": "5 días con 2 movimientos",
+  "salida": "2026-10-03T08:00",
+  "regreso": "2026-10-07T18:00",
+  "movimientos": [
+   {
+    "horaInicio": "09:00",
+    "horaFin": "15:00"
+   },
+   {
+    "horaInicio": "09:00",
+    "horaFin": "15:00"
+   }
+  ],
+  "idUsado": "ChIJF6JVNFJFJYQR5lX1WvyXtLY",
+  "total": 22900,
+  "servicio": 16900,
+  "importeMov": 6000,
+  "diasMov": 2
+ },
+ {
+  "grupo": "No está en la tabla",
+  "buscar": "Comala, Colima",
+  "que": "Comala",
+  "detalle": "3 días",
+  "salida": "2026-10-03T08:00",
+  "regreso": "2026-10-05T18:00",
+  "movimientos": [],
+  "idUsado": "ChIJY4aVsZtEJYQRHaHemtVYDxc",
+  "total": 16200,
+  "servicio": 16200,
+  "importeMov": 0,
+  "diasMov": 0
+ },
+ {
+  "grupo": "No está en la tabla",
+  "buscar": "Cuyutlán, Colima",
+  "que": "Cuyutlán",
+  "detalle": "6 días",
+  "salida": "2026-10-03T08:00",
+  "regreso": "2026-10-08T18:00",
+  "movimientos": [],
+  "idUsado": "ChIJbej1KHjOOoQRDCWrRYhAtzE",
+  "total": 20700,
+  "servicio": 20700,
+  "importeMov": 0,
+  "diasMov": 0
+ },
+ {
+  "grupo": "No está en la tabla",
+  "buscar": "Sahuayo, Michoacán",
+  "que": "Sahuayo",
   "detalle": "1 día con 2 movimientos",
-  "buscar": "Chapala, Jalisco",
   "salida": "2026-10-03T08:00",
   "regreso": "2026-10-03T18:00",
   "movimientos": [
@@ -380,50 +184,77 @@
     "horaFin": "15:00"
    }
   ],
-  "total": 9500,
-  "dias": 1,
-  "mov": 1,
+  "idUsado": "ChIJvxBryVLjLoQRHPLvBIleytI",
+  "total": 15100,
+  "servicio": 12100,
   "importeMov": 3000,
-  "servicio": 6500
+  "diasMov": 1
  },
  {
-  "grupo": "Está en la tabla, pero así no",
-  "que": "Tequila",
-  "detalle": "1 día con 1 movimiento",
-  "buscar": "Tequila, Jalisco",
+  "grupo": "No está en la tabla",
+  "buscar": "Santa Clara del Cobre, Michoacán",
+  "que": "Santa Clara del Cobre",
+  "detalle": "4 días con 3 movimientos",
   "salida": "2026-10-03T08:00",
-  "regreso": "2026-10-03T18:00",
+  "regreso": "2026-10-06T18:00",
+  "movimientos": [
+   {
+    "horaInicio": "09:00",
+    "horaFin": "15:00"
+   },
+   {
+    "horaInicio": "09:00",
+    "horaFin": "15:00"
+   },
+   {
+    "horaInicio": "09:00",
+    "horaFin": "15:00"
+   }
+  ],
+  "idUsado": "ChIJ16jLgWCMLYQRaUC10DIofX4",
+  "total": 30200,
+  "servicio": 21200,
+  "importeMov": 9000,
+  "diasMov": 3
+ },
+ {
+  "grupo": "No está en la tabla",
+  "buscar": "Angangueo, Michoacán",
+  "que": "Angangueo",
+  "detalle": "3 días con 1 movimiento",
+  "salida": "2026-10-03T08:00",
+  "regreso": "2026-10-05T18:00",
   "movimientos": [
    {
     "horaInicio": "09:00",
     "horaFin": "15:00"
    }
   ],
-  "total": 10000,
-  "dias": 1,
-  "mov": 1,
+  "idUsado": "ChIJZ61eca2_0oURr-SgpuZlP28",
+  "total": 26000,
+  "servicio": 23000,
   "importeMov": 3000,
-  "servicio": 7000
+  "diasMov": 1
  },
  {
-  "grupo": "Está en la tabla, pero así no",
-  "que": "Tequila",
-  "detalle": "3 días",
-  "buscar": "Tequila, Jalisco",
+  "grupo": "No está en la tabla",
+  "buscar": "Aguascalientes, Aguascalientes",
+  "que": "Aguascalientes",
+  "detalle": "solo ida",
   "salida": "2026-10-03T08:00",
-  "regreso": "2026-10-05T18:00",
+  "regreso": null,
   "movimientos": [],
-  "total": 9000,
-  "dias": 3,
-  "mov": 0,
+  "idUsado": "ChIJ-9nkOhTsKYQRIFKcZ3hpAQQ",
+  "total": 10400,
+  "servicio": 10400,
   "importeMov": 0,
-  "servicio": 9000
+  "diasMov": 0
  },
  {
-  "grupo": "Está en la tabla, pero así no",
-  "que": "Tapalpa",
+  "grupo": "No está en la tabla",
+  "buscar": "Querétaro, Querétaro",
+  "que": "Querétaro",
   "detalle": "4 días con 2 movimientos",
-  "buscar": "Tapalpa, Jalisco",
   "salida": "2026-10-03T08:00",
   "regreso": "2026-10-06T18:00",
   "movimientos": [
@@ -436,17 +267,31 @@
     "horaFin": "15:00"
    }
   ],
-  "total": 20500,
-  "dias": 4,
-  "mov": 2,
+  "idUsado": "ChIJVZJb3I9b04URL4MbVqqUsJc",
+  "total": 27900,
+  "servicio": 21900,
   "importeMov": 6000,
-  "servicio": 14500
+  "diasMov": 2
  },
  {
-  "grupo": "Está en la tabla, pero así no",
-  "que": "Mazamitla",
+  "grupo": "No está en la tabla",
+  "buscar": "Bernal, Querétaro",
+  "que": "Bernal",
+  "detalle": "3 días",
+  "salida": "2026-10-03T08:00",
+  "regreso": "2026-10-05T18:00",
+  "movimientos": [],
+  "idUsado": "ChIJV-kw5d9-04URLHhi-YRIH6o",
+  "total": 24400,
+  "servicio": 24400,
+  "importeMov": 0,
+  "diasMov": 0
+ },
+ {
+  "grupo": "No está en la tabla",
+  "buscar": "Tequisquiapan, Querétaro",
+  "que": "Tequisquiapan",
   "detalle": "5 días con 3 movimientos",
-  "buscar": "Mazamitla, Jalisco",
   "salida": "2026-10-03T08:00",
   "regreso": "2026-10-07T18:00",
   "movimientos": [
@@ -463,107 +308,19 @@
     "horaFin": "15:00"
    }
   ],
-  "total": 25000,
-  "dias": 5,
-  "mov": 3,
+  "idUsado": "ChIJq0UQdwOc04UR_3-xOpOSwz8",
+  "total": 34500,
+  "servicio": 25500,
   "importeMov": 9000,
-  "servicio": 16000
+  "diasMov": 3
  },
  {
-  "grupo": "Está en la tabla, pero así no",
-  "que": "San Juan de los Lagos",
-  "detalle": "solo ida",
-  "buscar": "San Juan de los Lagos, Jalisco",
+  "grupo": "No está en la tabla",
+  "buscar": "Dolores Hidalgo, Guanajuato",
+  "que": "Dolores Hidalgo",
+  "detalle": "2 días con 2 movimientos",
   "salida": "2026-10-03T08:00",
-  "regreso": null,
-  "movimientos": [],
-  "total": 9100,
-  "dias": 1,
-  "mov": 0,
-  "importeMov": 0,
-  "servicio": 9100
- },
- {
-  "grupo": "Está en la tabla, pero así no",
-  "que": "Talpa de Allende",
-  "detalle": "3 días con 1 movimiento",
-  "buscar": "Talpa de Allende, Jalisco",
-  "salida": "2026-10-03T08:00",
-  "regreso": "2026-10-05T18:00",
-  "movimientos": [
-   {
-    "horaInicio": "09:00",
-    "horaFin": "15:00"
-   }
-  ],
-  "total": 21000,
-  "dias": 3,
-  "mov": 1,
-  "importeMov": 3000,
-  "servicio": 18000
- },
- {
-  "grupo": "Está en la tabla, pero así no",
-  "que": "Tepic",
-  "detalle": "solo ida",
-  "buscar": "Tepic, Nayarit",
-  "salida": "2026-10-03T08:00",
-  "regreso": null,
-  "movimientos": [],
-  "total": 10900,
-  "dias": 1,
-  "mov": 0,
-  "importeMov": 0,
-  "servicio": 10900
- },
- {
-  "grupo": "Está en la tabla, pero así no",
-  "que": "León",
-  "detalle": "1 día",
-  "buscar": "León, Guanajuato",
-  "salida": "2026-10-03T08:00",
-  "regreso": "2026-10-03T18:00",
-  "movimientos": [],
-  "total": 17600,
-  "dias": 1,
-  "mov": 0,
-  "importeMov": 0,
-  "servicio": 17600
- },
- {
-  "grupo": "Está en la tabla, pero así no",
-  "que": "Guanajuato",
-  "detalle": "4 días con 3 movimientos",
-  "buscar": "Guanajuato, Guanajuato",
-  "salida": "2026-10-03T08:00",
-  "regreso": "2026-10-06T18:00",
-  "movimientos": [
-   {
-    "horaInicio": "09:00",
-    "horaFin": "15:00"
-   },
-   {
-    "horaInicio": "09:00",
-    "horaFin": "15:00"
-   },
-   {
-    "horaInicio": "09:00",
-    "horaFin": "15:00"
-   }
-  ],
-  "total": 35000,
-  "dias": 4,
-  "mov": 3,
-  "importeMov": 9000,
-  "servicio": 26000
- },
- {
-  "grupo": "Está en la tabla, pero así no",
-  "que": "Morelia",
-  "detalle": "3 días con 2 movimientos",
-  "buscar": "Morelia, Michoacán",
-  "salida": "2026-10-03T08:00",
-  "regreso": "2026-10-05T18:00",
+  "regreso": "2026-10-04T18:00",
   "movimientos": [
    {
     "horaInicio": "09:00",
@@ -574,59 +331,444 @@
     "horaFin": "15:00"
    }
   ],
-  "total": 25000,
-  "dias": 3,
-  "mov": 2,
+  "idUsado": "ChIJkdpFewM8K4QRQknO4_RDuTE",
+  "total": 26600,
+  "servicio": 20600,
   "importeMov": 6000,
-  "servicio": 19000
+  "diasMov": 2
  },
  {
-  "grupo": "Está en la tabla, pero así no",
-  "que": "Puerto Vallarta",
+  "grupo": "No está en la tabla",
+  "buscar": "San Blas, Nayarit",
+  "que": "San Blas",
   "detalle": "7 días",
-  "buscar": "Puerto Vallarta, Jalisco",
   "salida": "2026-10-03T08:00",
   "regreso": "2026-10-09T18:00",
   "movimientos": [],
+  "idUsado": "ChIJo0obSje4IIQR9c24KtR0IX0",
   "total": 24000,
-  "dias": 7,
-  "mov": 0,
+  "servicio": 24000,
   "importeMov": 0,
-  "servicio": 24000
+  "diasMov": 0
  },
  {
-  "grupo": "Está en la tabla, pero así no",
-  "que": "Puerto Vallarta",
+  "grupo": "No está en la tabla",
+  "buscar": "Toluca, Estado de México",
+  "que": "Toluca",
+  "detalle": "5 días con 4 movimientos",
+  "salida": "2026-10-03T08:00",
+  "regreso": "2026-10-07T18:00",
+  "movimientos": [
+   {
+    "horaInicio": "09:00",
+    "horaFin": "15:00"
+   },
+   {
+    "horaInicio": "09:00",
+    "horaFin": "15:00"
+   },
+   {
+    "horaInicio": "09:00",
+    "horaFin": "15:00"
+   },
+   {
+    "horaInicio": "09:00",
+    "horaFin": "15:00"
+   }
+  ],
+  "idUsado": "ChIJuetQKomJzYURxAgCVdVKP60",
+  "total": 45000,
+  "servicio": 33000,
+  "importeMov": 12000,
+  "diasMov": 4
+ },
+ {
+  "grupo": "No está en la tabla",
+  "buscar": "Teotihuacán, Estado de México",
+  "que": "Teotihuacán",
+  "detalle": "3 días con 2 movimientos",
+  "salida": "2026-10-03T08:00",
+  "regreso": "2026-10-05T18:00",
+  "movimientos": [
+   {
+    "horaInicio": "09:00",
+    "horaFin": "15:00"
+   },
+   {
+    "horaInicio": "09:00",
+    "horaFin": "15:00"
+   }
+  ],
+  "idUsado": "ChIJyd0BTvnq0YUR2mRxFCPVfsc",
+  "total": 36500,
+  "servicio": 30500,
+  "importeMov": 6000,
+  "diasMov": 2
+ },
+ {
+  "grupo": "No está en la tabla",
+  "buscar": "Cuernavaca, Morelos",
+  "que": "Cuernavaca",
+  "detalle": "6 días",
+  "salida": "2026-10-03T08:00",
+  "regreso": "2026-10-08T18:00",
+  "movimientos": [],
+  "idUsado": "ChIJra8im0nezYURoZC3ubW8tsk",
+  "total": 35000,
+  "servicio": 35000,
+  "importeMov": 0,
+  "diasMov": 0
+ },
+ {
+  "grupo": "No está en la tabla",
+  "buscar": "Taxco, Guerrero",
+  "que": "Taxco",
+  "detalle": "4 días con 3 movimientos",
+  "salida": "2026-10-03T08:00",
+  "regreso": "2026-10-06T18:00",
+  "movimientos": [
+   {
+    "horaInicio": "09:00",
+    "horaFin": "15:00"
+   },
+   {
+    "horaInicio": "09:00",
+    "horaFin": "15:00"
+   },
+   {
+    "horaInicio": "09:00",
+    "horaFin": "15:00"
+   }
+  ],
+  "idUsado": "ChIJC6AxgDZLzIURIFGj5QxoXsI",
+  "total": 42400,
+  "servicio": 33400,
+  "importeMov": 9000,
+  "diasMov": 3
+ },
+ {
+  "grupo": "No está en la tabla",
+  "buscar": "San Luis Potosí, San Luis Potosí",
+  "que": "San Luis Potosí",
   "detalle": "solo ida",
-  "buscar": "Puerto Vallarta, Jalisco",
   "salida": "2026-10-03T08:00",
   "regreso": null,
   "movimientos": [],
-  "total": 12300,
-  "dias": 1,
-  "mov": 0,
+  "idUsado": "ChIJefusBQCiKoQRV4Lhrynu0g4",
+  "total": 13600,
+  "servicio": 13600,
   "importeMov": 0,
-  "servicio": 12300
+  "diasMov": 0
  },
  {
-  "grupo": "Está en la tabla, pero así no",
+  "grupo": "No está en la tabla",
+  "buscar": "Monterrey, Nuevo León",
+  "que": "Monterrey",
+  "detalle": "8 días con 4 movimientos",
+  "salida": "2026-10-03T08:00",
+  "regreso": "2026-10-10T18:00",
+  "movimientos": [
+   {
+    "horaInicio": "09:00",
+    "horaFin": "15:00"
+   },
+   {
+    "horaInicio": "09:00",
+    "horaFin": "15:00"
+   },
+   {
+    "horaInicio": "09:00",
+    "horaFin": "15:00"
+   },
+   {
+    "horaInicio": "09:00",
+    "horaFin": "15:00"
+   }
+  ],
+  "idUsado": "ChIJ9fg3tDGVYoYRlJjIasrT06M",
+  "total": 60600,
+  "servicio": 48600,
+  "importeMov": 12000,
+  "diasMov": 4
+ },
+ {
+  "grupo": "Está, pero así no",
+  "buscar": "Chapala, Jalisco",
+  "que": "Chapala",
+  "detalle": "solo ida",
+  "salida": "2026-10-03T08:00",
+  "regreso": null,
+  "movimientos": [],
+  "idUsado": "ChIJt0wfd7FAL4QRU3_YZxtywXM",
+  "total": 4200,
+  "servicio": 4200,
+  "importeMov": 0,
+  "diasMov": 0
+ },
+ {
+  "grupo": "Está, pero así no",
+  "buscar": "Chapala, Jalisco",
+  "que": "Chapala",
+  "detalle": "1 día con 2 movimientos",
+  "salida": "2026-10-03T08:00",
+  "regreso": "2026-10-03T18:00",
+  "movimientos": [
+   {
+    "horaInicio": "09:00",
+    "horaFin": "15:00"
+   },
+   {
+    "horaInicio": "09:00",
+    "horaFin": "15:00"
+   }
+  ],
+  "idUsado": "ChIJt0wfd7FAL4QRU3_YZxtywXM",
+  "total": 9500,
+  "servicio": 6500,
+  "importeMov": 3000,
+  "diasMov": 1
+ },
+ {
+  "grupo": "Está, pero así no",
+  "buscar": "Tequila, Jalisco",
+  "que": "Tequila",
+  "detalle": "1 día con 1 movimiento",
+  "salida": "2026-10-03T08:00",
+  "regreso": "2026-10-03T18:00",
+  "movimientos": [
+   {
+    "horaInicio": "09:00",
+    "horaFin": "15:00"
+   }
+  ],
+  "idUsado": "ChIJb7KBK9oUJoQREk9oc47Nwjg",
+  "total": 10000,
+  "servicio": 7000,
+  "importeMov": 3000,
+  "diasMov": 1
+ },
+ {
+  "grupo": "Está, pero así no",
+  "buscar": "Tequila, Jalisco",
+  "que": "Tequila",
+  "detalle": "3 días",
+  "salida": "2026-10-03T08:00",
+  "regreso": "2026-10-05T18:00",
+  "movimientos": [],
+  "idUsado": "ChIJb7KBK9oUJoQREk9oc47Nwjg",
+  "total": 9000,
+  "servicio": 9000,
+  "importeMov": 0,
+  "diasMov": 0
+ },
+ {
+  "grupo": "Está, pero así no",
+  "buscar": "Tapalpa, Jalisco",
+  "que": "Tapalpa",
+  "detalle": "4 días con 2 movimientos",
+  "salida": "2026-10-03T08:00",
+  "regreso": "2026-10-06T18:00",
+  "movimientos": [
+   {
+    "horaInicio": "09:00",
+    "horaFin": "15:00"
+   },
+   {
+    "horaInicio": "09:00",
+    "horaFin": "15:00"
+   }
+  ],
+  "idUsado": "ChIJpQyj5O-aJYQRan-DbqJ6RhU",
+  "total": 20500,
+  "servicio": 14500,
+  "importeMov": 6000,
+  "diasMov": 2
+ },
+ {
+  "grupo": "Está, pero así no",
+  "buscar": "Mazamitla, Jalisco",
+  "que": "Mazamitla",
+  "detalle": "5 días con 3 movimientos",
+  "salida": "2026-10-03T08:00",
+  "regreso": "2026-10-07T18:00",
+  "movimientos": [
+   {
+    "horaInicio": "09:00",
+    "horaFin": "15:00"
+   },
+   {
+    "horaInicio": "09:00",
+    "horaFin": "15:00"
+   },
+   {
+    "horaInicio": "09:00",
+    "horaFin": "15:00"
+   }
+  ],
+  "idUsado": "ChIJ-7FrncIIL4QRBcASqjnW4LA",
+  "total": 25000,
+  "servicio": 16000,
+  "importeMov": 9000,
+  "diasMov": 3
+ },
+ {
+  "grupo": "Está, pero así no",
+  "buscar": "San Juan de los Lagos, Jalisco",
+  "que": "San Juan de los Lagos",
+  "detalle": "solo ida",
+  "salida": "2026-10-03T08:00",
+  "regreso": null,
+  "movimientos": [],
+  "idUsado": "ChIJnXKv3ptxKYQRGCyb02RTCvI",
+  "total": 9100,
+  "servicio": 9100,
+  "importeMov": 0,
+  "diasMov": 0
+ },
+ {
+  "grupo": "Está, pero así no",
+  "buscar": "Talpa de Allende, Jalisco",
+  "que": "Talpa de Allende",
+  "detalle": "3 días con 1 movimiento",
+  "salida": "2026-10-03T08:00",
+  "regreso": "2026-10-05T18:00",
+  "movimientos": [
+   {
+    "horaInicio": "09:00",
+    "horaFin": "15:00"
+   }
+  ],
+  "idUsado": "ChIJgUKTZ5kcJIQRdVB8O2TgW7w",
+  "total": 21000,
+  "servicio": 18000,
+  "importeMov": 3000,
+  "diasMov": 1
+ },
+ {
+  "grupo": "Está, pero así no",
+  "buscar": "Tepic, Nayarit",
+  "que": "Tepic",
+  "detalle": "solo ida",
+  "salida": "2026-10-03T08:00",
+  "regreso": null,
+  "movimientos": [],
+  "idUsado": "ChIJ2889idg1J4QReS0M9EVGeIM",
+  "total": 10900,
+  "servicio": 10900,
+  "importeMov": 0,
+  "diasMov": 0
+ },
+ {
+  "grupo": "Está, pero así no",
+  "buscar": "León, Guanajuato",
+  "que": "León",
+  "detalle": "1 día",
+  "salida": "2026-10-03T08:00",
+  "regreso": "2026-10-03T18:00",
+  "movimientos": [],
+  "idUsado": "ChIJIefm1v--K4QRJ0OlYeyVbWA",
+  "total": 17600,
+  "servicio": 17600,
+  "importeMov": 0,
+  "diasMov": 0
+ },
+ {
+  "grupo": "Está, pero así no",
+  "buscar": "Guanajuato, Guanajuato",
+  "que": "Guanajuato",
+  "detalle": "4 días con 3 movimientos",
+  "salida": "2026-10-03T08:00",
+  "regreso": "2026-10-06T18:00",
+  "movimientos": [
+   {
+    "horaInicio": "09:00",
+    "horaFin": "15:00"
+   },
+   {
+    "horaInicio": "09:00",
+    "horaFin": "15:00"
+   },
+   {
+    "horaInicio": "09:00",
+    "horaFin": "15:00"
+   }
+  ],
+  "idUsado": "ChIJ6_EMi_VzK4QRdB5XZdGw9CU",
+  "total": 35000,
+  "servicio": 26000,
+  "importeMov": 9000,
+  "diasMov": 3
+ },
+ {
+  "grupo": "Está, pero así no",
+  "buscar": "Morelia, Michoacán",
+  "que": "Morelia",
+  "detalle": "3 días con 2 movimientos",
+  "salida": "2026-10-03T08:00",
+  "regreso": "2026-10-05T18:00",
+  "movimientos": [
+   {
+    "horaInicio": "09:00",
+    "horaFin": "15:00"
+   },
+   {
+    "horaInicio": "09:00",
+    "horaFin": "15:00"
+   }
+  ],
+  "idUsado": "ChIJ46edsqILLYQRIIacZ3hpAQQ",
+  "total": 25000,
+  "servicio": 19000,
+  "importeMov": 6000,
+  "diasMov": 2
+ },
+ {
+  "grupo": "Está, pero así no",
+  "buscar": "Puerto Vallarta, Jalisco",
+  "que": "Puerto Vallarta",
+  "detalle": "7 días",
+  "salida": "2026-10-03T08:00",
+  "regreso": "2026-10-09T18:00",
+  "movimientos": [],
+  "idUsado": "ChIJf8hjUGNFIYQRdFK_hZm_z3k",
+  "total": 24000,
+  "servicio": 24000,
+  "importeMov": 0,
+  "diasMov": 0
+ },
+ {
+  "grupo": "Está, pero así no",
+  "buscar": "Puerto Vallarta, Jalisco",
+  "que": "Puerto Vallarta",
+  "detalle": "solo ida",
+  "salida": "2026-10-03T08:00",
+  "regreso": null,
+  "movimientos": [],
+  "idUsado": "ChIJf8hjUGNFIYQRdFK_hZm_z3k",
+  "total": 12300,
+  "servicio": 12300,
+  "importeMov": 0,
+  "diasMov": 0
+ },
+ {
+  "grupo": "Está, pero así no",
+  "buscar": "Sayulita, Nayarit",
   "que": "Sayulita",
   "detalle": "5 días",
-  "buscar": "Sayulita, Nayarit",
   "salida": "2026-10-03T08:00",
   "regreso": "2026-10-07T18:00",
   "movimientos": [],
+  "idUsado": "ChIJjek96mIWIYQRTOjR5sHAMxQ",
   "total": 19000,
-  "dias": 5,
-  "mov": 0,
+  "servicio": 19000,
   "importeMov": 0,
-  "servicio": 19000
+  "diasMov": 0
  },
  {
-  "grupo": "Está en la tabla, pero así no",
+  "grupo": "Está, pero así no",
+  "buscar": "Manzanillo, Colima",
   "que": "Manzanillo",
   "detalle": "6 días con 2 movimientos",
-  "buscar": "Manzanillo, Colima",
   "salida": "2026-10-03T08:00",
   "regreso": "2026-10-08T18:00",
   "movimientos": [
@@ -639,31 +781,31 @@
     "horaFin": "15:00"
    }
   ],
+  "idUsado": "ChIJGT67FzTUJIQRSw1156rps90",
   "total": 26500,
-  "dias": 6,
-  "mov": 2,
+  "servicio": 20500,
   "importeMov": 6000,
-  "servicio": 20500
+  "diasMov": 2
  },
  {
-  "grupo": "Está en la tabla, pero así no",
+  "grupo": "Está, pero así no",
+  "buscar": "San Miguel de Allende, Guanajuato",
   "que": "San Miguel de Allende",
   "detalle": "3 días",
-  "buscar": "San Miguel de Allende, Guanajuato",
   "salida": "2026-10-03T08:00",
   "regreso": "2026-10-05T18:00",
   "movimientos": [],
+  "idUsado": "ChIJD7xxmK9RK4QRpLAHHQMBMWU",
   "total": 26500,
-  "dias": 3,
-  "mov": 0,
+  "servicio": 26500,
   "importeMov": 0,
-  "servicio": 26500
+  "diasMov": 0
  },
  {
-  "grupo": "Está en la tabla, pero así no",
+  "grupo": "Está, pero así no",
+  "buscar": "Zacatecas, Zacatecas",
   "que": "Zacatecas",
   "detalle": "4 días con 3 movimientos",
-  "buscar": "Zacatecas, Zacatecas",
   "salida": "2026-10-03T08:00",
   "regreso": "2026-10-06T18:00",
   "movimientos": [
@@ -680,31 +822,31 @@
     "horaFin": "15:00"
    }
   ],
+  "idUsado": "ChIJVzPDP3pOgoYRwRNCCV-rA8w",
   "total": 34000,
-  "dias": 4,
-  "mov": 3,
+  "servicio": 25000,
   "importeMov": 9000,
-  "servicio": 25000
+  "diasMov": 3
  },
  {
-  "grupo": "Está en la tabla, pero así no",
+  "grupo": "Está, pero así no",
+  "buscar": "Mazatlán, Sinaloa",
   "que": "Mazatlán",
   "detalle": "8 días",
-  "buscar": "Mazatlán, Sinaloa",
   "salida": "2026-10-03T08:00",
   "regreso": "2026-10-10T18:00",
   "movimientos": [],
+  "idUsado": "ChIJwTcYaEFTn4YRsnI88arEpGI",
   "total": 32000,
-  "dias": 8,
-  "mov": 0,
+  "servicio": 32000,
   "importeMov": 0,
-  "servicio": 32000
+  "diasMov": 0
  },
  {
-  "grupo": "Está en la tabla, pero así no",
+  "grupo": "Está, pero así no",
+  "buscar": "Ciudad de México",
   "que": "Ciudad de México",
   "detalle": "5 días con 4 movimientos",
-  "buscar": "Ciudad de México",
   "salida": "2026-10-03T08:00",
   "regreso": "2026-10-07T18:00",
   "movimientos": [
@@ -725,31 +867,31 @@
     "horaFin": "15:00"
    }
   ],
+  "idUsado": "ChIJB3UJ2yYAzoURQeheJnYQBlQ",
   "total": 39000,
-  "dias": 5,
-  "mov": 4,
+  "servicio": 27000,
   "importeMov": 12000,
-  "servicio": 27000
+  "diasMov": 4
  },
  {
-  "grupo": "Está en la tabla, pero así no",
+  "grupo": "Está, pero así no",
+  "buscar": "Ciudad de México",
   "que": "Ciudad de México",
   "detalle": "solo ida",
-  "buscar": "Ciudad de México",
   "salida": "2026-10-03T08:00",
   "regreso": null,
   "movimientos": [],
+  "idUsado": "ChIJB3UJ2yYAzoURQeheJnYQBlQ",
   "total": 14300,
-  "dias": 1,
-  "mov": 0,
+  "servicio": 14300,
   "importeMov": 0,
-  "servicio": 14300
+  "diasMov": 0
  },
  {
-  "grupo": "Está en la tabla, pero así no",
+  "grupo": "Está, pero así no",
+  "buscar": "Puebla, Puebla",
   "que": "Puebla",
   "detalle": "6 días con 3 movimientos",
-  "buscar": "Puebla, Puebla",
   "salida": "2026-10-03T08:00",
   "regreso": "2026-10-08T18:00",
   "movimientos": [
@@ -766,45 +908,45 @@
     "horaFin": "15:00"
    }
   ],
+  "idUsado": "ChIJO3q8Xr3Az4URla2U5B1Gpkg",
   "total": 53500,
-  "dias": 6,
-  "mov": 3,
+  "servicio": 44500,
   "importeMov": 9000,
-  "servicio": 44500
+  "diasMov": 3
  },
  {
-  "grupo": "Está en la tabla, pero así no",
+  "grupo": "Está, pero así no",
+  "buscar": "Acapulco, Guerrero",
   "que": "Acapulco",
   "detalle": "7 días",
-  "buscar": "Acapulco, Guerrero",
   "salida": "2026-10-03T08:00",
   "regreso": "2026-10-09T18:00",
   "movimientos": [],
+  "idUsado": "ChIJyVDOroVXyoUR46SQivfYAZg",
   "total": 66000,
-  "dias": 7,
-  "mov": 0,
+  "servicio": 66000,
   "importeMov": 0,
-  "servicio": 66000
+  "diasMov": 0
  },
  {
-  "grupo": "Está en la tabla, pero así no",
+  "grupo": "Está, pero así no",
+  "buscar": "Cancún, Quintana Roo",
   "que": "Cancún",
   "detalle": "20 días",
-  "buscar": "Cancún, Quintana Roo",
   "salida": "2026-10-03T08:00",
   "regreso": "2026-10-22T18:00",
   "movimientos": [],
+  "idUsado": "ChIJ21P2rgUrTI8Ris1fYjy3Ms4",
   "total": 157000,
-  "dias": 20,
-  "mov": 0,
+  "servicio": 157000,
   "importeMov": 0,
-  "servicio": 157000
+  "diasMov": 0
  },
  {
-  "grupo": "Está en la tabla, pero así no",
+  "grupo": "Está, pero así no",
+  "buscar": "Barrancas del Cobre, Chihuahua",
   "que": "Barrancas del Cobre",
   "detalle": "10 días con 5 movimientos",
-  "buscar": "Barrancas del Cobre, Chihuahua",
   "salida": "2026-10-03T08:00",
   "regreso": "2026-10-12T18:00",
   "movimientos": [
@@ -829,10 +971,10 @@
     "horaFin": "15:00"
    }
   ],
+  "idUsado": "EjVCYXJyYW5jYXMgZGVsIENvYnJlLCBKdWFuIEVzY3V0aWEsIENoaWh1YWh1YSwgTcOpeGljbyIuKiwKFAoSCd92c_qvQ-qGEbf-CxORKd6bEhQKEgnVYZz2r0PqhhHKroN8FoAltg",
   "total": 84000,
-  "dias": 10,
-  "mov": 5,
+  "servicio": 84000,
   "importeMov": 0,
-  "servicio": 84000
+  "diasMov": 5
  }
 ]
