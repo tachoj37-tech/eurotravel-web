@@ -1,0 +1,522 @@
+[
+ {
+  "desde": "Ocotlán",
+  "destino": "Puerto Vallarta",
+  "detalle": "6 días con 2 movimientos",
+  "dias": 6,
+  "movs": 2,
+  "soloIda": false,
+  "origenTexto": "Ocotlán, Jalisco, México",
+  "total": 33000
+ },
+ {
+  "desde": "Jamay",
+  "destino": "Mazatlán",
+  "detalle": "5 días con 1 movimiento",
+  "dias": 5,
+  "movs": 1,
+  "soloIda": false,
+  "origenTexto": "Jamay, Jalisco, México",
+  "total": 38000
+ },
+ {
+  "desde": "Poncitlán",
+  "destino": "Chapala",
+  "detalle": "1 día",
+  "dias": 1,
+  "movs": 0,
+  "soloIda": false,
+  "origenTexto": "Poncitlán, Jalisco, México",
+  "total": 11000
+ },
+ {
+  "desde": "La Barca",
+  "destino": "Tequila",
+  "detalle": "2 días con 1 movimiento",
+  "dias": 2,
+  "movs": 1,
+  "soloIda": false,
+  "origenTexto": "La Barca, Jalisco, México",
+  "total": 15000
+ },
+ {
+  "desde": "Tototlán",
+  "destino": "Guanajuato",
+  "detalle": "4 días con 2 movimientos",
+  "dias": 4,
+  "movs": 2,
+  "soloIda": false,
+  "origenTexto": "Tototlán, Jalisco, México",
+  "total": 35500
+ },
+ {
+  "desde": "Zapotlán del Rey",
+  "destino": "Tapalpa",
+  "detalle": "3 días",
+  "dias": 3,
+  "movs": 0,
+  "soloIda": false,
+  "origenTexto": "Zapotlán del Rey, Jalisco, México",
+  "total": 18500
+ },
+ {
+  "desde": "Ocotlán",
+  "destino": "Zacatecas",
+  "detalle": "5 días con 3 movimientos",
+  "dias": 5,
+  "movs": 3,
+  "soloIda": false,
+  "origenTexto": "Ocotlán, Jalisco, México",
+  "total": 39000
+ },
+ {
+  "desde": "Jamay",
+  "destino": "Manzanillo",
+  "detalle": "6 días",
+  "dias": 6,
+  "movs": 0,
+  "soloIda": false,
+  "origenTexto": "Jamay, Jalisco, México",
+  "total": 25500
+ },
+ {
+  "desde": "Ocotlán",
+  "destino": "Ciudad de México",
+  "detalle": "5 días con 4 movimientos",
+  "dias": 5,
+  "movs": 4,
+  "soloIda": false,
+  "origenTexto": "Ocotlán, Jalisco, México",
+  "total": 39000
+ },
+ {
+  "desde": "La Barca",
+  "destino": "Morelia",
+  "detalle": "3 días con 1 movimiento",
+  "dias": 3,
+  "movs": 1,
+  "soloIda": false,
+  "origenTexto": "La Barca, Jalisco, México",
+  "total": 21500
+ },
+ {
+  "desde": "Poncitlán",
+  "destino": "Mazamitla",
+  "detalle": "4 días con 2 movimientos",
+  "dias": 4,
+  "movs": 2,
+  "soloIda": false,
+  "origenTexto": "Poncitlán, Jalisco, México",
+  "total": 25000
+ },
+ {
+  "desde": "Ocotlán",
+  "destino": "Barrancas del Cobre",
+  "detalle": "10 días",
+  "dias": 10,
+  "movs": 0,
+  "soloIda": false,
+  "origenTexto": "Ocotlán, Jalisco, México",
+  "total": 89000
+ },
+ {
+  "desde": "Jamay",
+  "destino": "Cancún",
+  "detalle": "20 días",
+  "dias": 20,
+  "movs": 0,
+  "soloIda": false,
+  "origenTexto": "Jamay, Jalisco, México",
+  "total": 157000
+ },
+ {
+  "desde": "Tototlán",
+  "destino": "San Miguel de Allende",
+  "detalle": "4 días con 2 movimientos",
+  "dias": 4,
+  "movs": 2,
+  "soloIda": false,
+  "origenTexto": "Tototlán, Jalisco, México",
+  "total": 34500
+ },
+ {
+  "desde": "Ocotlán",
+  "destino": "Real de Catorce",
+  "detalle": "6 días con 1 movimiento",
+  "dias": 6,
+  "movs": 1,
+  "soloIda": false,
+  "origenTexto": "Ocotlán, Jalisco, México",
+  "total": 43500
+ },
+ {
+  "desde": "La Barca",
+  "destino": "Huasteca Potosina",
+  "detalle": "5 días con 5 movimientos",
+  "dias": 5,
+  "movs": 5,
+  "soloIda": false,
+  "origenTexto": "La Barca, Jalisco, México",
+  "total": 48500
+ },
+ {
+  "desde": "Poncitlán",
+  "destino": "Sayulita",
+  "detalle": "5 días",
+  "dias": 5,
+  "movs": 0,
+  "soloIda": false,
+  "origenTexto": "Poncitlán, Jalisco, México",
+  "total": 25000
+ },
+ {
+  "desde": "Ocotlán",
+  "destino": "Melaque",
+  "detalle": "7 días con 2 movimientos",
+  "dias": 7,
+  "movs": 2,
+  "soloIda": false,
+  "origenTexto": "Ocotlán, Jalisco, México",
+  "total": 36000
+ },
+ {
+  "desde": "Zapotlán del Rey",
+  "destino": "Talpa de Allende",
+  "detalle": "3 días",
+  "dias": 3,
+  "movs": 0,
+  "soloIda": false,
+  "origenTexto": "Zapotlán del Rey, Jalisco, México",
+  "total": 22000
+ },
+ {
+  "desde": "Jamay",
+  "destino": "Tenacatita",
+  "detalle": "5 días con 1 movimiento",
+  "dias": 5,
+  "movs": 1,
+  "soloIda": false,
+  "origenTexto": "Jamay, Jalisco, México",
+  "total": 28000
+ },
+ {
+  "desde": "Ocotlán",
+  "destino": "Puebla",
+  "detalle": "4 días con 2 movimientos",
+  "dias": 4,
+  "movs": 2,
+  "soloIda": false,
+  "origenTexto": "Ocotlán, Jalisco, México",
+  "total": 46500
+ },
+ {
+  "desde": "Tototlán",
+  "destino": "Tlalpujahua",
+  "detalle": "3 días con 1 movimiento",
+  "dias": 3,
+  "movs": 1,
+  "soloIda": false,
+  "origenTexto": "Tototlán, Jalisco, México",
+  "total": 31000
+ },
+ {
+  "desde": "La Barca",
+  "destino": "Oaxaca",
+  "detalle": "8 días con 3 movimientos",
+  "dias": 8,
+  "movs": 3,
+  "soloIda": false,
+  "origenTexto": "La Barca, Jalisco, México",
+  "total": 88000
+ },
+ {
+  "desde": "Ocotlán",
+  "destino": "Ixtapa Zihuatanejo",
+  "detalle": "6 días con 2 movimientos",
+  "dias": 6,
+  "movs": 2,
+  "soloIda": false,
+  "origenTexto": "Ocotlán, Jalisco, México",
+  "total": 37500
+ },
+ {
+  "desde": "Poncitlán",
+  "destino": "Rincón de Guayabitos",
+  "detalle": "6 días",
+  "dias": 6,
+  "movs": 0,
+  "soloIda": false,
+  "origenTexto": "Poncitlán, Jalisco, México",
+  "total": 25000
+ },
+ {
+  "desde": "Ocotlán",
+  "destino": "Puerto Vallarta",
+  "detalle": "solo ida",
+  "dias": 1,
+  "movs": 0,
+  "soloIda": true,
+  "origenTexto": "Ocotlán, Jalisco, México",
+  "total": 16200
+ },
+ {
+  "desde": "Jamay",
+  "destino": "Chapala",
+  "detalle": "solo ida",
+  "dias": 1,
+  "movs": 0,
+  "soloIda": true,
+  "origenTexto": "Jamay, Jalisco, México",
+  "total": 7100
+ },
+ {
+  "desde": "Ocotlán",
+  "destino": "Tepic",
+  "detalle": "3 días con 1 movimiento",
+  "dias": 3,
+  "movs": 1,
+  "soloIda": false,
+  "origenTexto": "Ocotlán, Jalisco, México",
+  "total": 19900
+ },
+ {
+  "desde": "Ocotlán",
+  "destino": "León",
+  "detalle": "2 días con 1 movimiento",
+  "dias": 2,
+  "movs": 1,
+  "soloIda": false,
+  "origenTexto": "Ocotlán, Jalisco, México",
+  "total": 20600
+ },
+ {
+  "desde": "Poncitlán",
+  "destino": "Tala",
+  "detalle": "2 días",
+  "dias": 2,
+  "movs": 0,
+  "soloIda": false,
+  "origenTexto": "Poncitlán, Jalisco, México",
+  "total": 6000
+ },
+ {
+  "desde": "Ocotlán",
+  "destino": "Zacoalco de Torres",
+  "detalle": "2 días",
+  "dias": 2,
+  "movs": 0,
+  "soloIda": false,
+  "origenTexto": "Ocotlán, Jalisco, México",
+  "total": 6000
+ },
+ {
+  "desde": "La Barca",
+  "destino": "Cocula",
+  "detalle": "2 días",
+  "dias": 2,
+  "movs": 0,
+  "soloIda": false,
+  "origenTexto": "La Barca, Jalisco, México",
+  "total": 6500
+ },
+ {
+  "desde": "Jamay",
+  "destino": "Magdalena",
+  "detalle": "3 días con 1 movimiento",
+  "dias": 3,
+  "movs": 1,
+  "soloIda": false,
+  "origenTexto": "Jamay, Jalisco, México",
+  "total": 17800
+ },
+ {
+  "desde": "Poncitlán",
+  "destino": "San Juan Cosalá",
+  "detalle": "2 días con 1 movimiento",
+  "dias": 2,
+  "movs": 1,
+  "soloIda": false,
+  "origenTexto": "Poncitlán, Jalisco, México",
+  "total": 9500
+ },
+ {
+  "desde": "Tototlán",
+  "destino": "Zirahuén",
+  "detalle": "4 días con 2 movimientos",
+  "dias": 4,
+  "movs": 2,
+  "soloIda": false,
+  "origenTexto": "Tototlán, Jalisco, México",
+  "total": 29000
+ },
+ {
+  "desde": "Ocotlán",
+  "destino": "La Piedad",
+  "detalle": "2 días con 1 movimiento",
+  "dias": 2,
+  "movs": 1,
+  "soloIda": false,
+  "origenTexto": "Ocotlán, Jalisco, México",
+  "total": 14000
+ },
+ {
+  "desde": "Jamay",
+  "destino": "Sahuayo",
+  "detalle": "2 días",
+  "dias": 2,
+  "movs": 0,
+  "soloIda": false,
+  "origenTexto": "Jamay, Jalisco, México",
+  "total": 8600
+ },
+ {
+  "desde": "La Barca",
+  "destino": "Jiquilpan",
+  "detalle": "3 días con 1 movimiento",
+  "dias": 3,
+  "movs": 1,
+  "soloIda": false,
+  "origenTexto": "La Barca, Jalisco, México",
+  "total": 12500
+ },
+ {
+  "desde": "Tototlán",
+  "destino": "Arandas",
+  "detalle": "2 días con 1 movimiento",
+  "dias": 2,
+  "movs": 1,
+  "soloIda": false,
+  "origenTexto": "Tototlán, Jalisco, México",
+  "total": 12400
+ },
+ {
+  "desde": "Ocotlán",
+  "destino": "Tepatitlán",
+  "detalle": "3 días",
+  "dias": 3,
+  "movs": 0,
+  "soloIda": false,
+  "origenTexto": "Ocotlán, Jalisco, México",
+  "total": 9900
+ },
+ {
+  "desde": "Zapotlán del Rey",
+  "destino": "Atotonilco el Alto",
+  "detalle": "2 días con 1 movimiento",
+  "dias": 2,
+  "movs": 1,
+  "soloIda": false,
+  "origenTexto": "Zapotlán del Rey, Jalisco, México",
+  "total": 12700
+ },
+ {
+  "desde": "Ocotlán",
+  "destino": "Colima",
+  "detalle": "5 días con 2 movimientos",
+  "dias": 5,
+  "movs": 2,
+  "soloIda": false,
+  "origenTexto": "Ocotlán, Jalisco, México",
+  "total": 24400
+ },
+ {
+  "desde": "Poncitlán",
+  "destino": "Comala",
+  "detalle": "4 días con 1 movimiento",
+  "dias": 4,
+  "movs": 1,
+  "soloIda": false,
+  "origenTexto": "Poncitlán, Jalisco, México",
+  "total": 20900
+ },
+ {
+  "desde": "La Barca",
+  "destino": "Querétaro",
+  "detalle": "4 días con 2 movimientos",
+  "dias": 4,
+  "movs": 2,
+  "soloIda": false,
+  "origenTexto": "La Barca, Jalisco, México",
+  "total": 23900
+ },
+ {
+  "desde": "Ocotlán",
+  "destino": "Bernal",
+  "detalle": "3 días con 1 movimiento",
+  "dias": 3,
+  "movs": 1,
+  "soloIda": false,
+  "origenTexto": "Ocotlán, Jalisco, México",
+  "total": 25700
+ },
+ {
+  "desde": "Jamay",
+  "destino": "Aguascalientes",
+  "detalle": "3 días",
+  "dias": 3,
+  "movs": 0,
+  "soloIda": false,
+  "origenTexto": "Jamay, Jalisco, México",
+  "total": 15900
+ },
+ {
+  "desde": "Ocotlán",
+  "destino": "San Luis Potosí",
+  "detalle": "4 días con 2 movimientos",
+  "dias": 4,
+  "movs": 2,
+  "soloIda": false,
+  "origenTexto": "Ocotlán, Jalisco, México",
+  "total": 27000
+ },
+ {
+  "desde": "Tototlán",
+  "destino": "Lagos de Moreno",
+  "detalle": "2 días",
+  "dias": 2,
+  "movs": 0,
+  "soloIda": false,
+  "origenTexto": "Tototlán, Jalisco, México",
+  "total": 13200
+ },
+ {
+  "desde": "Ocotlán",
+  "destino": "Autlán de Navarro",
+  "detalle": "5 días con 1 movimiento",
+  "dias": 5,
+  "movs": 1,
+  "soloIda": false,
+  "origenTexto": "Ocotlán, Jalisco, México",
+  "total": 22300
+ },
+ {
+  "desde": "Poncitlán",
+  "destino": "Ciudad Guzmán",
+  "detalle": "3 días con 1 movimiento",
+  "dias": 3,
+  "movs": 1,
+  "soloIda": false,
+  "origenTexto": "Poncitlán, Jalisco, México",
+  "total": 17200
+ },
+ {
+  "desde": "Ocotlán",
+  "destino": "Mérida",
+  "detalle": "14 días",
+  "dias": 14,
+  "movs": 0,
+  "soloIda": false,
+  "origenTexto": "Ocotlán, Jalisco, México",
+  "total": 125300
+ },
+ {
+  "desde": "La Barca",
+  "destino": "Taxco",
+  "detalle": "5 días con 3 movimientos",
+  "dias": 5,
+  "movs": 3,
+  "soloIda": false,
+  "origenTexto": "La Barca, Jalisco, México",
+  "total": 39400
+ }
+]
