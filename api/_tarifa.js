@@ -112,6 +112,10 @@ const POR_KM_LARGO = 36;
    destinos que no estén en ella. */
 const destinos = require('./_destinos');
 
+/* De dónde SALE el viaje. La lista está medida desde Guadalajara; saliendo
+   de otro lado el mismo viaje puede costar más. Ver `_origenes.js`. */
+const origenes = require('./_origenes');
+
 /* ------------------------------------------------------------
    QUE UNIDADES SE SABEN COTIZAR SOLAS
    ------------------------------------------------------------
@@ -671,6 +675,58 @@ function sinPrecio(km, dias, extras) {
   };
 }
 
+/* ------------------------------------------------------------
+   LO QUE SUMA SALIR DE OTRO LADO
+   ------------------------------------------------------------
+   Solo le pasa a los destinos DE LISTA. Un destino de fórmula ya
+   cobra por los kilómetros que midió Google, así que salir de más
+   lejos ya se le cobró: sumarle un recargo sería cobrarlo dos
+   veces. La lista, en cambio, tira el kilometraje —Vallarta son
+   $19,000 midan lo que midan—, y ahí es donde el origen se
+   perdía.
+
+   Manda lo que el dueño dictó. Solo cuando no dictó nada para ese
+   destino se cobra el respaldo: los kilómetros que el viaje mide
+   DE MAS contra el mismo viaje desde Guadalajara, a la tarifa de
+   siempre.
+
+   Ese respaldo es justo lo que hace verdadera la regla del dueño
+   sin ningún caso especial: saliendo de Tequila, Vallarta mide
+   MENOS que desde Guadalajara —Tequila está de camino—, la resta
+   sale negativa y no se cobra nada.
+
+   No hay descuento por quedar de camino. El único destino que
+   baja es Morelia, y baja porque él lo escribió, no porque una
+   resta lo calculó.
+   ------------------------------------------------------------ */
+function recargoDeSalida(km, extras, dias) {
+  const vacio = { importe: 0, origen: null, dictado: false };
+  if (!km || !km.deLista) return vacio;          // fórmula: ya lo cobró el km
+
+  const cual = origenes.buscaOrigen(extras.origen);
+
+  const dictado = origenes.recargoDictado(extras.origen, km.deLista, dias);
+  if (dictado !== null) {
+    return { importe: dictado, origen: cual ? cual.nombre : null, dictado: true };
+  }
+
+  /* Respaldo por carretera. `deLista` garantiza que el destino existe en el
+     catálogo, así que su kilometraje de referencia también. */
+  const enCatalogo = destinos.buscaDestino(extras.destino);
+  const referencia = enCatalogo ? Number(enCatalogo.km) : 0;
+  const medido = Math.max(0, Number(km.km) || 0);
+  if (!referencia || !medido) return vacio;
+
+  const deMas = medido - referencia - origenes.MARGEN_KM;
+  if (deMas <= 0) return vacio;
+
+  return {
+    importe: Math.floor(deMas * POR_KM / REDONDEO) * REDONDEO,
+    origen: cual ? cual.nombre : null,
+    dictado: false
+  };
+}
+
 /* Del kilometraje, los días y lo que se declaró sale todo lo demás.
 
    `extras` es opcional y trae lo que el cliente declara:
@@ -679,6 +735,7 @@ function sinPrecio(km, dias, extras) {
                       navegador: [{ horaInicio, horaFin }, …]
      · destino      — el punto de destino, para los que traen regla propia
                       (la Huasteca y los que vengan)
+     · origen       — el punto de salida, para el recargo de `_origenes.js`
 
    Que la lista cruda y el destino entren AQUÍ, y no ya resueltos desde cada
    endpoint, es lo mismo que se hizo con kmDe: si cotizar y cobrar pudieran
@@ -930,7 +987,27 @@ function calcula(kmTotal, dias, extras) {
     cobroMovimientos = 0;
   }
 
-  const total = cobroTraslado + cobroNoches + cobroMovimientos;
+  /* ----------------------------------------------------------
+     EL RECARGO DE SALIDA VA APARTE, Y AL FINAL
+
+     Aparte porque el dueño lo pidió así —«lo añades como extra,
+     para que se puedan calcular movimientos normalmente»—: si se
+     metiera en el traslado, el piso por día y la regla R5 lo
+     moverían, y las noches y las bandas se calcularían sobre un
+     número que ya no es el de la lista.
+
+     Al final por lo mismo: nada de lo de arriba lo toca.
+
+     En un SOLO IDA se cobra la misma fracción que el traslado. El
+     desvío sigue existiendo —la unidad tiene que ir por el grupo
+     a Ocotlán—, pero no se hace dos veces.
+     ---------------------------------------------------------- */
+  const salida = recargoDeSalida(km, extras, dias);
+  const cobroOrigen = unSentido
+    ? Math.floor(FRACCION_UN_SENTIDO * salida.importe / REDONDEO) * REDONDEO
+    : salida.importe;
+
+  const total = cobroTraslado + cobroNoches + cobroMovimientos + cobroOrigen;
 
   // El anticipo se redondea al peso y el saldo se saca por resta, para que
   // las dos partes sumen exactamente el total y no sobre ni falte un centavo.
@@ -974,6 +1051,12 @@ function calcula(kmTotal, dias, extras) {
          el nombre del destino si vino de la lista, o la marca de la fórmula. */
       destinoDeLista: km.deLista || null,
       porFormula: !!km.porFormula,
+      /* El recargo por salir de otro lado, partido para que la oficina lo
+         pueda cuadrar contra el Excel: de dónde salió, cuánto sumó, y si el
+         número lo dictó el dueño o lo sacaron los kilómetros medidos. */
+      salidaDesde: salida.origen,
+      recargoSalida: cobroOrigen,
+      recargoDictado: salida.dictado,
       conMovimientos: conMovimientos,
       diasParados: diasParados,
       /* Qué destino con regla propia aplicó, si alguno. La oficina lo lee en
@@ -1001,7 +1084,10 @@ function calcula(kmTotal, dias, extras) {
        esconder la tarifa: un desglose que no cuadra con el total parece un
        error de cuentas, y el cliente llama a preguntar. */
     desglose: {
-      servicio: cobroTraslado + cobroNoches,
+      /* El recargo de salida va DENTRO de «servicio», por la misma razón que
+         las noches: partido, se lee como una tarifa. Y el desglose tiene que
+         seguir sumando el total exacto. */
+      servicio: cobroTraslado + cobroNoches + cobroOrigen,
       diasMovimiento: movimientos.length,
       importeMovimientos: cobroMovimientos,
       /* El NOMBRE del destino con regla propia, no su tarifa. Sale para que la
@@ -1017,6 +1103,7 @@ module.exports = {
   MINIMO_POR_DIA, REDONDEO, TASA_IVA, ANTICIPO,
   NOCHES_INCLUIDAS, EXTRA_POR_NOCHE, TOPE_DIA_BARATO, DIA_BARATO, BANDAS_MOVIMIENTO, TOPE_DIAS_MOVIMIENTO,
   DESTINOS_CON_REGLA,
+  recargoDeSalida,
   UNIDADES_QUE_COTIZAN, claveDeUnidad, seSabeCotizar, necesitaMedirse,
   kmDe, diasDeServicio, nochesDe, regresoAntesDeSalida, trasladoDe, reglaDeDestino,
   horasDe, bandaDe, movimientosDe, precioMovimientos,

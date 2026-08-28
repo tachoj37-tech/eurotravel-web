@@ -89,12 +89,17 @@ const DESTINO = { placeId: 'ChIJ_DESTINO_x', lat: 20.6534, lng: -105.2253,
 
 let corrida = 0;
 
-async function corre(metrosIda, metrosVuelta, salida, regreso, movimientos, destinoFijo) {
+async function corre(metrosIda, metrosVuelta, salida, regreso, movimientos, destinoFijo, origenFijo) {
   METROS_IDA = metrosIda; METROS_VUELTA = metrosVuelta;
   /* El cache de _rutas guarda por par de puntos; se le cambia la marca en cada
      corrida para que vuelva a "medir" y no conteste lo de la vez pasada. */
   const marca = 'k' + metrosIda + '_' + metrosVuelta + '_' + (++corrida);
-  const o = Object.assign({}, ORIGEN, { placeId: ORIGEN.placeId + marca });
+  /* `origenFijo` sirve para los orígenes con recargo propio (R19). Va aquí y
+     no en el cuerpo suelto porque los DOS endpoints tienen que recibir el
+     mismo origen: si uno se lo pasara a `calcula` y el otro no, el cliente
+     vería un precio y se le cobraría otro. */
+  const baseOrigen = origenFijo ? Object.assign({}, ORIGEN, origenFijo) : ORIGEN;
+  const o = Object.assign({}, baseOrigen, { placeId: ORIGEN.placeId + marca });
   /* `destinoFijo` sirve para los destinos CON precio de lista: se le cambia la
      direccion pero se le deja la marca DESTINO en el placeId, que es lo que
      distingue la ida de la vuelta en el Google fingido. */
@@ -376,6 +381,24 @@ function dia(fecha, inicio, fin) {
       { direccion: 'Puerto Vallarta, Jalisco, México' });
     igual('Vallarta 3 noches: los dos dan los 19,000 de su lista',
       [vta.cotiza.total, vta.cobra.total], [19000, 19000]);
+
+    /* ------------------------------------------------------------
+       R19 · EL MISMO VIAJE, SALIENDO DE OCOTLAN
+
+       Esta es la que caza el defecto más caro de la regla nueva: que
+       un endpoint le pase el origen a `calcula` y el otro no. El
+       cliente vería $19,000 en la pantalla y se le cobrarían
+       $25,000 en Stripe.
+
+       $19,000 de lista + $6,000 que él dictó en su fila 11.
+       ------------------------------------------------------------ */
+    const vtaOco = await corre(390000, 390000, '2026-09-03T08:00', '2026-09-06T18:00', [],
+      { direccion: 'Puerto Vallarta, Jalisco, México' },
+      { lat: 20.3529, lng: -102.7745, direccion: 'Ocotlán, Jalisco, México' });
+    igual('Vallarta desde Ocotlán: los dos endpoints dan los 25,000 de su fila 11',
+      [vtaOco.cotiza.total, vtaOco.cobra.total], [25000, 25000]);
+    igual('y el anticipo también coincide',
+      [vtaOco.cotiza.anticipo, vtaOco.cobra.anticipo], [5000, 5000]);
 
     /* Y que el precio de lista NO se le enseñe al cliente como lo que es: el
        nombre del renglon se queda del lado del servidor.

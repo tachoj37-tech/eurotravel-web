@@ -233,15 +233,26 @@ async function pide(cuerpo) {
   }
 
   {
-    /* --- 4f. el aviso que importa: precio de lista con origen lejano ---
-       Los precios de la lista se armaron saliendo de Guadalajara. Si el
-       viaje sale de Monterrey, la lista lo cobra igual —y la pagina de
-       verdad tambien—. Aqui tiene que verse. */
+    /* --- 4f. precio de lista con origen lejano ---
+       ESTA ASERCION CAMBIO DE LADO EL 28-ago-2026, y no porque estuviera
+       mal: estaba DOCUMENTANDO un hueco, y el hueco se tapó.
+
+       Decía que Vallarta desde Monterrey costaba los mismos $19,000 que
+       desde Guadalajara, «y la pagina de verdad tambien». Eso era cierto y
+       era el defecto: la lista tira el kilometraje, así que el origen se
+       perdía. El dueño lo mandó arreglar el 28-ago-2026 al pasarme la fila
+       de Ocotlán.
+
+       Ahora el viaje mide 1,400 km contra los 620 del catálogo. Quitando
+       los 60 de margen quedan 720 km de más, que a $22 son $15,840 y
+       redondeados a la centena de abajo, $15,800. */
     METROS = 700000;                                    // 1,400 km ida y vuelta
     const r = await pide({ clave: CLAVE, dias: 3,
       origen: { direccion: 'Monterrey, Nuevo León, México', lat: 25.6866, lng: -100.3161 },
       destino: punto(VALLARTA) });
-    igual('el precio sigue siendo el de lista', r._json.total, 19000);
+    igual('la lista ya no ignora de dónde sale', r._json.total, 19000 + 15800);
+    igual('y se dice cuánto de eso fue por la salida', r._json.salida.importe, 15800);
+    igual('sin ser un número dictado, sino medido', r._json.salida.dictado, false);
     igual('pero se acusa que NO sale de casa', r._json.viaje.saleDeCasa, false);
     cierto('y se dice a cuanto esta', r._json.viaje.aCuantoDeCasa > 500);
     //  6,500 + 1,400 × 22 = 37,300 contra 19,000 de lista: 18,300 de menos
@@ -332,7 +343,12 @@ async function pide(cuerpo) {
       if (r._json.total !== p.total || r._json.anticipo !== p.anticipo) {
         rotos.push({ nombre, pantalla: r._json.total, seCobra: p.total });
       }
-      const partes = r._json.traslado.final + r._json.estadia.importe + r._json.movimientos.importe;
+      /* Son CUATRO partes desde el 28-ago-2026: el recargo por salir de otro
+         lado es la cuarta. Sin sumarlo aquí, esta prueba se puso roja en el
+         caso de Chapala —y tenía razón: la pantalla enseñaba un desglose que
+         no cuadraba con su propio total. */
+      const partes = r._json.traslado.final + r._json.estadia.importe +
+        r._json.movimientos.importe + r._json.salida.importe;
       if (partes !== r._json.total) rotos.push({ nombre, partes: partes, total: r._json.total });
     }
     igual('los ' + CASOS.length + ' casos: la pantalla enseña lo que se cobra', rotos, []);

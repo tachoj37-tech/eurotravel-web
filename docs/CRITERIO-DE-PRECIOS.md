@@ -43,7 +43,8 @@ De ahí se siguen tres reglas de conducta:
 | **R16** | arriba de 1,400 km ya se cotiza solo | $36 el km, y menos fiable — saberlo |
 | **R17** | hay destinos donde moverse no cuesta | Barrancas: $3,000 el día, se mueva o no |
 | **R18** | abajo de $15,000 el día no es gratis | $500 la noche destapada; de la 4ª, los mil de siempre |
-| **R10** | *pendiente:* el precio depende del origen | la fila de Ocotlán, ignorada por ahora |
+| **R19** | el origen suma cuando NO queda de camino | Ocotlán, fila 11; y por carretera, no por mapa |
+| **R10** | ~~pendiente~~ *resuelta por R19 el 28-ago-2026* | ya no cobra precio de Guadalajara salga de donde salga |
 
 ---
 
@@ -456,3 +457,98 @@ lanzamiento.**
   yo había supuesto**: Tolantongo (yo 4, él 3) y Barrancas (yo 4, él 7). Con
   Barrancas eran $9,000 de sobrecobro en un viaje de 6 días. Vale la pena
   preguntar los tres que faltan.
+
+---
+
+### R19 · El origen suma cuando NO queda de camino (28-ago-2026)
+
+Dictado por el dueño al pasarme el Excel y señalarme su fila 11:
+
+> «estudia el incremento que hay entre salir de Ocotlán e implementalo […]
+> lo añades como extra, para que se puedan calcular movimientos normalmente,
+> hay viajes que se mantienen igual, porque muchas veces Ocotlán queda de
+> pasada para llegar a un destino […] si un viaje sale de Tequila, tú
+> pensarías que cuesta más, pero no, porque Tequila está de camino a
+> Vallarta, entonces es el mismo precio.»
+
+Esto cierra **R10**, que llevaba dos días abierta.
+
+#### Lo que dice su fila 11, medido
+
+De 49 columnas: **19 no suben**, **29 suben** entre $2,000 y $6,000 en
+escalones de $500, y **Morelia baja $500** — el único que baja.
+
+Los 19 que no suben son todos al este y sureste: CDMX, Puebla, Tlalpujahua,
+Tolantongo, Zamora, Pátzcuaro, Morelia, Mariposa, Valle de Bravo, Ixtapa,
+Acapulco, Oaxaca, Chiapas y Cancún.
+
+#### El criterio se mide POR CARRETERA, no en el mapa
+
+Se probó su regla contra sus propios números —¿está Ocotlán más cerca del
+destino que Guadalajara?— y **acierta en 38 de 49**. Los dos extremos salen
+perfectos: los 18 destinos que quedan más lejos suben **los 18, sin una sola
+excepción**, y los del este lejano no suben ninguno.
+
+Los 11 que fallan son todos del mismo tipo: **Guanajuato, San Juan de los
+Lagos, Real de Catorce, Zacatecas y la Huasteca**. En línea recta Ocotlán se
+ve más cerca, pero a esos se llega por Lagos de Moreno, al noreste, y Ocotlán
+está al sureste. Es desvío aunque parezca atajo.
+
+Por eso el respaldo usa los kilómetros que mide Google y no las coordenadas.
+
+#### Cómo quedó
+
+**Manda lo que él dictó.** Los 49 números viven en `api/_origenes.js`, tal
+cual, sin modelo: sus importes van en escalones de $500 y no salen de ninguna
+curva —el mismo motivo por el que la tabla de destinos no es una fórmula—.
+
+**El respaldo solo entra donde él no dictó**: el viaje se compara contra el
+mismo viaje desde Guadalajara y se cobran los kilómetros de más, a la tarifa
+de siempre. Eso hace verdadera su regla sin un solo caso especial: saliendo
+de Tequila, Vallarta mide MENOS que desde Guadalajara, la resta sale negativa
+y no se cobra nada.
+
+**Solo aplica a destinos de LISTA.** Uno de fórmula ya cobró por los
+kilómetros que midió Google; sumarle recargo sería cobrarlo dos veces.
+
+**Va al final, después del piso por día.** Si se sumara antes, Chapala a diez
+días desde Ocotlán costaría lo mismo que desde Guadalajara: el piso de
+$30,000 se comería los $4,500 sin dejar rastro. La prueba lo clava.
+
+#### Lo que decidí yo, y hay que confirmarle
+
+1. **El radio de 25 km** alrededor de Ocotlán, que alcanza Poncitlán, Jamay,
+   La Barca y Atotonilco. Mismo rumbo y misma distancia, así que el desvío es
+   prácticamente el mismo. Él no dijo hasta dónde llega «Ocotlán».
+2. **El margen de 60 km** antes de cobrar kilómetros de más. Guadalajara mide
+   unos 30 km de punta a punta, así que el mismo viaje sale hasta 60 km
+   distinto según si el cliente está en Tonalá o en Tlajomulco. Sin margen, un
+   vecino de Zapopan vería un recargo de $200 por existir.
+3. **Tequila desde Ocotlán quedó en $12,000, no en los $13,500 del Excel.**
+   Aquel número se apoya en los $8,500 que él bajó a $7,000 el 26-ago. Lo que
+   se hereda es el **recargo** de $5,000, no el precio viejo: el desvío no
+   cambió porque le bajara a Tequila.
+4. **Los tres destinos donde el recargo cambia con los días.** Su Excel les da
+   dos columnas y dos importes distintos:
+
+   | | | |
+   |---|---|---|
+   | Huasteca | 3 días +$4,000 | 4 días +$2,000 |
+   | Talpa | 1 día +$4,500 | 2 días +$4,000 |
+   | Guanajuato | 1 día +$3,000 | 3 días +$3,500 |
+
+   Para los días que él no escribió se usa el dictado más cercano. Es lo que
+   menos inventa, pero es elección mía.
+
+#### Y un número que huele raro
+
+**La Huasteca desde Ocotlán a 3 días cuesta $42,500, que es exactamente lo
+que cuestan 4 días desde Guadalajara.** Además su recargo baja al crecer los
+días (+$4,000 a tres, +$2,000 a cuatro), al revés de todos los demás.
+Señalado, no cambiado (R12).
+
+#### Lo que falta del mismo Excel
+
+**Yurécuaro** (fila 22) y **Dominical** (fila 25) tienen sus propias filas y
+sus propios camiones. El dueño dijo que irá pasando más orígenes con precios;
+`_origenes.js` está hecho para que cada uno sea un renglón más.

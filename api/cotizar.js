@@ -147,6 +147,7 @@ module.exports = async function handler(req, res) {
       noches: noches,
       movimientos: cuerpo.movimientos,
       destino: cuerpo.destino,
+      origen: cuerpo.origen,
       redondo: redondo
     });
 

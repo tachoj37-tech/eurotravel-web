@@ -35,6 +35,7 @@
 const crypto = require('crypto');
 const tarifa = require('./_tarifa');
 const destinos = require('./_destinos');
+const origenes = require('./_origenes');
 const rutas = require('./_rutas');
 const defensas = require('./_defensas');
 
@@ -233,7 +234,8 @@ module.exports = async function handler(req, res) {
     const p = tarifa.calcula(kmTotal, dias, {
       noches: noches,
       movimientos: movimientos,
-      destino: destino
+      destino: destino,
+      origen: origen
     });
 
     /* ------------------------------------------------------------
@@ -311,6 +313,16 @@ module.exports = async function handler(req, res) {
         reglaDestino: p.interno.reglaDestino,
         bandas: tarifa.BANDAS_MOVIMIENTO,
         importe: p.desglose.importeMovimientos
+      },
+      /* Lo que suma salir de otro lado. Es la cuarta parte del total, y tiene
+         que aparecer aquí o el desglose de esta pantalla deja de sumar —que
+         es justo como se cazó al agregarlo—. `dictado` dice si el número lo
+         puso el dueño en su Excel o lo sacaron los kilómetros medidos. */
+      salida: {
+        desde: p.interno.salidaDesde,
+        dictado: p.interno.recargoDictado,
+        margenKm: origenes.MARGEN_KM,
+        importe: p.interno.recargoSalida
       },
       total: p.total,
       anticipo: p.anticipo,
