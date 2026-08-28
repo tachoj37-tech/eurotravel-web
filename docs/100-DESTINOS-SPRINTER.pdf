@@ -1,0 +1,556 @@
+%PDF-1.4
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Count 5 /Kids [6 0 R 8 0 R 10 0 R 12 0 R 14 0 R] >>
+endobj
+3 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>
+endobj
+4 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>
+endobj
+5 0 obj
+<< /Length 2787 >>
+stream
+BT 0.45 g /F2 9 Tf 1 0 0 1 46 746 Tm (EUROTRAVEL) Tj ET
+BT 0 g /F2 22 Tf 1 0 0 1 46 718 Tm (Cien destinos para afinar) Tj ET
+BT 0 g /F2 22 Tf 1 0 0 1 46 694 Tm (el criterio de la Sprinter) Tj ET
+0.1 G 1.2 w 46 670 m 566 670 l S
+BT 0.15 g /F1 10.5 Tf 1 0 0 1 46 642 Tm (Esto no es una lista de precios. Es una hoja de trabajo.) Tj ET
+BT 0.15 g /F1 10.5 Tf 1 0 0 1 46 627 Tm () Tj ET
+BT 0.15 g /F1 10.5 Tf 1 0 0 1 46 612 Tm (La página ya sabe cotizar sola los destinos que no están en tu tabla: usa una) Tj ET
+BT 0.15 g /F1 10.5 Tf 1 0 0 1 46 597 Tm (fórmula. Este documento es para que veas qué dice esa fórmula y la corrijas,) Tj ET
+BT 0.15 g /F1 10.5 Tf 1 0 0 1 46 582 Tm (porque el precio bueno lo pones tú.) Tj ET
+BT 0.15 g /F1 10.5 Tf 1 0 0 1 46 567 Tm () Tj ET
+BT 0.15 g /F1 10.5 Tf 1 0 0 1 46 552 Tm (Está en dos partes:) Tj ET
+BT 0 g /F2 11 Tf 1 0 0 1 56 531 Tm (PRIMERA PARTE — los 49 que ya cotizaste) Tj ET
+BT 0.3 g /F1 10 Tf 1 0 0 1 56 516 Tm (Tu precio contra el que daría la fórmula. Donde hay mucha diferencia, es que) Tj ET
+BT 0.3 g /F1 10 Tf 1 0 0 1 56 502 Tm (la fórmula no entendió algo: ahí es donde más se aprende.) Tj ET
+BT 0 g /F2 11 Tf 1 0 0 1 56 478 Tm (SEGUNDA PARTE — 51 destinos nuevos) Tj ET
+BT 0.3 g /F1 10 Tf 1 0 0 1 56 463 Tm (Lo que la fórmula cobraría hoy por cada uno, medido de verdad con Google el) Tj ET
+BT 0.3 g /F1 10 Tf 1 0 0 1 56 449 Tm (27 de agosto de 2026. Al lado, un espacio para que escribas el precio bueno.) Tj ET
+0.75 G 0.5 w 46 415 m 566 415 l S
+BT 0 g /F2 13 Tf 1 0 0 1 46 393 Tm (Lo que ya se ve de una vez) Tj ET
+BT 0.15 g /F1 10.5 Tf 1 0 0 1 46 373 Tm (De tus 49 destinos, la fórmula cobraría de MÁS en 23 y de MENOS en 26.) Tj ET
+BT 0.15 g /F1 10.5 Tf 1 0 0 1 46 358 Tm () Tj ET
+BT 0.15 g /F1 10.5 Tf 1 0 0 1 46 343 Tm (Y no está repartido al azar: se pasa en los cerca —hasta 90% de más en) Tj ET
+BT 0.15 g /F1 10.5 Tf 1 0 0 1 46 328 Tm (Zacoalco— y se queda corta en los que traen algo especial, como Talpa) Tj ET
+BT 0.15 g /F1 10.5 Tf 1 0 0 1 46 313 Tm (Burrita, que es peregrinación y no un traslado cualquiera.) Tj ET
+BT 0.15 g /F1 10.5 Tf 1 0 0 1 46 298 Tm () Tj ET
+BT 0.15 g /F1 10.5 Tf 1 0 0 1 46 283 Tm (O sea que a la fórmula no le falla la tarifa: le falta entender que un viaje) Tj ET
+BT 0.15 g /F1 10.5 Tf 1 0 0 1 46 268 Tm (corto tiene un piso, y que hay viajes que no se miden en kilómetros.) Tj ET
+BT 0 g /F2 13 Tf 1 0 0 1 46 237 Tm (Cómo usarlo) Tj ET
+BT 0.15 g /F1 10.5 Tf 1 0 0 1 46 217 Tm (No hace falta que los llenes todos ni de corrido. Cada precio que escribas y) Tj ET
+BT 0.15 g /F1 10.5 Tf 1 0 0 1 46 202 Tm (me pases se convierte en una regla, y esa regla queda escrita con su porqué) Tj ET
+BT 0.15 g /F1 10.5 Tf 1 0 0 1 46 187 Tm (en el criterio, para que dentro de un año se sepa de dónde salió.) Tj ET
+endstream
+endobj
+6 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents 5 0 R >>
+endobj
+7 0 obj
+<< /Length 10055 >>
+stream
+BT 0.45 g /F2 9 Tf 1 0 0 1 46 746 Tm (PRIMERA PARTE) Tj ET
+BT 0 g /F2 17 Tf 1 0 0 1 46 726 Tm (Los 49 que ya cotizaste) Tj ET
+BT 0.4 g /F1 9.5 Tf 1 0 0 1 46 709 Tm (De cerca a lejos. La diferencia es cuánto se pasa la fórmula.) Tj ET
+BT 0.45 g /F2 8 Tf 1 0 0 1 46 687 Tm (DESTINO) Tj ET
+BT 0.45 g /F2 8 Tf 1 0 0 1 348.15999999999997 687 Tm (TU PRECIO) Tj ET
+BT 0.45 g /F2 8 Tf 1 0 0 1 424.4 687 Tm (LA FÓRMULA) Tj ET
+BT 0.45 g /F2 8 Tf 1 0 0 1 516.4 687 Tm (DIFERENCIA) Tj ET
+0.5 G 0.8 w 46 680 m 566 680 l S
+BT 0.1 g /F1 9.5 Tf 1 0 0 1 46 666 Tm (Tala) Tj ET
+BT 0.1 g /F1 9.5 Tf 1 0 0 1 363.12 666 Tm ($6,000) Tj ET
+BT 0.45 g /F1 9.5 Tf 1 0 0 1 445.12 666 Tm ($8,502) Tj ET
+BT 0 g /F2 9.5 Tf 1 0 0 1 545.48 666 Tm (+42%) Tj ET
+0.955 g 41 647 530 15 re f
+BT 0.1 g /F1 9.5 Tf 1 0 0 1 46 651 Tm (San Juan Cosalá \(ribera de Chapala\)) Tj ET
+BT 0.1 g /F1 9.5 Tf 1 0 0 1 363.12 651 Tm ($6,500) Tj ET
+BT 0.45 g /F1 9.5 Tf 1 0 0 1 445.12 651 Tm ($8,612) Tj ET
+BT 0 g /F2 9.5 Tf 1 0 0 1 545.48 651 Tm (+32%) Tj ET
+BT 0.1 g /F1 9.5 Tf 1 0 0 1 46 636 Tm (Chapala) Tj ET
+BT 0.1 g /F1 9.5 Tf 1 0 0 1 363.12 636 Tm ($6,500) Tj ET
+BT 0.45 g /F1 9.5 Tf 1 0 0 1 445.12 636 Tm ($8,700) Tj ET
+BT 0 g /F2 9.5 Tf 1 0 0 1 545.48 636 Tm (+34%) Tj ET
+0.955 g 41 617 530 15 re f
+BT 0.1 g /F1 9.5 Tf 1 0 0 1 46 621 Tm (Zacoalco de Torres) Tj ET
+BT 0.1 g /F1 9.5 Tf 1 0 0 1 363.12 621 Tm ($5,000) Tj ET
+BT 0.45 g /F1 9.5 Tf 1 0 0 1 445.12 621 Tm ($9,492) Tj ET
+BT 0 g /F2 9.5 Tf 1 0 0 1 545.48 621 Tm (+90%) Tj ET
+BT 0.1 g /F1 9.5 Tf 1 0 0 1 46 606 Tm (Tequila / Guachimontones) Tj ET
+BT 0.1 g /F1 9.5 Tf 1 0 0 1 363.12 606 Tm ($7,000) Tj ET
+BT 0.45 g /F1 9.5 Tf 1 0 0 1 445.12 606 Tm ($9,492) Tj ET
+BT 0 g /F2 9.5 Tf 1 0 0 1 545.48 606 Tm (+36%) Tj ET
+0.955 g 41 587 530 15 re f
+BT 0.1 g /F1 9.5 Tf 1 0 0 1 46 591 Tm (Cocula) Tj ET
+BT 0.1 g /F1 9.5 Tf 1 0 0 1 363.12 591 Tm ($6,500) Tj ET
+BT 0.45 g /F1 9.5 Tf 1 0 0 1 445.12 591 Tm ($9,690) Tj ET
+BT 0 g /F2 9.5 Tf 1 0 0 1 545.48 591 Tm (+49%) Tj ET
+BT 0.1 g /F1 9.5 Tf 1 0 0 1 46 576 Tm (Magdalena \(pasando Tequila\)) Tj ET
+BT 0.1 g /F1 9.5 Tf 1 0 0 1 363.12 576 Tm ($7,500) Tj ET
+BT 0.45 g /F1 9.5 Tf 1 0 0 1 445.12 576 Tm ($9,932) Tj ET
+BT 0 g /F2 9.5 Tf 1 0 0 1 545.48 576 Tm (+32%) Tj ET
+0.955 g 41 557 530 15 re f
+BT 0.1 g /F1 9.5 Tf 1 0 0 1 46 561 Tm (Tapalpa) Tj ET
+BT 0.1 g /F1 9.5 Tf 1 0 0 1 357.8 561 Tm ($14,500) Tj ET
+BT 0.45 g /F1 9.5 Tf 1 0 0 1 439.8 561 Tm ($12,264) Tj ET
+BT 0.5 g /F1 9.5 Tf 1 0 0 1 545.48 561 Tm (-15%) Tj ET
+BT 0.1 g /F1 9.5 Tf 1 0 0 1 46 546 Tm (Mazamitla) Tj ET
+BT 0.1 g /F1 9.5 Tf 1 0 0 1 357.8 546 Tm ($14,500) Tj ET
+BT 0.45 g /F1 9.5 Tf 1 0 0 1 439.8 546 Tm ($12,396) Tj ET
+BT 0.5 g /F1 9.5 Tf 1 0 0 1 545.48 546 Tm (-15%) Tj ET
+0.955 g 41 527 530 15 re f
+BT 0.1 g /F1 9.5 Tf 1 0 0 1 46 531 Tm (San Juan de los Lagos) Tj ET
+BT 0.1 g /F1 9.5 Tf 1 0 0 1 357.8 531 Tm ($14,000) Tj ET
+BT 0.45 g /F1 9.5 Tf 1 0 0 1 439.8 531 Tm ($12,792) Tj ET
+BT 0.5 g /F1 9.5 Tf 1 0 0 1 550.8 531 Tm (-9%) Tj ET
+BT 0.1 g /F1 9.5 Tf 1 0 0 1 46 516 Tm (Camécuaro / Zamora) Tj ET
+BT 0.1 g /F1 9.5 Tf 1 0 0 1 357.8 516 Tm ($14,500) Tj ET
+BT 0.45 g /F1 9.5 Tf 1 0 0 1 439.8 516 Tm ($13,408) Tj ET
+BT 0.5 g /F1 9.5 Tf 1 0 0 1 550.8 516 Tm (-8%) Tj ET
+0.955 g 41 497 530 15 re f
+BT 0.1 g /F1 9.5 Tf 1 0 0 1 46 501 Tm (El Manto) Tj ET
+BT 0.1 g /F1 9.5 Tf 1 0 0 1 357.8 501 Tm ($14,000) Tj ET
+BT 0.45 g /F1 9.5 Tf 1 0 0 1 439.8 501 Tm ($13,408) Tj ET
+BT 0.5 g /F1 9.5 Tf 1 0 0 1 550.8 501 Tm (-4%) Tj ET
+BT 0.1 g /F1 9.5 Tf 1 0 0 1 46 486 Tm (Talpa Burrita \(peregrinación\)) Tj ET
+BT 0.1 g /F1 9.5 Tf 1 0 0 1 357.8 486 Tm ($26,500) Tj ET
+BT 0.45 g /F1 9.5 Tf 1 0 0 1 439.8 486 Tm ($15,344) Tj ET
+BT 0 g /F2 9.5 Tf 1 0 0 1 545.48 486 Tm (-42%) Tj ET
+0.955 g 41 467 530 15 re f
+BT 0.1 g /F1 9.5 Tf 1 0 0 1 46 471 Tm (Talpa de Allende) Tj ET
+BT 0.1 g /F1 9.5 Tf 1 0 0 1 357.8 471 Tm ($15,000) Tj ET
+BT 0.45 g /F1 9.5 Tf 1 0 0 1 439.8 471 Tm ($15,344) Tj ET
+BT 0.5 g /F1 9.5 Tf 1 0 0 1 550.8 471 Tm (+2%) Tj ET
+BT 0.1 g /F1 9.5 Tf 1 0 0 1 46 456 Tm (Tepic) Tj ET
+BT 0.1 g /F1 9.5 Tf 1 0 0 1 357.8 456 Tm ($16,900) Tj ET
+BT 0.45 g /F1 9.5 Tf 1 0 0 1 439.8 456 Tm ($15,608) Tj ET
+BT 0.5 g /F1 9.5 Tf 1 0 0 1 550.8 456 Tm (-8%) Tj ET
+0.955 g 41 437 530 15 re f
+BT 0.1 g /F1 9.5 Tf 1 0 0 1 46 441 Tm (León) Tj ET
+BT 0.1 g /F1 9.5 Tf 1 0 0 1 357.8 441 Tm ($17,600) Tj ET
+BT 0.45 g /F1 9.5 Tf 1 0 0 1 439.8 441 Tm ($16,268) Tj ET
+BT 0.5 g /F1 9.5 Tf 1 0 0 1 550.8 441 Tm (-8%) Tj ET
+BT 0.1 g /F1 9.5 Tf 1 0 0 1 46 426 Tm (Rincón de Guayabitos) Tj ET
+BT 0.1 g /F1 9.5 Tf 1 0 0 1 357.8 426 Tm ($18,500) Tj ET
+BT 0.45 g /F1 9.5 Tf 1 0 0 1 439.8 426 Tm ($16,928) Tj ET
+BT 0.5 g /F1 9.5 Tf 1 0 0 1 550.8 426 Tm (-8%) Tj ET
+0.955 g 41 407 530 15 re f
+BT 0.1 g /F1 9.5 Tf 1 0 0 1 46 411 Tm (Chacala) Tj ET
+BT 0.1 g /F1 9.5 Tf 1 0 0 1 357.8 411 Tm ($16,500) Tj ET
+BT 0.45 g /F1 9.5 Tf 1 0 0 1 439.8 411 Tm ($17,544) Tj ET
+BT 0.5 g /F1 9.5 Tf 1 0 0 1 550.8 411 Tm (+6%) Tj ET
+BT 0.1 g /F1 9.5 Tf 1 0 0 1 46 396 Tm (Sayulita / San Pancho) Tj ET
+BT 0.1 g /F1 9.5 Tf 1 0 0 1 357.8 396 Tm ($18,000) Tj ET
+BT 0.45 g /F1 9.5 Tf 1 0 0 1 439.8 396 Tm ($18,204) Tj ET
+BT 0.5 g /F1 9.5 Tf 1 0 0 1 550.8 396 Tm (+1%) Tj ET
+0.955 g 41 377 530 15 re f
+BT 0.1 g /F1 9.5 Tf 1 0 0 1 46 381 Tm (Zirahuén \(junto a Pátzcuaro\)) Tj ET
+BT 0.1 g /F1 9.5 Tf 1 0 0 1 357.8 381 Tm ($23,000) Tj ET
+BT 0.45 g /F1 9.5 Tf 1 0 0 1 439.8 381 Tm ($18,490) Tj ET
+BT 0.5 g /F1 9.5 Tf 1 0 0 1 545.48 381 Tm (-20%) Tj ET
+BT 0.1 g /F1 9.5 Tf 1 0 0 1 46 366 Tm (Guanajuato) Tj ET
+BT 0.1 g /F1 9.5 Tf 1 0 0 1 357.8 366 Tm ($19,000) Tj ET
+BT 0.45 g /F1 9.5 Tf 1 0 0 1 439.8 366 Tm ($18,600) Tj ET
+BT 0.5 g /F1 9.5 Tf 1 0 0 1 550.8 366 Tm (-2%) Tj ET
+0.955 g 41 347 530 15 re f
+BT 0.1 g /F1 9.5 Tf 1 0 0 1 46 351 Tm (Manzanillo) Tj ET
+BT 0.1 g /F1 9.5 Tf 1 0 0 1 357.8 351 Tm ($18,500) Tj ET
+BT 0.45 g /F1 9.5 Tf 1 0 0 1 439.8 351 Tm ($19,128) Tj ET
+BT 0.5 g /F1 9.5 Tf 1 0 0 1 550.8 351 Tm (+3%) Tj ET
+BT 0.1 g /F1 9.5 Tf 1 0 0 1 46 336 Tm (Morelia) Tj ET
+BT 0.1 g /F1 9.5 Tf 1 0 0 1 357.8 336 Tm ($19,000) Tj ET
+BT 0.45 g /F1 9.5 Tf 1 0 0 1 439.8 336 Tm ($19,128) Tj ET
+BT 0.5 g /F1 9.5 Tf 1 0 0 1 550.8 336 Tm (+1%) Tj ET
+0.955 g 41 317 530 15 re f
+BT 0.1 g /F1 9.5 Tf 1 0 0 1 46 321 Tm (Puerto Vallarta y alrededores) Tj ET
+BT 0.1 g /F1 9.5 Tf 1 0 0 1 357.8 321 Tm ($19,000) Tj ET
+BT 0.45 g /F1 9.5 Tf 1 0 0 1 439.8 321 Tm ($20,140) Tj ET
+BT 0.5 g /F1 9.5 Tf 1 0 0 1 550.8 321 Tm (+6%) Tj ET
+BT 0.1 g /F1 9.5 Tf 1 0 0 1 46 306 Tm (Punta Perula) Tj ET
+BT 0.1 g /F1 9.5 Tf 1 0 0 1 357.8 306 Tm ($20,500) Tj ET
+BT 0.45 g /F1 9.5 Tf 1 0 0 1 439.8 306 Tm ($20,140) Tj ET
+BT 0.5 g /F1 9.5 Tf 1 0 0 1 550.8 306 Tm (-2%) Tj ET
+0.955 g 41 287 530 15 re f
+BT 0.1 g /F1 9.5 Tf 1 0 0 1 46 291 Tm (Mismaloya) Tj ET
+BT 0.1 g /F1 9.5 Tf 1 0 0 1 357.8 291 Tm ($20,000) Tj ET
+BT 0.45 g /F1 9.5 Tf 1 0 0 1 439.8 291 Tm ($20,932) Tj ET
+BT 0.5 g /F1 9.5 Tf 1 0 0 1 550.8 291 Tm (+5%) Tj ET
+BT 0.1 g /F1 9.5 Tf 1 0 0 1 46 276 Tm (Pátzcuaro / Uruapan) Tj ET
+BT 0.1 g /F1 9.5 Tf 1 0 0 1 357.8 276 Tm ($25,000) Tj ET
+BT 0.45 g /F1 9.5 Tf 1 0 0 1 439.8 276 Tm ($20,932) Tj ET
+BT 0.5 g /F1 9.5 Tf 1 0 0 1 545.48 276 Tm (-16%) Tj ET
+0.955 g 41 257 530 15 re f
+BT 0.1 g /F1 9.5 Tf 1 0 0 1 46 261 Tm (San Miguel de Allende) Tj ET
+BT 0.1 g /F1 9.5 Tf 1 0 0 1 357.8 261 Tm ($26,500) Tj ET
+BT 0.45 g /F1 9.5 Tf 1 0 0 1 439.8 261 Tm ($21,328) Tj ET
+BT 0.5 g /F1 9.5 Tf 1 0 0 1 545.48 261 Tm (-20%) Tj ET
+BT 0.1 g /F1 9.5 Tf 1 0 0 1 46 246 Tm (Melaque / Barra de Navidad) Tj ET
+BT 0.1 g /F1 9.5 Tf 1 0 0 1 357.8 246 Tm ($20,500) Tj ET
+BT 0.45 g /F1 9.5 Tf 1 0 0 1 439.8 246 Tm ($21,724) Tj ET
+BT 0.5 g /F1 9.5 Tf 1 0 0 1 550.8 246 Tm (+6%) Tj ET
+0.955 g 41 227 530 15 re f
+BT 0.1 g /F1 9.5 Tf 1 0 0 1 46 231 Tm (Zacatecas) Tj ET
+BT 0.1 g /F1 9.5 Tf 1 0 0 1 357.8 231 Tm ($25,000) Tj ET
+BT 0.45 g /F1 9.5 Tf 1 0 0 1 439.8 231 Tm ($22,076) Tj ET
+BT 0.5 g /F1 9.5 Tf 1 0 0 1 545.48 231 Tm (-12%) Tj ET
+BT 0.1 g /F1 9.5 Tf 1 0 0 1 46 216 Tm (Tlalpujahua) Tj ET
+BT 0.1 g /F1 9.5 Tf 1 0 0 1 357.8 216 Tm ($23,500) Tj ET
+BT 0.45 g /F1 9.5 Tf 1 0 0 1 439.8 216 Tm ($23,264) Tj ET
+BT 0.5 g /F1 9.5 Tf 1 0 0 1 550.8 216 Tm (-1%) Tj ET
+0.955 g 41 197 530 15 re f
+BT 0.1 g /F1 9.5 Tf 1 0 0 1 46 201 Tm (Tenacatita) Tj ET
+BT 0.1 g /F1 9.5 Tf 1 0 0 1 357.8 201 Tm ($20,000) Tj ET
+BT 0.45 g /F1 9.5 Tf 1 0 0 1 439.8 201 Tm ($23,264) Tj ET
+BT 0.5 g /F1 9.5 Tf 1 0 0 1 545.48 201 Tm (+16%) Tj ET
+BT 0.1 g /F1 9.5 Tf 1 0 0 1 46 186 Tm (Santuario de la Mariposa Monarca) Tj ET
+BT 0.1 g /F1 9.5 Tf 1 0 0 1 357.8 186 Tm ($23,000) Tj ET
+BT 0.45 g /F1 9.5 Tf 1 0 0 1 439.8 186 Tm ($23,660) Tj ET
+BT 0.5 g /F1 9.5 Tf 1 0 0 1 550.8 186 Tm (+3%) Tj ET
+0.955 g 41 167 530 15 re f
+BT 0.1 g /F1 9.5 Tf 1 0 0 1 46 171 Tm (Mayto) Tj ET
+BT 0.1 g /F1 9.5 Tf 1 0 0 1 357.8 171 Tm ($26,500) Tj ET
+BT 0.45 g /F1 9.5 Tf 1 0 0 1 439.8 171 Tm ($24,056) Tj ET
+BT 0.5 g /F1 9.5 Tf 1 0 0 1 550.8 171 Tm (-9%) Tj ET
+BT 0.1 g /F1 9.5 Tf 1 0 0 1 46 156 Tm (Mariposa / Azufres / Pátzcuaro) Tj ET
+BT 0.1 g /F1 9.5 Tf 1 0 0 1 357.8 156 Tm ($29,000) Tj ET
+BT 0.45 g /F1 9.5 Tf 1 0 0 1 439.8 156 Tm ($24,540) Tj ET
+BT 0.5 g /F1 9.5 Tf 1 0 0 1 545.48 156 Tm (-15%) Tj ET
+0.955 g 41 137 530 15 re f
+BT 0.1 g /F1 9.5 Tf 1 0 0 1 46 141 Tm (Mazatlán) Tj ET
+BT 0.1 g /F1 9.5 Tf 1 0 0 1 357.8 141 Tm ($28,000) Tj ET
+BT 0.45 g /F1 9.5 Tf 1 0 0 1 439.8 141 Tm ($27,664) Tj ET
+BT 0.5 g /F1 9.5 Tf 1 0 0 1 550.8 141 Tm (-1%) Tj ET
+BT 0.1 g /F1 9.5 Tf 1 0 0 1 46 126 Tm (Valle de Bravo / Nevado de Toluca) Tj ET
+BT 0.1 g /F1 9.5 Tf 1 0 0 1 357.8 126 Tm ($32,000) Tj ET
+BT 0.45 g /F1 9.5 Tf 1 0 0 1 439.8 126 Tm ($29,204) Tj ET
+BT 0.5 g /F1 9.5 Tf 1 0 0 1 550.8 126 Tm (-9%) Tj ET
+0.955 g 41 107 530 15 re f
+BT 0.1 g /F1 9.5 Tf 1 0 0 1 46 111 Tm (Ixtapa Zihuatanejo) Tj ET
+BT 0.1 g /F1 9.5 Tf 1 0 0 1 357.8 111 Tm ($29,500) Tj ET
+BT 0.45 g /F1 9.5 Tf 1 0 0 1 439.8 111 Tm ($29,732) Tj ET
+BT 0.5 g /F1 9.5 Tf 1 0 0 1 550.8 111 Tm (+1%) Tj ET
+BT 0.1 g /F1 9.5 Tf 1 0 0 1 46 96 Tm (Ciudad de México) Tj ET
+BT 0.1 g /F1 9.5 Tf 1 0 0 1 357.8 96 Tm ($22,000) Tj ET
+BT 0.45 g /F1 9.5 Tf 1 0 0 1 439.8 96 Tm ($30,744) Tj ET
+BT 0 g /F2 9.5 Tf 1 0 0 1 545.48 96 Tm (+40%) Tj ET
+endstream
+endobj
+8 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents 7 0 R >>
+endobj
+9 0 obj
+<< /Length 2766 >>
+stream
+BT 0 g /F2 13 Tf 1 0 0 1 46 746 Tm (Los 49 que ya cotizaste \(sigue\)) Tj ET
+BT 0.45 g /F2 8 Tf 1 0 0 1 46 722 Tm (DESTINO) Tj ET
+BT 0.45 g /F2 8 Tf 1 0 0 1 348.15999999999997 722 Tm (TU PRECIO) Tj ET
+BT 0.45 g /F2 8 Tf 1 0 0 1 424.4 722 Tm (LA FÓRMULA) Tj ET
+BT 0.45 g /F2 8 Tf 1 0 0 1 516.4 722 Tm (DIFERENCIA) Tj ET
+0.5 G 0.8 w 46 715 m 566 715 l S
+0.955 g 41 697 530 15 re f
+BT 0.1 g /F1 9.5 Tf 1 0 0 1 46 701 Tm (Grutas Tolantongo) Tj ET
+BT 0.1 g /F1 9.5 Tf 1 0 0 1 357.8 701 Tm ($29,500) Tj ET
+BT 0.45 g /F1 9.5 Tf 1 0 0 1 439.8 701 Tm ($30,744) Tj ET
+BT 0.5 g /F1 9.5 Tf 1 0 0 1 550.8 701 Tm (+4%) Tj ET
+BT 0.1 g /F1 9.5 Tf 1 0 0 1 46 686 Tm (Real de Catorce) Tj ET
+BT 0.1 g /F1 9.5 Tf 1 0 0 1 357.8 686 Tm ($34,500) Tj ET
+BT 0.45 g /F1 9.5 Tf 1 0 0 1 439.8 686 Tm ($32,592) Tj ET
+BT 0.5 g /F1 9.5 Tf 1 0 0 1 550.8 686 Tm (-6%) Tj ET
+0.955 g 41 667 530 15 re f
+BT 0.1 g /F1 9.5 Tf 1 0 0 1 46 671 Tm (Huasteca Potosina) Tj ET
+BT 0.1 g /F1 9.5 Tf 1 0 0 1 357.8 671 Tm ($26,500) Tj ET
+BT 0.45 g /F1 9.5 Tf 1 0 0 1 439.8 671 Tm ($34,264) Tj ET
+BT 0 g /F2 9.5 Tf 1 0 0 1 545.48 671 Tm (+29%) Tj ET
+BT 0.1 g /F1 9.5 Tf 1 0 0 1 46 656 Tm (Puebla) Tj ET
+BT 0.1 g /F1 9.5 Tf 1 0 0 1 357.8 656 Tm ($36,500) Tj ET
+BT 0.45 g /F1 9.5 Tf 1 0 0 1 439.8 656 Tm ($35,936) Tj ET
+BT 0.5 g /F1 9.5 Tf 1 0 0 1 550.8 656 Tm (-2%) Tj ET
+0.955 g 41 637 530 15 re f
+BT 0.1 g /F1 9.5 Tf 1 0 0 1 46 641 Tm (Puebla con Zacatlán) Tj ET
+BT 0.1 g /F1 9.5 Tf 1 0 0 1 357.8 641 Tm ($39,500) Tj ET
+BT 0.45 g /F1 9.5 Tf 1 0 0 1 439.8 641 Tm ($36,596) Tj ET
+BT 0.5 g /F1 9.5 Tf 1 0 0 1 550.8 641 Tm (-7%) Tj ET
+BT 0.1 g /F1 9.5 Tf 1 0 0 1 46 626 Tm (Acapulco) Tj ET
+BT 0.1 g /F1 9.5 Tf 1 0 0 1 357.8 626 Tm ($60,000) Tj ET
+BT 0.45 g /F1 9.5 Tf 1 0 0 1 439.8 626 Tm ($51,556) Tj ET
+BT 0.5 g /F1 9.5 Tf 1 0 0 1 545.48 626 Tm (-14%) Tj ET
+0.955 g 41 607 530 15 re f
+BT 0.1 g /F1 9.5 Tf 1 0 0 1 46 611 Tm (Oaxaca) Tj ET
+BT 0.1 g /F1 9.5 Tf 1 0 0 1 357.8 611 Tm ($75,000) Tj ET
+BT 0.45 g /F1 9.5 Tf 1 0 0 1 439.8 611 Tm ($58,468) Tj ET
+BT 0.5 g /F1 9.5 Tf 1 0 0 1 545.48 611 Tm (-22%) Tj ET
+BT 0.1 g /F1 9.5 Tf 1 0 0 1 46 596 Tm (Chiapas) Tj ET
+BT 0.1 g /F1 9.5 Tf 1 0 0 1 357.8 596 Tm ($85,000) Tj ET
+BT 0.45 g /F1 9.5 Tf 1 0 0 1 439.8 596 Tm ($89,428) Tj ET
+BT 0.5 g /F1 9.5 Tf 1 0 0 1 550.8 596 Tm (+5%) Tj ET
+0.955 g 41 577 530 15 re f
+BT 0.1 g /F1 9.5 Tf 1 0 0 1 46 581 Tm (Barrancas del Cobre) Tj ET
+BT 0.1 g /F1 9.5 Tf 1 0 0 1 357.8 581 Tm ($75,000) Tj ET
+BT 0.45 g /F1 9.5 Tf 1 0 0 1 439.8 581 Tm ($90,652) Tj ET
+BT 0.5 g /F1 9.5 Tf 1 0 0 1 545.48 581 Tm (+21%) Tj ET
+BT 0.1 g /F1 9.5 Tf 1 0 0 1 46 566 Tm (Cancún) Tj ET
+BT 0.1 g /F1 9.5 Tf 1 0 0 1 352.48 566 Tm ($145,000) Tj ET
+BT 0.45 g /F1 9.5 Tf 1 0 0 1 434.48 566 Tm ($141,052) Tj ET
+BT 0.5 g /F1 9.5 Tf 1 0 0 1 550.8 566 Tm (-3%) Tj ET
+endstream
+endobj
+10 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents 9 0 R >>
+endobj
+11 0 obj
+<< /Length 6850 >>
+stream
+BT 0.45 g /F2 9 Tf 1 0 0 1 46 746 Tm (SEGUNDA PARTE) Tj ET
+BT 0 g /F2 17 Tf 1 0 0 1 46 726 Tm (51 destinos nuevos) Tj ET
+BT 0.4 g /F1 9.5 Tf 1 0 0 1 46 709 Tm (Viaje redondo de 2 días, sin movimientos. Escribe tu precio en la línea.) Tj ET
+BT 0.45 g /F2 8 Tf 1 0 0 1 46 687 Tm (DESTINO) Tj ET
+BT 0.45 g /F2 8 Tf 1 0 0 1 318.4 687 Tm (LA FÓRMULA DICE) Tj ET
+BT 0.45 g /F2 8 Tf 1 0 0 1 424 687 Tm (TU PRECIO) Tj ET
+0.5 G 0.8 w 46 680 m 566 680 l S
+BT 0.1 g /F1 10 Tf 1 0 0 1 46 664 Tm (Ajijic) Tj ET
+BT 0.5 g /F1 8 Tf 1 0 0 1 75.6 664 Tm (Jalisco) Tj ET
+BT 0.45 g /F1 10 Tf 1 0 0 1 361.6 664 Tm ($6,500) Tj ET
+0.62 G 0.6 w 424 661 m 566 661 l S
+BT 0.1 g /F1 10 Tf 1 0 0 1 46 645 Tm (Jocotepec) Tj ET
+BT 0.5 g /F1 8 Tf 1 0 0 1 98.39999999999999 645 Tm (Jalisco) Tj ET
+BT 0.45 g /F1 10 Tf 1 0 0 1 356 645 Tm ($10,100) Tj ET
+0.62 G 0.6 w 424 642 m 566 642 l S
+BT 0.1 g /F1 10 Tf 1 0 0 1 46 626 Tm (Villa Corona) Tj ET
+BT 0.5 g /F1 8 Tf 1 0 0 1 110.19999999999999 626 Tm (Jalisco) Tj ET
+BT 0.45 g /F1 10 Tf 1 0 0 1 361.6 626 Tm ($9,700) Tj ET
+0.62 G 0.6 w 424 623 m 566 623 l S
+BT 0.1 g /F1 10 Tf 1 0 0 1 46 607 Tm (Etzatlán) Tj ET
+BT 0.5 g /F1 8 Tf 1 0 0 1 88.4 607 Tm (Jalisco) Tj ET
+BT 0.45 g /F1 10 Tf 1 0 0 1 356 607 Tm ($10,800) Tj ET
+0.62 G 0.6 w 424 604 m 566 604 l S
+BT 0.1 g /F1 10 Tf 1 0 0 1 46 588 Tm (Ameca) Tj ET
+BT 0.5 g /F1 8 Tf 1 0 0 1 83 588 Tm (Jalisco) Tj ET
+BT 0.45 g /F1 10 Tf 1 0 0 1 356 588 Tm ($10,700) Tj ET
+0.62 G 0.6 w 424 585 m 566 585 l S
+BT 0.1 g /F1 10 Tf 1 0 0 1 46 569 Tm (Tepatitlán de Morelos) Tj ET
+BT 0.5 g /F1 8 Tf 1 0 0 1 154.2 569 Tm (Jalisco) Tj ET
+BT 0.45 g /F1 10 Tf 1 0 0 1 361.6 569 Tm ($9,600) Tj ET
+0.62 G 0.6 w 424 566 m 566 566 l S
+BT 0.1 g /F1 10 Tf 1 0 0 1 46 550 Tm (Arandas) Tj ET
+BT 0.5 g /F1 8 Tf 1 0 0 1 90.4 550 Tm (Jalisco) Tj ET
+BT 0.45 g /F1 10 Tf 1 0 0 1 356 550 Tm ($11,900) Tj ET
+0.62 G 0.6 w 424 547 m 566 547 l S
+BT 0.1 g /F1 10 Tf 1 0 0 1 46 531 Tm (Ocotlán) Tj ET
+BT 0.5 g /F1 8 Tf 1 0 0 1 85.6 531 Tm (Jalisco) Tj ET
+BT 0.45 g /F1 10 Tf 1 0 0 1 356 531 Tm ($10,000) Tj ET
+0.62 G 0.6 w 424 528 m 566 528 l S
+BT 0.1 g /F1 10 Tf 1 0 0 1 46 512 Tm (Lagos de Moreno) Tj ET
+BT 0.5 g /F1 8 Tf 1 0 0 1 134.99999999999997 512 Tm (Jalisco) Tj ET
+BT 0.45 g /F1 10 Tf 1 0 0 1 356 512 Tm ($14,500) Tj ET
+0.62 G 0.6 w 424 509 m 566 509 l S
+BT 0.1 g /F1 10 Tf 1 0 0 1 46 493 Tm (Ciudad Guzmán) Tj ET
+BT 0.5 g /F1 8 Tf 1 0 0 1 123.19999999999999 493 Tm (Jalisco) Tj ET
+BT 0.45 g /F1 10 Tf 1 0 0 1 356 493 Tm ($13,100) Tj ET
+0.62 G 0.6 w 424 490 m 566 490 l S
+BT 0.1 g /F1 10 Tf 1 0 0 1 46 474 Tm (Autlán de Navarro) Tj ET
+BT 0.5 g /F1 8 Tf 1 0 0 1 138.6 474 Tm (Jalisco) Tj ET
+BT 0.45 g /F1 10 Tf 1 0 0 1 356 474 Tm ($15,800) Tj ET
+0.62 G 0.6 w 424 471 m 566 471 l S
+BT 0.1 g /F1 10 Tf 1 0 0 1 46 455 Tm (Mascota) Tj ET
+BT 0.5 g /F1 8 Tf 1 0 0 1 90 455 Tm (Jalisco) Tj ET
+BT 0.45 g /F1 10 Tf 1 0 0 1 356 455 Tm ($15,900) Tj ET
+0.62 G 0.6 w 424 452 m 566 452 l S
+BT 0.1 g /F1 10 Tf 1 0 0 1 46 436 Tm (San Sebastián del Oeste) Tj ET
+BT 0.5 g /F1 8 Tf 1 0 0 1 165.99999999999994 436 Tm (Jalisco) Tj ET
+BT 0.45 g /F1 10 Tf 1 0 0 1 356 436 Tm ($18,000) Tj ET
+0.62 G 0.6 w 424 433 m 566 433 l S
+BT 0.1 g /F1 10 Tf 1 0 0 1 46 417 Tm (Colima) Tj ET
+BT 0.5 g /F1 8 Tf 1 0 0 1 83.4 417 Tm (Colima) Tj ET
+BT 0.45 g /F1 10 Tf 1 0 0 1 356 417 Tm ($15,900) Tj ET
+0.62 G 0.6 w 424 414 m 566 414 l S
+BT 0.1 g /F1 10 Tf 1 0 0 1 46 398 Tm (Comala) Tj ET
+BT 0.5 g /F1 8 Tf 1 0 0 1 85.8 398 Tm (Colima) Tj ET
+BT 0.45 g /F1 10 Tf 1 0 0 1 356 398 Tm ($16,200) Tj ET
+0.62 G 0.6 w 424 395 m 566 395 l S
+BT 0.1 g /F1 10 Tf 1 0 0 1 46 379 Tm (Cuyutlán) Tj ET
+BT 0.5 g /F1 8 Tf 1 0 0 1 90.80000000000001 379 Tm (Colima) Tj ET
+BT 0.45 g /F1 10 Tf 1 0 0 1 356 379 Tm ($18,700) Tj ET
+0.62 G 0.6 w 424 376 m 566 376 l S
+BT 0.1 g /F1 10 Tf 1 0 0 1 46 360 Tm (Tecomán) Tj ET
+BT 0.5 g /F1 8 Tf 1 0 0 1 93.4 360 Tm (Colima) Tj ET
+BT 0.45 g /F1 10 Tf 1 0 0 1 356 360 Tm ($17,900) Tj ET
+0.62 G 0.6 w 424 357 m 566 357 l S
+BT 0.1 g /F1 10 Tf 1 0 0 1 46 341 Tm (Sahuayo) Tj ET
+BT 0.5 g /F1 8 Tf 1 0 0 1 90.4 341 Tm (Michoacán) Tj ET
+BT 0.45 g /F1 10 Tf 1 0 0 1 356 341 Tm ($12,100) Tj ET
+0.62 G 0.6 w 424 338 m 566 338 l S
+BT 0.1 g /F1 10 Tf 1 0 0 1 46 322 Tm (Jiquilpan) Tj ET
+BT 0.5 g /F1 8 Tf 1 0 0 1 93.60000000000001 322 Tm (Michoacán) Tj ET
+BT 0.45 g /F1 10 Tf 1 0 0 1 356 322 Tm ($12,700) Tj ET
+0.62 G 0.6 w 424 319 m 566 319 l S
+BT 0.1 g /F1 10 Tf 1 0 0 1 46 303 Tm (La Piedad) Tj ET
+BT 0.5 g /F1 8 Tf 1 0 0 1 99.4 303 Tm (Michoacán) Tj ET
+BT 0.45 g /F1 10 Tf 1 0 0 1 356 303 Tm ($13,700) Tj ET
+0.62 G 0.6 w 424 300 m 566 300 l S
+BT 0.1 g /F1 10 Tf 1 0 0 1 46 284 Tm (Santa Clara del Cobre) Tj ET
+BT 0.5 g /F1 8 Tf 1 0 0 1 157.99999999999997 284 Tm (Michoacán) Tj ET
+BT 0.45 g /F1 10 Tf 1 0 0 1 356 284 Tm ($21,200) Tj ET
+0.62 G 0.6 w 424 281 m 566 281 l S
+BT 0.1 g /F1 10 Tf 1 0 0 1 46 265 Tm (Tzintzuntzan) Tj ET
+BT 0.5 g /F1 8 Tf 1 0 0 1 109.19999999999999 265 Tm (Michoacán) Tj ET
+BT 0.45 g /F1 10 Tf 1 0 0 1 356 265 Tm ($17,700) Tj ET
+0.62 G 0.6 w 424 262 m 566 262 l S
+BT 0.1 g /F1 10 Tf 1 0 0 1 46 246 Tm (Angangueo) Tj ET
+BT 0.5 g /F1 8 Tf 1 0 0 1 100.8 246 Tm (Michoacán) Tj ET
+BT 0.45 g /F1 10 Tf 1 0 0 1 356 246 Tm ($23,000) Tj ET
+0.62 G 0.6 w 424 243 m 566 243 l S
+BT 0.1 g /F1 10 Tf 1 0 0 1 46 227 Tm (Aguascalientes) Tj ET
+BT 0.5 g /F1 8 Tf 1 0 0 1 119.6 227 Tm (Aguascalientes) Tj ET
+BT 0.45 g /F1 10 Tf 1 0 0 1 356 227 Tm ($16,000) Tj ET
+0.62 G 0.6 w 424 224 m 566 224 l S
+BT 0.1 g /F1 10 Tf 1 0 0 1 46 208 Tm (Querétaro) Tj ET
+BT 0.5 g /F1 8 Tf 1 0 0 1 98.4 208 Tm (Querétaro) Tj ET
+BT 0.45 g /F1 10 Tf 1 0 0 1 356 208 Tm ($21,900) Tj ET
+0.62 G 0.6 w 424 205 m 566 205 l S
+BT 0.1 g /F1 10 Tf 1 0 0 1 46 189 Tm (Bernal) Tj ET
+BT 0.5 g /F1 8 Tf 1 0 0 1 82.80000000000001 189 Tm (Querétaro) Tj ET
+BT 0.45 g /F1 10 Tf 1 0 0 1 356 189 Tm ($24,400) Tj ET
+0.62 G 0.6 w 424 186 m 566 186 l S
+BT 0.1 g /F1 10 Tf 1 0 0 1 46 170 Tm (Tequisquiapan) Tj ET
+BT 0.5 g /F1 8 Tf 1 0 0 1 116.79999999999998 170 Tm (Querétaro) Tj ET
+BT 0.45 g /F1 10 Tf 1 0 0 1 356 170 Tm ($24,500) Tj ET
+0.62 G 0.6 w 424 167 m 566 167 l S
+BT 0.1 g /F1 10 Tf 1 0 0 1 46 151 Tm (Dolores Hidalgo) Tj ET
+BT 0.5 g /F1 8 Tf 1 0 0 1 125.8 151 Tm (Guanajuato) Tj ET
+BT 0.45 g /F1 10 Tf 1 0 0 1 356 151 Tm ($20,600) Tj ET
+0.62 G 0.6 w 424 148 m 566 148 l S
+BT 0.1 g /F1 10 Tf 1 0 0 1 46 132 Tm (Celaya) Tj ET
+BT 0.5 g /F1 8 Tf 1 0 0 1 82.8 132 Tm (Guanajuato) Tj ET
+BT 0.45 g /F1 10 Tf 1 0 0 1 356 132 Tm ($20,000) Tj ET
+0.62 G 0.6 w 424 129 m 566 129 l S
+BT 0.1 g /F1 10 Tf 1 0 0 1 46 113 Tm (Irapuato) Tj ET
+BT 0.5 g /F1 8 Tf 1 0 0 1 93.19999999999999 113 Tm (Guanajuato) Tj ET
+BT 0.45 g /F1 10 Tf 1 0 0 1 356 113 Tm ($17,400) Tj ET
+0.62 G 0.6 w 424 110 m 566 110 l S
+BT 0.1 g /F1 10 Tf 1 0 0 1 46 94 Tm (San Blas) Tj ET
+BT 0.5 g /F1 8 Tf 1 0 0 1 94.2 94 Tm (Nayarit) Tj ET
+BT 0.45 g /F1 10 Tf 1 0 0 1 356 94 Tm ($19,000) Tj ET
+0.62 G 0.6 w 424 91 m 566 91 l S
+endstream
+endobj
+12 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents 11 0 R >>
+endobj
+13 0 obj
+<< /Length 4362 >>
+stream
+BT 0 g /F2 13 Tf 1 0 0 1 46 746 Tm (51 destinos nuevos \(sigue\)) Tj ET
+BT 0.45 g /F2 8 Tf 1 0 0 1 46 722 Tm (DESTINO) Tj ET
+BT 0.45 g /F2 8 Tf 1 0 0 1 318.4 722 Tm (LA FÓRMULA DICE) Tj ET
+BT 0.45 g /F2 8 Tf 1 0 0 1 424 722 Tm (TU PRECIO) Tj ET
+0.5 G 0.8 w 46 715 m 566 715 l S
+BT 0.1 g /F1 10 Tf 1 0 0 1 46 699 Tm (Bucerías) Tj ET
+BT 0.5 g /F1 8 Tf 1 0 0 1 95.6 699 Tm (Nayarit) Tj ET
+BT 0.45 g /F1 10 Tf 1 0 0 1 356 699 Tm ($19,000) Tj ET
+0.62 G 0.6 w 424 696 m 566 696 l S
+BT 0.1 g /F1 10 Tf 1 0 0 1 46 680 Tm (Nuevo Vallarta) Tj ET
+BT 0.5 g /F1 8 Tf 1 0 0 1 120.60000000000002 680 Tm (Nayarit) Tj ET
+BT 0.45 g /F1 10 Tf 1 0 0 1 356 680 Tm ($19,000) Tj ET
+0.62 G 0.6 w 424 677 m 566 677 l S
+BT 0.1 g /F1 10 Tf 1 0 0 1 46 661 Tm (Toluca) Tj ET
+BT 0.5 g /F1 8 Tf 1 0 0 1 82.8 661 Tm (Estado de México) Tj ET
+BT 0.45 g /F1 10 Tf 1 0 0 1 356 661 Tm ($32,000) Tj ET
+0.62 G 0.6 w 424 658 m 566 658 l S
+BT 0.1 g /F1 10 Tf 1 0 0 1 46 642 Tm (Teotihuacán) Tj ET
+BT 0.5 g /F1 8 Tf 1 0 0 1 106.4 642 Tm (Estado de México) Tj ET
+BT 0.45 g /F1 10 Tf 1 0 0 1 356 642 Tm ($30,500) Tj ET
+0.62 G 0.6 w 424 639 m 566 639 l S
+BT 0.1 g /F1 10 Tf 1 0 0 1 46 623 Tm (Cuernavaca) Tj ET
+BT 0.5 g /F1 8 Tf 1 0 0 1 105.99999999999999 623 Tm (Morelos) Tj ET
+BT 0.45 g /F1 10 Tf 1 0 0 1 356 623 Tm ($33,000) Tj ET
+0.62 G 0.6 w 424 620 m 566 620 l S
+BT 0.1 g /F1 10 Tf 1 0 0 1 46 604 Tm (Tepoztlán) Tj ET
+BT 0.5 g /F1 8 Tf 1 0 0 1 96 604 Tm (Morelos) Tj ET
+BT 0.45 g /F1 10 Tf 1 0 0 1 356 604 Tm ($32,800) Tj ET
+0.62 G 0.6 w 424 601 m 566 601 l S
+BT 0.1 g /F1 10 Tf 1 0 0 1 46 585 Tm (Taxco) Tj ET
+BT 0.5 g /F1 8 Tf 1 0 0 1 80 585 Tm (Guerrero) Tj ET
+BT 0.45 g /F1 10 Tf 1 0 0 1 356 585 Tm ($33,400) Tj ET
+0.62 G 0.6 w 424 582 m 566 582 l S
+BT 0.1 g /F1 10 Tf 1 0 0 1 46 566 Tm (Pachuca) Tj ET
+BT 0.5 g /F1 8 Tf 1 0 0 1 90.4 566 Tm (Hidalgo) Tj ET
+BT 0.45 g /F1 10 Tf 1 0 0 1 356 566 Tm ($30,800) Tj ET
+0.62 G 0.6 w 424 563 m 566 563 l S
+BT 0.1 g /F1 10 Tf 1 0 0 1 46 547 Tm (Huasca de Ocampo) Tj ET
+BT 0.5 g /F1 8 Tf 1 0 0 1 141.2 547 Tm (Hidalgo) Tj ET
+BT 0.45 g /F1 10 Tf 1 0 0 1 356 547 Tm ($32,200) Tj ET
+0.62 G 0.6 w 424 544 m 566 544 l S
+BT 0.1 g /F1 10 Tf 1 0 0 1 46 528 Tm (Tlaxcala) Tj ET
+BT 0.5 g /F1 8 Tf 1 0 0 1 90.8 528 Tm (Tlaxcala) Tj ET
+BT 0.45 g /F1 10 Tf 1 0 0 1 356 528 Tm ($34,600) Tj ET
+0.62 G 0.6 w 424 525 m 566 525 l S
+BT 0.1 g /F1 10 Tf 1 0 0 1 46 509 Tm (Cuetzalan) Tj ET
+BT 0.5 g /F1 8 Tf 1 0 0 1 96 509 Tm (Puebla) Tj ET
+BT 0.45 g /F1 10 Tf 1 0 0 1 356 509 Tm ($44,100) Tj ET
+0.62 G 0.6 w 424 506 m 566 506 l S
+BT 0.1 g /F1 10 Tf 1 0 0 1 46 490 Tm (San Luis Potosí) Tj ET
+BT 0.5 g /F1 8 Tf 1 0 0 1 129.20000000000002 490 Tm (San Luis Potosí) Tj ET
+BT 0.45 g /F1 10 Tf 1 0 0 1 356 490 Tm ($21,000) Tj ET
+0.62 G 0.6 w 424 487 m 566 487 l S
+BT 0.1 g /F1 10 Tf 1 0 0 1 46 471 Tm (Durango) Tj ET
+BT 0.5 g /F1 8 Tf 1 0 0 1 90.4 471 Tm (Durango) Tj ET
+BT 0.45 g /F1 10 Tf 1 0 0 1 356 471 Tm ($34,300) Tj ET
+0.62 G 0.6 w 424 468 m 566 468 l S
+BT 0.1 g /F1 10 Tf 1 0 0 1 46 452 Tm (Saltillo) Tj ET
+BT 0.5 g /F1 8 Tf 1 0 0 1 83.6 452 Tm (Coahuila) Tj ET
+BT 0.45 g /F1 10 Tf 1 0 0 1 356 452 Tm ($38,500) Tj ET
+0.62 G 0.6 w 424 449 m 566 449 l S
+BT 0.1 g /F1 10 Tf 1 0 0 1 46 433 Tm (Monterrey) Tj ET
+BT 0.5 g /F1 8 Tf 1 0 0 1 100.4 433 Tm (Nuevo León) Tj ET
+BT 0.45 g /F1 10 Tf 1 0 0 1 356 433 Tm ($44,600) Tj ET
+0.62 G 0.6 w 424 430 m 566 430 l S
+BT 0.1 g /F1 10 Tf 1 0 0 1 46 414 Tm (Chihuahua) Tj ET
+BT 0.5 g /F1 8 Tf 1 0 0 1 98.39999999999999 414 Tm (Chihuahua) Tj ET
+BT 0.45 g /F1 10 Tf 1 0 0 1 356 414 Tm ($71,500) Tj ET
+0.62 G 0.6 w 424 411 m 566 411 l S
+BT 0.1 g /F1 10 Tf 1 0 0 1 46 395 Tm (Los Mochis) Tj ET
+BT 0.5 g /F1 8 Tf 1 0 0 1 106.60000000000001 395 Tm (Sinaloa) Tj ET
+BT 0.45 g /F1 10 Tf 1 0 0 1 356 395 Tm ($50,800) Tj ET
+0.62 G 0.6 w 424 392 m 566 392 l S
+BT 0.1 g /F1 10 Tf 1 0 0 1 46 376 Tm (Veracruz) Tj ET
+BT 0.5 g /F1 8 Tf 1 0 0 1 95.6 376 Tm (Veracruz) Tj ET
+BT 0.45 g /F1 10 Tf 1 0 0 1 356 376 Tm ($51,700) Tj ET
+0.62 G 0.6 w 424 373 m 566 373 l S
+BT 0.1 g /F1 10 Tf 1 0 0 1 46 357 Tm (Xalapa) Tj ET
+BT 0.5 g /F1 8 Tf 1 0 0 1 82.8 357 Tm (Veracruz) Tj ET
+BT 0.45 g /F1 10 Tf 1 0 0 1 356 357 Tm ($43,900) Tj ET
+0.62 G 0.6 w 424 354 m 566 354 l S
+BT 0.1 g /F1 10 Tf 1 0 0 1 46 338 Tm (Mérida) Tj ET
+BT 0.5 g /F1 8 Tf 1 0 0 1 84.8 338 Tm (Yucatán) Tj ET
+BT 0.45 g /F1 10 Tf 1 0 0 1 350.4 338 Tm ($119,600) Tj ET
+0.62 G 0.6 w 424 335 m 566 335 l S
+endstream
+endobj
+14 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents 13 0 R >>
+endobj
+xref
+0 15
+0000000000 65535 f 
+0000000009 00000 n 
+0000000058 00000 n 
+0000000142 00000 n 
+0000000239 00000 n 
+0000000341 00000 n 
+0000003180 00000 n 
+0000003316 00000 n 
+0000013424 00000 n 
+0000013560 00000 n 
+0000016378 00000 n 
+0000016515 00000 n 
+0000023418 00000 n 
+0000023556 00000 n 
+0000027971 00000 n 
+trailer
+<< /Size 15 /Root 1 0 R >>
+startxref
+28109
+%%EOF

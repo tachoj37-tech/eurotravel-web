@@ -1,0 +1,359 @@
+[
+ {
+  "nombre": "Ajijic, Jalisco",
+  "id": "ChIJtSinkExBL4QRY52kBXEK1rg",
+  "precio": 6500,
+  "nota": "",
+  "encontrado": "Ajijic — Jalisco, México"
+ },
+ {
+  "nombre": "Jocotepec, Jalisco",
+  "id": "ChIJJQXgnAtcL4QR_WyIg2kBIRs",
+  "precio": 10100,
+  "nota": "",
+  "encontrado": "Jocotepec — Jalisco, México"
+ },
+ {
+  "nombre": "Villa Corona, Jalisco",
+  "id": "ChIJHZ8E4a_7JYQRSAfErvTxw0A",
+  "precio": 9700,
+  "nota": "",
+  "encontrado": "Villa Corona — Jalisco, México"
+ },
+ {
+  "nombre": "Etzatlán, Jalisco",
+  "id": "ChIJoyKanmtvJoQR1DdSUtBXb3Q",
+  "precio": 10800,
+  "nota": "",
+  "encontrado": "Etzatlán — Jalisco, México"
+ },
+ {
+  "nombre": "Ameca, Jalisco",
+  "id": "ChIJgVBlE4nWJYQR-bmim_fbigY",
+  "precio": 10700,
+  "nota": "",
+  "encontrado": "Ameca — Jalisco, México"
+ },
+ {
+  "nombre": "Tepatitlán de Morelos, Jalisco",
+  "id": "ChIJ67FvzdYnKYQR18NEtpQxn8A",
+  "precio": 9600,
+  "nota": "",
+  "encontrado": "Tepatitlán de Morelos — Jalisco, México"
+ },
+ {
+  "nombre": "Arandas, Jalisco",
+  "id": "ChIJJYH6JHdMKYQRhhTaCscOcQE",
+  "precio": 11900,
+  "nota": "",
+  "encontrado": "Arandas — Jalisco, México"
+ },
+ {
+  "nombre": "Ocotlán, Jalisco",
+  "id": "ChIJ72_Ex9rYLoQRfy4rbS4GEgM",
+  "precio": 10000,
+  "nota": "",
+  "encontrado": "Ocotlán — Jalisco, México"
+ },
+ {
+  "nombre": "Lagos de Moreno, Jalisco",
+  "id": "ChIJO14MpyTSK4QRUaU0txjmpxk",
+  "precio": 14500,
+  "nota": "",
+  "encontrado": "Lagos de Moreno — Jalisco, México"
+ },
+ {
+  "nombre": "Ciudad Guzmán, Jalisco",
+  "id": "ChIJM_AHSjKBL4QRhIdfjn_3sJg",
+  "precio": 13100,
+  "nota": "",
+  "encontrado": "Ciudad Guzmán — Jalisco, México"
+ },
+ {
+  "nombre": "Autlán de Navarro, Jalisco",
+  "id": "ChIJTXMbPc5VJIQRH2IMFVFitDQ",
+  "precio": 15800,
+  "nota": "",
+  "encontrado": "Autlán de Navarro — Jalisco, México"
+ },
+ {
+  "nombre": "Mascota, Jalisco",
+  "id": "ChIJSa0Wg3CmJoQRHo2jEJAdPRk",
+  "precio": 15900,
+  "nota": "",
+  "encontrado": "Mascota — Jalisco, México"
+ },
+ {
+  "nombre": "San Sebastián del Oeste, Jalisco",
+  "id": "ChIJ6_SunGS3JoQRX2hCj0vAFtk",
+  "precio": 18000,
+  "nota": "",
+  "encontrado": "San Sebastián del Oeste — Jalisco, México"
+ },
+ {
+  "nombre": "Colima, Colima",
+  "id": "ChIJF6JVNFJFJYQR5lX1WvyXtLY",
+  "precio": 15900,
+  "nota": "",
+  "encontrado": "Colima — Colima, México"
+ },
+ {
+  "nombre": "Comala, Colima",
+  "id": "ChIJY4aVsZtEJYQRHaHemtVYDxc",
+  "precio": 16200,
+  "nota": "",
+  "encontrado": "Comala — Colima, México"
+ },
+ {
+  "nombre": "Cuyutlán, Colima",
+  "id": "ChIJbej1KHjOOoQRDCWrRYhAtzE",
+  "precio": 18700,
+  "nota": "",
+  "encontrado": "Cuyutlán — Colima, México"
+ },
+ {
+  "nombre": "Tecomán, Colima",
+  "id": "ChIJdUyt41m2OoQRg8Uk0RAgWvc",
+  "precio": 17900,
+  "nota": "",
+  "encontrado": "Tecomán — Colima, México"
+ },
+ {
+  "nombre": "Sahuayo, Michoacán",
+  "id": "ChIJvxBryVLjLoQRHPLvBIleytI",
+  "precio": 12100,
+  "nota": "",
+  "encontrado": "Sahuayo — Michoacán, México"
+ },
+ {
+  "nombre": "Jiquilpan, Michoacán",
+  "id": "ChIJI4OK1G38LoQRn_8h_KPtt6c",
+  "precio": 12700,
+  "nota": "",
+  "encontrado": "Jiquilpan — Michoacán, México"
+ },
+ {
+  "nombre": "La Piedad, Michoacán",
+  "id": "ChIJ-3lXMAEfLIQRHGs6D2y4f34",
+  "precio": 13700,
+  "nota": "",
+  "encontrado": "La Piedad — Michoacán, México"
+ },
+ {
+  "nombre": "Santa Clara del Cobre, Michoacán",
+  "id": "ChIJ16jLgWCMLYQRaUC10DIofX4",
+  "precio": 21200,
+  "nota": "",
+  "encontrado": "Santa Clara del Cobre — Michoacán, México"
+ },
+ {
+  "nombre": "Tzintzuntzan, Michoacán",
+  "id": "ChIJUcqmhhu9LYQRZZLknhAcQSs",
+  "precio": 17700,
+  "nota": "",
+  "encontrado": "Tzintzuntzan — Michoacán, México"
+ },
+ {
+  "nombre": "Angangueo, Michoacán",
+  "id": "ChIJZ61eca2_0oURr-SgpuZlP28",
+  "precio": 23000,
+  "nota": "",
+  "encontrado": "Angangueo — Michoacán, México"
+ },
+ {
+  "nombre": "Aguascalientes, Aguascalientes",
+  "id": "ChIJ-9nkOhTsKYQRIFKcZ3hpAQQ",
+  "precio": 16000,
+  "nota": "",
+  "encontrado": "Aguascalientes — Aguascalientes, México"
+ },
+ {
+  "nombre": "Querétaro, Querétaro",
+  "id": "ChIJVZJb3I9b04URL4MbVqqUsJc",
+  "precio": 21900,
+  "nota": "",
+  "encontrado": "Querétaro — Querétaro, México"
+ },
+ {
+  "nombre": "Bernal, Querétaro",
+  "id": "ChIJV-kw5d9-04URLHhi-YRIH6o",
+  "precio": 24400,
+  "nota": "",
+  "encontrado": "Bernal — Querétaro, México"
+ },
+ {
+  "nombre": "Tequisquiapan, Querétaro",
+  "id": "ChIJq0UQdwOc04UR_3-xOpOSwz8",
+  "precio": 24500,
+  "nota": "",
+  "encontrado": "Tequisquiapan — Querétaro, México"
+ },
+ {
+  "nombre": "Dolores Hidalgo, Guanajuato",
+  "id": "ChIJkdpFewM8K4QRQknO4_RDuTE",
+  "precio": 20600,
+  "nota": "",
+  "encontrado": "Dolores Hidalgo — Guanajuato, México"
+ },
+ {
+  "nombre": "Celaya, Guanajuato",
+  "id": "ChIJdcZgHmS6LIQRRyd9mq3Tj5k",
+  "precio": 20000,
+  "nota": "",
+  "encontrado": "Celaya — Guanajuato, México"
+ },
+ {
+  "nombre": "Irapuato, Guanajuato",
+  "id": "ChIJ9SR-ex9-LIQRm2jpzR4I_cc",
+  "precio": 17400,
+  "nota": "",
+  "encontrado": "Irapuato — Guanajuato, México"
+ },
+ {
+  "nombre": "San Blas, Nayarit",
+  "id": "ChIJo0obSje4IIQR9c24KtR0IX0",
+  "precio": 19000,
+  "nota": "",
+  "encontrado": "San Blas — Nayarit, México"
+ },
+ {
+  "nombre": "Bucerías, Nayarit",
+  "id": "ChIJM1ycD5VAIYQRj1Qui8Q5dbc",
+  "precio": 19000,
+  "nota": "",
+  "encontrado": "Bucerías — Nayarit, México"
+ },
+ {
+  "nombre": "Nuevo Vallarta, Nayarit",
+  "id": "ChIJx1CMEKNGIYQRPWRRqm8GtUw",
+  "precio": 19000,
+  "nota": "",
+  "encontrado": "Nuevo Vallarta — Nayarit, México"
+ },
+ {
+  "nombre": "Toluca, Estado de México",
+  "id": "ChIJuetQKomJzYURxAgCVdVKP60",
+  "precio": 32000,
+  "nota": "",
+  "encontrado": "Toluca — Estado de México, México"
+ },
+ {
+  "nombre": "Teotihuacán, Estado de México",
+  "id": "ChIJyd0BTvnq0YUR2mRxFCPVfsc",
+  "precio": 30500,
+  "nota": "",
+  "encontrado": "Teotihuacan — Estado de México, México"
+ },
+ {
+  "nombre": "Cuernavaca, Morelos",
+  "id": "ChIJra8im0nezYURoZC3ubW8tsk",
+  "precio": 33000,
+  "nota": "",
+  "encontrado": "Cuernavaca — Morelos, México"
+ },
+ {
+  "nombre": "Tepoztlán, Morelos",
+  "id": "ChIJdStY3WELzoURIItygPPXAAQ",
+  "precio": 32800,
+  "nota": "",
+  "encontrado": "Tepoztlán — Morelos, México"
+ },
+ {
+  "nombre": "Taxco, Guerrero",
+  "id": "ChIJC6AxgDZLzIURIFGj5QxoXsI",
+  "precio": 33400,
+  "nota": "",
+  "encontrado": "Taxco — Guerrero, México"
+ },
+ {
+  "nombre": "Pachuca, Hidalgo",
+  "id": "ChIJiwMeb3Gn0YURSbeWFBBcMRM",
+  "precio": 30800,
+  "nota": "",
+  "encontrado": "Pachuca — Hidalgo, México"
+ },
+ {
+  "nombre": "Huasca de Ocampo, Hidalgo",
+  "id": "ChIJFXMAJdYD0YURZSLTaf3RVyw",
+  "precio": 32200,
+  "nota": "",
+  "encontrado": "Huasca de Ocampo — Hidalgo, México"
+ },
+ {
+  "nombre": "Tlaxcala, Tlaxcala",
+  "id": "ChIJC5AwfmrZz4URyABdnapQy3I",
+  "precio": 34600,
+  "nota": "",
+  "encontrado": "Tlaxcala — Tlaxcala, México"
+ },
+ {
+  "nombre": "Cuetzalan, Puebla",
+  "id": "ChIJu1vFf3iO2oURJn_Y7F7eY6U",
+  "precio": 44100,
+  "nota": "",
+  "encontrado": "Cuetzalan — Puebla, México"
+ },
+ {
+  "nombre": "San Luis Potosí, San Luis Potosí",
+  "id": "ChIJefusBQCiKoQRV4Lhrynu0g4",
+  "precio": 21000,
+  "nota": "",
+  "encontrado": "San Luis Potosí — San Luis Potosí, México"
+ },
+ {
+  "nombre": "Durango, Durango",
+  "id": "ChIJc9-8GKW3m4YR1EpsOqaO3b8",
+  "precio": 34300,
+  "nota": "",
+  "encontrado": "Durango — Durango, México"
+ },
+ {
+  "nombre": "Saltillo, Coahuila",
+  "id": "ChIJ7xnfeJANiIYRwDBHeUGSUak",
+  "precio": 38500,
+  "nota": "",
+  "encontrado": "Saltillo — Coahuila de Zaragoza, México"
+ },
+ {
+  "nombre": "Monterrey, Nuevo León",
+  "id": "ChIJ9fg3tDGVYoYRlJjIasrT06M",
+  "precio": 44600,
+  "nota": "",
+  "encontrado": "Monterrey — Nuevo León, México"
+ },
+ {
+  "nombre": "Chihuahua, Chihuahua",
+  "id": "ChIJM0BIXZ1E6oYRex3dBqen8bc",
+  "precio": 71500,
+  "nota": "",
+  "encontrado": "Chihuahua — Chihuahua, México"
+ },
+ {
+  "nombre": "Los Mochis, Sinaloa",
+  "id": "ChIJw-o1tkIvuoYRCIgyUkfDJLY",
+  "precio": 50800,
+  "nota": "",
+  "encontrado": "Los Mochis — Sinaloa, México"
+ },
+ {
+  "nombre": "Veracruz, Veracruz",
+  "id": "ChIJxXjKRUJBw4URmwE26ULWpBg",
+  "precio": 51700,
+  "nota": "",
+  "encontrado": "Veracruz — Veracruz, México"
+ },
+ {
+  "nombre": "Xalapa, Veracruz",
+  "id": "ChIJ2SXyoRwy24URfKRAQ7w3SFg",
+  "precio": 43900,
+  "nota": "",
+  "encontrado": "Xalapa — Veracruz, México"
+ },
+ {
+  "nombre": "Mérida, Yucatán",
+  "id": "ChIJFw1Fq1xxVo8RCeurFVcV_F0",
+  "precio": 119600,
+  "nota": "",
+  "encontrado": "Mérida — Yucatán, México"
+ }
+]
