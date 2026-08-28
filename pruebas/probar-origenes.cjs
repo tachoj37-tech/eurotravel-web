@@ -177,21 +177,43 @@ function conKm(nombre, km, dias, origen) {
 }
 
 /* Tequila está a unos 60 km rumbo a Vallarta, así que el redondo mide
-   ~120 km MENOS que los 620 del catálogo. */
+   ~120 km MENOS que los 620 del catálogo. Da igual lo que mida: Tequila no
+   es un origen dictado, así que no se le suma nada. */
 ok('Tequila -> Vallarta (mide 120 km menos)', conKm('Puerto Vallarta y alrededores', VLL.km - 120, 4, TEQUILA), 19000);
+ok('Tequila -> Vallarta aunque midiera 300 km de más', conKm('Puerto Vallarta y alrededores', VLL.km + 300, 4, TEQUILA), 19000);
 
-/* Y al revés: un origen desconocido que SI es desvío sí paga. Colima está
-   al sur; a Zacatecas se va al norte, así que el viaje mide de más. */
-titulo('Un desvío de verdad, con origen que no está en el Excel');
+/* ------------------------------------------------------------
+   UN ORIGEN QUE NO ESTA DICTADO NO PAGA, MIDA LO QUE MIDA
+
+   ESTAS ASERCIONES CAMBIARON DE LADO EL 28-ago-2026, el mismo día
+   que nacieron. La primera versión traía un respaldo: para un
+   origen desconocido comparaba el viaje medido contra el mismo
+   viaje desde Guadalajara y cobraba los kilómetros de más. A
+   Monterrey–Vallarta le sumaba $15,800.
+
+   El dueño lo acotó: «de momento solo vamos a usar el radio de
+   Ocotlán». Y tenía razón de fondo: esos $15,800 salían de una
+   cuenta mía, no de su Excel, que es justo lo que prohíbe R12.
+   ------------------------------------------------------------ */
+titulo('Un origen que no dictó no paga, aunque el viaje mida de más');
 const ZAC = destinos.buscaDestino({ nombre: 'Zacatecas' });
 const COLIMA = { lat: 19.2452, lng: -103.7241, direccion: 'Colima, Col., México' };
-ok('Colima -> Zacatecas, mismo km que GDL: no cobra',
-  conKm('Zacatecas', ZAC.km, 2, COLIMA), 25000);
-ok('Colima -> Zacatecas, 60 km de más: dentro del margen, no cobra',
-  conKm('Zacatecas', ZAC.km + 60, 2, COLIMA), 25000);
-/* 460 km de más - 60 de margen = 400 km x $22 = $8,800 */
-ok('Colima -> Zacatecas, 460 km de más: cobra los 400 que pasan del margen',
-  conKm('Zacatecas', ZAC.km + 460, 2, COLIMA), 25000 + 8800);
+ok('Colima -> Zacatecas, mismo km que GDL', conKm('Zacatecas', ZAC.km, 2, COLIMA), 25000);
+ok('Colima -> Zacatecas, 460 km de más: sigue sin cobrar',
+  conKm('Zacatecas', ZAC.km + 460, 2, COLIMA), 25000);
+const MONTERREY = { lat: 25.6866, lng: -100.3161, direccion: 'Monterrey, N.L., México' };
+ok('Monterrey -> Vallarta, 780 km de más: sigue sin cobrar',
+  conKm('Puerto Vallarta y alrededores', VLL.km + 780, 3, MONTERREY), 19000);
+
+/* Y el otro lado del mismo candado: DENTRO del radio de Ocotlán, un destino
+   que su fila no menciona tampoco paga. Son 8 del catálogo —Tepic, León,
+   Tala, Zacoalco, Cocula, Magdalena, San Juan Cosalá y Zirahuén—, que no
+   vienen en su Excel. Está señalado en el criterio. */
+titulo('Desde Ocotlán, un destino que su fila no menciona no paga');
+[['Tepic', 2, 16900], ['León', 1, 17600]].forEach(function (f) {
+  ok(f[0] + ' desde Ocotlán: sin número dictado, precio de Guadalajara',
+    cotiza(f[0], f[1], 0, OCOTLAN), f[2]);
+});
 
 /* ------------------------------------------------------------
    5. QUE EL RECARGO NO SE META EN LOS MOVIMIENTOS

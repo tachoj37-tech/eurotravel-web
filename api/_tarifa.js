@@ -678,22 +678,22 @@ function sinPrecio(km, dias, extras) {
 /* ------------------------------------------------------------
    LO QUE SUMA SALIR DE OTRO LADO
    ------------------------------------------------------------
-   Solo le pasa a los destinos DE LISTA. Un destino de fórmula ya
-   cobra por los kilómetros que midió Google, así que salir de más
-   lejos ya se le cobró: sumarle un recargo sería cobrarlo dos
-   veces. La lista, en cambio, tira el kilometraje —Vallarta son
-   $19,000 midan lo que midan—, y ahí es donde el origen se
-   perdía.
+   SOLO lo que el dueño dictó. No hay cuenta de respaldo: si el
+   origen no está en `_origenes.js`, o si está pero su fila no dice
+   nada de ese destino, no se suma nada y se cobra precio de
+   Guadalajara. Un número que él no escribió no se cobra (R12).
 
-   Manda lo que el dueño dictó. Solo cuando no dictó nada para ese
-   destino se cobra el respaldo: los kilómetros que el viaje mide
-   DE MAS contra el mismo viaje desde Guadalajara, a la tarifa de
-   siempre.
+   Y solo le pasa a los destinos DE LISTA. Uno de fórmula ya cobra
+   por los kilómetros que midió Google, así que salir de más lejos
+   ya se le cobró: sumarle un recargo sería cobrarlo dos veces. La
+   lista, en cambio, tira el kilometraje —Vallarta son $19,000
+   midan lo que midan—, y ahí es donde el origen se perdía.
 
-   Ese respaldo es justo lo que hace verdadera la regla del dueño
-   sin ningún caso especial: saliendo de Tequila, Vallarta mide
-   MENOS que desde Guadalajara —Tequila está de camino—, la resta
-   sale negativa y no se cobra nada.
+   Su regla de «queda de pasada» no necesita geometría: ya viene
+   resuelta a mano dentro de su propia fila. Los 19 destinos que
+   escribió iguales SON los que quedan de camino. Y saliendo de
+   Tequila —que no es un origen dictado— no se suma nada, que es
+   justo lo que él dijo que tenía que pasar.
 
    No hay descuento por quedar de camino. El único destino que
    baja es Morelia, y baja porque él lo escribió, no porque una
@@ -703,28 +703,11 @@ function recargoDeSalida(km, extras, dias) {
   const vacio = { importe: 0, origen: null, dictado: false };
   if (!km || !km.deLista) return vacio;          // fórmula: ya lo cobró el km
 
-  const cual = origenes.buscaOrigen(extras.origen);
-
   const dictado = origenes.recargoDictado(extras.origen, km.deLista, dias);
-  if (dictado !== null) {
-    return { importe: dictado, origen: cual ? cual.nombre : null, dictado: true };
-  }
+  if (dictado === null) return vacio;            // él no lo escribió: no se cobra
 
-  /* Respaldo por carretera. `deLista` garantiza que el destino existe en el
-     catálogo, así que su kilometraje de referencia también. */
-  const enCatalogo = destinos.buscaDestino(extras.destino);
-  const referencia = enCatalogo ? Number(enCatalogo.km) : 0;
-  const medido = Math.max(0, Number(km.km) || 0);
-  if (!referencia || !medido) return vacio;
-
-  const deMas = medido - referencia - origenes.MARGEN_KM;
-  if (deMas <= 0) return vacio;
-
-  return {
-    importe: Math.floor(deMas * POR_KM / REDONDEO) * REDONDEO,
-    origen: cual ? cual.nombre : null,
-    dictado: false
-  };
+  const cual = origenes.buscaOrigen(extras.origen);
+  return { importe: dictado, origen: cual ? cual.nombre : null, dictado: true };
 }
 
 /* Del kilometraje, los días y lo que se declaró sale todo lo demás.

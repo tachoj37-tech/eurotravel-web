@@ -502,11 +502,27 @@ Por eso el respaldo usa los kilómetros que mide Google y no las coordenadas.
 cual, sin modelo: sus importes van en escalones de $500 y no salen de ninguna
 curva —el mismo motivo por el que la tabla de destinos no es una fórmula—.
 
-**El respaldo solo entra donde él no dictó**: el viaje se compara contra el
-mismo viaje desde Guadalajara y se cobran los kilómetros de más, a la tarifa
-de siempre. Eso hace verdadera su regla sin un solo caso especial: saliendo
-de Tequila, Vallarta mide MENOS que desde Guadalajara, la resta sale negativa
-y no se cobra nada.
+**Y solo eso: no hay respaldo.** Si el origen no está dictado, o está pero su
+fila no dice nada de ese destino, se cobra precio de Guadalajara.
+
+> **Hubo un respaldo y duró unas horas.** Para un origen desconocido comparaba
+> el viaje medido contra el mismo viaje desde Guadalajara y cobraba los
+> kilómetros de más, perdonando 60 —el ancho del área metropolitana—. El dueño
+> lo acotó el mismo día: *«de momento solo vamos a usar el radio de Ocotlán,
+> ahí te vas a basar para actualizar todos los destinos de la fila 11»*.
+>
+> Tenía razón de fondo, y es R12 otra vez: a Monterrey–Vallarta le sumaba
+> $15,800 **salidos de una cuenta mía, no de su Excel**. Yo lo había puesto
+> como «lo recomendado» y él lo apretó. Que quede escrito: cuando dudé entre
+> calcular un número o no cobrarlo, la respuesta buena era no cobrarlo.
+>
+> Para retomarlo, la cuenta era `medido − km del catálogo − 60`, a $22 el km,
+> redondeado abajo a la centena.
+
+Su regla de «queda de pasada» no necesita geometría: **ya viene resuelta a
+mano dentro de su propia fila**. Los 19 destinos que escribió iguales SON los
+que quedan de camino. Y saliendo de Tequila —que no es origen dictado— no se
+suma nada, que es justo lo que él dijo que tenía que pasar.
 
 **Solo aplica a destinos de LISTA.** Uno de fórmula ya cobró por los
 kilómetros que midió Google; sumarle recargo sería cobrarlo dos veces.
@@ -515,20 +531,23 @@ kilómetros que midió Google; sumarle recargo sería cobrarlo dos veces.
 días desde Ocotlán costaría lo mismo que desde Guadalajara: el piso de
 $30,000 se comería los $4,500 sin dejar rastro. La prueba lo clava.
 
+#### El radio, que es lo único que decide hoy
+
+**25 km alrededor de Ocotlán**, lo que alcanza Poncitlán, Jamay, La Barca y
+Atotonilco: mismo rumbo y misma distancia, así que el desvío es prácticamente
+el mismo. Confirmado por el dueño el 28-ago-2026 —*«de momento solo vamos a
+usar el radio de Ocotlán»*—, y desde que se quitó el respaldo es **la única
+puerta** por la que entra un recargo.
+
+Las coordenadas mandan sobre el texto: hay otro Ocotlán en Oaxaca.
+
 #### Lo que decidí yo, y hay que confirmarle
 
-1. **El radio de 25 km** alrededor de Ocotlán, que alcanza Poncitlán, Jamay,
-   La Barca y Atotonilco. Mismo rumbo y misma distancia, así que el desvío es
-   prácticamente el mismo. Él no dijo hasta dónde llega «Ocotlán».
-2. **El margen de 60 km** antes de cobrar kilómetros de más. Guadalajara mide
-   unos 30 km de punta a punta, así que el mismo viaje sale hasta 60 km
-   distinto según si el cliente está en Tonalá o en Tlajomulco. Sin margen, un
-   vecino de Zapopan vería un recargo de $200 por existir.
-3. **Tequila desde Ocotlán quedó en $12,000, no en los $13,500 del Excel.**
+1. **Tequila desde Ocotlán quedó en $12,000, no en los $13,500 del Excel.**
    Aquel número se apoya en los $8,500 que él bajó a $7,000 el 26-ago. Lo que
    se hereda es el **recargo** de $5,000, no el precio viejo: el desvío no
    cambió porque le bajara a Tequila.
-4. **Los tres destinos donde el recargo cambia con los días.** Su Excel les da
+2. **Los tres destinos donde el recargo cambia con los días.** Su Excel les da
    dos columnas y dos importes distintos:
 
    | | | |
@@ -546,6 +565,29 @@ $30,000 se comería los $4,500 sin dejar rastro. La prueba lo clava.
 que cuestan 4 días desde Guadalajara.** Además su recargo baja al crecer los
 días (+$4,000 a tres, +$2,000 a cuatro), al revés de todos los demás.
 Señalado, no cambiado (R12).
+
+#### Los 8 destinos que Ocotlán no cubre
+
+Al quitar el respaldo quedó un hueco que antes tapaba una cuenta: **hay 8
+destinos del catálogo que NO vienen en el Excel**, así que su fila 11 no dice
+nada de ellos. Desde Ocotlán pagan precio de Guadalajara.
+
+| destino | de dónde salió | su ancla en la lista | lo que Ocotlán le suma al ancla |
+|---|---|---|---|
+| San Juan Cosalá | dictado (R11) | Chapala | +$4,500 |
+| Magdalena | dictado (R11) | Tequila | +$5,000 |
+| Zirahuén | dictado (R11) | Pátzcuaro | $0 — queda de camino |
+| Tala | dictado 26-ago | — | — |
+| Zacoalco | dictado 26-ago | — | — |
+| Cocula | dictado 26-ago | — | — |
+| Tepic | dictado, corregido a mano | — | — |
+| León | dictado, corregido a mano | — | — |
+
+Los tres primeros nacieron anclados a un destino de la lista (R11), así que
+**podría tocarles el recargo de su ancla**. Los otros cinco no tienen ancla.
+
+**No se movió ninguno**: proponer esos cinco números sería R12 otra vez. Está
+aquí para preguntárselo con la lista enfrente.
 
 #### Lo que falta del mismo Excel
 

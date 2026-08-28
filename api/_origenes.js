@@ -42,15 +42,30 @@
    25) ya están en el mismo archivo, esperando.
    ============================================================ */
 
-/* Cuánto se le perdona a la medición antes de cobrar por los kilómetros de
-   más. El área metropolitana de Guadalajara mide unos 30 km de punta a
-   punta, así que el MISMO viaje sale hasta ~60 km distinto de ida y vuelta
-   según si el cliente está en Tonalá o en Tlajomulco. Sin este margen, un
-   vecino de Zapopan vería un recargo de $200 por existir.
+/* --------------------------------------------------------------
+   SOLO EL RADIO. NO HAY RESPALDO POR KILOMETROS.
 
-   NO sale del Excel: lo puse yo, y está anotado en el criterio para que el
-   dueño lo mueva si le parece corto o largo. */
-const MARGEN_KM = 60;
+   Hubo uno y se quitó el 28-ago-2026, el mismo día, por orden del
+   dueño: «de momento solo vamos a usar el radio de Ocotlán, ahí te
+   vas a basar para actualizar todos los destinos de la fila 11».
+
+   Lo que hacía: para un origen que NO estuviera en esta tabla,
+   comparaba el viaje medido contra el mismo viaje desde
+   Guadalajara y cobraba los kilómetros de más, perdonando 60 —el
+   ancho del área metropolitana, para que un vecino de Zapopan no
+   viera un recargo de $200 por existir—.
+
+   Por qué se fue: cobraba números que él nunca dictó. Un viaje
+   desde Monterrey a Vallarta le sumaba $15,800 salidos de una
+   cuenta mía, no de su Excel, y eso es exactamente lo que prohíbe
+   R12. Mientras no haya un origen dictado, la página cobra precio
+   de Guadalajara — que es lo que hacía antes y nunca le costó una
+   queja.
+
+   Para retomarlo: la cuenta era
+   `medido − km del catálogo − 60`, a POR_KM, redondeado abajo a la
+   centena. El criterio lo guarda entero en R19.
+   -------------------------------------------------------------- */
 
 const ORIGENES = [
   {
@@ -213,4 +228,4 @@ function recargoDictado(origen, nombreDestino, dias) {
   return null;
 }
 
-module.exports = { ORIGENES, MARGEN_KM, buscaOrigen, recargoDictado, lejosEnKm };
+module.exports = { ORIGENES, buscaOrigen, recargoDictado, lejosEnKm };

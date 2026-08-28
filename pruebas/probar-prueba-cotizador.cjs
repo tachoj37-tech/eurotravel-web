@@ -234,25 +234,24 @@ async function pide(cuerpo) {
 
   {
     /* --- 4f. precio de lista con origen lejano ---
-       ESTA ASERCION CAMBIO DE LADO EL 28-ago-2026, y no porque estuviera
-       mal: estaba DOCUMENTANDO un hueco, y el hueco se tapó.
+       Monterrey NO es un origen dictado, así que Vallarta le cuesta los
+       mismos $19,000 de lista. Eso es una DECISION del dueño, no un
+       descuido: el 28-ago-2026 acotó la regla del origen a «solo el radio
+       de Ocotlán», y un número que él no escribió no se cobra (R12).
 
-       Decía que Vallarta desde Monterrey costaba los mismos $19,000 que
-       desde Guadalajara, «y la pagina de verdad tambien». Eso era cierto y
-       era el defecto: la lista tira el kilometraje, así que el origen se
-       perdía. El dueño lo mandó arreglar el 28-ago-2026 al pasarme la fila
-       de Ocotlán.
-
-       Ahora el viaje mide 1,400 km contra los 620 del catálogo. Quitando
-       los 60 de margen quedan 720 km de más, que a $22 son $15,840 y
-       redondeados a la centena de abajo, $15,800. */
+       Esta aserción fue y volvió el mismo día. Primero decía $19,000
+       documentando un hueco; luego $34,800 cuando le puse un respaldo por
+       kilómetros; y al acotarlo él, volvió a $19,000 — ahora por regla, no
+       por hueco. El aviso de abajo es lo que sigue importando: la pantalla
+       tiene que ACUSAR que no sale de casa, para que la oficina lo vea. */
     METROS = 700000;                                    // 1,400 km ida y vuelta
     const r = await pide({ clave: CLAVE, dias: 3,
       origen: { direccion: 'Monterrey, Nuevo León, México', lat: 25.6866, lng: -100.3161 },
       destino: punto(VALLARTA) });
-    igual('la lista ya no ignora de dónde sale', r._json.total, 19000 + 15800);
-    igual('y se dice cuánto de eso fue por la salida', r._json.salida.importe, 15800);
-    igual('sin ser un número dictado, sino medido', r._json.salida.dictado, false);
+    igual('sin origen dictado, manda el precio de lista', r._json.total, 19000);
+    igual('y no se le suma nada por la salida', r._json.salida.importe, 0);
+    igual('porque Monterrey no está entre los orígenes conocidos',
+      r._json.salida.origenesConocidos.indexOf('Monterrey'), -1);
     igual('pero se acusa que NO sale de casa', r._json.viaje.saleDeCasa, false);
     cierto('y se dice a cuanto esta', r._json.viaje.aCuantoDeCasa > 500);
     //  6,500 + 1,400 × 22 = 37,300 contra 19,000 de lista: 18,300 de menos

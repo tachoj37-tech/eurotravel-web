@@ -321,7 +321,7 @@ module.exports = async function handler(req, res) {
       salida: {
         desde: p.interno.salidaDesde,
         dictado: p.interno.recargoDictado,
-        margenKm: origenes.MARGEN_KM,
+        origenesConocidos: origenes.ORIGENES.map(function (o) { return o.nombre; }),
         importe: p.interno.recargoSalida
       },
       total: p.total,
