@@ -304,6 +304,31 @@ ok('ni por coordenadas',
   origenes.buscaOrigen({ lat: 20.5497, lng: -102.5097 }), null);
 
 /* ------------------------------------------------------------
+   6-ter. UNA CALLE DE TONALA NO ES OCOTLAN
+
+   Falso positivo real, sacado de lo que Google contesta hoy: al
+   buscar «Ocotlán, Jalisco», su SEGUNDA sugerencia es una calle en
+   Tonalá. La pagina casi nunca manda coordenadas —solo con GPS o
+   con un link del mapa—, asi que el texto es el camino normal y
+   ese cliente se habria llevado hasta $6,000 de recargo.
+   ------------------------------------------------------------ */
+titulo('Una calle llamada Ocotlán en Tonalá no cobra recargo');
+[
+  'Ocotlan, Jalisco I Sección, Tonalá, Jalisco, México',
+  'Calle Ocotlán 123, Col. Centro, Guadalajara, Jalisco, México',
+  'Av. La Barca, Zapopan, Jalisco, México',
+  'Jamay 45, Tlaquepaque, Jalisco, México'
+].forEach(function (d) {
+  ok('«' + d.slice(0, 46) + '»', origenes.buscaOrigen({ direccion: d }), null);
+});
+/* Pero el pueblo de verdad sigue entrando */
+ok('y Ocotlán, Jalisco de verdad sí entra',
+  (origenes.buscaOrigen({ direccion: 'Ocotlán, Jalisco, México' }) || {}).nombre, 'Ocotlán');
+/* Y si llegan coordenadas del pueblo, mandan ellas aunque el texto sea raro */
+ok('con coordenadas del pueblo, el texto raro no estorba',
+  (origenes.buscaOrigen({ lat: 20.3529, lng: -102.7745, direccion: 'Tonalá' }) || {}).nombre, 'Ocotlán');
+
+/* ------------------------------------------------------------
    7. EL OTRO OCOTLAN
    ------------------------------------------------------------ */
 titulo('Ocotlán de Morelos, Oaxaca, no es este Ocotlán');

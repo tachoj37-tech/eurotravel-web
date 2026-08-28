@@ -67,6 +67,41 @@
    centena. El criterio lo guarda entero en R19.
    -------------------------------------------------------------- */
 
+/* --------------------------------------------------------------
+   LOS MUNICIPIOS DEL AREA METROPOLITANA MATAN LA COINCIDENCIA
+
+   Sin esto había un falso positivo caro. La página casi nunca manda
+   coordenadas —solo llegan si el cliente usa el GPS o pega un link
+   del mapa; eligiendo una sugerencia NO llegan—, así que el texto
+   es el camino normal, no la excepción.
+
+   Y Google, buscando «Ocotlán, Jalisco», devuelve como segunda
+   sugerencia:
+
+       «Ocotlan, Jalisco I Sección, Tonalá, Jalisco, México»
+
+   que es una CALLE en Tonalá, a diez minutos del centro de
+   Guadalajara. Por texto entraba al recargo, y a ese cliente se le
+   habrían cobrado hasta $6,000 de más.
+
+   Sobrecobrar a alguien de Guadalajara es peor que no cobrarle a
+   alguien de Ocotlán: el primero se entera y se va.
+
+   Nombrar un municipio metropolitano gana siempre. Las coordenadas,
+   cuando llegan, ganan sobre todo lo demás.
+   -------------------------------------------------------------- */
+/* OJO CON `\b` Y LOS ACENTOS: en JavaScript `\w` es solo [A-Za-z0-9_], así
+   que la `á` NO cuenta como letra. En «Tonalá,» el `\b` del final se pide
+   entre `á` y `,` —dos no-letras— y NO hay frontera: la coincidencia falla
+   justo en la forma acentuada, que es la que escribe Google.
+
+   Esto se cazó a la primera corrida y por eso está escrito: son lookarounds
+   con la lista de letras de verdad, no `\b`. */
+const LETRA = 'a-záéíóúüñ';
+const AREA_METROPOLITANA = new RegExp(
+  '(?<![' + LETRA + '])(guadalajara|zapopan|tlaquepaque|tonal[aá]|tlajomulco|' +
+  'el\\s+salto|zapotlanejo|juanacatl[aá]n|ixtlahuac[aá]n)(?![' + LETRA + '])', 'i');
+
 const ORIGENES = [
   {
     nombre: 'Ocotlán',
@@ -221,6 +256,7 @@ function buscaOrigen(origen) {
       continue;
     }
     if (!texto || !o.enJalisco.test(texto)) continue;
+    if (AREA_METROPOLITANA.test(texto)) continue;   // una calle de Tonalá no es Ocotlán
     for (let j = 0; j < o.pueblos.length; j++) {
       if (o.pueblos[j].busca.test(texto)) return o;
     }
