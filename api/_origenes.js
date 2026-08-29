@@ -172,6 +172,23 @@ const ORIGENES = [
       /* Baja: Morelia queda más cerca desde Ocotlán. Es el único de los 49. */
       'Morelia': -500,
 
+      /* --------------------------------------------------------
+         TRES QUE NO VIENEN EN SU EXCEL Y DICTO APARTE
+
+         El dueño los vio en la hoja de 50 viajes del 28-ago-2026 y
+         marcó dos: «estos dos muy caros, deben ser mínimo 9,000»
+         —Tala y Zacoalco, los dos en $6,000 a dos días—. Y luego:
+         «sube el 3000 también», o sea que a Cocula, que estaba
+         justo debajo y al mismo rumbo, le toca lo mismo.
+
+         Los tres quedan al PONIENTE de Guadalajara, así que desde
+         Ocotlán son desvío igual que Tequila o Chapala. Con los
+         $3,000, los dos que marcó dan los $9,000 que pidió.
+         -------------------------------------------------------- */
+      'Tala': 3000,
+      'Zacoalco de Torres': 3000,
+      'Cocula': 3000,
+
       /* Suben */
       'San Juan de los Lagos': 2000,
       'San Miguel de Allende': 2000,

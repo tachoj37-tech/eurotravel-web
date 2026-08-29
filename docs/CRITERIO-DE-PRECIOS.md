@@ -566,28 +566,59 @@ que cuestan 4 días desde Guadalajara.** Además su recargo baja al crecer los
 días (+$4,000 a tres, +$2,000 a cuatro), al revés de todos los demás.
 Señalado, no cambiado (R12).
 
-#### Los 8 destinos que Ocotlán no cubre
+#### Tala, Zacoalco y Cocula, dictados aparte (28-ago-2026)
 
-Al quitar el respaldo quedó un hueco que antes tapaba una cuenta: **hay 8
-destinos del catálogo que NO vienen en el Excel**, así que su fila 11 no dice
-nada de ellos. Desde Ocotlán pagan precio de Guadalajara.
+Mirando la hoja de 50 viajes desde su zona, el dueño marcó dos renglones:
+
+> «estos dos muy caros, deben ser mínimo 9,000» — Tala y Zacoalco, los dos
+> en $6,000 a dos días.
+>
+> Y enseguida: «sube el 3000 también», que mete a Cocula, el renglón de
+> abajo, al mismo rumbo.
+
+Los tres quedan **al poniente** de Guadalajara, así que desde Ocotlán son
+desvío igual que Tequila o Chapala. Con los $3,000, los dos que marcó dan
+exactamente los $9,000 que pidió; Cocula da $9,500 porque su precio propio es
+$6,500.
+
+> **Lo que NO se hizo, y por qué.** «Sube el 3000» también podía leerse como
+> el **piso por día** —$3,000, y los $6,000 de esos dos renglones son
+> justamente 2 × 3,000—. Se midió antes de tocarlo: subirlo a $4,500 mueve
+> **40 de los 49 destinos**, hasta $18,000 en un viaje de doce días. Chapala
+> a 7 días pasaría de $24,000 a $34,500.
+>
+> Eso es muchísimo más de lo que él marcó, así que se hizo lo chico y se le
+> reportó lo grande. Si de verdad quería el piso, lo dice y se cambia.
+
+**Pendiente:** Zacoalco a UN día desde Ocotlán da $8,000, no $9,000, porque su
+precio de lista es $5,000. Él dijo «mínimo 9,000» mirando renglones de dos
+días. Si los nueve mil son un piso de verdad y no un recargo, ese caso falta.
+
+#### Los 5 destinos que Ocotlán todavía no cubre
+
+Al quitar el respaldo quedó un hueco que antes tapaba una cuenta: hay destinos
+del catálogo que **NO vienen en el Excel**, así que su fila 11 no dice nada de
+ellos. Desde Ocotlán pagan precio de Guadalajara. Eran ocho; el dueño ya dictó
+tres el 28-ago (arriba), y quedan **cinco**:
 
 | destino | de dónde salió | su ancla en la lista | lo que Ocotlán le suma al ancla |
 |---|---|---|---|
 | San Juan Cosalá | dictado (R11) | Chapala | +$4,500 |
 | Magdalena | dictado (R11) | Tequila | +$5,000 |
 | Zirahuén | dictado (R11) | Pátzcuaro | $0 — queda de camino |
-| Tala | dictado 26-ago | — | — |
-| Zacoalco | dictado 26-ago | — | — |
-| Cocula | dictado 26-ago | — | — |
 | Tepic | dictado, corregido a mano | — | — |
 | León | dictado, corregido a mano | — | — |
 
 Los tres primeros nacieron anclados a un destino de la lista (R11), así que
-**podría tocarles el recargo de su ancla**. Los otros cinco no tienen ancla.
+**podría tocarles el recargo de su ancla**. Tepic y León no tienen ancla.
 
-**No se movió ninguno**: proponer esos cinco números sería R12 otra vez. Está
-aquí para preguntárselo con la lista enfrente.
+**No se movió ninguno**: proponer esos números sería R12 otra vez. Está aquí
+para preguntárselo con la lista enfrente — así fue como salieron los tres de
+arriba, enseñándole la hoja.
+
+El caso que mejor enseña el hueco: desde Poncitlán, **Chapala a dos días con
+un movimiento cuesta $14,000 y San Juan Cosalá $9,500**, estando a ocho
+kilómetros uno del otro y valiendo lo mismo desde Guadalajara.
 
 #### Lo que falta del mismo Excel
 

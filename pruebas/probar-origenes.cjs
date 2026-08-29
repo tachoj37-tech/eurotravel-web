@@ -216,6 +216,30 @@ titulo('Desde Ocotlán, un destino que su fila no menciona no paga');
 });
 
 /* ------------------------------------------------------------
+   LOS TRES DEL PONIENTE QUE DICTO APARTE (28-ago-2026)
+
+   No vienen en su Excel. Los vio en la hoja de 50 viajes, marcó
+   Tala y Zacoalco —«estos dos muy caros, deben ser mínimo 9,000»,
+   los dos en $6,000 a dos días— y luego dijo «sube el 3000
+   también», que mete a Cocula.
+
+   Los $9,000 exactos de esos dos son la prueba de que el número
+   es $3,000 y no otro.
+   ------------------------------------------------------------ */
+titulo('Tala, Zacoalco y Cocula, dictados el 28-ago');
+ok('Tala 2 días desde Ocotlán llega a los 9,000 que pidió',
+  cotiza('Tala', 2, 0, OCOTLAN), 9000);
+ok('Zacoalco 2 días también',
+  cotiza('Zacoalco de Torres', 2, 0, OCOTLAN), 9000);
+ok('Cocula 2 días: su precio propio es $6,500, así que da 9,500',
+  cotiza('Cocula', 2, 0, OCOTLAN), 9500);
+/* Y desde Guadalajara ninguno se movió: el recargo es del origen, no del
+   destino. Si esto se pusiera rojo, le habría subido el precio a todos. */
+ok('Tala 2 días desde Guadalajara sigue en 6,000', cotiza('Tala', 2, 0, GDL), 6000);
+ok('Zacoalco 2 días desde Guadalajara sigue en 6,000', cotiza('Zacoalco de Torres', 2, 0, GDL), 6000);
+ok('Cocula 2 días desde Guadalajara sigue en 6,500', cotiza('Cocula', 2, 0, GDL), 6500);
+
+/* ------------------------------------------------------------
    5. QUE EL RECARGO NO SE META EN LOS MOVIMIENTOS
 
    El dueño lo pidió explícito: «lo añades como extra, para que se
