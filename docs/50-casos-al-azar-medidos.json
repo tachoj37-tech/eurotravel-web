@@ -1,0 +1,508 @@
+[
+ {
+  "zona": "Guadalajara",
+  "desde": "Tlaquepaque",
+  "destino": "Angangueo",
+  "detalle": "7 días con 1 movimiento",
+  "dias": 7,
+  "movs": 1,
+  "deTabla": false,
+  "hoy": 29000
+ },
+ {
+  "zona": "Guadalajara",
+  "desde": "Guadalajara",
+  "destino": "Cancún",
+  "detalle": "8 días con 3 movimientos",
+  "dias": 8,
+  "movs": 3,
+  "deTabla": true,
+  "hoy": 118000
+ },
+ {
+  "zona": "Guadalajara",
+  "desde": "Tlaquepaque",
+  "destino": "Monterrey",
+  "detalle": "4 días con 2 movimientos",
+  "dias": 4,
+  "movs": 2,
+  "deTabla": false,
+  "hoy": 50800
+ },
+ {
+  "zona": "Yurécuaro",
+  "desde": "Yurécuaro",
+  "destino": "Villa Corona",
+  "detalle": "10 días",
+  "dias": 10,
+  "movs": 0,
+  "deTabla": false,
+  "hoy": 37000
+ },
+ {
+  "zona": "Guadalajara",
+  "desde": "Zapopan",
+  "destino": "El Manto",
+  "detalle": "3 días",
+  "dias": 3,
+  "movs": 0,
+  "deTabla": true,
+  "hoy": 19000
+ },
+ {
+  "zona": "Guadalajara",
+  "desde": "Tlaquepaque",
+  "destino": "Chiquilistlán",
+  "detalle": "1 día con 1 movimiento",
+  "dias": 1,
+  "movs": 1,
+  "deTabla": false,
+  "hoy": 15200
+ },
+ {
+  "zona": "Guadalajara",
+  "desde": "Guadalajara",
+  "destino": "Ajijic",
+  "detalle": "11 días con 3 movimientos",
+  "dias": 11,
+  "movs": 3,
+  "deTabla": false,
+  "hoy": 50000
+ },
+ {
+  "zona": "Guadalajara",
+  "desde": "Zapopan",
+  "destino": "Comala",
+  "detalle": "5 días",
+  "dias": 5,
+  "movs": 0,
+  "deTabla": false,
+  "hoy": 17100
+ },
+ {
+  "zona": "Ocotlán",
+  "desde": "Ocotlán",
+  "destino": "San Blas",
+  "detalle": "9 días con 1 movimiento",
+  "dias": 9,
+  "movs": 1,
+  "deTabla": false,
+  "hoy": 41000
+ },
+ {
+  "zona": "Ocotlán",
+  "desde": "La Barca",
+  "destino": "Saltillo",
+  "detalle": "5 días con 1 movimiento",
+  "dias": 5,
+  "movs": 1,
+  "deTabla": false,
+  "hoy": 41200
+ },
+ {
+  "zona": "Yurécuaro",
+  "desde": "Degollado",
+  "destino": "Bernal",
+  "detalle": "11 días",
+  "dias": 11,
+  "movs": 0,
+  "deTabla": false,
+  "hoy": 42000
+ },
+ {
+  "zona": "Yurécuaro",
+  "desde": "Tanhuato",
+  "destino": "Tepatitlán",
+  "detalle": "5 días con 1 movimiento",
+  "dias": 5,
+  "movs": 1,
+  "deTabla": false,
+  "hoy": 20000
+ },
+ {
+  "zona": "Ocotlán",
+  "desde": "Jamay",
+  "destino": "San Luis Potosí",
+  "detalle": "11 días",
+  "dias": 11,
+  "movs": 0,
+  "deTabla": false,
+  "hoy": 40000
+ },
+ {
+  "zona": "Ocotlán",
+  "desde": "La Barca",
+  "destino": "Real de Catorce",
+  "detalle": "7 días con 1 movimiento",
+  "dias": 7,
+  "movs": 1,
+  "deTabla": true,
+  "hoy": 44500
+ },
+ {
+  "zona": "Guadalajara",
+  "desde": "Zapopan",
+  "destino": "San Juan de los Lagos",
+  "detalle": "9 días con 1 movimiento",
+  "dias": 9,
+  "movs": 1,
+  "deTabla": true,
+  "hoy": 36000
+ },
+ {
+  "zona": "Yurécuaro",
+  "desde": "Yurécuaro",
+  "destino": "Mazamitla",
+  "detalle": "1 día con 1 movimiento",
+  "dias": 1,
+  "movs": 1,
+  "deTabla": true,
+  "hoy": 17500,
+  "conR21": 24500
+ },
+ {
+  "zona": "Yurécuaro",
+  "desde": "Yurécuaro",
+  "destino": "Sayulita / San Pancho",
+  "detalle": "9 días con 2 movimientos",
+  "dias": 9,
+  "movs": 2,
+  "deTabla": true,
+  "hoy": 38000,
+  "conR21": 46000
+ },
+ {
+  "zona": "Yurécuaro",
+  "desde": "Tanhuato",
+  "destino": "La Piedad",
+  "detalle": "1 día con 1 movimiento",
+  "dias": 1,
+  "movs": 1,
+  "deTabla": false,
+  "hoy": 11100
+ },
+ {
+  "zona": "Ocotlán",
+  "desde": "Ocotlán",
+  "destino": "San Sebastián del Oeste",
+  "detalle": "9 días",
+  "dias": 9,
+  "movs": 0,
+  "deTabla": false,
+  "hoy": 32000
+ },
+ {
+  "zona": "Ocotlán",
+  "desde": "Ocotlán",
+  "destino": "Talpa de Allende",
+  "detalle": "6 días",
+  "dias": 6,
+  "movs": 0,
+  "deTabla": true,
+  "hoy": 26500
+ },
+ {
+  "zona": "Guadalajara",
+  "desde": "Zapopan",
+  "destino": "Mérida",
+  "detalle": "6 días",
+  "dias": 6,
+  "movs": 0,
+  "deTabla": false,
+  "hoy": 122300
+ },
+ {
+  "zona": "Guadalajara",
+  "desde": "Zapopan",
+  "destino": "Ameca",
+  "detalle": "12 días",
+  "dias": 12,
+  "movs": 0,
+  "deTabla": false,
+  "hoy": 45000
+ },
+ {
+  "zona": "Yurécuaro",
+  "desde": "Yurécuaro",
+  "destino": "San Miguel de Allende",
+  "detalle": "9 días",
+  "dias": 9,
+  "movs": 0,
+  "deTabla": true,
+  "hoy": 32000,
+  "conR21": 34500
+ },
+ {
+  "zona": "Guadalajara",
+  "desde": "Guadalajara",
+  "destino": "Pátzcuaro / Uruapan",
+  "detalle": "4 días con 1 movimiento",
+  "dias": 4,
+  "movs": 1,
+  "deTabla": true,
+  "hoy": 28000
+ },
+ {
+  "zona": "Ocotlán",
+  "desde": "La Barca",
+  "destino": "Talpa Burrita (peregrinación)",
+  "detalle": "7 días con 1 movimiento",
+  "dias": 7,
+  "movs": 1,
+  "deTabla": true,
+  "hoy": 36000
+ },
+ {
+  "zona": "Ocotlán",
+  "desde": "Jamay",
+  "destino": "Ameca",
+  "detalle": "8 días",
+  "dias": 8,
+  "movs": 0,
+  "deTabla": false,
+  "hoy": 29000
+ },
+ {
+  "zona": "Yurécuaro",
+  "desde": "Tanhuato",
+  "destino": "Puebla",
+  "detalle": "11 días",
+  "dias": 11,
+  "movs": 0,
+  "deTabla": true,
+  "hoy": 54500,
+  "conR21": 66500
+ },
+ {
+  "zona": "Ocotlán",
+  "desde": "La Barca",
+  "destino": "Cocula",
+  "detalle": "11 días",
+  "dias": 11,
+  "movs": 0,
+  "deTabla": true,
+  "hoy": 44000
+ },
+ {
+  "zona": "Yurécuaro",
+  "desde": "Degollado",
+  "destino": "Tenacatita",
+  "detalle": "6 días",
+  "dias": 6,
+  "movs": 0,
+  "deTabla": true,
+  "hoy": 22000
+ },
+ {
+  "zona": "Yurécuaro",
+  "desde": "Tanhuato",
+  "destino": "Arandas",
+  "detalle": "8 días",
+  "dias": 8,
+  "movs": 0,
+  "deTabla": false,
+  "hoy": 29000
+ },
+ {
+  "zona": "Guadalajara",
+  "desde": "Guadalajara",
+  "destino": "Tlalpujahua",
+  "detalle": "2 días",
+  "dias": 2,
+  "movs": 0,
+  "deTabla": true,
+  "hoy": 26500
+ },
+ {
+  "zona": "Guadalajara",
+  "desde": "Tlaquepaque",
+  "destino": "Aguascalientes",
+  "detalle": "9 días",
+  "dias": 9,
+  "movs": 0,
+  "deTabla": false,
+  "hoy": 32000
+ },
+ {
+  "zona": "Guadalajara",
+  "desde": "Zapopan",
+  "destino": "Zacatecas",
+  "detalle": "8 días",
+  "dias": 8,
+  "movs": 0,
+  "deTabla": true,
+  "hoy": 29000
+ },
+ {
+  "zona": "Yurécuaro",
+  "desde": "Yurécuaro",
+  "destino": "Saltillo",
+  "detalle": "12 días con 3 movimientos",
+  "dias": 12,
+  "movs": 3,
+  "deTabla": false,
+  "hoy": 56200
+ },
+ {
+  "zona": "Guadalajara",
+  "desde": "Zapopan",
+  "destino": "Etzatlán",
+  "detalle": "11 días con 1 movimiento",
+  "dias": 11,
+  "movs": 1,
+  "deTabla": false,
+  "hoy": 44000
+ },
+ {
+  "zona": "Guadalajara",
+  "desde": "Guadalajara",
+  "destino": "Pátzcuaro / Uruapan",
+  "detalle": "12 días con 2 movimientos",
+  "dias": 12,
+  "movs": 2,
+  "deTabla": true,
+  "hoy": 50000
+ },
+ {
+  "zona": "Guadalajara",
+  "desde": "Tlaquepaque",
+  "destino": "León",
+  "detalle": "1 día con 1 movimiento",
+  "dias": 1,
+  "movs": 1,
+  "deTabla": true,
+  "hoy": 20600
+ },
+ {
+  "zona": "Yurécuaro",
+  "desde": "Yurécuaro",
+  "destino": "Saltillo",
+  "detalle": "3 días con 1 movimiento",
+  "dias": 3,
+  "movs": 1,
+  "deTabla": false,
+  "hoy": 42200
+ },
+ {
+  "zona": "Guadalajara",
+  "desde": "Tlaquepaque",
+  "destino": "Ciudad Guzmán",
+  "detalle": "4 días",
+  "dias": 4,
+  "movs": 0,
+  "deTabla": false,
+  "hoy": 13200
+ },
+ {
+  "zona": "Guadalajara",
+  "desde": "Tlaquepaque",
+  "destino": "Puebla",
+  "detalle": "8 días con 2 movimientos",
+  "dias": 8,
+  "movs": 2,
+  "deTabla": true,
+  "hoy": 54500
+ },
+ {
+  "zona": "Yurécuaro",
+  "desde": "Degollado",
+  "destino": "Tenacatita",
+  "detalle": "2 días",
+  "dias": 2,
+  "movs": 0,
+  "deTabla": true,
+  "hoy": 20000
+ },
+ {
+  "zona": "Ocotlán",
+  "desde": "La Barca",
+  "destino": "Grutas Tolantongo",
+  "detalle": "2 días con 2 movimientos",
+  "dias": 2,
+  "movs": 2,
+  "deTabla": true,
+  "hoy": 34500
+ },
+ {
+  "zona": "Yurécuaro",
+  "desde": "Tanhuato",
+  "destino": "Barrancas del Cobre",
+  "detalle": "5 días",
+  "dias": 5,
+  "movs": 0,
+  "deTabla": true,
+  "hoy": 69000,
+  "conR21": 79000
+ },
+ {
+  "zona": "Ocotlán",
+  "desde": "La Barca",
+  "destino": "Chacala",
+  "detalle": "6 días con 3 movimientos",
+  "dias": 6,
+  "movs": 3,
+  "deTabla": true,
+  "hoy": 34500
+ },
+ {
+  "zona": "Yurécuaro",
+  "desde": "Tanhuato",
+  "destino": "San Miguel de Allende",
+  "detalle": "4 días con 3 movimientos",
+  "dias": 4,
+  "movs": 3,
+  "deTabla": true,
+  "hoy": 35500,
+  "conR21": 38000
+ },
+ {
+  "zona": "Ocotlán",
+  "desde": "Ocotlán",
+  "destino": "Tepoztlán",
+  "detalle": "11 días",
+  "dias": 11,
+  "movs": 0,
+  "deTabla": false,
+  "hoy": 40000
+ },
+ {
+  "zona": "Yurécuaro",
+  "desde": "Degollado",
+  "destino": "Cuitzeo",
+  "detalle": "11 días con 1 movimiento",
+  "dias": 11,
+  "movs": 1,
+  "deTabla": false,
+  "hoy": 44000
+ },
+ {
+  "zona": "Guadalajara",
+  "desde": "Tlaquepaque",
+  "destino": "Sayulita / San Pancho",
+  "detalle": "1 día",
+  "dias": 1,
+  "movs": 0,
+  "deTabla": true,
+  "hoy": 18000
+ },
+ {
+  "zona": "Ocotlán",
+  "desde": "Jamay",
+  "destino": "Campeche",
+  "detalle": "10 días",
+  "dias": 10,
+  "movs": 0,
+  "deTabla": false,
+  "hoy": 107600
+ },
+ {
+  "zona": "Guadalajara",
+  "desde": "Guadalajara",
+  "destino": "Chiapas",
+  "detalle": "10 días con 3 movimientos",
+  "dias": 10,
+  "movs": 3,
+  "deTabla": true,
+  "hoy": 102000
+ }
+]
