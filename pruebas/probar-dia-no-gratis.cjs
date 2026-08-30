@@ -1,37 +1,36 @@
 /* ============================================================
-   R18 — abajo de $15,000, el día no es gratis
+   R25 — tres noches para todos, y los tres que él dictó por su nombre
    ------------------------------------------------------------
        node pruebas/probar-dia-no-gratis.cjs
 
-   DE DONDE SALIO
+   ESTE ARCHIVO CAMBIO DE LADO EL 30-ago-2026, Y ENTERO.
 
-   El 28-ago-2026 el dueño revisó los 50 casos que la página cotiza
-   sola y vio que tres y cuatro días costaban EXACTAMENTE lo mismo
-   que dos: las tres noches incluidas se los comían. Dictó, en dos
-   tiempos y con estas palabras:
+   Nació el 28-ago para vigilar R18: «abajo de $15,000 el día no es
+   gratis, $500 la noche destapada». Dos días después, al
+   preguntarle si esa regla seguía en pie —con los once destinos
+   afectados y sus números enfrente— el dueño contestó:
 
-       «súbeles 500, el día, a los 4 de abajo»
-       «a Bernal 1000 el día»
-       «esos 500 exclusivamente a destinos abajo de 15,000
-        en precio normal»
+       «todos los viajes que tengan el destino y un precio, ya te
+        dije, tres noches y mil por cada noche arriba»
 
-   Quedó entonces una regla general por PRECIO, no por distancia ni
-   por estar en la tabla: si el viaje de dos días cuesta menos de
-   $15,000, cada día de más vale $500. Comala y Autlán están arriba
-   del tope pero él los nombró, así que llevan la suya. Bernal
-   también, a $1,000.
+   O sea que el corte de los $15,000 se acabó. Las aserciones que
+   exigían los $500 se voltearon; las que vigilaban que no bajara
+   ningún precio siguen igual de vivas.
 
-   LO QUE ESTA PRUEBA VIGILA, en orden de gravedad
+   LO QUE NO SE FUE: Comala, Autlán y Bernal. Esos NO tienen
+   columna en el Excel —«un destino y un precio» no los alcanza— y
+   él los dictó uno por uno, con nombre propio y su tarifa. Siguen
+   con la suya, y aquí se comprueba.
 
-   1. QUE NINGUN PRECIO BAJE. Aquí me equivoqué dos veces —ver el
-      comentario de `cobraNoches`— y las dos veces el error era el
-      mismo: cobrar una noche que era gratis terminaba abaratando
-      las que ya se cobraban. Un viaje de diez días llegó a bajar
-      $2,000. Ésta es LA aserción de este archivo.
-   2. Que el viaje de DOS DIAS no se haya movido: él no pidió
-      subirlo, y cobrar «el día» desde el primero lo habría subido.
-   3. Que el día de más sí se cobre.
-   4. Que arriba de $15,000 nada cambie, salvo lo que él dictó.
+   LO QUE VIGILA, en orden de gravedad
+
+   1. Que los precios hayan vuelto EXACTAMENTE a como estaban
+      antes de R18. El archivo congelado que servía para probar que
+      nada bajaba ahora sirve para probar que todo volvió: si un
+      solo renglón queda distinto, es que el retiro se hizo a
+      medias.
+   2. Que los tres dictados NO se hayan ido con R18.
+   3. Que ningún viaje de un día salga más caro que el de dos.
    ============================================================ */
 'use strict';
 
@@ -46,15 +45,13 @@ function igual(nombre, dio, esperado) {
 }
 
 /* Kilómetros escogidos para reproducir el precio que el sitio publicado dio
-   el 27-ago-2026 en el viaje de dos días. Abajo se comprueba que en efecto lo
-   reproducen: si algún día cambia la tarifa por kilómetro, esa aserción avisa
-   antes de que el resto empiece a medir otra cosa. */
+   el 27-ago-2026 en el viaje de dos días. */
 const FUERA = {
-  'Ocotlán': { km: 160, dosDias: 10000, dia: 500 },        // por la regla general
-  'Comala': { km: 442, dosDias: 16200, dia: 500 },         // dictado, arriba del tope
+  'Ocotlán': { km: 160, dosDias: 10000, dia: 0 },          // volvió a la regla general
+  'Comala': { km: 442, dosDias: 16200, dia: 500 },         // dictado, sigue
   'Autlán de Navarro': { km: 424, dosDias: 15800, dia: 500 },
-  'Bernal': { km: 815, dosDias: 24400, dia: 1000 },        // dictado
-  'Tequisquiapan': { km: 820, dosDias: 24500, dia: 0 }     // sin regla: no cambia
+  'Bernal': { km: 815, dosDias: 24400, dia: 1000 },        // dictado, sigue
+  'Tequisquiapan': { km: 820, dosDias: 24500, dia: 0 }     // nunca tuvo regla
 };
 
 function q(nombre, km, dias, movs) {
@@ -65,37 +62,33 @@ function q(nombre, km, dias, movs) {
   }).total;
 }
 
-/* ============ 1. NINGUN PRECIO BAJA ============
-   Se recorre TODA la tabla del dueño y los de fuera, de 1 a 20 días, contra
-   lo que costaban antes de esta regla. Es la aserción que más vale. */
+/* ============ 1. TODO VOLVIO A COMO ESTABA ANTES DE R18 ============
+   La aserción más valiosa del archivo, y la que más barata sale: el mismo
+   archivo congelado, leído al revés. Antes probaba que nada bajara; ahora
+   prueba que todo volvió a su sitio. Un retiro a medias se ve aquí.
+
+   Los tres dictados se excluyen A PROPOSITO: ésos NO volvieron, y el punto
+   2 comprueba que siguen cobrando lo suyo. */
 {
   const ANTES = require('./datos/precios-antes-de-r18.json');
-  const bajaron = [];
+  const DICTADOS = ['Comala', 'Autlán de Navarro', 'Bernal'];
+  const distintos = [];
   Object.keys(ANTES).forEach(function (clave) {
     const partes = clave.split('|');
     const nombre = partes[0], dias = Number(partes[1]), km = Number(partes[2]);
+    if (DICTADOS.indexOf(nombre) >= 0) return;
     const ahora = q(nombre, km, dias, 0);
-    if (ahora < ANTES[clave]) {
-      bajaron.push(nombre + ' a ' + dias + 'd: $' + ANTES[clave] + ' → $' + ahora);
+    if (ahora !== ANTES[clave]) {
+      distintos.push(nombre + ' a ' + dias + 'd: era $' + ANTES[clave] + ', ahora $' + ahora);
     }
   });
-  igual('NINGUN precio bajó, en ' + Object.keys(ANTES).length + ' combinaciones', bajaron, []);
+  igual('los precios volvieron EXACTO a antes de R18, en ' +
+    Object.keys(ANTES).length + ' combinaciones', distintos, []);
 }
 
-/* ============ 2. EL VIAJE DE DOS DIAS NO SE MOVIO ============ */
-{
-  const movidos = Object.keys(FUERA).filter(function (d) {
-    return q(d, FUERA[d].km, 2, 0) !== FUERA[d].dosDias;
-  });
-  igual('los kilómetros reproducen el precio medido, y DOS DIAS no se movió', movidos, []);
-
-  const alReves = Object.keys(FUERA).filter(function (d) {
-    return q(d, FUERA[d].km, 1, 0) > q(d, FUERA[d].km, 2, 0);
-  });
-  igual('y un día nunca sale más caro que dos', alReves, []);
-}
-
-/* ============ 3. EL DIA DE MAS SE COBRA ============ */
+/* ============ 2. LOS TRES DICTADOS SIGUEN COBRANDO LO SUYO ============
+   Comala y Autlán a $500 el día, Bernal a $1,000. Si el retiro de R18 se
+   los hubiera llevado por delante, aquí se ve. */
 {
   Object.keys(FUERA).forEach(function (d) {
     const c = FUERA[d];
@@ -104,74 +97,62 @@ function q(nombre, km, dias, movs) {
       '   ($' + dos.toLocaleString('es-MX') + ' → $' + tres.toLocaleString('es-MX') + ')',
       tres - dos, c.dia);
   });
-}
 
-/* ============ 4. EL CORTE ES POR PRECIO ============
-   Un destino barato de la tabla entra; uno caro no. */
-{
-  const baratos = DESTINOS.filter(function (d) {
-    return d.precio.sprinter && d.precio.sprinter < t.TOPE_DIA_BARATO && !d.diasIncluidos;
-  });
-  const caros = DESTINOS.filter(function (d) {
-    return d.precio.sprinter && d.precio.sprinter >= t.TOPE_DIA_BARATO && !d.diasIncluidos;
-  });
-
-  /* En los baratos, el tercer día ya no es gratis. Se compara contra el
-     traslado y no contra el precio de dos días, porque en varios manda el
-     piso de $3,000 por día y ése no es cosa de esta regla. */
-  const gratis = baratos.filter(function (d) {
-    return q(d.nombre, d.km, 3, 0) === q(d.nombre, d.km, 2, 0);
-  }).map(function (d) { return d.nombre; });
-  igual('en los ' + baratos.length + ' renglones baratos, el tercer día ya no es gratis', gratis, []);
-
-  /* En los caros, la regla NO los tocó.
-
-     ESTA ASERCION NACIO MAL: decía «el tercer día sigue incluido» y comparaba
-     3 días contra 2. Se puso roja con siete destinos, y la roja tenía razón:
-     varios caros YA cobraban el día antes de esta regla —CDMX y la Huasteca
-     por su `estadiaPorDia`, y otros por el `diaExtra` de su propio renglón—.
-     Que el tercer día les cueste no es cosa mía.
-
-     Lo que hay que comprobar es que esta regla no los MOVIO, y eso se mide
-     contra los precios congelados de antes, no contra su propio viaje de dos
-     días. */
-  const ANTES2 = require('./datos/precios-antes-de-r18.json');
-  const movidos = [];
-  caros.forEach(function (d) {
-    [2, 3, 4, 5, 7].forEach(function (dias) {
-      const clave = d.nombre + '|' + dias + '|' + d.km;
-      if (!(clave in ANTES2)) return;
-      const ahora = q(d.nombre, d.km, dias, 0);
-      if (ahora !== ANTES2[clave]) movidos.push(d.nombre + ' a ' + dias + 'd');
+  /* Y su tarifa dictada NO abarata las noches que ya se cobraban a mil.
+     Éste fue un defecto real, cometido dos veces: ver `cobraNoches`. */
+  const ANTES = require('./datos/precios-antes-de-r18.json');
+  ['Comala', 'Autlán de Navarro', 'Bernal'].forEach(function (d) {
+    const km = FUERA[d].km;
+    const bajaron = [3, 4, 5, 7, 10, 20].filter(function (dias) {
+      const clave = d + '|' + dias + '|' + km;
+      return (clave in ANTES) && q(d, km, dias, 0) < ANTES[clave];
     });
+    igual(d + ': ninguna duración bajó contra lo de antes', bajaron, []);
   });
-  igual('y a los ' + caros.length + ' caros la regla no los movió ni un peso', movidos, []);
 }
 
-/* ============ 5. LA CUARTA NOCHE VUELVE A LOS MIL ============
-   Los $500 son solo para las noches que antes venían incluidas. */
+/* ============ 3. TRES NOCHES PARA TODOS LOS DE LA TABLA ============
+   Ya no hay corte por precio: barato o caro, el que solo trae nombre y
+   precio lleva sus tres noches. */
 {
-  /* Se mide CONTRA LOS PRECIOS CONGELADOS, que es lo único que aísla esta
-     regla del piso de $3,000 por día.
+  const soloNombre = DESTINOS.filter(function (d) {
+    if (!d.precio.sprinter) return false;
+    if (d.diasIncluidos || d.porDias || d.movimientosIncluidos) return false;
+    /* CDMX y la Huasteca quedan fuera aunque el catálogo no los marque: su
+       regla les cobra $1,000 por CADA día desde el primero (R3), así que
+       nunca tuvieron noches incluidas que perdonar. La primera versión de
+       este filtro los dejaba dentro y la aserción se puso roja con razón. */
+    const r = t.reglaDeDestino({ nombre: d.nombre });
+    if (r && r.estadiaPorDia) return false;
+    return true;
+  });
+  /* Con tres noches incluidas, 2 y 3 días valen igual salvo que mande el
+     piso de $3,000 por día — que no es cosa de esta regla. */
+  const raros = soloNombre.filter(function (d) {
+    const dos = q(d.nombre, d.km, 2, 0), tres = q(d.nombre, d.km, 3, 0);
+    const pisoDeTres = 3 * t.MINIMO_POR_DIA;
+    return tres !== dos && tres !== pisoDeTres;
+  }).map(function (d) { return d.nombre; });
+  igual('en los ' + soloNombre.length + ' de solo nombre, el 3er día es gratis o lo pone el piso',
+    raros, []);
 
-     La primera versión comparaba 4 días contra 3 y esperaba $3,500. Salió
-     $2,500 y la roja tenía razón: entre esos dos días el piso salta de
-     $10,000 a $12,000 —dos mil— y la noche pone quinientos. Mezclar las dos
-     reglas en una resta no prueba ninguna de las dos. */
-  const ANTES3 = require('./datos/precios-antes-de-r18.json');
-  const km = FUERA['Ocotlán'].km;
-  const subio = function (dias) {
-    return q('Ocotlán', km, dias, 0) - ANTES3['Ocotlán|' + dias + '|' + km];
-  };
-  igual('Ocotlán a 3 días: una noche destapada, +500', subio(3), 500);
-  igual('a 4 días: dos noches destapadas, +1000', subio(4), 1000);
-  /* De la cuarta noche en adelante manda la de siempre, así que ya no sube
-     más: esas noches se cobraban a mil antes y a mil ahora. */
-  igual('a 7 días ya no sube más: esas noches ya se cobraban', subio(7), 1000);
-  igual('ni a 20 días', subio(20), 1000);
+  /* Y la cuarta noche sí cobra sus mil, en todos. */
+  const sinCobrar = soloNombre.filter(function (d) {
+    const cuatro = q(d.nombre, d.km, 4, 0), cinco = q(d.nombre, d.km, 5, 0);
+    return cinco - cuatro < 1000;
+  }).map(function (d) { return d.nombre; });
+  igual('y del 4º día al 5º suben al menos sus mil', sinCobrar, []);
 }
 
-/* ============ 6. NO SE COME LO QUE YA ESTABA ============ */
+/* ============ 4. UN DIA NUNCA CUESTA MAS QUE DOS ============ */
+{
+  const alReves = Object.keys(FUERA).filter(function (d) {
+    return q(d, FUERA[d].km, 1, 0) > q(d, FUERA[d].km, 2, 0);
+  });
+  igual('un día nunca sale más caro que dos', alReves, []);
+}
+
+/* ============ 5. NO SE COME LO QUE YA ESTABA ============ */
 {
   const sin = q('Comala', FUERA['Comala'].km, 3, 0);
   const con = q('Comala', FUERA['Comala'].km, 3, 2);

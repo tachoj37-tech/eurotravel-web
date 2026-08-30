@@ -288,14 +288,18 @@ igual('cruzando de mes: 3 días', t.diasDeServicio('2026-10-31', '2026-11-02'), 
      mil, porque Chapala traia tres noches incluidas—.
 
      Ese dia dicto R18: «esos 500 exclusivamente a destinos abajo de 15,000 en
-     precio normal». Chapala son $6,500, asi que entra: ahora solo trae UNA
-     noche incluida y las dos que se destaparon valen $500 cada una.
+     precio normal», y Chapala entraba: una noche incluida y $500 las
+     destapadas. Este numero fue $17,000 durante dos dias.
+
+     Y VOLVIO A CAMBIAR DE LADO EL 30-ago-2026, a $16,000. Preguntado si ese
+     corte seguia en pie, el dueño lo quito: «todos los viajes que tengan el
+     destino y un precio, tres noches y mil por cada noche arriba» (R25).
+     Chapala recupera sus tres noches.
 
          minimo 5 × 3,000 = 15,000 gana a los 6,500
-         4 noches - 1 incluida = 3 extra
-         las dos destapadas a 500 + la cuarta a los mil de siempre = 2,000 */
-  igual('Chapala cinco días: manda el mínimo, 15,000 + 2,000 de noches',
-    t.calcula(100, 5, { destino: en('Chapala, Jalisco, México'), noches: 4 }).total, 17000);
+         4 noches - 3 incluidas = 1 extra, a los mil de siempre */
+  igual('Chapala cinco días: manda el mínimo, 15,000 + 1,000 de noche',
+    t.calcula(100, 5, { destino: en('Chapala, Jalisco, México'), noches: 4 }).total, 16000);
   /* y a un precio de lista que ya pasa el piso, el piso no le hace nada */
   igual('Vallarta cuatro días: sus 19,000, el piso ni se asoma',
     t.calcula(620, 4, { destino: en('Puerto Vallarta, Jalisco, México'), noches: 3 }).total, 19000);
@@ -751,6 +755,41 @@ igual('sin nada no vale', t.horasDe(null, undefined), 0);
   igual('Morelia 7 días: manda el piso (7×3,000 + 3 noches)', q('Morelia', 7, 0), 21000 + 3000);
   igual('Mariposa 8 días: manda el piso (8×3,000 + 4 noches)',
     q('Santuario de la Mariposa Monarca', 8, 0), 24000 + 4000);
+
+  /* ============================================================
+     R24 · LO QUE LA COLUMNA YA TRAE, NO SE COBRA OTRA VEZ
+     ------------------------------------------------------------
+     Dictado el 30-ago-2026: «todos los viajes que tengan, por
+     ejemplo, Huasteca tres días, Ciudad de México dos días, tienen
+     movimientos incluidos […] a excepción de Cancún».
+
+     Cada aserción es la CELDA DE SU EXCEL con movimiento todos los
+     días de esa columna. Si alguna sube, es que se está cobrando
+     dos veces lo mismo.
+     ============================================================ */
+  [['Talpa de Allende', 2, 16500], ['Tlalpujahua', 2, 26500],
+   ['El Manto', 3, 19000], ['Puebla', 2, 36500],
+   ['Puebla con Zacatlán', 2, 39500], ['Rincón de Guayabitos', 4, 18500],
+   ['Talpa Burrita (peregrinación)', 4, 26500], ['Acapulco', 4, 60000],
+   ['Chiapas', 8, 85000], ['Camécuaro / Zamora', 1, 14500]
+  ].forEach(function (f) {
+    const [n, dias, celda] = f;
+    igual(n.slice(0, 24) + ' ' + dias + 'd con movimiento todos los días = su celda',
+      q(n, dias, dias), celda);
+  });
+
+  /* LAS DOS EXCEPCIONES, y las dos salen de él */
+  igual('Cancún SÍ cobra sus movimientos aparte — su palabra',
+    q('Cancún', 17, 3), 145000 + 3 * 3000);
+  igual('Guanajuato 3 días también: su columna dice «SIN MOV»',
+    q('Guanajuato', 3, 3), 24500 + 3 * 3000);
+
+  /* Y pasada la duración de la columna, el movimiento se cobra normal:
+     ahí la columna ya se acabó, igual que en R2 y R14. */
+  igual('Puebla al 3er día ya cobra su movimiento',
+    q('Puebla', 3, 3) - q('Puebla', 3, 2), 3000);
+  igual('Chiapas al 9o día también',
+    q('Chiapas', 9, 9) - q('Chiapas', 9, 8), 3000);
 })();
 
 console.log('\n' + buenas + ' buenas, ' + malas + ' malas');

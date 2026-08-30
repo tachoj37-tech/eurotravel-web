@@ -280,6 +280,8 @@ function trasladoDe(kmTotal, destino, unidad, dias) {
       porDuracion: !!enLista.porDias ||
         (typeof enLista.diasIncluidos === 'number' && typeof enLista.diaExtra === 'number'),
       diasIncluidos: enLista.diasIncluidos || null,
+      /* R24: los días que su columna del Excel ya trae con movimientos. */
+      movimientosIncluidos: enLista.movimientosIncluidos || 0,
       precioConMovimientos: enLista.conMovimientos || null
     };
   }
@@ -832,6 +834,26 @@ function calcula(kmTotal, dias, extras) {
   const regla = reglaDeDestino(extras.destino);
   /* Un solo-ida no se mueve: se ignoran los movimientos que lleguen. */
   const movimientos = unSentido ? [] : movimientosDe(extras.movimientos, dias, regla);
+
+  /* ------------------------------------------------------------
+     R24 · LO QUE LA COLUMNA YA TRAE, NO SE COBRA OTRA VEZ
+
+     Dictado el 30-ago-2026: «todos los viajes que tengan, por
+     ejemplo, Huasteca tres días, Ciudad de México dos días,
+     tienen movimientos incluidos […] a excepción de Cancún».
+
+     `movimientosIncluidos` son los DIAS que cubre su columna del
+     Excel. Esos días se ponen en cero; del siguiente en adelante
+     se cobran normal, porque ahí la columna ya se acabó —la misma
+     frontera de R2 y R14.
+
+     Se pone a CERO en vez de quitarlos: el operador necesita la
+     hora aunque no cueste, igual que en R22.
+     ------------------------------------------------------------ */
+  for (let i = 0; i < movimientos.length && i < km.movimientosIncluidos; i++) {
+    movimientos[i].precio = 0;
+  }
+
   const importeMovimientos = precioMovimientos(movimientos);
   const conMovimientos = movimientos.length > 0;
 
@@ -883,16 +905,26 @@ function calcula(kmTotal, dias, extras) {
 
      Queda entonces:  3 días = +una noche · 4 días = +dos noches.
      ---------------------------------------------------------- */
-  /* ¿Este destino cae en la regla del día barato? El corte lo hace el precio
-     normal —el traslado de dos días, de lista o de fórmula—, NO la distancia
-     ni si está en la tabla. Un paquete con días propios queda fuera: ésos ya
-     traen su duración en el precio y su día extra tiene su propia regla. */
-  const esBarato = !km.diasIncluidos && !km.porDuracion && km.total < TOPE_DIA_BARATO;
+  /* ------------------------------------------------------------
+     R25 · TRES NOCHES PARA TODOS — SE FUE EL CORTE DE LOS $15,000
 
+     El 30-ago-2026 el dueño cerró la pregunta que le hice sobre
+     este corte: «todos los viajes que tengan el destino y un
+     precio, ya te dije, tres noches y mil por cada noche arriba».
+
+     Aquí vivía R18: los destinos abajo de $15,000 llevaban UNA
+     noche incluida y $500 las destapadas. Eso se acabó — su
+     palabra de hoy es sobre TODOS, y se lo pregunté con los once
+     destinos y sus números enfrente.
+
+     LO QUE NO SE FUE: Comala, Autlán y Bernal. Esos no tienen
+     columna en el Excel —«un destino y un precio» no los alcanza—
+     y él los dictó UNO POR UNO con nombre propio. Siguen con su
+     `nochesIncluidas` y su `nocheExtra` en DESTINOS_CON_REGLA.
+     ------------------------------------------------------------ */
   const nochesIncluidas = (regla && typeof regla.nochesIncluidas === 'number')
     ? regla.nochesIncluidas
-    : (km.diasIncluidos ? Math.max(0, km.diasIncluidos - 1)
-                        : (esBarato ? 1 : NOCHES_INCLUIDAS));
+    : (km.diasIncluidos ? Math.max(0, km.diasIncluidos - 1) : NOCHES_INCLUIDAS);
 
   /* Lo que vale cada noche de más, cuando todas valen igual: la que el dueño
      le dictó al destino, o la de siempre.
@@ -924,9 +956,9 @@ function calcula(kmTotal, dias, extras) {
      manda la de siempre. El dueño pidió cobrar los días que salían
      gratis, no descontar los que ya se cobraban.
      ------------------------------------------------------------ */
-  const tarifaPropia = esBarato && !(regla && typeof regla.nocheExtra === 'number')
-    ? DIA_BARATO
-    : porNoche;
+  /* Ya no hay tarifa rebajada general: la única que queda es la que el dueño
+     le dictó a un destino por su nombre (Comala, Autlán, Bernal). */
+  const tarifaPropia = porNoche;
 
   function cobraNoches(cuantas) {
     /* Este destino no rebajó nada: todas sus noches valen igual. */

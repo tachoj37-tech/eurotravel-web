@@ -42,12 +42,14 @@ De ahí se siguen tres reglas de conducta:
 | **R15** | la medición depende de la salida | las tandas salen del centro de Guadalajara |
 | **R16** | arriba de 1,400 km ya se cotiza solo | $36 el km, y menos fiable — saberlo |
 | **R17** | hay destinos donde moverse no cuesta | Barrancas: $3,000 el día, se mueva o no |
-| **R18** | abajo de $15,000 el día no es gratis | $500 la noche destapada; de la 4ª, los mil de siempre |
+| **R18** | ~~abajo de $15,000 el día no es gratis~~ | **REVOCADA por R25 el 30-ago-2026**; vivió dos días |
 | **R19** | el origen suma cuando NO queda de camino | Ocotlán, fila 11; y por carretera, no por mapa |
 | **R20** | si no sé un precio, lo saco del Excel | cinco pasos, y siempre digo de qué celda salió |
 | **R21** | Yurécuaro entra como origen | fila 22; Chiapas queda fuera por imposible |
 | **R22** | el viaje de un día no paga movimiento | salvo CDMX y Huasteca, que lo traen en su base |
 | **R23** | Morelia y Mariposa van planas hasta la 3ª noche | y $1,000 de la cuarta; NO es defecto, lo confirmó |
+| **R24** | lo que la columna ya trae no se cobra dos veces | movimientos incluidos, salvo Cancún y Guanajuato 3 días |
+| **R25** | tres noches para todos | REVOCA R18; quedan Comala, Autlán y Bernal |
 | **R10** | ~~pendiente~~ *resuelta por R19 el 28-ago-2026* | ya no cobra precio de Guadalajara salga de donde salga |
 
 ---
@@ -375,7 +377,19 @@ catálogo y deja de estimarse.
 
 
 
-### R18 · Abajo de $15,000, el día no es gratis
+### ~~R18 · Abajo de $15,000, el día no es gratis~~ — REVOCADA
+
+> **Esta regla ya NO rige.** El dueño la retiró el 30-ago-2026, dos días
+> después de dictarla, al preguntarle si el corte de los $15,000 seguía en pie:
+> *«todos los viajes que tengan el destino y un precio, tres noches y mil por
+> cada noche arriba»* (**R25**).
+>
+> Se conserva escrita, y completa, por dos razones: los tres destinos que él
+> dictó por su nombre —Comala, Autlán y Bernal— **siguen vivos** y salieron de
+> aquí; y el defecto que se cazó dos veces al implementarla es de los más
+> instructivos del proyecto.
+>
+> **Lo que sigue describe cómo funcionó del 28 al 30 de agosto.**
 
 **Dictado por el dueño el 28-ago-2026**, en dos tiempos, mirando la lista de
 los 50 casos que la página cotiza sola:
@@ -837,10 +851,15 @@ Su Excel tiene ocho columnas que dicen «1 día». Seis suben bien; dos no:
 | **MARIPOSA 1 DIA** | $23,000 | **$23,000** | plano hasta la 3ª noche |
 | **MORELIA 1 DIA** | $19,000 | **$19,000** | plano hasta la 3ª noche |
 
-Las seis que suben tienen un segundo dato: o su `porDias` con otra duración, o
-un `diaExtra` dictado, o —Camécuaro— caen abajo de los $15,000 y R18 las
-alcanza. Morelia y Mariposa no tienen ninguno de los tres, así que les toca la
+Las seis que suben tienen un segundo dato: su `porDias` con otra duración, o un
+`diaExtra` dictado. Morelia y Mariposa no tienen ninguno, así que les toca la
 regla general: **tres noches incluidas, y $1,000 de la cuarta en adelante.**
+
+> Esta tabla se midió el 30-ago con R18 todavía viva, y por eso Camécuaro
+> aparecía subiendo: caía abajo de los $15,000. Con R25 ya no sube tampoco
+> —su columna dice «1 DIA» y no trae segundo dato—, así que hoy son **tres**
+> los que van planos hasta la tercera noche, no dos. El dueño confirmó ese
+> comportamiento; la lista de arriba conserva la medición del día.
 
 | | 1–4 días | 5º día | 6º día |
 |---|---|---|---|
@@ -860,3 +879,97 @@ alarga, y de ahí en adelante el escalón deja de ser $1,000:
 No es contradicción: el piso es su propia regla y existe justo para eso —una
 unidad apartada muchos días no puede cobrarse como un paseo—. Queda anotado
 porque el escalón deja de ser parejo y conviene saber dónde.
+
+---
+
+### R24 · Lo que la columna ya trae, no se cobra otra vez (30-ago-2026)
+
+> «Todos los viajes que tengan, por ejemplo, Huasteca tres días, Huasteca dos
+> días, Ciudad de México dos días tanto, **tienen movimientos incluidos**. Ya
+> creo que ya te lo había dicho, **a excepción de Cancún**, Cancún no tiene
+> movimientos incluidos.»
+
+Si la columna del Excel nombra una duración, su precio **ya trae los
+movimientos de esos días**. Sumarlos encima era cobrarlos dos veces.
+
+Se midió antes de tocar nada. **Once destinos sumaban encima de su propia
+celda**, y varios por mucho:
+
+| destino | su celda | cobraba con movimientos | de más |
+|---|---|---|---|
+| Chiapas 8 días | $85,000 | $109,000 | **+$24,000** |
+| Guayabitos 4 días | $18,500 | $30,500 | +$12,000 |
+| Talpa Burrita 4 días | $26,500 | $38,500 | +$12,000 |
+| Acapulco 4 días | $60,000 | $72,000 | +$12,000 |
+| El Manto 3 días | $19,000 | $28,000 | +$9,000 |
+| Puebla 2 días | $36,500 | $42,500 | +$6,000 |
+
+Va como `movimientosIncluidos: N` en el catálogo, donde N son los días que
+cubre su columna. **Pasado ese día se cobra normal**, que es la misma frontera
+de R2 y R14.
+
+#### Las dos que siguen cobrando, y las dos son suyas
+
+| | por qué |
+|---|---|
+| **Cancún** | su palabra, con nombre y apellido |
+| **Guanajuato 3 días** | **su propia columna dice «GUANAJUATO 3 DIAS SIN MOV»** |
+
+#### Y las dos que no hacía falta marcar
+
+**CDMX y la Huasteca** ya se comportaban así, y por eso él las puso de ejemplo.
+Su precio no se toma de la celda: se **construye** hasta ella (R3, base +
+estadía + movimiento). Marcarlas les habría quitado lo que las arma. Comprobado:
+dan sus cinco celdas al peso y no suman nada encima.
+
+Sus palabras cierran ese caso también: *«si son Ciudad de México tres días, se
+cobran tres días de movimientos en ese precio, pero si dos días no tienen
+movimientos, nomás déjalos en mil el día»* — que es exactamente R3.
+
+#### Un defecto que se escondió y solo lo delató medir
+
+Agregar el campo al catálogo **no bastó**: `precioDeLista` no devuelve el
+renglón, arma un objeto nuevo con campos escogidos. El campo llegaba en
+`undefined`, la regla no surtía efecto **y nada tronaba**. Se vio porque se
+volvió a medir, no porque fallara.
+
+**Lección:** un campo nuevo en el catálogo hay que seguirlo hasta donde se usa.
+Que el archivo cargue no prueba que el dato llegó.
+
+---
+
+### R25 · Tres noches para todos — se fue el corte de los $15,000 (30-ago-2026)
+
+> «Todos los viajes que tengan el destino y un precio, ya te dije, **tres
+> noches y mil por cada noche arriba**.»
+
+**Esto revoca R18.** Se le preguntó explícitamente si el corte seguía en pie
+—con los once destinos afectados y sus números enfrente— y contestó eso.
+
+R18 vivió dos días. Decía: abajo de $15,000, **una** noche incluida y $500 las
+destapadas. Ahora todos los destinos con columna de solo nombre vuelven a sus
+**tres noches incluidas y $1,000** de la cuarta.
+
+| | con R18 | ahora |
+|---|---|---|
+| Chapala 3 días | $9,500 | **$9,000** |
+| Chapala 4 días | $13,000 | **$12,000** |
+| Tapalpa 4 días | $15,500 | **$14,500** |
+| San Juan de los Lagos 4 días | $15,000 | **$14,000** |
+
+#### Lo que NO se fue: Comala, Autlán y Bernal
+
+Esos tres **no tienen columna en el Excel** —«un destino y un precio» no los
+alcanza— y él los dictó uno por uno, con nombre propio y su tarifa. Siguen con
+la suya: $500 el día Comala y Autlán, $1,000 Bernal.
+
+#### El archivo congelado ahora sirve al revés
+
+`pruebas/datos/precios-antes-de-r18.json` guardaba los 570 precios de antes de
+R18, y servía para probar que **ninguno bajara**. Ahora prueba que **todos
+volvieron exactos** a como estaban. Un retiro a medias se ve ahí, y los tres
+dictados se excluyen a propósito porque ésos sí cambiaron.
+
+**Lección de este par de días:** una regla puede vivir dos días y morirse, y
+está bien — es su negocio, no mi modelo. Lo que no puede pasar es que el
+criterio siga diciendo que rige.

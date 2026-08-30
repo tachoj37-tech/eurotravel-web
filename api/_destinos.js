@@ -54,6 +54,28 @@
    Tepic, que el dueño corrigio a mano.
    ============================================================ */
 
+/* ============================================================
+   `movimientosIncluidos` — R24, dictado el 30-ago-2026
+   ------------------------------------------------------------
+   «Todos los viajes que tengan, por ejemplo, Huasteca tres días,
+    Ciudad de México dos días, tienen movimientos incluidos […] a
+    excepción de Cancún, Cancún no tiene movimientos incluidos.»
+
+   El número son los DIAS que cubre su columna del Excel. Dentro
+   de esos días el movimiento no se cobra aparte: ya viene en el
+   precio. Del día siguiente en adelante se cobra normal.
+
+   QUIENES NO LO LLEVAN, Y POR QUE
+
+   · Cancún — su palabra, con nombre y apellido.
+   · Guanajuato — su propia columna dice «GUANAJUATO 3 DIAS SIN
+     MOV». El Excel es explícito: ese precio NO trae movimientos.
+   · CDMX y la Huasteca — no les hace falta. Su precio no se toma
+     de la celda: se CONSTRUYE hasta ella (R3, base + estadía +
+     movimiento). Marcarlos les quitaría lo que los arma, y hoy
+     dan sus celdas al peso sin sumar nada encima.
+   ============================================================ */
+
 const DESTINOS = [
   /* Dictado por el dueño el 26-ago-2026 (criterio R11): está en la misma
      ribera, ANTES de Chapala, y la fórmula lo cobraba $9,400. «Déjalo en
@@ -99,7 +121,8 @@ const DESTINOS = [
     precio: { busNC47: 24000, sprinter: 14000 } },
   { nombre: "Camécuaro / Zamora", km: 314,
     busca: /camecuaro|cam[eé]cuaro|zamora/i,
-    precio: { busNC47: 26000, sprinter: 14500 } },
+    precio: { busNC47: 26000, sprinter: 14500 },
+    movimientosIncluidos: 1 },
   { nombre: "El Manto", km: 314,
     busca: /el manto/i,
     /* El Excel trae dos duraciones: 1 día $14,000 y 3 días $19,000. El día
@@ -107,7 +130,8 @@ const DESTINOS = [
        (el 2,500 deducido de los escalones le pareció caro). */
     precio: { busNC47: 22000, sprinter: 14000 },
     porDias: { 1: 14000, 3: 19000 },
-    diaExtra: 1500 },
+    diaExtra: 1500,
+    movimientosIncluidos: 3 },
   /* VA ANTES que Talpa a propósito: «talpa burrita» empata con las dos
      expresiones, y aquí gana el primer renglón que empate.
 
@@ -118,14 +142,16 @@ const DESTINOS = [
   { nombre: "Talpa Burrita (peregrinación)", km: 402,
     busca: /burrit/i,
     precio: { busNC47: 38000, sprinter: 26500 },
-    diasIncluidos: 4 },
+    diasIncluidos: 4,
+    movimientosIncluidos: 4 },
   { nombre: "Talpa de Allende", km: 402,
     busca: /talpa/i,
     /* Los precios por duración vienen del Excel tal cual; el día extra de
        $1,500 lo dice su fila 10: «$3000 bus y $1500 spr día extra». */
     precio: { busNC47: 26000, bus4849: 27000, sprinter: 15000 },
     porDias: { 1: 15000, 2: 16500 },
-    diaExtra: 1500 },
+    diaExtra: 1500,
+    movimientosIncluidos: 2 },
   { nombre: "Tepic", km: 414,
     busca: /tepic/i,
     precio: { sprinter: 16900 } },
@@ -134,7 +160,8 @@ const DESTINOS = [
     precio: { sprinter: 17600 } },
   { nombre: "Rincón de Guayabitos", km: 474,
     busca: /guayabitos/i,
-    precio: { busNC47: 29000, bus4849: 30000, neobusI6: 32000, pbI6: 32000, marcopolo: 36000, irizar: 34000, sprinter: 18500 } },
+    precio: { busNC47: 29000, bus4849: 30000, neobusI6: 32000, pbI6: 32000, marcopolo: 36000, irizar: 34000, sprinter: 18500 },
+    movimientosIncluidos: 4 },
   { nombre: "Chacala", km: 502,
     busca: /chacala/i,
     precio: { busNC47: 28000, bus4849: 29000, neobusI6: 31000, pbI6: 30000, marcopolo: 35000, irizar: 33000, sprinter: 16500 } },
@@ -162,7 +189,8 @@ const DESTINOS = [
     precio: { busNC47: 30000, bus4849: 31000, neobusI6: 33000, pbI6: 32000, marcopolo: 37000, irizar: 35000, sprinter: 18500 } },
   { nombre: "Morelia", km: 574,
     busca: /morelia/i,
-    precio: { busNC47: 30000, sprinter: 19000 } },
+    precio: { busNC47: 30000, sprinter: 19000 },
+    movimientosIncluidos: 1 },
   { nombre: "Puerto Vallarta y alrededores", km: 620,
     busca: /vallarta|bucer|punta mita|san blas|nuevo vallarta/i,
     precio: { busNC47: 32000, bus4849: 33000, neobusI6: 34000, pbI6: 34000, marcopolo: 38000, irizar: 36000, sprinter: 19000 } },
@@ -207,13 +235,15 @@ const DESTINOS = [
        dueño el 26-ago-2026: $1,500 (el 3,000 deducido del escalón, caro). */
     precio: { busNC47: 36000, bus4849: 37000, neobusI6: 40000, pbI6: 38000, marcopolo: 44000, irizar: 42000, sprinter: 23500 },
     porDias: { 1: 23500, 2: 26500 },
-    diaExtra: 1500 },
+    diaExtra: 1500,
+    movimientosIncluidos: 2 },
   { nombre: "Tenacatita", km: 762,
     busca: /tenacatita|boca de iguanas/i,
     precio: { busNC47: 32000, bus4849: 33000, neobusI6: 35000, pbI6: 34000, marcopolo: 39000, irizar: 37000, sprinter: 20000 } },
   { nombre: "Santuario de la Mariposa Monarca", km: 780,
     busca: /mariposa|angangueo|el rosario/i,
-    precio: { busNC47: 36000, sprinter: 23000 } },
+    precio: { busNC47: 36000, sprinter: 23000 },
+    movimientosIncluidos: 1 },
   { nombre: "Mayto", km: 798,
     busca: /mayto/i,
     precio: { busNC47: 42000, bus4849: 43000, neobusI6: 44000, pbI6: 45000, marcopolo: 49000, irizar: 47000, sprinter: 26500 } },
@@ -254,13 +284,15 @@ const DESTINOS = [
        del Excel: «$4,000 bus y $2,000 SPR». */
     precio: { busNC47: 58000, bus4849: 59000, neobusI6: 62000, pbI6: 60000, marcopolo: 65000, irizar: 63000, sprinter: 36500 },
     porDias: { 2: 36500 },
-    diaExtra: 2000 },
+    diaExtra: 2000,
+    movimientosIncluidos: 2 },
   { nombre: "Puebla con Zacatlán", km: 1368,
     busca: /zacatl|chignahuapan|chignauapan/i,
     /* Mismo trato que Puebla: 2 días del Excel y $2,000 el extra (fila 10). */
     precio: { busNC47: 63000, bus4849: 65000, neobusI6: 68000, pbI6: 65000, marcopolo: 70000, irizar: 68000, sprinter: 39500 },
     porDias: { 2: 39500 },
-    diaExtra: 2000 },
+    diaExtra: 2000,
+    movimientosIncluidos: 2 },
   { nombre: "Acapulco", km: 1796,
     busca: /acapulco/i,
     /* «ACAPULCO 4 DIAS $60,000». Sus cuatro días no estaban marcados y su
@@ -268,7 +300,8 @@ const DESTINOS = [
        26-ago-2026. Como todo día dictado, corre en los dos sentidos (R14). */
     precio: { busNC47: 80000, bus4849: 85000, neobusI6: 90000, pbI6: 95000, marcopolo: 100000, irizar: 96500, sprinter: 60000 },
     diasIncluidos: 4,
-    diaExtra: 2000 },
+    diaExtra: 2000,
+    movimientosIncluidos: 4 },
   /* «oaxaca» a secas se llevaba a Puerto Escondido y a Huatulco —que estan en
      el estado, pero 500 km MAS ALLA de la capital— al precio de la capital.
      Ahora esos dos caen en «lo cotiza un asesor», que es lo correcto. */
@@ -284,7 +317,8 @@ const DESTINOS = [
        DOS sentidos, igual que Cancún — dictado por el dueño el 26-ago-2026
        («Chiapas igual que Cancún, 4000»). */
     diasIncluidos: 8,
-    diaExtra: 4000 },
+    diaExtra: 4000,
+    movimientosIncluidos: 8 },
   /* El Excel trae el Marcopolo de Barrancas en 1,300,000: un cero de mas.
      En los 40 destinos el Marcopolo nunca pasa del Irizar por mas de 5,000, y
      aqui lo pasaria por 1,175,000. Se corrigio a 130,000 —el escalon que
@@ -380,7 +414,14 @@ function precioDeLista(destino, unidad) {
     diasIncluidos: typeof d.diasIncluidos === 'number' ? d.diasIncluidos : null,
     /* R5: destinos cuyo Excel trae una columna aparte para el viaje CON
        movimientos (Tolantongo). Ese precio ya lo incluye todo. */
-    conMovimientos: typeof d.conMovimientos === 'number' ? d.conMovimientos : null
+    conMovimientos: typeof d.conMovimientos === 'number' ? d.conMovimientos : null,
+    /* R24: los días que su columna del Excel ya trae con movimientos.
+
+       ESTA FUNCION ARMA UN OBJETO NUEVO, NO DEVUELVE EL RENGLON. Agregar el
+       campo al catálogo no basta: si no se copia aquí, llega en `undefined`
+       y la regla no surte efecto sin que nada truene. Pasó al escribir R24 y
+       solo se vio porque se midió el precio, no porque fallara. */
+    movimientosIncluidos: typeof d.movimientosIncluidos === 'number' ? d.movimientosIncluidos : 0
   };
 }
 

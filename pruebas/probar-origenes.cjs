@@ -273,9 +273,13 @@ titulo('Los movimientos se calculan igual, salga de donde salga');
 titulo('El recargo sobrevive al piso por día');
 const chapalaLargaGdl = cotiza('Chapala', 10, 0, GDL);
 const chapalaLargaOco = cotiza('Chapala', 10, 0, OCOTLAN);
-/* $30,000 de piso (10 días × $3,000) + $7,000 de noches. Las noches salen de
-   R18, que a Chapala le destapa 2 a $500 y le cobra las otras 6 a $1,000. */
-ok('Chapala 10 días desde Guadalajara: manda el piso', chapalaLargaGdl, 37000);
+/* $30,000 de piso (10 días × $3,000) + $6,000 de noches.
+
+   CAMBIO DE LADO EL 30-ago-2026, de $37,000 a $36,000. Traía las noches de
+   R18 —2 destapadas a $500 y 6 a $1,000, o sea $7,000—. Al cerrar R25, el
+   dueño quitó el corte de los $15,000: Chapala vuelve a sus tres noches
+   incluidas, así que de sus 9 noches se cobran 6 y todas a mil. */
+ok('Chapala 10 días desde Guadalajara: manda el piso', chapalaLargaGdl, 36000);
 ok('Chapala 10 días desde Ocotlán: el piso NO se come el recargo',
   chapalaLargaOco - chapalaLargaGdl, 4500);
 
