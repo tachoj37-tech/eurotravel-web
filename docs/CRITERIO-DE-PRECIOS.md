@@ -898,7 +898,7 @@ celda**, y varios por mucho:
 | destino | su celda | cobraba con movimientos | de más |
 |---|---|---|---|
 | Chiapas 8 días | $85,000 | $109,000 | **+$24,000** |
-| Guayabitos 4 días | $18,500 | $30,500 | +$12,000 |
+| ~~Guayabitos 4 días~~ | $18,500 | $30,500 | *no aplica — ver abajo* |
 | Talpa Burrita 4 días | $26,500 | $38,500 | +$12,000 |
 | Acapulco 4 días | $60,000 | $72,000 | +$12,000 |
 | El Manto 3 días | $19,000 | $28,000 | +$9,000 |
@@ -908,12 +908,29 @@ Va como `movimientosIncluidos: N` en el catálogo, donde N son los días que
 cubre su columna. **Pasado ese día se cobra normal**, que es la misma frontera
 de R2 y R14.
 
-#### Las dos que siguen cobrando, y las dos son suyas
+#### Las tres que siguen cobrando, y las tres son suyas
 
 | | por qué |
 |---|---|
 | **Cancún** | su palabra, con nombre y apellido |
 | **Guanajuato 3 días** | **su propia columna dice «GUANAJUATO 3 DIAS SIN MOV»** |
+| **Guayabitos** | lo corrigió el mismo día — abajo |
+
+> **Guayabitos entró con los demás y salió el mismo día.** Su columna dice
+> «GUAYABITOS hasta 4 días», así que al escribir R24 se marcó con los otros.
+> El dueño lo sacó en cuanto lo vio: *«Guayabitos sí se cobran los movimientos
+> extras»*, y lo explicó: *«recuerda que dice hasta 4 días es ese precio, pero
+> sin movimientos»*.
+>
+> **La lección para el resto de la tabla:** «hasta 4 días» habla de cuánto DURA
+> el precio, no de paseos incluidos. Es una **estancia**, no un recorrido — la
+> unidad se queda estacionada y moverse es otra cosa. Es lo mismo que ya dice
+> R7 de su noche extra.
+>
+> **Y esto deja una duda abierta con ACAPULCO**, que es la misma forma:
+> «ACAPULCO 4 DIAS», playa, cuatro días. Hoy sí lleva los movimientos
+> incluidos. Si es estancia como Guayabitos, le toca cobrarlos. No se movió
+> porque él no lo nombró (R12), pero está aquí para preguntárselo.
 
 #### Y las dos que no hacía falta marcar
 

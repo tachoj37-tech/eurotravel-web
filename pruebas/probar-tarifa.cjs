@@ -769,7 +769,7 @@ igual('sin nada no vale', t.horasDe(null, undefined), 0);
      ============================================================ */
   [['Talpa de Allende', 2, 16500], ['Tlalpujahua', 2, 26500],
    ['El Manto', 3, 19000], ['Puebla', 2, 36500],
-   ['Puebla con Zacatlán', 2, 39500], ['Rincón de Guayabitos', 4, 18500],
+   ['Puebla con Zacatlán', 2, 39500],
    ['Talpa Burrita (peregrinación)', 4, 26500], ['Acapulco', 4, 60000],
    ['Chiapas', 8, 85000], ['Camécuaro / Zamora', 1, 14500]
   ].forEach(function (f) {
@@ -778,11 +778,17 @@ igual('sin nada no vale', t.horasDe(null, undefined), 0);
       q(n, dias, dias), celda);
   });
 
-  /* LAS DOS EXCEPCIONES, y las dos salen de él */
+  /* LAS TRES EXCEPCIONES, y las tres salen de él */
   igual('Cancún SÍ cobra sus movimientos aparte — su palabra',
     q('Cancún', 17, 3), 145000 + 3 * 3000);
   igual('Guanajuato 3 días también: su columna dice «SIN MOV»',
     q('Guanajuato', 3, 3), 24500 + 3 * 3000);
+  /* Guayabitos entró con los demás al escribir R24 —su columna dice «hasta 4
+     días»— y el dueño lo sacó el mismo día: «Guayabitos sí se cobran los
+     movimientos extras». Su «hasta 4 días» habla de cuánto dura el precio, no
+     de paseos: es estancia de playa, no recorrido. */
+  igual('Guayabitos también cobra los suyos — lo corrigió el 30-ago',
+    q('Rincón de Guayabitos', 4, 2), 18500 + 2 * 3000);
 
   /* Y pasada la duración de la columna, el movimiento se cobra normal:
      ahí la columna ya se acabó, igual que en R2 y R14. */

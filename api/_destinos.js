@@ -160,8 +160,17 @@ const DESTINOS = [
     precio: { sprinter: 17600 } },
   { nombre: "Rincón de Guayabitos", km: 474,
     busca: /guayabitos/i,
-    precio: { busNC47: 29000, bus4849: 30000, neobusI6: 32000, pbI6: 32000, marcopolo: 36000, irizar: 34000, sprinter: 18500 },
-    movimientosIncluidos: 4 },
+    /* GUAYABITOS NO LLEVA `movimientosIncluidos`, y por poco lo lleva.
+
+       Su columna dice «GUAYABITOS hasta 4 días», así que al escribir R24 entró
+       con los demás. El dueño lo corrigió el 30-ago-2026: «Guayabitos sí se
+       cobran los movimientos extras».
+
+       Y tiene sentido: ese «hasta 4 días» habla de cuánto DURA el precio, no
+       de paseos incluidos. Es una estancia de playa, no un recorrido — la
+       unidad se queda estacionada, y moverse es otra cosa. Es lo mismo que ya
+       dice R7 de su noche extra. */
+    precio: { busNC47: 29000, bus4849: 30000, neobusI6: 32000, pbI6: 32000, marcopolo: 36000, irizar: 34000, sprinter: 18500 } },
   { nombre: "Chacala", km: 502,
     busca: /chacala/i,
     precio: { busNC47: 28000, bus4849: 29000, neobusI6: 31000, pbI6: 30000, marcopolo: 35000, irizar: 33000, sprinter: 16500 } },
