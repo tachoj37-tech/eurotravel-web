@@ -46,6 +46,7 @@ De ahí se siguen tres reglas de conducta:
 | **R19** | el origen suma cuando NO queda de camino | Ocotlán, fila 11; y por carretera, no por mapa |
 | **R20** | si no sé un precio, lo saco del Excel | cinco pasos, y siempre digo de qué celda salió |
 | **R21** | Yurécuaro entra como origen | fila 22; Chiapas queda fuera por imposible |
+| **R22** | el viaje de un día no paga movimiento | salvo CDMX y Huasteca, que lo traen en su base |
 | **R10** | ~~pendiente~~ *resuelta por R19 el 28-ago-2026* | ya no cobra precio de Guadalajara salga de donde salga |
 
 ---
@@ -743,3 +744,64 @@ Excel manda, pero un número imposible no es un dato: es una celda corrida.
    Cancún, Oaxaca, Acapulco, Morelia, San Juan de los Lagos, Manzanillo,
    Tenacatita, Valle de Bravo, Pátzcuaro, Mariposa y los demás. Morelia llama la
    atención: desde Ocotlán baja $500 y Yurécuaro está aún más cerca.
+
+---
+
+### R22 · El viaje de un día no paga movimiento (30-ago-2026)
+
+Dictado por el dueño al revisar la hoja de los 50 viajes reales, señalando
+Tequila:
+
+> «sólo fue el problema de Tequila, debería estar en 7000. Los viajes de un
+> solo día no cobres movimientos, éstos normalmente siempre tienen, no lo
+> cobres.»
+
+Tiene toda la razón y **su propio Excel lo respalda**: un paseo de un día ES
+el movimiento. Cobrarlo aparte sacaba a esos viajes de su propia lista.
+
+#### Dos celdas suyas que ANTES no cuadraban y ahora sí
+
+| | su Excel | la página antes | ahora |
+|---|---|---|---|
+| GUANAJUATO MISMO DIA | $19,000 | $22,000 | **$19,000** |
+| MORELIA 1 DIA | $19,000 | $22,000 | **$19,000** |
+| Tequila 1 día | $7,000 | $10,000 | **$7,000** |
+
+Que la regla haga cuadrar dos celdas que nadie estaba mirando es la mejor
+señal de que es correcta.
+
+#### La excepción: CDMX y la Huasteca
+
+A los destinos con `estadiaPorDia` **no se les aplica**, y no es capricho. Su
+precio del Excel está definido como base más días **con** movimientos —palabras
+suyas en R3: *«son cuatro mil por día extra, pero con movimientos»*—.
+Perdonarles el del primer día tira su propia celda: **CDMX 1 día caería a
+$23,000 cuando su Excel dice $26,000.**
+
+Lo decide su mandamiento, no mi gusto: *«si un cálculo da algo que no está en
+el Excel, el cálculo está mal, no el Excel»*.
+
+La diferencia de fondo es la misma que ya separa R1 de R3. «GUANAJUATO MISMO
+DIA $19,000» es el precio **completo** de ese día; «CDMX 1 DIA $26,000» es una
+**base** a la que se le suma el día. Al primero el movimiento ya le venía
+dentro; al segundo se le suma aparte.
+
+Tolantongo queda igual por R5: su columna «con mov» es un precio completo del
+Excel, no un recargo por día.
+
+#### El movimiento no se borra, se pone en cero
+
+El operador necesita la hora aunque no cueste, y el contrato la imprime. Se
+sigue contando el día con movimiento; lo que vale cero es su importe.
+
+#### El hueco que dejó pasar esto
+
+**Ninguna prueba cubría «un día CON movimiento».** Se probaba un día sin ellos,
+y varios días con ellos — nunca la esquina donde se cruzan. Por eso Tequila
+salió en $10,000 y nadie se enteró hasta que el dueño lo vio en el PDF.
+
+Ya hay 17 aserciones para esa esquina, comprobadas apagando la regla: se ponen
+rojas y reproducen exactamente el $10,000 que él cazó.
+
+**Lección:** al probar dos reglas que se pueden combinar, probar también la
+combinación. Las dos por separado estaban bien.

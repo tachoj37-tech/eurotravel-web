@@ -535,19 +535,57 @@ function bandaDe(horas) {
    ------------------------------------------------------------ */
 function movimientosDe(lista, diasDeServicio, regla) {
   if (!Array.isArray(lista)) return [];
-  const tope = Math.min(TOPE_DIAS_MOVIMIENTO, Math.max(0, Math.floor(Number(diasDeServicio) || 0)));
+  const dias = Math.max(0, Math.floor(Number(diasDeServicio) || 0));
+  const tope = Math.min(TOPE_DIAS_MOVIMIENTO, dias);
   /* `typeof`, no `&&`: una tarifa fija de CERO es válida —Barrancas cobra el
      día igual se mueva o no— y con `fijo || banda` el cero se caía a la banda
      por ser falso. */
   const fijo = regla && typeof regla.movimientoPorDia === 'number'
     ? regla.movimientoPorDia : null;
+
+  /* ------------------------------------------------------------
+     R22 · EL VIAJE DE UN DIA NO PAGA MOVIMIENTO
+
+     Dictado por el dueño el 30-ago-2026, corrigiendo la hoja de los
+     50 viajes reales: «los viajes de un solo día no cobres
+     movimientos, éstos normalmente siempre tienen, no lo cobres».
+
+     Tiene sentido y su propio Excel lo respalda: un paseo de un día
+     ES el movimiento. «GUANAJUATO MISMO DIA $19,000» y «MORELIA 1
+     DIA $19,000» son precios de un día que ya andando, y cobrarles
+     $3,000 encima los sacaba de su propia lista.
+
+     Los movimientos NO se borran, se ponen en cero: el operador
+     necesita la hora aunque no cueste, y el contrato la imprime.
+
+     LA EXCEPCION: CDMX Y LA HUASTECA
+
+     A los destinos con `estadiaPorDia` no se les aplica, y no es un
+     capricho: su precio del Excel ESTA DEFINIDO como base más días
+     CON movimientos —palabras suyas en R3, «son cuatro mil por día
+     extra, pero con movimientos»—. Perdonarles el del primer día
+     tira su propia celda: CDMX 1 día caería a $23,000 cuando su
+     Excel dice $26,000.
+
+     Lo decide su mandamiento, no mi gusto: «si un cálculo da algo
+     que no está en el Excel, el cálculo está mal, no el Excel».
+
+     La diferencia de fondo es la que ya distingue R1 de R3.
+     «GUANAJUATO MISMO DIA $19,000» es el precio COMPLETO de ese
+     día; «CDMX 1 DIA $26,000» es una base a la que se le suma el
+     día. Al primero el movimiento ya le venía dentro; al segundo
+     se le suma aparte.
+     ------------------------------------------------------------ */
+  const gratis = dias === 1 && !(regla && regla.estadiaPorDia);
+
   const salida = [];
   for (let i = 0; i < lista.length && salida.length < tope; i++) {
     const d = lista[i] || {};
     const horas = horasDe(d.horaInicio, d.horaFin);
     /* Con regla propia las horas no cambian el precio, pero SÍ se guardan:
        el operador necesita saber a qué hora, aunque cueste lo mismo. */
-    salida.push({ horas: horas, precio: fijo === null ? bandaDe(horas).precio : fijo });
+    const precio = fijo === null ? bandaDe(horas).precio : fijo;
+    salida.push({ horas: horas, precio: gratis ? 0 : precio });
   }
   return salida;
 }

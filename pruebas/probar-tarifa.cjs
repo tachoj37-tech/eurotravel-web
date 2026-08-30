@@ -665,5 +665,66 @@ igual('sin nada no vale', t.horasDe(null, undefined), 0);
   igual('el total siempre queda en centenas', noRedondos, 0);
 })();
 
+/* ============================================================
+   R22 · EL VIAJE DE UN DIA NO PAGA MOVIMIENTO (30-ago-2026)
+   ------------------------------------------------------------
+   Dictado por el dueño al revisar la hoja de los 50 viajes reales:
+   «los viajes de un solo día no cobres movimientos, éstos
+   normalmente siempre tienen, no lo cobres».
+
+   ESTE HUECO EXISTIA Y POR ESO SE ESCAPO EL ERROR. Ninguna prueba
+   cubria «un dia CON movimiento»: se probaba un dia sin ellos, y
+   varios dias con ellos. Tequila salio en $10,000 y nadie se
+   entero hasta que el dueño lo vio en el PDF.
+   ============================================================ */
+(function () {
+  const destinos = require('../api/_destinos.js');
+  const GDL = { lat: 20.675171, lng: -103.347338, direccion: 'Guadalajara, Jal.' };
+  function q(nombre, dias, movs) {
+    const d = destinos.buscaDestino({ nombre: nombre });
+    const l = [];
+    for (let i = 0; i < movs; i++) l.push({ salida: '09:00', regreso: '17:00' });
+    return t.calcula(d.km, dias, { destino: { nombre: nombre }, origen: GDL,
+      unidad: 'sprinter', noches: Math.max(0, dias - 1), movimientos: l }).total;
+  }
+
+  /* El caso que el dueño corrigio: cobraba $10,000 = 7,000 + 3,000 */
+  igual('Tequila 1 día con movimiento son sus $7,000 pelados', q('Tequila / Guachimontones', 1, 1), 7000);
+  igual('y sin movimiento, los mismos', q('Tequila / Guachimontones', 1, 0), 7000);
+
+  /* Y ahora dos celdas del Excel que ANTES no cuadraban y ahora sí:
+     «GUANAJUATO MISMO DIA $19,000» y «MORELIA 1 DIA $19,000» son el
+     precio completo de ese día; cobrarles el movimiento encima los
+     sacaba de su propia lista. */
+  igual('Guanajuato mismo día con movimiento = su celda del Excel', q('Guanajuato', 1, 1), 19000);
+  igual('Morelia 1 día con movimiento = su celda del Excel', q('Morelia', 1, 1), 19000);
+  igual('Chapala 1 día con movimiento', q('Chapala', 1, 1), 6500);
+  igual('tres movimientos en un día tampoco cobran', q('Chapala', 1, 3), 6500);
+
+  /* LA EXCEPCION: CDMX y la Huasteca, cuyo precio del Excel ESTA
+     definido como base mas dias CON movimientos (R3). Perdonarles el
+     del primer dia tira su propia celda —CDMX caeria a $23,000— y el
+     mandamiento dice que entonces el calculo esta mal, no el Excel. */
+  igual('CDMX 1 día con movimiento sigue siendo su celda, $26,000', q('Ciudad de México', 1, 1), 26000);
+  igual('y sin movimiento sí baja', q('Ciudad de México', 1, 0), 23000);
+
+  /* De DOS dias en adelante todo se cobra igual que siempre */
+  igual('CDMX 2 días con 2 movimientos', q('Ciudad de México', 2, 2), 30000);
+  igual('CDMX 3 días con 3 movimientos', q('Ciudad de México', 3, 3), 34000);
+  igual('Huasteca 3 días con 3 movimientos', q('Huasteca Potosina', 3, 3), 38500);
+  igual('Huasteca 4 días con 4 movimientos', q('Huasteca Potosina', 4, 4), 42500);
+  igual('Vallarta 4 días con 2 movimientos sigue cobrando los dos',
+    q('Puerto Vallarta y alrededores', 4, 2), 19000 + 2 * 3000);
+  igual('Chapala 2 días con 1 movimiento SÍ lo cobra', q('Chapala', 2, 1), 6500 + 3000);
+
+  /* El movimiento se guarda aunque no se cobre: el operador necesita la
+     hora y el contrato la imprime. */
+  const p = t.calcula(100, 1, { destino: { nombre: 'Chapala' }, origen: GDL, unidad: 'sprinter',
+    noches: 0, movimientos: [{ salida: '09:00', regreso: '17:00' }] });
+  igual('el día con movimiento se sigue contando', p.desglose.diasMovimiento, 1);
+  igual('pero su importe es cero', p.desglose.importeMovimientos, 0);
+  igual('y sus horas quedan guardadas', p.interno.horasMovimiento.length, 1);
+})();
+
 console.log('\n' + buenas + ' buenas, ' + malas + ' malas');
 process.exit(malas ? 1 : 0);
