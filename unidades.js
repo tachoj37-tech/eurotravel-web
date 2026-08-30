@@ -33,6 +33,10 @@ window.UNIDADES = [
     spec: [['i-users', '20 pasajeros'], ['i-snow', 'Aire acondicionado'], ['i-seat', 'Asientos reclinables'], ['i-tv', 'Pantalla y sistema de audio'], ['i-bag', 'Espacio para equipaje'], ['i-shield', 'Seguro de viajero incluido'], ['i-briefcase', 'Traslados ejecutivos y eventos'], ['i-route', 'Ágil en ciudad y carretera']] },
   { id: 'suburban', cat: 'suburban', cotizadorAutomatico: false, tag: 'Suburban · Ejecutivo', name: 'Suburban', cap: 'Hasta 6 pasajeros', max: 6, img: 'suburban',
     desc: 'Elegancia y comodidad para traslados ejecutivos, recepción de directivos en el aeropuerto y grupos reducidos que viajan con equipaje.',
+    /* La pantalla táctil la confirmó el dueño el 29-ago-2026, al preguntarle
+       por qué la página decía «Wifi ilimitado» y este catálogo no: dijo
+       «interiores de piel y pantalla táctil». El wifi NO lo tiene y se quitó
+       de index.html el mismo día. */
     amen: ['Aire acondicionado', 'Servicio ejecutivo', 'Equipaje', 'Chofer'],
-    spec: [['i-users', 'Hasta 6 pasajeros'], ['i-snow', 'Aire acondicionado'], ['i-seat', 'Interiores en piel'], ['i-bag', 'Espacio para equipaje'], ['i-plane', 'Traslados aeropuerto'], ['i-shield', 'Seguro de viajero incluido'], ['i-briefcase', 'Servicio ejecutivo puerta a puerta'], ['i-clock', 'Disponible por horas']] }
+    spec: [['i-users', 'Hasta 6 pasajeros'], ['i-snow', 'Aire acondicionado'], ['i-seat', 'Interiores en piel'], ['i-tv', 'Pantalla táctil'], ['i-bag', 'Espacio para equipaje'], ['i-plane', 'Traslados aeropuerto'], ['i-shield', 'Seguro de viajero incluido'], ['i-briefcase', 'Servicio ejecutivo puerta a puerta'], ['i-clock', 'Disponible por horas']] }
 ];
