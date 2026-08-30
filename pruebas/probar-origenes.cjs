@@ -298,6 +298,93 @@ ok('Villa Corona desde Ocotlán y desde Guadalajara, a los mismos km, cuestan ig
   porFormula.total, porFormulaGdl.total);
 ok('y su recargo es cero', porFormula.interno.recargoSalida, 0);
 
+/* ============================================================
+   YURECUARO — LA FILA 22, RENGLON POR RENGLON
+   ------------------------------------------------------------
+   `esperado` es el precio que trae SU Excel saliendo de
+   Yurécuaro. Los días son los de la columna.
+   ============================================================ */
+titulo('Los precios de Yurécuaro, tal como los escribió');
+const YURECUARO = { lat: 20.3389, lng: -102.2836, direccion: 'Yurécuaro, Mich., México' };
+
+const FILA_22 = [
+  ['Puerto Vallarta y alrededores', 4, 0, 28000],
+  ['Mismaloya',                     4, 0, 29000],
+  ['Sayulita / San Pancho',         4, 0, 26000],
+  ['Mazamitla',                     2, 0, 21500],
+  ['Tapalpa',                       2, 0, 21500],
+  ['Chapala',                       1, 0, 16500],
+  ['Chacala',                       4, 0, 22500],
+  ['Punta Perula',                  4, 0, 26500],
+  ['Rincón de Guayabitos',          4, 0, 26000],
+  ['Mazatlán',                      4, 0, 32000],
+  ['Real de Catorce',               4, 0, 45000],
+  ['Barrancas del Cobre',           7, 0, 85000],
+  ['Talpa de Allende',              1, 0, 25000],
+  ['Tlalpujahua',                   1, 0, 27500],
+  ['Talpa Burrita (peregrinación)', 4, 0, 35000],
+  ['Melaque / Barra de Navidad',    4, 0, 25000],
+  ['El Manto',                      1, 0, 18000],
+  ['El Manto',                      3, 0, 23000],
+  ['Guanajuato',                    1, 0, 25000],
+  ['Guanajuato',                    3, 0, 26500],
+  ['San Miguel de Allende',         2, 0, 29000],
+  ['Zacatecas',                     2, 0, 28500],
+  ['Mayto',                         4, 0, 32000],
+
+  /* Los que NO cambian */
+  ['Camécuaro / Zamora',            1, 0, 14500],
+
+  /* Los que BAJAN: le quedan de camino */
+  ['Ixtapa Zihuatanejo',            4, 0, 26500],
+
+  /* Con movimientos metidos en su precio del Excel */
+  ['Ciudad de México',              1, 1, 26000],
+  ['Ciudad de México',              2, 2, 30000],
+  ['Ciudad de México',              3, 3, 34000],
+  ['Huasteca Potosina',             3, 3, 46500],
+  ['Puebla',                        2, 0, 48500]
+];
+FILA_22.forEach(function (f) {
+  ok(f[0] + ' ' + f[1] + ' día(s) desde Yurécuaro', cotiza(f[0], f[1], f[2], YURECUARO), f[3]);
+});
+
+/* Tolantongo: su única celda es la de CON movimientos ($28,000 contra los
+   $34,500 de Guadalajara). El descuento se aplica al destino, así que también
+   alcanza al viaje sin movimientos — eso es inferencia mía y está anotado. */
+ok('Tolantongo con movimientos desde Yurécuaro',
+  cotiza('Grutas Tolantongo', 3, 3, YURECUARO), 28000);
+
+/* Tequila hereda el RECARGO de su fila (+$10,000), no el precio viejo:
+   el Excel dice $18,500 sobre unos $8,500 que el dueño bajó a $7,000. */
+ok('Tequila desde Yurécuaro: $7,000 + $10,000 de recargo',
+  cotiza('Tequila / Guachimontones', 1, 0, YURECUARO), 17000);
+
+/* ------------------------------------------------------------
+   CHIAPAS NO LLEVA EL NUMERO DE SU CELDA, A PROPOSITO
+
+   La celda dice $16,500 contra $85,000 desde Guadalajara: un
+   recargo de MENOS $68,500 que casi seguro es una celda corrida.
+   Se dejó fuera, así que cobra el precio de Guadalajara.
+
+   Si algún día alguien la mete «porque está en el Excel», esta
+   prueba se pone roja y explica por qué.
+   ------------------------------------------------------------ */
+titulo('Chiapas desde Yurécuaro NO cobra los $16,500 de su celda');
+ok('cobra los $85,000 de Guadalajara, no los $16,500 de la celda rara',
+  cotiza('Chiapas', 8, 0, YURECUARO), 85000);
+ok('y su recargo dictado es nulo, no cero',
+  origenes.recargoDictado(YURECUARO, 'Chiapas', 8), null);
+
+/* Y los 16 destinos que su fila deja en blanco pagan precio de Guadalajara */
+titulo('Lo que la fila 22 deja en blanco paga precio de Guadalajara');
+[['Cancún', 17, 0], ['Oaxaca', 4, 0], ['Acapulco', 4, 0],
+ ['Morelia', 1, 0], ['San Juan de los Lagos', 1, 0], ['Manzanillo', 4, 0]]
+  .forEach(function (f) {
+    ok(f[0] + ' desde Yurécuaro = desde Guadalajara',
+      cotiza(f[0], f[1], f[2], YURECUARO), cotiza(f[0], f[1], f[2], GDL));
+  });
+
 /* ------------------------------------------------------------
    6-bis. EL TEXTO Y EL RADIO TIENEN QUE DECIR LO MISMO
 
@@ -351,6 +438,46 @@ ok('y Ocotlán, Jalisco de verdad sí entra',
 /* Y si llegan coordenadas del pueblo, mandan ellas aunque el texto sea raro */
 ok('con coordenadas del pueblo, el texto raro no estorba',
   (origenes.buscaOrigen({ lat: 20.3529, lng: -102.7745, direccion: 'Tonalá' }) || {}).nombre, 'Ocotlán');
+
+/* ------------------------------------------------------------
+   6-quater. LOS ORIGENES NO SE PISAN
+
+   Al entrar Yurécuaro los radios quedaron a 1.2 km de tocarse con
+   los de Ocotlán. Si algún día se encimaran, `buscaOrigen` se
+   queda con el MAS CERCANO —no con el primero del arreglo, que
+   era lo de antes y hacía que el precio dependiera del orden en
+   que estuvieran escritos—.
+
+   Aquí se comprueban las dos cosas: que hoy no se encimen, y que
+   si se encimaran ganaría el correcto.
+   ------------------------------------------------------------ */
+titulo('Los orígenes no se enciman, y si se encimaran gana el más cercano');
+for (let i = 0; i < origenes.ORIGENES.length; i++) {
+  for (let j = i + 1; j < origenes.ORIGENES.length; j++) {
+    const a = origenes.ORIGENES[i], b = origenes.ORIGENES[j];
+    const entre = origenes.lejosEnKm(a.lat, a.lng, b.lat, b.lng);
+    ok(a.nombre + ' y ' + b.nombre + ' están a ' + entre.toFixed(1) +
+      ' km, más que sus radios juntos (' + (a.radioKm + b.radioKm) + ')',
+      entre > a.radioKm + b.radioKm, true);
+  }
+}
+/* Cada origen se reconoce a sí mismo, aunque el otro exista */
+origenes.ORIGENES.forEach(function (o) {
+  ok('el punto de ' + o.nombre + ' devuelve ' + o.nombre,
+    (origenes.buscaOrigen({ lat: o.lat, lng: o.lng }) || {}).nombre, o.nombre);
+});
+/* Y ningún pueblo aparece en dos orígenes: por texto no hay distancia
+   que desempate, así que un nombre repetido sería un precio al azar. */
+titulo('Ningún pueblo se repite entre orígenes');
+const vistos = {};
+let repetidos = 0;
+origenes.ORIGENES.forEach(function (o) {
+  o.pueblos.forEach(function (p) {
+    if (vistos[p.n]) repetidos++;
+    vistos[p.n] = o.nombre;
+  });
+});
+ok('cero pueblos repetidos', repetidos, 0);
 
 /* ------------------------------------------------------------
    7. EL OTRO OCOTLAN

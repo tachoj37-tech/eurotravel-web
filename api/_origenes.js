@@ -142,14 +142,16 @@ const ORIGENES = [
 
     /* Pide Jalisco a propósito: hay otro Ocotlán en Oaxaca, y otro Zapotlán
        —el Grande, Ciudad Guzmán— que no es este. */
-    enJalisco: /\bjal(isco)?\b/i,
+    enSuEstado: /\bjal(isco)?\b/i,
 
     /* --------------------------------------------------------
        LO QUE SUBE, DESTINO POR DESTINO
 
-       Cero NO es lo mismo que ausente: cero es «el dueño dijo que
-       no sube», y ausente es «no viene en su Excel». El ausente
-       cae al respaldo por kilómetros; el cero no.
+       Cero NO es lo mismo que ausente, aunque hoy cobren igual:
+       cero es «el dueño dijo que no sube» y ausente es «no viene en
+       su Excel». Los dos dan precio de Guadalajara, pero el ausente
+       está esperando su número y el cero ya lo tiene. Cuando él
+       dicte los que faltan, la diferencia importa.
        -------------------------------------------------------- */
     recargo: {
       /* No suben: Ocotlán queda de camino */
@@ -235,6 +237,110 @@ const ORIGENES = [
       'Talpa de Allende': { porDias: { 1: 4500, 2: 4000 } },
       'Guanajuato': { porDias: { 1: 3000, 3: 3500 } }
     }
+  },
+
+  {
+    nombre: 'Yurécuaro',
+    /* Fila 22 del Excel, «YUCUARO SPRINTER». Leída el 29-ago-2026. */
+    fila: 22,
+
+    /* Yurécuaro, Michoacán. RADIO DE 22, no de 25: Ocotlán está a 51.2 km,
+       así que con 25 los dos círculos quedarían a 1.2 km de tocarse. Con 22
+       hay 4.2 km de aire, y de todos modos `buscaOrigen` se queda con el más
+       cercano si algún día se encimaran. */
+    lat: 20.3389, lng: -102.2836, radioKm: 22,
+
+    pueblos: [
+      { n: 'Yurécuaro',              busca: /yur[eé]cuaro/i,          lat: 20.3389, lng: -102.2836 },
+      { n: 'Tanhuato',               busca: /tanhuato/i,              lat: 20.2911, lng: -102.3350 },
+      { n: 'Degollado',              busca: /degollado/i,             lat: 20.4592, lng: -102.1811 },
+      { n: 'Vista Hermosa',          busca: /vista\s+hermosa/i,       lat: 20.2833, lng: -102.4667 },
+      { n: 'Ixtlán de los Hervores', busca: /ixtl[aá]n\s+de\s+los\s+hervores/i, lat: 20.1919, lng: -102.4058 }
+    ],
+
+    /* Degollado es de Jalisco y los otros cuatro de Michoacán, así que aquí
+       el guardia acepta los dos estados. La lista de pueblos es la que
+       decide; esto solo evita confundir un pueblo del mismo nombre en otro
+       lado del país. */
+    enSuEstado: /\b(mich(oac[aá]n)?|jal(isco)?)\b/i,
+
+    /* --------------------------------------------------------
+       LA FILA 22, TAL CUAL
+
+       33 de sus 49 columnas traen número. Las 16 vacías no se
+       inventan: pagan precio de Guadalajara hasta que él las
+       dicte.
+
+       Yurécuaro está MAS al oriente que Ocotlán, y por eso sus
+       recargos al poniente son mayores —Chapala +$10,000 contra
+       los +$4,500 de Ocotlán— y en cambio Tolantongo e Ixtapa le
+       salen MAS BARATOS que desde Guadalajara: le quedan de
+       camino. Eso confirma el criterio del dueño por segunda vez,
+       ahora con un origen distinto.
+       -------------------------------------------------------- */
+    recargo: {
+      /* No suben: quedan de camino */
+      'Ciudad de México': 0,
+      'Camécuaro / Zamora': 0,
+
+      /* BAJAN: Yurécuaro está de camino y más cerca */
+      'Grutas Tolantongo': -6500,
+      'Ixtapa Zihuatanejo': -3000,
+
+      /* Suben */
+      'Guanajuato': { porDias: { 1: 6000, 3: 2000 } },
+      'San Miguel de Allende': 2500,
+      'Zacatecas': 3500,
+      'Mazatlán': 4000,
+      'El Manto': 4000,
+      'Tlalpujahua': 4000,
+      'Melaque / Barra de Navidad': 4500,
+      'Mayto': 5500,
+      'Chacala': 6000,
+      'Punta Perula': 6000,
+      'Mazamitla': 7000,
+      'Tapalpa': 7000,
+      'Rincón de Guayabitos': 7500,
+      'Sayulita / San Pancho': 8000,
+      'Huasteca Potosina': 8000,
+      'Talpa Burrita (peregrinación)': 8500,
+      'Puerto Vallarta y alrededores': 9000,
+      'Mismaloya': 9000,
+      'Chapala': 10000,
+      'Tequila / Guachimontones': 10000,
+      'Barrancas del Cobre': 10000,
+      'Talpa de Allende': 10000,
+      'Real de Catorce': 10500,
+
+      /* --------------------------------------------------------
+         PUEBLA: SU NUMERO, PERO HAY QUE CONFIRMARLO
+
+         +$12,000 es el recargo más alto de toda la fila, y es el
+         ÚNICO renglón donde el patrón geográfico se invierte:
+         desde Ocotlán Puebla dice «MISMO COSTO GDL», y Yurécuaro
+         queda todavía MAS de camino a Puebla que Ocotlán. Debería
+         costar igual o menos, no doce mil más.
+
+         Se implementa porque es su número y la magnitud es
+         creíble —no como la de Chiapas, abajo—, pero está
+         señalado en el criterio para preguntárselo.
+         -------------------------------------------------------- */
+      'Puebla': 12000
+
+      /* --------------------------------------------------------
+         CHIAPAS NO ENTRA, Y ES A PROPOSITO
+
+         Su celda dice $16,500 cuando desde Guadalajara son
+         $85,000: un recargo de MENOS $68,500 en un viaje de ocho
+         días. Está sola entre celdas vacías y tiene toda la pinta
+         de un número que cayó en la columna equivocada.
+
+         Implementarla le costaría $68,500 en el primer cliente de
+         Yurécuaro que pidiera Chiapas. Al quedar fuera, ese viaje
+         cobra los $85,000 de Guadalajara, que es lo prudente
+         mientras él no lo confirme. Señalado, no inventado (R12).
+         -------------------------------------------------------- */
+    }
   }
 ];
 
@@ -266,13 +372,35 @@ function buscaOrigen(origen) {
   const hayPunto = !isNaN(lat) && !isNaN(lng);
   const texto = String(origen.direccion || origen.texto || origen.nombre || '');
 
+  /* --------------------------------------------------------------
+     GANA EL MAS CERCANO, NO EL PRIMERO DE LA LISTA
+
+     Antes se devolvía el primero cuyo radio alcanzara, y eso hacía
+     que el precio dependiera del ORDEN del arreglo —que es
+     arbitrario—. Con un solo origen no se notaba; al entrar
+     Yurécuaro sí: sus radios quedan a 1.2 km de tocarse, y un
+     pueblo en medio le habría tocado a quien estuviera escrito
+     primero, no a quien de verdad le queda cerca.
+
+     Así, agregar un origen nuevo no puede cambiarle el precio a
+     otro por accidente. `probar-origenes.cjs` lo exige. */
+  if (hayPunto) {
+    let mejor = null, mejorKm = Infinity;
+    for (let i = 0; i < ORIGENES.length; i++) {
+      const o = ORIGENES[i];
+      const km = lejosEnKm(lat, lng, o.lat, o.lng);
+      if (km <= o.radioKm && km < mejorKm) { mejor = o; mejorKm = km; }
+    }
+    return mejor;
+  }
+
+  /* Por texto no hay distancia que comparar: gana el pueblo que coincida.
+     Los nombres son propios y no se repiten entre orígenes —hay una prueba
+     que lo exige—, así que no puede haber empate. */
+  if (!texto) return null;
   for (let i = 0; i < ORIGENES.length; i++) {
     const o = ORIGENES[i];
-    if (hayPunto) {
-      if (lejosEnKm(lat, lng, o.lat, o.lng) <= o.radioKm) return o;
-      continue;
-    }
-    if (!texto || !o.enJalisco.test(texto)) continue;
+    if (!o.enSuEstado.test(texto)) continue;
     if (AREA_METROPOLITANA.test(texto)) continue;   // una calle de Tonalá no es Ocotlán
     for (let j = 0; j < o.pueblos.length; j++) {
       if (o.pueblos[j].busca.test(texto)) return o;

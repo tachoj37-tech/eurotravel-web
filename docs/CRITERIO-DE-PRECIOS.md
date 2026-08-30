@@ -45,6 +45,7 @@ De ahí se siguen tres reglas de conducta:
 | **R18** | abajo de $15,000 el día no es gratis | $500 la noche destapada; de la 4ª, los mil de siempre |
 | **R19** | el origen suma cuando NO queda de camino | Ocotlán, fila 11; y por carretera, no por mapa |
 | **R20** | si no sé un precio, lo saco del Excel | cinco pasos, y siempre digo de qué celda salió |
+| **R21** | Yurécuaro entra como origen | fila 22; Chiapas queda fuera por imposible |
 | **R10** | ~~pendiente~~ *resuelta por R19 el 28-ago-2026* | ya no cobra precio de Guadalajara salga de donde salga |
 
 ---
@@ -671,3 +672,74 @@ no consulta ninguna inteligencia artificial: sus precios son aritmética con los
 números ya copiados a `_destinos.js` y `_origenes.js`. R20 se aplica cuando él
 me pregunta, y su resultado es un cambio de código con su regla escrita aquí.
 Ver la sección de costos en `LA-SPRINTER-SEGUN-EL-EXCEL.md`.
+
+---
+
+### R21 · Yurécuaro entra como origen (29-ago-2026)
+
+Dictado por el dueño: *«contempla salidas de Yurécuaro en el cotizador, de
+Sprinter, escanea toda esa fila y adáptate»*. Es la fila 22 del Excel,
+`YUCUARO SPRINTER`, y entra igual que entró Ocotlán con R19.
+
+**33 de sus 49 columnas traen número; 31 de esas 33 se reconstruyen al peso.**
+Las dos que no, a propósito: Tequila hereda el recargo sobre el precio ya
+corregido, y Chiapas queda fuera (abajo).
+
+#### Yurécuaro confirma el criterio por segunda vez
+
+Está **más al oriente que Ocotlán**, y sus números lo reflejan sin que nadie se
+los acomodara:
+
+| destino | desde Ocotlán | desde Yurécuaro | por qué |
+|---|---|---|---|
+| Chapala | +$4,500 | **+$10,000** | más lejos al poniente |
+| Vallarta | +$6,000 | **+$9,000** | igual |
+| Tolantongo | $0 | **−$6,500** | le queda de camino |
+| Ixtapa | $0 | **−$3,000** | igual |
+
+Que un origen más oriental cobre más al poniente y **menos** al oriente es
+exactamente lo que él describió el 28-ago. No hubo que ajustar ninguna regla:
+la máquina de R19 lo aceptó tal cual.
+
+#### El radio: 22 km, y por qué no 25
+
+Ocotlán y Yurécuaro están a **51.2 km**. Con 25 km cada uno, sus círculos
+quedarían a **1.2 km de tocarse** — demasiado apretado para dejarlo al azar.
+Con 22 hay 4.2 km de aire.
+
+Y se arregló de raíz: **`buscaOrigen` ahora se queda con el origen MÁS
+CERCANO**, no con el primero del arreglo. Antes el precio dependía del orden en
+que estuvieran escritos, que es arbitrario; con un solo origen no se notaba.
+Comprobado encimando los radios a la fuerza: cada punto cae con quien le queda
+cerca.
+
+Dentro quedan **Yurécuaro, Tanhuato, Degollado (Jalisco), Vista Hermosa e
+Ixtlán de los Hervores**. La Piedad se queda fuera por 1.4 km.
+
+#### CHIAPAS NO ENTRA — y esto es lo importante de esta regla
+
+Su celda dice **$16,500** cuando desde Guadalajara son **$85,000**: un recargo
+de **menos $68,500** en un viaje de ocho días. Está sola entre celdas vacías y
+tiene toda la pinta de un número que cayó en la columna equivocada.
+
+**Se dejó fuera.** Ese viaje cobra los $85,000 de Guadalajara hasta que él lo
+confirme. Meterla le costaría $68,500 en el primer cliente de Yurécuaro que
+pidiera Chiapas, y una prueba se pone roja si alguien la agrega «porque está en
+el Excel».
+
+Ésta es la frontera entre obedecer el Excel y obedecer un error de dedo. El
+Excel manda, pero un número imposible no es un dato: es una celda corrida.
+
+#### Lo demás que hay que preguntarle
+
+1. **Puebla, +$12,000** — el recargo más alto de la fila y el **único renglón
+   donde el patrón se invierte**: desde Ocotlán Puebla dice «MISMO COSTO GDL», y
+   Yurécuaro queda todavía más de camino. Debería costar igual o menos. Se
+   implementó porque su magnitud es creíble, pero huele.
+2. **Tolantongo** — su única celda es la de CON movimientos ($28,000). El
+   descuento se aplica al destino, así que también alcanza al viaje sin
+   movimientos. Eso es inferencia mía.
+3. **Los 16 destinos que su fila deja en blanco** pagan precio de Guadalajara:
+   Cancún, Oaxaca, Acapulco, Morelia, San Juan de los Lagos, Manzanillo,
+   Tenacatita, Valle de Bravo, Pátzcuaro, Mariposa y los demás. Morelia llama la
+   atención: desde Ocotlán baja $500 y Yurécuaro está aún más cerca.
