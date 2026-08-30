@@ -805,3 +805,38 @@ rojas y reproducen exactamente el $10,000 que él cazó.
 
 **Lección:** al probar dos reglas que se pueden combinar, probar también la
 combinación. Las dos por separado estaban bien.
+
+---
+
+### Pendiente · Morelia y Mariposa: cuatro días cuestan lo mismo que uno
+
+Salió al comprobar, el 30-ago-2026, que Guanajuato y Morelia sí usan precio de
+tabla —el dueño lo confirmó: *«Guanajuato mismo día y Morelia usa precios de
+tabla»*—. Usarlos, los usan. Pero **su columna dice «1 DIA» y no hay segunda
+columna**, así que la página no sabe qué cobrar por el día dos.
+
+Su Excel tiene ocho columnas que dicen «1 día». Seis suben bien; dos no:
+
+| columna del Excel | 1 día | 4 días | |
+|---|---|---|---|
+| CDMX 1 DIA | $23,000 | $26,000 | sube |
+| TALPA 1 DIA DIRECTO | $15,000 | $19,500 | sube |
+| TLALPUJAHUA 1 DIA | $23,500 | $29,500 | sube |
+| CAMÉCUARO/ZAMORA 1 DIA | $14,500 | $15,500 | sube |
+| EL MANTO 1 DIA | $14,000 | $20,500 | sube |
+| GUANAJUATO MISMO DIA | $19,000 | $26,000 | sube |
+| **MARIPOSA 1 DIA** | $23,000 | **$23,000** | **no sube** |
+| **MORELIA 1 DIA** | $19,000 | **$19,000** | **no sube** |
+
+Las seis que suben tienen un segundo dato: o su `porDias` con otra duración, o
+un `diaExtra` dictado, o —Camécuaro— caen abajo de los $15,000 y R18 las
+alcanza. Morelia y Mariposa no tienen ninguno de los tres: pasan del tope de
+R18 por $4,000 y $8,000, así que sus tres noches incluidas se comen los días.
+
+**Qué significa en dinero:** una Sprinter apartada cuatro días a Morelia cobra
+lo mismo que un paseo de un día. No es el modelo de playa —Vallarta de jueves a
+domingo sí son $19,000 a propósito—: es que su columna nunca dijo qué pasa
+después del primer día.
+
+**No se movió** (R12). Basta con que él dicte el día extra de esos dos, como ya
+dictó el de Talpa, Tlalpujahua, El Manto y Guanajuato ($1,500 los cuatro).
