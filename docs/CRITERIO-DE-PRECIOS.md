@@ -47,6 +47,7 @@ De ahí se siguen tres reglas de conducta:
 | **R20** | si no sé un precio, lo saco del Excel | cinco pasos, y siempre digo de qué celda salió |
 | **R21** | Yurécuaro entra como origen | fila 22; Chiapas queda fuera por imposible |
 | **R22** | el viaje de un día no paga movimiento | salvo CDMX y Huasteca, que lo traen en su base |
+| **R23** | Morelia y Mariposa van planas hasta la 3ª noche | y $1,000 de la cuarta; NO es defecto, lo confirmó |
 | **R10** | ~~pendiente~~ *resuelta por R19 el 28-ago-2026* | ya no cobra precio de Guadalajara salga de donde salga |
 
 ---
@@ -808,12 +809,20 @@ combinación. Las dos por separado estaban bien.
 
 ---
 
-### Pendiente · Morelia y Mariposa: cuatro días cuestan lo mismo que uno
+### R23 · Morelia y Mariposa: tres noches incluidas y $1,000 de la cuarta (30-ago-2026)
 
-Salió al comprobar, el 30-ago-2026, que Guanajuato y Morelia sí usan precio de
-tabla —el dueño lo confirmó: *«Guanajuato mismo día y Morelia usa precios de
-tabla»*—. Usarlos, los usan. Pero **su columna dice «1 DIA» y no hay segunda
-columna**, así que la página no sabe qué cobrar por el día dos.
+> **Esto nació como «pendiente» y el dueño lo cerró el mismo día.** Se lo
+> presenté como un defecto —cuatro días cuestan lo mismo que uno— y contestó:
+> *«ah, está bien; entonces cuando supere su tercera noche, o sea su 4ta,
+> auméntale 1000 por noche»*. Que es exactamente lo que la página ya hacía.
+>
+> **No era defecto: era su modelo.** Queda escrito como regla y no como
+> pendiente, para que nadie lo vuelva a «arreglar».
+
+Salió al comprobar que Guanajuato y Morelia sí usan precio de tabla —el dueño
+lo confirmó: *«Guanajuato mismo día y Morelia usa precios de tabla»*—. Usarlos,
+los usan. Pero **su columna dice «1 DIA» y no hay segunda columna**, así que
+del día dos en adelante mandan las tres noches incluidas.
 
 Su Excel tiene ocho columnas que dicen «1 día». Seis suben bien; dos no:
 
@@ -825,18 +834,29 @@ Su Excel tiene ocho columnas que dicen «1 día». Seis suben bien; dos no:
 | CAMÉCUARO/ZAMORA 1 DIA | $14,500 | $15,500 | sube |
 | EL MANTO 1 DIA | $14,000 | $20,500 | sube |
 | GUANAJUATO MISMO DIA | $19,000 | $26,000 | sube |
-| **MARIPOSA 1 DIA** | $23,000 | **$23,000** | **no sube** |
-| **MORELIA 1 DIA** | $19,000 | **$19,000** | **no sube** |
+| **MARIPOSA 1 DIA** | $23,000 | **$23,000** | plano hasta la 3ª noche |
+| **MORELIA 1 DIA** | $19,000 | **$19,000** | plano hasta la 3ª noche |
 
 Las seis que suben tienen un segundo dato: o su `porDias` con otra duración, o
 un `diaExtra` dictado, o —Camécuaro— caen abajo de los $15,000 y R18 las
-alcanza. Morelia y Mariposa no tienen ninguno de los tres: pasan del tope de
-R18 por $4,000 y $8,000, así que sus tres noches incluidas se comen los días.
+alcanza. Morelia y Mariposa no tienen ninguno de los tres, así que les toca la
+regla general: **tres noches incluidas, y $1,000 de la cuarta en adelante.**
 
-**Qué significa en dinero:** una Sprinter apartada cuatro días a Morelia cobra
-lo mismo que un paseo de un día. No es el modelo de playa —Vallarta de jueves a
-domingo sí son $19,000 a propósito—: es que su columna nunca dijo qué pasa
-después del primer día.
+| | 1–4 días | 5º día | 6º día |
+|---|---|---|---|
+| Morelia | $19,000 | $20,000 | $21,000 |
+| Mariposa | $23,000 | $24,000 | $25,000 |
 
-**No se movió** (R12). Basta con que él dicte el día extra de esos dos, como ya
-dictó el de Talpa, Tlalpujahua, El Manto y Guanajuato ($1,500 los cuatro).
+#### Y a partir de cierto punto manda el piso, no las noches
+
+El piso de **$3,000 por día** le gana al precio de tabla cuando el viaje se
+alarga, y de ahí en adelante el escalón deja de ser $1,000:
+
+| | el piso alcanza al precio | qué pasa |
+|---|---|---|
+| Morelia ($19,000) | al **7º día** ($21,000) | el día 7 sube $3,000, no $1,000 |
+| Mariposa ($23,000) | al **8º día** ($24,000) | igual |
+
+No es contradicción: el piso es su propia regla y existe justo para eso —una
+unidad apartada muchos días no puede cobrarse como un paseo—. Queda anotado
+porque el escalón deja de ser parejo y conviene saber dónde.

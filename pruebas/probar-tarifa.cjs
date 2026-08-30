@@ -724,6 +724,33 @@ igual('sin nada no vale', t.horasDe(null, undefined), 0);
   igual('el día con movimiento se sigue contando', p.desglose.diasMovimiento, 1);
   igual('pero su importe es cero', p.desglose.importeMovimientos, 0);
   igual('y sus horas quedan guardadas', p.interno.horasMovimiento.length, 1);
+
+  /* ============================================================
+     R23 · MORELIA Y MARIPOSA: PLANAS HASTA LA 3ª NOCHE
+     ------------------------------------------------------------
+     ESTO SE LE PRESENTO AL DUEÑO COMO DEFECTO Y NO LO ERA.
+
+     Se le enseñó que cuatro días cuestan lo mismo que uno, y
+     contestó: «ah, está bien; entonces cuando supere su tercera
+     noche, o sea su 4ta, auméntale 1000 por noche» — que es lo
+     que ya hacía.
+
+     Las aserciones existen para que nadie lo vuelva a «arreglar»:
+     si alguien les mete un día extra, se ponen rojas.
+     ============================================================ */
+  [['Morelia', 19000], ['Santuario de la Mariposa Monarca', 23000]].forEach(function (f) {
+    const n = f[0], base = f[1];
+    igual(n.split(' ')[0] + ': 1 día', q(n, 1, 0), base);
+    igual(n.split(' ')[0] + ': 4 días cuestan lo mismo, y es a propósito', q(n, 4, 0), base);
+    igual(n.split(' ')[0] + ': la 4ª noche cobra sus $1,000', q(n, 5, 0), base + 1000);
+    igual(n.split(' ')[0] + ': la 5ª, otros mil', q(n, 6, 0), base + 2000);
+  });
+
+  /* Y donde el piso de $3,000 por día alcanza al precio de tabla, el escalón
+     deja de ser $1,000 — es el piso haciendo su trabajo, no un defecto. */
+  igual('Morelia 7 días: manda el piso (7×3,000 + 3 noches)', q('Morelia', 7, 0), 21000 + 3000);
+  igual('Mariposa 8 días: manda el piso (8×3,000 + 4 noches)',
+    q('Santuario de la Mariposa Monarca', 8, 0), 24000 + 4000);
 })();
 
 console.log('\n' + buenas + ' buenas, ' + malas + ' malas');
