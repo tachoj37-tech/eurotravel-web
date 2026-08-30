@@ -184,3 +184,39 @@ domingos, y por eso la pregunta 1 de abajo.
    Meco/El Naranjo +$3,000. ¿Los cobra la página? Hoy un cliente que pide
    CDMX 3 días con movimientos paga la banda normal, no los $8,000 de Chalma
    — el que más duele.
+
+---
+
+## 7. Qué cuesta cada cotización (y qué NO cuesta)
+
+Pregunta del dueño el 29-ago-2026: *«¿estás haciendo un código, o cada que
+coticen van a gastar API de Anthropic?»*
+
+**Es código. Ninguna cotización consulta una inteligencia artificial.**
+Comprobado con una búsqueda en todo el proyecto: cero menciones de Anthropic,
+OpenAI, Claude, GPT o Gemini. Los tres archivos que deciden el precio
+—`_tarifa.js`, `_destinos.js` y `_origenes.js`— **no hacen ni una sola llamada
+a ningún servidor**: son aritmética con los números ya copiados del Excel.
+
+### Lo que sí se paga, por cotización
+
+| destino | ¿mide con Google? | llamadas |
+|---|---|---|
+| **De la lista** (los 49 del Excel) | **no** | **0** |
+| De fórmula (Sahuayo, Bernal, Comala…) | sí, ida y vuelta | 2 |
+
+Los destinos de lista no gastan **nada**: su precio es cerrado, así que
+`necesitaMedirse` corta antes de llamar a Google. Los de fórmula miden dos
+tramos, y el resultado se guarda **24 horas por par de puntos**: si dos
+clientes piden el mismo viaje el mismo día, Google se paga una vez.
+
+A eso se suman las sugerencias de direcciones mientras el cliente escribe
+(Places), y en el cobro, Stripe. Nada más.
+
+### Por qué la página no puede leer el Excel
+
+Vive en la computadora del dueño, no en el servidor. Por eso sus números se
+copian al código —y por eso existe R20: cuando él pregunta por un precio que
+no está, **yo** abro el Excel, saco la respuesta de una celda suya y el
+resultado es un cambio de código con su regla escrita. El trabajo de leer el
+Excel se hace una vez, no en cada cotización.

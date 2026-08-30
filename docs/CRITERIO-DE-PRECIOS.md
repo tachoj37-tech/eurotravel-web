@@ -44,6 +44,7 @@ De ahí se siguen tres reglas de conducta:
 | **R17** | hay destinos donde moverse no cuesta | Barrancas: $3,000 el día, se mueva o no |
 | **R18** | abajo de $15,000 el día no es gratis | $500 la noche destapada; de la 4ª, los mil de siempre |
 | **R19** | el origen suma cuando NO queda de camino | Ocotlán, fila 11; y por carretera, no por mapa |
+| **R20** | si no sé un precio, lo saco del Excel | cinco pasos, y siempre digo de qué celda salió |
 | **R10** | ~~pendiente~~ *resuelta por R19 el 28-ago-2026* | ya no cobra precio de Guadalajara salga de donde salga |
 
 ---
@@ -625,3 +626,48 @@ kilómetros uno del otro y valiendo lo mismo desde Guadalajara.
 **Yurécuaro** (fila 22) y **Dominical** (fila 25) tienen sus propias filas y
 sus propios camiones. El dueño dijo que irá pasando más orígenes con precios;
 `_origenes.js` está hecho para que cada uno sea un renglón más.
+
+---
+
+### R20 · Cuando no sepa un precio, la respuesta sale del Excel (29-ago-2026)
+
+Regla fija pedida por el dueño:
+
+> «en caso de no saber un precio vas a evaluar el Excel y tú evaluar la opción
+> que más se adecúe»
+
+**Esto NO contradice a R12, la refuerza.** R12 prohíbe que yo *invente* un
+número. R20 dice de dónde sale el número cuando no lo sé: de su archivo, no de
+mi cabeza. La diferencia entre proponer e inferir es la celda que lo respalda.
+
+#### El orden de búsqueda, y siempre en este orden
+
+1. **El renglón exacto.** Ese destino, esa duración, ese origen.
+2. **El mismo destino a otra duración.** Su Excel trae varias columnas del
+   mismo lugar («CDMX 1 día / 2 días / 3 días»); de dos de ellas sale el día
+   extra, y con eso se llega a cualquier duración (así se despejaron las bases
+   de CDMX y la Huasteca, y cuadran al peso).
+3. **El mismo destino desde otro origen.** Las cinco filas Sprinter son el
+   mismo viaje visto desde cinco salidas; comparándolas sale el patrón.
+4. **El vecino de camino.** Si el destino está pegado a uno de la lista o de
+   paso hacia él, se ancla a ése (R11).
+5. **La fórmula**, y solo si no hubo ancla (R11).
+
+#### Lo que hay que decir SIEMPRE al contestar
+
+De qué celda salió. «Fila 11, columna 6» es una respuesta; «yo creo que unos
+once mil» no lo es. Si el paso 1 falla y hay que bajar al 2 o al 3, se dice
+**cuál** se usó y **qué se supuso**, porque cada paso hacia abajo es un supuesto
+más.
+
+Y si después de los cinco pasos el número sigue sin salir del Excel, la
+respuesta correcta es **«esto no está en tu archivo, dímelo tú»**. Ésa es la
+frontera de R12 y no se cruza.
+
+#### Esto es trabajo mío, no de la página
+
+La página **no lee el Excel** —el archivo vive en la computadora del dueño— y
+no consulta ninguna inteligencia artificial: sus precios son aritmética con los
+números ya copiados a `_destinos.js` y `_origenes.js`. R20 se aplica cuando él
+me pregunta, y su resultado es un cambio de código con su regla escrita aquí.
+Ver la sección de costos en `LA-SPRINTER-SEGUN-EL-EXCEL.md`.
