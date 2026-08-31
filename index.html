@@ -3425,10 +3425,10 @@ window.IMGS = {
            tapaba la esquina de cada unidad. El `tag` sigue vivo: se lee
            entero en la ficha que abre al hacer clic. */
         '<div class="unit-ph">' +
-        '<img loading="lazy" alt="' + u.name + '" src="' + (I[u.img] || '') + '"></div>' +
-        '<div class="unit-body"><h3>' + u.name + '</h3>' +
-        '<span class="unit-cap"><svg aria-hidden="true"><use href="#i-users"/></svg>' + u.cap + '</span>' +
-        '<div class="amen">' + u.amen.map(function (a) { return '<span>' + a + '</span>'; }).join('') + '</div>' +
+        '<img loading="lazy" alt="' + esc(u.name) + '" src="' + esc(I[u.img] || '') + '"></div>' +
+        '<div class="unit-body"><h3>' + esc(u.name) + '</h3>' +
+        '<span class="unit-cap"><svg aria-hidden="true"><use href="#i-users"/></svg>' + esc(u.cap) + '</span>' +
+        '<div class="amen">' + u.amen.map(function (a) { return '<span>' + esc(a) + '</span>'; }).join('') + '</div>' +
         '<span class="unit-more">Ver detalles <svg aria-hidden="true"><use href="#i-arrow"/></svg></span></div>';
       card.addEventListener('click', function () { openModal(u.id); });
       fleetEl.appendChild(card);
@@ -3457,7 +3457,7 @@ window.IMGS = {
       byId('m-title').textContent = u.name;
       byId('m-desc').textContent = u.desc;
       byId('m-spec').innerHTML = u.spec.map(function (s) {
-        return '<div><svg aria-hidden="true"><use href="#' + s[0] + '"/></svg><span>' + s[1] + '</span></div>';
+        return '<div><svg aria-hidden="true"><use href="#' + esc(s[0]) + '"/></svg><span>' + esc(s[1]) + '</span></div>';
       }).join('');
 
       var seatBox = byId('m-seat');
@@ -3532,7 +3532,23 @@ window.IMGS = {
       return (s || '').toLowerCase().replace(/[áéíóúüñ]/g, function (c) { return ACC[c] || c; });
     }
 
-    function esc(s) { return (s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+    /* Escapa TAMBIEN las comillas, y no por gusto: varios de estos textos se
+       pegan dentro de un atributo —`alt="…"`, `src="…"`— y ahí una comilla se
+       sale del atributo aunque los signos de menor y mayor estén escapados.
+
+       La versión de antes solo cubría & < >, que alcanza para texto entre
+       etiquetas pero no para atributos. Hoy los datos que pasan por aquí son
+       de archivos nuestros (unidades.js, lugares.js) y de Google Places, así
+       que no había hueco abierto; pero el día que un nombre venga con comilla
+       —o que alguno de estos textos lo escriba una persona— lo habría.
+
+       Es la misma lista que ya usaba viaje.html. Ahora las dos páginas
+       escapan igual. */
+    function esc(s) {
+      return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+        return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+      });
+    }
 
     function renderList(q) {
       var list = byId('loc-list');
@@ -5391,7 +5407,7 @@ window.IMGS = {
 
       byId('res-list').innerHTML =
         '<div class="opt">' +
-        '<img src="' + (I[u.img] || '') + '" alt="' + esc(u.name) + '">' +
+        '<img src="' + esc(I[u.img] || '') + '" alt="' + esc(u.name) + '">' +
         '<div><h4>' + esc(u.name) + '</h4><div class="caps">' + esc(u.cap) + '</div>' +
         '<div class="amen">' + u.amen.slice(0, 3).map(function (a) { return '<span>' + esc(a) + '</span>'; }).join('') + '</div>' +
         nota + '</div>' +
