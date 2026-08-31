@@ -285,3 +285,68 @@ cada bloque. Es anterior a este trabajo y no se tocó.
 3. **Vercel a Pro** — el plan Hobby es de uso no comercial.
 4. **`/api/contratos/reversa-externa` en EuroSystem** — hoy la reversa avisa
    pero no revierte.
+
+---
+
+# Pasada con Snyk — 30-ago-2026
+
+Pedida por el dueño: *«usa Snyk para darte una vuelta de vulnerabilidades de
+seguridad en este proyecto, completo»*.
+
+## Lo que Snyk sí escaneó
+
+| escáner | resultado |
+|---|---|
+| **Dependencias (SCA)** | **0 problemas.** El proyecto no tiene ninguna dependencia ni lockfile: no hay cadena de suministro que atacar |
+| **Infraestructura (IaC)** | No aplica — no hay Terraform, Kubernetes ni CloudFormation |
+| **Código (SAST)** | **BLOQUEADO**: Snyk Code no está activado en su organización, y activarlo devuelve 403 — pide permisos de administrador que la sesión no tiene |
+
+Como el escáner de código es justamente el que importa aquí —sin dependencias,
+todo el riesgo vive en el JavaScript— se hizo la pasada a mano sobre las
+mismas categorías.
+
+## Lo que salió: el escapador de `index.html`
+
+**Único hallazgo.** La página tenía **dos escapadores distintos sin saberlo**:
+
+| | escapa |
+|---|---|
+| `viaje.html` | `& < > " '` |
+| `index.html` | `& < >` — **sin comillas** |
+
+Alcanza para texto entre etiquetas, pero varios de esos textos se pegan
+**dentro de un atributo** (`alt="…"`, `src="…"`), y ahí una comilla se sale del
+atributo aunque los signos de menor y mayor estén escapados. Y las tarjetas de
+unidades no escapaban **nada**.
+
+**Comprobado en el navegador, rojo y verde**, metiendo un nombre malicioso:
+
+| | atributos que quedan en la imagen |
+|---|---|
+| escapador viejo | `alt`, **`onerror`**, **`x`**, `src` |
+| escapador nuevo | `alt`, `src` |
+
+**No había hueco abierto, y conviene decirlo con precisión:** esos datos salen
+de archivos nuestros (`unidades.js`, `lugares.js`) y de Google Places. Ninguno
+lo escribe un visitante. Pero el día que un nombre traiga comilla, o que alguno
+de esos textos lo teclee una persona, sí lo habría.
+
+## Lo que se revisó y está bien
+
+| | |
+|---|---|
+| **Ejecución dinámica** | Ni `eval`, ni `new Function`, ni `child_process`. Los `exec(` que aparecen son expresiones regulares |
+| **Archivos** | Cero lecturas o escrituras con ruta variable: no hay travesía de directorios posible |
+| **Secretos** | Ninguno en el código ni en el historial de Git. Lo único que aparece es `sk_test_x`, un relleno de pruebas. Ningún `.env` comprometido |
+| **Firma de Stripe** | HMAC-SHA256, `timingSafeEqual` y tolerancia de 5 minutos contra reenvíos |
+| **Comparaciones** | 11 usos de comparación en tiempo constante, y **cero** secretos comparados con `===` |
+| **Galleta de sesión** | `HttpOnly; Secure; SameSite=Lax; Path=/` con vencimiento |
+| **Redirección abierta** | `sitioDe()` solo puede devolver una dirección de la lista blanca, nunca lo que mandó quien llamó. Importa el doble porque de ahí sale a dónde regresa Stripe al cliente después de pagar |
+| **Aleatoriedad** | El folio usa `Math.random`, pero **no es una llave**: `pedir-codigo` exige la liga firmada. Lo que sí es secreto usa `crypto` |
+
+## Lo que falta
+
+**Activar Snyk Code**, que es cosa del dueño: app.snyk.io → Settings → Snyk
+Code → encender. Vale la pena porque sería una revisión **independiente** del
+código —no la mía sobre mi propio trabajo— y las partes de cuentas, cobros y
+firmas son justo donde una segunda opinión pesa.
