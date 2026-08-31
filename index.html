@@ -4866,7 +4866,19 @@ window.IMGS = {
               /* Sin liga el renglón se ve pero no lleva a ningún lado; mejor
                  decirlo que dejar un botón que no hace nada. */
               if (v.liga) {
-                b.addEventListener('click', function () { window.location.href = v.liga; });
+                /* La liga la arma nuestro servidor y siempre apunta aquí, pero
+                   se comprueba antes de seguirla: es un dato que viene de la
+                   red y termina en `location`. Marcado por Snyk el 30-ago-2026.
+
+                   Se resuelve contra la dirección actual, así que una liga
+                   relativa —o una con doble barra— no puede sacar al cliente
+                   del sitio. */
+                b.addEventListener('click', function () {
+                  var destino;
+                  try { destino = new URL(v.liga, location.href); } catch (e) { return; }
+                  if (destino.origin !== location.origin) return;
+                  window.location.href = destino.href;
+                });
               } else {
                 b.disabled = true;
                 d.textContent += '  ·  busca el correo con tu liga';
@@ -4977,7 +4989,23 @@ window.IMGS = {
             falla((res.d && res.d.aviso) || 'No pudimos abrir el pago en este momento.') ;
             return;
           }
-          location.href = res.d.url;   // se va a Stripe
+          /* Se exige que la dirección sea de Stripe antes de irse.
+
+             Hoy esa URL la arma nuestro propio servidor con la respuesta de
+             Stripe, así que no hay hueco. Pero es el ÚNICO punto de la página
+             que manda al cliente fuera del sitio, y es justo donde va a
+             teclear su tarjeta: si algún día algo colara otra dirección aquí,
+             el cliente aterrizaría en una pantalla de pago falsa sin notarlo.
+
+             Comprobar el destino cuesta tres líneas. Lo marcó Snyk el
+             30-ago-2026 como redirección abierta. */
+          var aDonde = String(res.d.url || '');
+          var esStripe = /^https:\/\/([a-z0-9-]+\.)*stripe\.com\//i.test(aDonde);
+          if (!esStripe) {
+            falla('No pudimos abrir el pago en este momento.');
+            return;
+          }
+          location.href = aDonde;   // se va a Stripe
         }, function () {
           falla('No pudimos abrir el pago en este momento.');
         });

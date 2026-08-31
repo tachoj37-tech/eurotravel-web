@@ -350,3 +350,90 @@ de esos textos lo teclee una persona, sí lo habría.
 Code → encender. Vale la pena porque sería una revisión **independiente** del
 código —no la mía sobre mi propio trabajo— y las partes de cuentas, cobros y
 firmas son justo donde una segunda opinión pesa.
+
+---
+
+# Snyk Code — el escaneo de verdad, 30-ago-2026
+
+El dueño activó Snyk Code y el escáner corrió sobre todo el proyecto.
+**17 hallazgos.** Ninguno se dio por bueno sin comprobarlo: cada uno se
+verificó leyendo el código, y los que parecían reales se probaron **en el
+navegador** antes de tocar nada.
+
+Veredicto: **2 reales, 1 mío encontrado al leer, 14 falsos positivos.**
+
+## LO REAL · Redirección abierta en `viaje.html`
+
+**Snyk tenía razón y yo me había equivocado.** En mi pasada a mano del mismo
+día di por buena esta línea:
+
+```js
+location.replace(location.pathname);
+```
+
+Razoné que `pathname` es siempre del mismo sitio. **No lo es.** Probado en el
+navegador con `https://sitio.com//malo.com/x`:
+
+| | |
+|---|---|
+| `location.pathname` | `//malo.com/x` |
+| a dónde iba | **`http://malo.com/x`** |
+
+Bastaba mandarle a un cliente una liga con doble barra: al cerrar sesión —si la
+red fallaba— salía de la página. Un buen anzuelo, porque el cliente cree que
+sigue en Eurotravel.
+
+### El primer arreglo NO alcanzó, y también se probó
+
+Colapsé las barras del principio. Volví a probar con más trucos y **tres se le
+saltaban igual**: `/\malo.com/x`, `\malo.com/x` y un tabulador en medio —el
+navegador trata la barra invertida como barra normal.
+
+El arreglo bueno no memoriza trucos: parte de `new URL(location.href)`, que ya
+es una dirección absoluta de nuestro origen, y solo le quita la consulta. No
+se puede mover de sitio por construcción. Comprobado contra los cuatro casos.
+
+**Lección:** una lista negra de caracteres peligrosos siempre está incompleta.
+Vale más partir de algo que ya es correcto que intentar limpiar lo sucio.
+
+## LO MIO · La cookie que no se borraba
+
+Leyendo esa misma función salió otra cosa. El comentario prometía:
+
+> «Aunque falle la red, la cookie se borra del navegador»
+
+Y no. `ev` es **HttpOnly** —la pone el servidor justo para que este script no
+la pueda tocar—, así que `document.cookie = 'ev=; …'` no hacía nada. Se quitó:
+más vale no prometer lo que no se cumple. Si la red falla, la sesión sigue
+abierta del lado del servidor hasta que venza.
+
+## ENDURECIDO · Las dos redirecciones que sí eran nuestras
+
+Ninguna era un hueco —las dos direcciones las arma nuestro servidor— pero las
+dos terminan en `location` con datos que vienen de la red:
+
+| | qué se hizo |
+|---|---|
+| **La liga de «Mis viajes»** | se resuelve contra la dirección actual y se exige mismo origen |
+| **La dirección de pago** | se exige que sea de `stripe.com` |
+
+La de Stripe importa más de lo que parece: es **el único punto de la página que
+manda al cliente fuera del sitio**, y es justo donde va a teclear su tarjeta.
+
+## LOS 14 FALSOS POSITIVOS, y por qué
+
+| cuántos | qué marcaba | por qué no lo es |
+|---|---|---|
+| **3 altos** | XSS en `viaje.html` | los tres pasan por `esc()`, que cubre `& < > " '`. Snyk sigue el flujo A TRAVES del escapador pero no lo reconoce por ser función propia |
+| **1 medio** | XSS en el buscador de `index.html` | también escapa; el `data-i` es el índice del bucle, un número |
+| **4 medios** | XSS en `prueba-cotizador.html` | herramienta interna tras una clave, y usa el escapador completo |
+| **1 alto** | «secreto escrito en el código» en `_cuentas.js` | es `SAL_DE_RELLENO`, la sal falsa que iguala los tiempos cuando la cuenta NO existe. No protege nada porque no hay nada que proteger |
+| **4 altos** | secretos en `pruebas/` | rellenos de prueba, no secretos de verdad |
+| **1 bajo** | galleta sin `Secure` | era la línea que borraba la cookie, ya retirada |
+
+## Lo que hay que saber para la próxima
+
+**Snyk seguirá marcando 15.** Trece son los falsos positivos de arriba y dos
+son el código ya arreglado, que Snyk no reconoce saneado. Vale la pena volver
+a correrlo cuando se toque código nuevo, pero el número por sí solo no dice
+nada: hay que mirar si aparece algo distinto de esta lista.

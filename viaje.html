@@ -253,10 +253,45 @@
             'de tu correo. Te pediremos un código nuevo.</p>' +
           '</div>';
       }).catch(function () {
-        /* Aunque falle la red, la cookie se borra del navegador: vale más
-           cerrar de este lado que dejarla abierta por un error de red. */
-        document.cookie = 'ev=; Path=/; Max-Age=0';
-        location.replace(location.pathname);
+        /* ============================================================
+           DOS COSAS QUE ESTABAN MAL AQUI, Y LAS CAZO SNYK EL 30-ago-2026
+           ------------------------------------------------------------
+           1. REDIRECCION ABIERTA, y era de verdad. Decía
+              `location.replace(location.pathname)`, y `pathname` PUEDE
+              empezar con dos barras: para
+              `https://sitio.com//malo.com/x`, `pathname` vale
+              `//malo.com/x`, que es una dirección relativa al protocolo
+              y manda el navegador A OTRO SITIO. Comprobado en el
+              navegador antes de arreglarlo.
+
+              Bastaba una liga con doble barra mandada a un cliente para
+              sacarlo de la página justo cuando cierra sesión.
+
+              Se colapsan las barras del principio: `//malo.com/x` queda
+              `/malo.com/x`, que ya no sale de aquí.
+
+           2. LA COOKIE NO SE BORRABA. El comentario prometía que sí,
+              pero `ev` es HttpOnly —la pone el servidor a propósito
+              para que este script no la pueda leer NI ESCRIBIR—, así
+              que esa línea no hacía nada. Se quitó: mejor no prometer
+              lo que no se cumple. Si la red falla, la sesión sigue
+              abierta del lado del servidor hasta que venza, y lo que
+              queda es recargar para que la pantalla diga la verdad.
+           ============================================================ */
+        /* Se parte de la dirección COMPLETA, no del `pathname`.
+
+           El primer arreglo colapsaba las barras del principio, y NO BASTABA:
+           probando en el navegador, `/\malo.com/x`, `\\malo.com/x` y un
+           tabulador en medio se le saltaban igual, porque el navegador trata
+           la barra invertida como barra normal.
+
+           `new URL(location.href)` arranca de una dirección absoluta que YA
+           está en nuestro origen, así que quitarle la consulta no la puede
+           mover de sitio. No hay lista de trucos que memorizar. */
+        var aqui = new URL(location.href);
+        aqui.search = '';
+        aqui.hash = '';
+        location.replace(aqui.href);
       });
     });
   }
