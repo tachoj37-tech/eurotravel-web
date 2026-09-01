@@ -267,80 +267,249 @@ const PASA = {
    el que tiene la red. El precio SIEMPRE sale del motor de cobro,
    nunca de aquí (R12).
    ------------------------------------------------------------ */
-function pasoDeCotizacion(t, crudo, estado, hoy) {
+/* Las horas del recorrido mueven el precio, así que se preguntan. Se
+   ofrecen TRES, que es el máximo de botones de WhatsApp, y con
+   etiquetas de menos de 20 caracteres, que es su tope. */
+const HORAS_MOV = [
+  { etiqueta: 'Hasta 8 horas', fin: '16:00' },
+  { etiqueta: 'Hasta 10 horas', fin: '18:00' },
+  { etiqueta: 'Todo el día', fin: '20:00' }
+];
+
+/* Días de servicio contando los dos extremos: salir el 10 y volver el
+   12 son tres días. Se arma el Date con NÚMEROS, nunca con el texto:
+   `new Date('2026-09-10')` es medianoche UTC, o sea el día anterior. */
+function diasEntre(desde, hasta) {
+  const arma = function (s) {
+    return new Date(Number(s.slice(0, 4)), Number(s.slice(5, 7)) - 1, Number(s.slice(8, 10)));
+  };
+  return Math.round((arma(hasta) - arma(desde)) / 86400000) + 1;
+}
+
+function resumenDe(e) {
+  const dias = diasEntre(e.salida, e.regreso);
+  let t = '📍 ' + e.origen + ' → ' + e.destino + '\n' +
+    '📅 ' + fechaEnPalabras(e.salida) + ' al ' + fechaEnPalabras(e.regreso) +
+    '  (' + dias + (dias === 1 ? ' día' : ' días') + ')';
+  if (e.recorridos > 0) {
+    t += '\n🚐 ' + e.recorridos + (e.recorridos === 1 ? ' día' : ' días') +
+      ' de recorrido, ' + HORAS_MOV[e.banda || 0].etiqueta.toLowerCase();
+  } else if (e.recorridos === 0) {
+    t += '\n🚐 Sin recorridos, solo ida y vuelta';
+  }
+  return t;
+}
+
+/* Arma lo que se le pregunta en cada casilla, con sus opciones. Las
+   opciones son las que en WhatsApp serán botones o lista, y por eso
+   se respetan sus topes: 3 botones de 20 caracteres, o 10 filas de
+   24. Hay una prueba que lo vigila. */
+function pregunta(estado) {
   const e = estado;
+  switch (e.paso) {
+    case 'destino':
+      return { texto: '¿A dónde van? 📍\n\nEscríbeme la ciudad o el lugar.', opciones: [] };
+    case 'origen':
+      return {
+        texto: '¿De dónde salen?',
+        opciones: ['Guadalajara', 'Tlaquepaque', 'Otro lugar']
+      };
+    case 'origenLibre':
+      return { texto: '¿De qué ciudad salen?', opciones: [] };
+    case 'salida':
+      return {
+        texto: '¿Qué día salen? 📅\n\nEscríbelo como quieras: *10 de septiembre*, ' +
+          '*10/9* o *mañana*.',
+        opciones: []
+      };
+    case 'regreso':
+      return { texto: '¿Y qué día regresan?', opciones: [] };
+    case 'recorridos': {
+      const dias = diasEntre(e.salida, e.regreso);
+      /* Nunca más días de recorrido que días de viaje, y la lista de
+         WhatsApp aguanta 10 filas contando la de «ninguno». */
+      const tope = Math.min(dias, 9);
+      const ops = ['Ninguno'];
+      for (let i = 1; i <= tope; i++) ops.push(i + (i === 1 ? ' día' : ' días'));
+      return {
+        texto: 'Durante el viaje, ¿van a usar la unidad para pasear o hacer ' +
+          'recorridos? 🚐\n\n¿Cuántos días?',
+        opciones: ops
+      };
+    }
+    case 'horas':
+      return {
+        texto: '¿Cuántas horas al día, más o menos?',
+        opciones: HORAS_MOV.map(function (h) { return h.etiqueta; })
+      };
+    case 'confirmar':
+      return {
+        texto: 'Déjame confirmar 👇\n\n' + resumenDe(e) + '\n\n¿Todo bien?',
+        opciones: ['Sí, cotizar', 'Cambiar algo']
+      };
+    case 'cambiar':
+      return {
+        texto: '¿Qué cambiamos?',
+        opciones: ['El destino', 'De dónde salen', 'Las fechas', 'Los recorridos']
+      };
+  }
+  return null;
+}
 
-  if (tiene(t, ['cancelar', 'olvidalo', 'ya no', 'mejor no', 'empezar de nuevo'])) {
+/* Hace la pregunta de la casilla en la que quedó. */
+function siguiente(e) {
+  const p = pregunta(e);
+  return { texto: p.texto, opciones: p.opciones, pasa: false, estado: e };
+}
+
+function pasoDeCotizacion(t, crudo, estado, hoy) {
+  const e = Object.assign({}, estado);
+  const dicho = String(crudo).trim();
+
+  if (tiene(t, ['cancelar', 'olvidalo', 'ya no', 'mejor no'])) {
     return { texto: 'Listo, lo dejamos ahí 👍\n\n¿Te ayudo con algo más?',
-      pasa: false, estado: null };
+      pasa: false, estado: null, opciones: [] };
   }
 
+  /* ---- a dónde ---- */
   if (e.paso === 'destino') {
-    const d = String(crudo).trim().slice(0, 120);
-    if (d.length < 3) {
-      return { texto: '¿A qué ciudad o lugar van?', pasa: false, estado: e };
-    }
-    return {
-      texto: 'Perfecto, *' + d + '* 📍\n\n¿Y de dónde salen?',
-      pasa: false,
-      estado: { paso: 'origen', destino: d }
-    };
+    if (dicho.length < 3) return siguiente(e);
+    e.destino = dicho.slice(0, 120);
+    e.paso = e.origen ? 'confirmar' : 'origen';
+    return siguiente(e);
   }
 
+  /* ---- de dónde ---- */
   if (e.paso === 'origen') {
-    const o = String(crudo).trim().slice(0, 120);
-    if (o.length < 3) {
-      return { texto: '¿De qué ciudad salen?', pasa: false, estado: e };
-    }
-    return {
-      texto: '¿Qué día salen? Puedes escribirlo como quieras: *10 de septiembre*, ' +
-        '*10/9*, o *mañana*.',
-      pasa: false,
-      estado: { paso: 'salida', destino: e.destino, origen: o }
-    };
+    if (/otro/.test(t)) { e.paso = 'origenLibre'; return siguiente(e); }
+    if (dicho.length < 3) return siguiente(e);
+    e.origen = dicho.slice(0, 120);
+    e.paso = e.salida ? 'confirmar' : 'salida';
+    return siguiente(e);
+  }
+  if (e.paso === 'origenLibre') {
+    if (dicho.length < 3) return siguiente(e);
+    e.origen = dicho.slice(0, 120);
+    e.paso = e.salida ? 'confirmar' : 'salida';
+    return siguiente(e);
   }
 
+  /* ---- cuándo ---- */
   if (e.paso === 'salida') {
     const f = fechaDe(crudo, hoy);
     if (!f) {
-      return { texto: 'No entendí la fecha 🙈 Escríbela como *10 de septiembre* o *10/9*.',
-        pasa: false, estado: e };
+      return { texto: 'Esa fecha no la entendí 🙈\n\nEscríbela como *10 de septiembre* ' +
+        'o *10/9*.', pasa: false, estado: e, opciones: [] };
     }
-    return {
-      texto: 'Salen el *' + fechaEnPalabras(f) + '*.\n\n¿Y qué día regresan?',
-      pasa: false,
-      estado: { paso: 'regreso', destino: e.destino, origen: e.origen, salida: f }
-    };
+    e.salida = f;
+    /* Si ya había regreso y quedó antes, se vuelve a preguntar. */
+    if (e.regreso && e.regreso < f) e.regreso = null;
+    e.paso = e.regreso ? 'confirmar' : 'regreso';
+    return siguiente(e);
   }
 
   if (e.paso === 'regreso') {
     const f = fechaDe(crudo, hoy);
     if (!f) {
-      return { texto: 'Esa fecha no la entendí. ¿Qué día regresan?', pasa: false, estado: e };
+      return { texto: 'Esa fecha no la entendí. ¿Qué día regresan?',
+        pasa: false, estado: e, opciones: [] };
     }
     if (f < e.salida) {
       return {
-        texto: 'El regreso queda antes de la salida 🤔 Salen el *' +
+        texto: 'El regreso queda antes de la salida 🤔\n\nSalen el *' +
           fechaEnPalabras(e.salida) + '*. ¿Qué día vuelven?',
-        pasa: false, estado: e
+        pasa: false, estado: e, opciones: []
       };
+    }
+    e.regreso = f;
+    /* R22: el viaje de un día no cobra movimientos, así que preguntarlos
+       sería pedirle un dato al cliente para después ignorarlo. Se salta
+       la casilla y se deja en cero. */
+    if (diasEntre(e.salida, f) === 1) {
+      e.recorridos = 0;
+      e.paso = 'confirmar';
+    } else {
+      e.paso = typeof e.recorridos === 'number' ? 'confirmar' : 'recorridos';
+    }
+    return siguiente(e);
+  }
+
+  /* ---- recorridos ---- */
+  if (e.paso === 'recorridos') {
+    let n = null;
+    if (/ningun|no\b|nada|solo ida|ninguna/.test(t)) n = 0;
+    else {
+      const m = t.match(/(\d{1,2})/);
+      if (m) n = Number(m[1]);
+    }
+    if (n === null || n < 0) return siguiente(e);
+    const tope = diasEntre(e.salida, e.regreso);
+    if (n > tope) {
+      return {
+        texto: 'El viaje dura *' + tope + (tope === 1 ? ' día' : ' días') +
+          '*, así que no pueden ser más recorridos que eso. ¿Cuántos días?',
+        pasa: false, estado: e, opciones: pregunta(e).opciones
+      };
+    }
+    e.recorridos = n;
+    e.paso = n === 0 ? 'confirmar' : 'horas';
+    return siguiente(e);
+  }
+
+  if (e.paso === 'horas') {
+    let b = null;
+    if (/todo|12|doce/.test(t)) b = 2;
+    else if (/10|diez/.test(t)) b = 1;
+    else if (/8|ocho/.test(t)) b = 0;
+    if (b === null) return siguiente(e);
+    e.banda = b;
+    e.paso = 'confirmar';
+    return siguiente(e);
+  }
+
+  /* ---- confirmar ---- */
+  if (e.paso === 'confirmar') {
+    if (/cambiar|no\b|corregi|modificar/.test(t)) {
+      e.paso = 'cambiar';
+      return siguiente(e);
+    }
+    /* Cualquier otra cosa se toma como que sí: es lo que quiso decir
+       quien contesta «va», «sale», «dale» o «ok». */
+    const movimientos = [];
+    for (let i = 0; i < (e.recorridos || 0); i++) {
+      movimientos.push({ horaInicio: '08:00', horaFin: HORAS_MOV[e.banda || 0].fin });
     }
     return {
       texto: 'Va, déjame sacar el precio…',
       pasa: false,
       estado: null,
+      opciones: [],
       cotiza: {
         unidad: 'sprinter',
         origen: { direccion: e.origen },
         destino: { direccion: e.destino },
         salida: e.salida,
-        regreso: f,
-        redondo: true
+        regreso: e.regreso,
+        redondo: true,
+        movimientos: movimientos
       },
-      /* Se guarda en palabras para poder repetirlo al dar el precio: el
-         cliente tiene que ver QUÉ se cotizó, no solo cuánto. */
-      resumen: { destino: e.destino, origen: e.origen, salida: e.salida, regreso: f }
+      /* Se guarda para poder repetirlo al dar el precio: el cliente
+         tiene que ver QUÉ se cotizó, no solo cuánto. */
+      resumen: {
+        destino: e.destino, origen: e.origen, salida: e.salida, regreso: e.regreso,
+        recorridos: e.recorridos || 0, horas: HORAS_MOV[e.banda || 0].etiqueta
+      }
     };
+  }
+
+  /* ---- corregir una casilla sin volver a empezar ---- */
+  if (e.paso === 'cambiar') {
+    if (/destino|donde van|a donde/.test(t)) { e.paso = 'destino'; e.destino = null; }
+    else if (/salen|origen|de donde/.test(t)) { e.paso = 'origen'; e.origen = null; }
+    else if (/fecha|dia|cuando/.test(t)) { e.paso = 'salida'; e.salida = null; e.regreso = null; }
+    else if (/recorrid|pasear|movim/.test(t)) { e.paso = 'recorridos'; e.recorridos = null; e.banda = null; }
+    else return siguiente(e);
+    return siguiente(e);
   }
 
   return null;
@@ -374,14 +543,16 @@ function textoDeCotizacion(precio, resumen) {
     texto: '🚐 *Sprinter · hasta 20 pasajeros*\n\n' +
       (r.origen ? '📍 ' + r.origen + ' → ' + r.destino + '\n' : '') +
       (r.salida ? '📅 ' + fechaEnPalabras(r.salida) + ' al ' + fechaEnPalabras(r.regreso) + '\n' : '') +
-      '🗓️ ' + precio.dias + (precio.dias === 1 ? ' día' : ' días') + ' de servicio\n\n' +
-      '*Total: ' + pesos(precio.total) + '* (IVA incluido)\n' +
+      '🗓️ ' + precio.dias + (precio.dias === 1 ? ' día' : ' días') + ' de servicio\n' +
+      (r.recorridos ? '🚐 ' + r.recorridos + (r.recorridos === 1 ? ' día' : ' días') +
+        ' de recorrido (' + String(r.horas).toLowerCase() + ')\n' : '') +
+      '\n*Total: ' + pesos(precio.total) + '* (IVA incluido)\n' +
       'Para apartar: ' + pesos(precio.anticipo) + '\n' +
       'Resto al abordar: ' + pesos(precio.saldo) + '\n\n' +
       'Incluye operador, combustible, casetas y seguro de viajero.\n\n' +
-      '¿Lo apartamos? Puedes hacerlo en línea aquí:\n' + SITIO + '/#/cotizar\n' +
-      'O márcale al *' + TELEFONO + '* si prefieres.',
-    pasa: false
+      '¿Lo apartamos?',
+    pasa: false,
+    opciones: ['Apartar en línea', 'Hablar con alguien', 'Cotizar otro']
   };
 }
 
@@ -426,11 +597,11 @@ function respuestaA(mensaje, estado, hoy) {
     /* La Sprinter SÍ se cotiza aquí mismo, porque es la única con
        `cotizadorAutomatico` en el catálogo. Se arranca el paso a paso. */
     if (u && u.cotizadorAutomatico) {
+      const p = siguiente({ paso: 'destino' });
       return {
         texto: 'Para ' + gente + ' personas te va la *' + u.name + '* (' + u.cap + ').\n\n' +
-          'Te saco el precio ahorita mismo 👇\n\n¿A dónde van?',
-        pasa: false,
-        estado: { paso: 'destino' }
+          'Te saco el precio ahorita 👇\n\n' + p.texto,
+        pasa: false, estado: p.estado, opciones: p.opciones
       };
     }
     if (u) {
@@ -467,22 +638,55 @@ function respuestaA(mensaje, estado, hoy) {
         pasa: true
       };
     }
+    if (u.cotizadorAutomatico) {
+      const p = siguiente({ paso: 'destino' });
+      return {
+        texto: 'Para ' + gente + ' personas te va la *' + u.name + '* (' + u.cap + ').\n\n' +
+          'Te saco el precio ahorita 👇\n\n' + p.texto,
+        pasa: false, estado: p.estado, opciones: p.opciones
+      };
+    }
     return {
       texto: 'Para ' + gente + ' personas te va la *' + u.name + '*.\n\n' + fichaDe(u) +
-        (u.cotizadorAutomatico
-          ? '\n\n¿Te saco el precio? Dime *a dónde van*.'
-          : '\n\n¿A dónde van y qué días? Con eso te cotizan.'),
-      pasa: !u.cotizadorAutomatico,
-      estado: u.cotizadorAutomatico ? { paso: 'destino' } : null
+        '\n\n¿A dónde van y qué días? Con eso te cotizan.',
+      pasa: true, opciones: []
     };
   }
 
-  /* ---- una unidad por su nombre ---- */
+  /* ------------------------------------------------------------
+     UNA UNIDAD POR SU NOMBRE
+     ------------------------------------------------------------
+     Antes esto solo enseñaba la ficha y ahí se moría: el dueño
+     escribió «quiero una Sprinter» y el bot le contestó qué
+     incluye, sin ofrecerle cotizar. Quien nombra la unidad que
+     quiere ya decidió; lo que sigue es el precio, no el folleto.
+     ------------------------------------------------------------ */
   for (let i = 0; i < UNIDADES.length; i++) {
     const u = UNIDADES[i];
     if (t.indexOf(normaliza(u.name)) !== -1) {
-      return { texto: fichaDe(u), pasa: false };
+      if (u.cotizadorAutomatico) {
+        const p = siguiente({ paso: 'destino' });
+        return {
+          texto: '*' + u.name + '* — ' + u.cap + ' 🚐\n\nTe saco el precio ahorita.\n\n' +
+            p.texto,
+          pasa: false, estado: p.estado, opciones: p.opciones
+        };
+      }
+      return {
+        texto: fichaDe(u) + '\n\n¿A dónde van y qué días? Con eso te cotizan.',
+        pasa: true, opciones: []
+      };
     }
+  }
+
+  /* ---- «quiero cotizar», sin más ---- */
+  if (tiene(t, ['cotizar', 'cotizame', 'cotizacion', 'quiero rentar', 'necesito rentar',
+    'quiero un', 'necesito un', 'rentar'])) {
+    return {
+      texto: 'Va 🚐 ¿Cuántas personas viajan?\n\nSi son *20 o menos* te saco el precio ' +
+        'aquí mismo.',
+      pasa: false, opciones: []
+    };
   }
 
   /* ---- la flota ---- */
@@ -546,5 +750,10 @@ function respuestaA(mensaje, estado, hoy) {
 module.exports = {
   respuestaA, textoDeCotizacion,
   normaliza, cuantaGente, unidadPara, fechaDe, fechaEnPalabras, hoyISO,
-  UNIDADES, TELEFONO
+  /* `pregunta` y `diasEntre` se exportan para poder vigilarlos desde las
+     pruebas: que ninguna opción se pase de los topes de WhatsApp —3
+     botones de 20 caracteres o 10 filas de 24— y que los días se cuenten
+     con los dos extremos. */
+  pregunta, diasEntre, HORAS_MOV,
+  UNIDADES, TELEFONO, SITIO
 };

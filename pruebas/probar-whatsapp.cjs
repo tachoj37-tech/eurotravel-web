@@ -207,44 +207,154 @@ console.log('\n== LAS FECHAS, COMO LAS ESCRIBE LA GENTE ==');
   ok('lee la fecha escrita de 12 formas distintas', mal, []);
 }
 
+const HOY = '2026-08-31';
+
+/* Corre una conversacion entera y devuelve el ultimo turno mas todo lo
+   que se dijo, para poder revisar el camino y no solo el final. */
+function conversa(guion) {
+  let e = null, r = null;
+  const turnos = [];
+  guion.forEach(function (m) {
+    r = conv.respuestaA(m, e, HOY);
+    e = r.estado;
+    turnos.push(r);
+  });
+  return { ultimo: r, turnos: turnos };
+}
+
+console.log('\n== «QUIERO UNA SPRINTER» TIENE QUE COTIZAR ==');
+{
+  /* Esto lo reporto el dueño: decia «quiero una Sprinter» y el bot le
+     contestaba QUE INCLUYE, sin ofrecerle precio. Quien nombra la
+     unidad que quiere ya decidio; lo que sigue es el precio. */
+  const r = conv.respuestaA('quiero una sprinter', null, HOY);
+  ok('nombrar la Sprinter arranca la cotizacion', r.estado && r.estado.paso, 'destino');
+  okQue('  y pregunta a donde van', /a donde van/i.test(conv.normaliza(r.texto)));
+}
+{
+  const r = conv.respuestaA('quiero cotizar', null, HOY);
+  okQue('«quiero cotizar» no se queda callado',
+    /cuantas personas/i.test(conv.normaliza(r.texto)));
+}
+
 console.log('\n== COTIZAR LA SPRINTER, PASO A PASO ==');
 {
-  const HOY = '2026-08-31';
-  let e = null, r;
-  const dichos = [];
-  ['somos 15 personas', 'Chapala', 'Guadalajara', '10 de septiembre', '12 de septiembre']
-    .forEach(function (m) { r = conv.respuestaA(m, e, HOY); e = r.estado; dichos.push(r); });
+  const c = conversa(['quiero una sprinter', 'Chapala', 'Guadalajara',
+    '10 de septiembre', '13 de septiembre', '2 dias', 'Hasta 10 horas', 'si']);
+  const r = c.ultimo;
 
   ok('al final pide cotizar', !!r.cotiza, true);
   ok('  con la unidad correcta', r.cotiza && r.cotiza.unidad, 'sprinter');
   ok('  con las fechas en aaaa-mm-dd',
-    r.cotiza && [r.cotiza.salida, r.cotiza.regreso], ['2026-09-10', '2026-09-12']);
+    r.cotiza && [r.cotiza.salida, r.cotiza.regreso], ['2026-09-10', '2026-09-13']);
   ok('  con origen y destino como los escribio el cliente',
     r.cotiza && [r.cotiza.origen.direccion, r.cotiza.destino.direccion],
     ['Guadalajara', 'Chapala']);
-  ok('  y NINGUN precio: eso lo dice /api/cotizar, no el bot',
-    dichos.some(function (d) { return /\$\s*[\d,]+/.test(d.texto); }), false);
+  ok('  con los DOS dias de recorrido que pidio', r.cotiza && r.cotiza.movimientos.length, 2);
+  ok('  y con las horas que escogio (10 h = termina a las 18:00)',
+    r.cotiza && r.cotiza.movimientos[0].horaFin, '18:00');
+  ok('  y NINGUN precio en todo el camino: eso lo dice /api/cotizar',
+    c.turnos.some(function (d) { return /\$\s*[\d,]+/.test(d.texto); }), false);
 }
 {
-  const HOY = '2026-08-31';
-  let e = { paso: 'regreso', destino: 'Chapala', origen: 'GDL', salida: '2026-09-10' };
-  const r = conv.respuestaA('5 de septiembre', e, HOY);
+  /* Antes de cotizar tiene que enseñar QUE entendio. */
+  const c = conversa(['sprinter', 'Chapala', 'Guadalajara', '10/9', '13/9', 'ninguno']);
+  const t = c.ultimo.texto;
+  okQue('confirma antes de cotizar', /confirmar/i.test(t));
+  okQue('  repitiendo el destino', /Chapala/.test(t));
+  okQue('  y las fechas', /septiembre/.test(t));
+  ok('  con boton de si y de cambiar', c.ultimo.opciones, ['Sí, cotizar', 'Cambiar algo']);
+}
+
+console.log('\n== R22: EL VIAJE DE UN DIA NO PAGA MOVIMIENTOS ==');
+{
+  const c = conversa(['sprinter', 'Tequila', 'Guadalajara',
+    '10 de septiembre', '10 de septiembre']);
+  okQue('con salida y regreso el mismo dia NO pregunta recorridos',
+    /confirmar/i.test(c.ultimo.texto));
+  const fin = conversa(['sprinter', 'Tequila', 'Guadalajara',
+    '10 de septiembre', '10 de septiembre', 'si']).ultimo;
+  ok('  y cotiza sin movimientos', fin.cotiza && fin.cotiza.movimientos.length, 0);
+}
+
+console.log('\n== NO SE DEJA LLEVAR A UN IMPOSIBLE ==');
+{
+  const r = conv.respuestaA('5 de septiembre',
+    { paso: 'regreso', destino: 'Chapala', origen: 'GDL', salida: '2026-09-10' }, HOY);
   okQue('no deja regresar antes de salir', !r.cotiza && /antes de la salida/.test(r.texto));
 }
 {
-  const r = conv.respuestaA('el jueves ese', { paso: 'salida' }, '2026-08-31');
+  const r = conv.respuestaA('el jueves ese', { paso: 'salida' }, HOY);
   okQue('una fecha que no entiende la vuelve a pedir, no la inventa',
-    !r.cotiza && /no entendi la fecha/i.test(conv.normaliza(r.texto)));
+    !r.cotiza && /no la entendi/i.test(conv.normaliza(r.texto)));
 }
 {
-  const r = conv.respuestaA('cancelar', { paso: 'destino' }, '2026-08-31');
+  const r = conv.respuestaA('9 dias',
+    { paso: 'recorridos', destino: 'X', origen: 'Y', salida: '2026-09-10', regreso: '2026-09-12' }, HOY);
+  okQue('no acepta mas dias de recorrido que dias de viaje',
+    !r.estado.recorridos && /no pueden ser mas/i.test(conv.normaliza(r.texto)));
+}
+
+console.log('\n== SE PUEDE CORREGIR SIN EMPEZAR DE CERO ==');
+{
+  const c = conversa(['sprinter', 'Chapala', 'Guadalajara', '10/9', '13/9', 'ninguno',
+    'cambiar algo', 'el destino', 'Mazamitla', 'si']);
+  ok('cambiar el destino conserva las fechas',
+    c.ultimo.cotiza && [c.ultimo.cotiza.destino.direccion, c.ultimo.cotiza.salida],
+    ['Mazamitla', '2026-09-10']);
+}
+{
+  const r = conv.respuestaA('cancelar', { paso: 'destino' }, HOY);
   ok('se puede cancelar a media cotizacion', r.estado, null);
 }
 {
   /* A media cotizacion, «Chapala» es el destino — no un saludo fallido. */
-  const r = conv.respuestaA('Chapala', { paso: 'destino' }, '2026-08-31');
+  const r = conv.respuestaA('Chapala', { paso: 'destino' }, HOY);
   ok('a media cotizacion, lo que escribe es la RESPUESTA, no un tema nuevo',
     r.estado && r.estado.destino, 'Chapala');
+}
+
+console.log('\n== LO QUE PREGUNTA TIENE QUE CABER EN WHATSAPP ==');
+{
+  /* WhatsApp permite 3 botones de 20 caracteres, o una lista de 10
+     filas de 24. Si una pregunta no cabe ahi, funciona en la pagina y
+     se rompe el dia que se conecte con Meta — y eso no se notaria
+     hasta tener un cliente enfrente. */
+  const estados = [
+    { paso: 'destino' }, { paso: 'origen' }, { paso: 'origenLibre' },
+    { paso: 'salida' }, { paso: 'regreso' },
+    { paso: 'recorridos', salida: '2026-09-10', regreso: '2026-09-20' },
+    { paso: 'horas' },
+    { paso: 'confirmar', destino: 'Chapala', origen: 'Guadalajara',
+      salida: '2026-09-10', regreso: '2026-09-13', recorridos: 2, banda: 1 },
+    { paso: 'cambiar' }
+  ];
+  const culpables = [];
+  estados.forEach(function (e) {
+    const p = conv.pregunta(e);
+    if (!p) { culpables.push(e.paso + ': no contesta nada'); return; }
+    const ops = p.opciones || [];
+    if (ops.length > 10) culpables.push(e.paso + ': ' + ops.length + ' opciones, el tope es 10');
+    const limite = ops.length <= 3 ? 20 : 24;
+    ops.forEach(function (o) {
+      if (o.length > limite) {
+        culpables.push(e.paso + ': «' + o + '» mide ' + o.length + ', el tope es ' + limite);
+      }
+    });
+  });
+  ok('ninguna opcion se pasa de los topes de WhatsApp', culpables, []);
+}
+{
+  /* La lista de recorridos crece con los dias del viaje. Que no se
+     pase de 10 filas en un viaje largo. */
+  const p = conv.pregunta({ paso: 'recorridos', salida: '2026-09-01', regreso: '2026-12-01' });
+  okQue('en un viaje larguisimo la lista sigue cabiendo', p.opciones.length <= 10);
+}
+{
+  const dias = [['2026-09-10', '2026-09-10', 1], ['2026-09-10', '2026-09-12', 3],
+    ['2026-12-30', '2027-01-02', 4]];
+  const mal = dias.filter(function (d) { return conv.diasEntre(d[0], d[1]) !== d[2]; });
+  ok('los dias se cuentan con los dos extremos, y cruzando el año', mal, []);
 }
 
 console.log('\n== EL PRECIO QUE DEVUELVE /api/cotizar ==');

@@ -90,6 +90,35 @@
   var ATAJOS_INICIO = ['Quiero cotizar', '¿Qué unidades tienen?',
     '¿Qué incluye?', 'Hablar con una persona'];
 
+  function ligaAWhatsApp() {
+    var a = document.createElement('a');
+    a.className = 'wa-real';
+    a.href = 'https://wa.me/523321832993';
+    a.target = '_blank';
+    a.rel = 'noopener';
+    a.textContent = 'Abrir WhatsApp con una persona';
+    hilo.appendChild(a);
+    hilo.scrollTop = hilo.scrollHeight;
+  }
+
+  /* Dos opciones no son mensajes, son acciones: llevan a otro lado en
+     vez de contestarle al bot. */
+  function esAccion(texto) {
+    var t = String(texto);
+    if (/apartar en linea|apartar en línea/i.test(t)) {
+      location.hash = '#/cotizar';
+      cierra();
+      return true;
+    }
+    if (/hablar con alguien/i.test(t)) {
+      burbuja(texto, 'yo');
+      ligaAWhatsApp();
+      pintaAtajos(ATAJOS_INICIO);
+      return true;
+    }
+    return false;
+  }
+
   /* ------------------------------------------------------------
      EL PRECIO
      ------------------------------------------------------------
@@ -108,7 +137,8 @@
       conPausa(function () {
         var r = window.BOT.textoDeCotizacion(precio, resumen);
         burbuja(r.texto, 'bot');
-        pintaAtajos(['Cotizar otro viaje', 'Hablar con una persona']);
+        if (r.pasa) ligaAWhatsApp();
+        pintaAtajos(r.opciones || ATAJOS_INICIO);
         ocupado = false;
       }, 900);
     }).catch(function () {
@@ -122,6 +152,7 @@
 
   function manda(texto) {
     if (ocupado || !String(texto).trim()) return;
+    if (esAccion(texto)) { caja.value = ''; return; }
     burbuja(texto, 'yo');
     caja.value = '';
     atajos.textContent = '';
@@ -147,17 +178,12 @@
         pideElPrecio(r.cotiza, r.resumen);
         return;                       // el precio llega en el siguiente turno
       }
-      if (r.pasa) {
-        var liga = document.createElement('a');
-        liga.className = 'wa-real';
-        liga.href = 'https://wa.me/523321832993';
-        liga.target = '_blank';
-        liga.rel = 'noopener';
-        liga.textContent = 'Abrir WhatsApp con una persona';
-        hilo.appendChild(liga);
-        hilo.scrollTop = hilo.scrollHeight;
-      }
-      pintaAtajos(estado ? [] : ATAJOS_INICIO);
+      if (r.pasa) ligaAWhatsApp();
+      /* Las opciones las decide el bot, no la pantalla: así en WhatsApp
+         saldrán los MISMOS botones, que es donde tienen que caber en
+         tres de veinte caracteres. */
+      pintaAtajos(r.opciones && r.opciones.length ? r.opciones
+        : (estado ? [] : ATAJOS_INICIO));
       ocupado = false;
     });
   }
