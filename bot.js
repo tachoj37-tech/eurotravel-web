@@ -55,6 +55,126 @@ function normaliza(t) {
     .trim();
 }
 
+/* ============================================================
+   ESCRIBIR MAL NO PUEDE COSTAR UNA VENTA
+   ------------------------------------------------------------
+   La gente escribe desde el celular, con prisa y con el pulgar:
+   «kiero uan spter», «cuanto kuesta», «vallarrta». Un bot que
+   solo entiende lo bien escrito pierde clientes de verdad.
+
+   Esto NO usa IA. Son tres pasos baratos, en orden de qué tan
+   seguido aciertan:
+
+   1. FONÉTICA. La mayoría de las faltas del español no cambian
+      cómo suena la palabra: b/v, s/z/c, y/ll, la h muda, qu/k,
+      g/j. Si dos palabras suenan igual, son la misma. Esto solo
+      caza «kiero», «boy», «aser», «sierto», «llendo».
+
+   2. ABREVIATURA. Escribir «spter» por «sprinter» no es una
+      falta, es teclear rápido: se comieron letras pero las que
+      quedaron van en orden. Si lo tecleado es subcadena en orden
+      de la palabra buena, es esa.
+
+   3. DISTANCIA. Para lo demás —una letra de más, una de menos,
+      dos cambiadas de lugar— se cuenta cuántos cambios hacen
+      falta. El tope sube con el largo de la palabra: en una de
+      cuatro letras un cambio ya es otra palabra, en una de diez
+      no.
+
+   Las palabras cortas se comparan EXACTAS. «no» y «lo» están a
+   un cambio, y confundirlas cambiaría el sentido de la frase.
+   ============================================================ */
+
+/* Cómo suena la palabra, a lo bruto. No es un algoritmo formal
+   —no hace falta— sino las confusiones que de verdad se ven. */
+function fonetica(p) {
+  return String(p)
+    .replace(/h/g, '')                       // la h no suena: ola = hola
+    .replace(/qu|ck|k/g, 'k')                // kiero = quiero
+    .replace(/c([eiéí])/g, 's$1')            // sierto = cierto
+    .replace(/c/g, 'k')                      // kasa = casa
+    .replace(/z/g, 's')                      // ves = vez
+    .replace(/v/g, 'b')                      // boy = voy
+    .replace(/ll/g, 'y')                     // lla = ya
+    .replace(/g([eiéí])/g, 'j$1')            // jente = gente
+    .replace(/x/g, 's')
+    .replace(/(.)\1+/g, '$1');               // vallarrta = vallarta
+}
+
+/* ¿Lo tecleado son las letras de la palabra buena, en orden y sin
+   inventar ninguna? Así se cazan las abreviaturas del pulgar. */
+function esAbreviatura(corta, larga) {
+  if (corta.length < 4 || corta.length >= larga.length) return false;
+  if (corta.length / larga.length < 0.5) return false;
+  if (corta[0] !== larga[0]) return false;   // la primera letra sí se respeta
+  let j = 0;
+  for (let i = 0; i < larga.length && j < corta.length; i++) {
+    if (larga[i] === corta[j]) j++;
+  }
+  return j === corta.length;
+}
+
+/* Cuántos cambios hay de una palabra a la otra. Cuenta el cambio de
+   lugar de dos letras contiguas como UNO —«uan» por «una»— porque es
+   de las faltas más comunes al teclear rápido. */
+function distancia(a, b) {
+  const m = a.length, n = b.length;
+  if (Math.abs(m - n) > 3) return 99;        // ni vale la pena medir
+  const d = [];
+  for (let i = 0; i <= m; i++) d[i] = [i];
+  for (let j = 0; j <= n; j++) d[0][j] = j;
+  for (let i = 1; i <= m; i++) {
+    for (let j = 1; j <= n; j++) {
+      const costo = a[i - 1] === b[j - 1] ? 0 : 1;
+      d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + costo);
+      if (i > 1 && j > 1 && a[i - 1] === b[j - 2] && a[i - 2] === b[j - 1]) {
+        d[i][j] = Math.min(d[i][j], d[i - 2][j - 2] + 1);
+      }
+    }
+  }
+  return d[m][n];
+}
+
+function tope(largo) {
+  if (largo <= 4) return 0;                  // corta: exacta o nada
+  if (largo <= 7) return 1;
+  return 2;
+}
+
+/* ------------------------------------------------------------
+   LAS QUE SE COMPARAN EXACTAS, PASE LO QUE PASE
+   ------------------------------------------------------------
+   Hay palabras cuyo vecino a un cambio de distancia significa otra
+   cosa. Tolerarles la falta no ayuda: se equivoca.
+
+   El caso que lo destapó: «somos 15 personaz» acababa en «te paso
+   con una persona» —porque «personaz» está a un cambio de
+   «persona»— en vez de recomendar unidad. Es la MISMA confusión
+   que ya se había arreglado con los límites de palabra, y la
+   tolerancia a faltas la revivió.
+
+   Quien quiere una persona lo dice de otro modo: «hablar con»,
+   «con alguien», «asesor». Esas siguen tolerando faltas.
+   ------------------------------------------------------------ */
+const EXACTAS = ['persona', 'no', 'si', 'dia', 'dias'];
+
+/* ¿Lo que escribió es esta palabra, aunque la haya escrito mal? */
+function esLaPalabra(dicho, buena) {
+  if (dicho === buena) return true;
+  if (EXACTAS.indexOf(buena) !== -1) return false;
+  const fd = fonetica(dicho), fb = fonetica(buena);
+  if (fd === fb) return true;                // suena igual
+  if (esAbreviatura(dicho, buena) || esAbreviatura(fd, fb)) return true;
+  const t = tope(buena.length);
+  if (t === 0) return false;
+  return distancia(fd, fb) <= t;
+}
+
+/* Parte la frase en palabras, para poder comparar una por una. */
+function palabrasDe(t) {
+  return String(t).split(/[^a-z0-9ñ]+/).filter(function (p) { return p.length > 0; });
+}
+
 /* ------------------------------------------------------------
    PALABRA COMPLETA, NO PEDAZO
    ------------------------------------------------------------
@@ -76,8 +196,21 @@ function normaliza(t) {
    el acento antes de llegar, así que a esta altura todo es ASCII.
    ------------------------------------------------------------ */
 function tiene(t, palabras) {
+  /* Primero exacto: es lo que acierta casi siempre y no cuesta nada. */
   for (let i = 0; i < palabras.length; i++) {
     if (new RegExp('\\b' + palabras[i] + '\\b').test(t)) return true;
+  }
+  /* Y si no, mal escrito. Solo se compara contra palabras sueltas y
+     literales: las que traen espacio son frases —«hablar con»— y las
+     que traen `\w*` son comodines; a esas no se les puede medir la
+     distancia sin inventar coincidencias. */
+  const sueltas = palabras.filter(function (p) { return /^[a-zñ]+$/.test(p); });
+  if (!sueltas.length) return false;
+  const dichas = palabrasDe(t);
+  for (let i = 0; i < dichas.length; i++) {
+    for (let j = 0; j < sueltas.length; j++) {
+      if (esLaPalabra(dichas[i], sueltas[j])) return true;
+    }
   }
   return false;
 }
@@ -139,10 +272,21 @@ function fechaDe(texto, hoy) {
 
   const anioHoy = Number(base.slice(0, 4));
 
-  /* «10 de septiembre», «10 septiembre», «10 de sep del 2027» */
+  /* «10 de septiembre», «10 septiembre», «10 de sep del 2027», y
+     también «4 sep», «10 setiembre», «10 de septienbre». */
   let m = t.match(/(\d{1,2})\s*(?:de\s*)?([a-z]+)(?:\s*(?:de(?:l)?\s*)?(\d{4}))?/);
-  if (m && MESES[m[2]]) {
-    return armaFecha(Number(m[3]) || null, MESES[m[2]], Number(m[1]), base);
+  if (m) {
+    let mes = MESES[m[2]];
+    if (!mes) {
+      /* Mal escrito. Se compara contra los nombres largos nada más:
+         medirle la distancia a «ene» o «may» confundiría meses entre
+         sí, y equivocar el mes de un viaje no es un detalle. */
+      const nombres = Object.keys(MESES).filter(function (k) { return k.length > 4; });
+      for (let i = 0; i < nombres.length && !mes; i++) {
+        if (esLaPalabra(m[2], nombres[i])) mes = MESES[nombres[i]];
+      }
+    }
+    if (mes) return armaFecha(Number(m[3]) || null, mes, Number(m[1]), base);
   }
 
   /* «10/9», «10-09-2026», «10.9.26» */
@@ -850,7 +994,13 @@ function respuestaA(mensaje, estado, hoy) {
      ------------------------------------------------------------ */
   for (let i = 0; i < UNIDADES.length; i++) {
     const u = UNIDADES[i];
-    if (t.indexOf(normaliza(u.name)) !== -1) {
+    /* «spter», «suburvan», «neobús»: se busca por palabra y con
+       tolerancia, no con `indexOf`, que exige escribirlo perfecto. */
+    const nombre = normaliza(u.name);
+    const loNombro = t.indexOf(nombre) !== -1 || palabrasDe(t).some(function (p) {
+      return esLaPalabra(p, nombre);
+    });
+    if (loNombro) {
       if (u.cotizadorAutomatico) {
         const p = siguiente({ paso: 'destino', unidad: 'sprinter' });
         return {

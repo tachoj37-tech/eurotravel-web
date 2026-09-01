@@ -466,6 +466,60 @@ console.log('\n== EL IVA NO SE NOMBRA, PERO SE COBRA IGUAL ==');
   })());
 }
 
+console.log('\n== ESCRIBIR MAL NO PUEDE COSTAR UNA VENTA ==');
+{
+  /* La gente escribe desde el celular con el pulgar. Esto NO usa IA:
+     es fonetica (kiero=quiero), abreviatura (spter=sprinter) y
+     distancia. El ejemplo del dueño era «lla kiero uan spter». */
+  /* Se busca sobre el texto NORMALIZADO —sin acentos y en minusculas—
+     asi que los patrones van tambien en minusculas. Buscar «Sprinter»
+     con mayuscula aqui no casa nunca, y esa fue la primera version de
+     esta prueba: fallaba por la prueba, no por el bot. */
+  const casos = [
+    ['lla kiero uan spter', /sprinter/],
+    ['kiero una sprnter', /sprinter/],
+    ['me interesa la suburvan', /suburban/],
+    ['cuanto kuesta', /cuantas personas/],
+    ['presio', /cuantas personas/],
+    ['ke unidades tienen', /unidades/],
+    ['ke incluye', /incluyen/],
+    ['ablar con una persona', /paso con una persona/],
+    ['kiero cotisar', /cuantas personas/]
+  ];
+  const mal = casos.filter(function (c) {
+    return !c[1].test(conv.normaliza(conv.respuestaA(c[0], null, HOY).texto));
+  }).map(function (c) { return c[0]; });
+  ok('entiende 9 formas de escribirlo mal', mal, []);
+}
+{
+  const fechas = [['4 sep', '2026-09-04'], ['10 setiembre', '2026-09-10'],
+    ['10 de septienbre', '2026-09-10'], ['15 disiembre', '2026-12-15'],
+    ['3 de nobiembre', '2026-11-03'],
+    /* Un mes que no existe NO se adivina: mejor volver a preguntar
+       que mandar al cliente en la fecha equivocada. */
+    ['10 de xyz', null], ['10 de zzzzz', null]];
+  const mal = fechas.filter(function (f) { return conv.fechaDe(f[0], HOY) !== f[1]; })
+    .map(function (f) { return f[0] + ' -> ' + conv.fechaDe(f[0], HOY); });
+  ok('lee la fecha aunque el mes venga mal escrito', mal, []);
+}
+{
+  /* EL RIESGO DE TOLERAR FALTAS: pasarse de listo.
+     «somos 15 personaz» acababa en «te paso con una persona», porque
+     «personaz» esta a un cambio de «persona». Es la MISMA confusion
+     que ya se habia arreglado con limites de palabra, y la tolerancia
+     la revivio. Por eso hay palabras que se comparan exactas. */
+  const r = conv.respuestaA('somos 15 personaz', null, HOY);
+  ok('«personaz» sigue siendo cuantas personas son, no pedir una persona',
+    r.pasa, false);
+  okQue('  y recomienda unidad', /Sprinter/.test(r.texto));
+}
+{
+  /* Y que el candado no haya matado lo que si debe pasar con alguien. */
+  const mal = ['quiero hablar con una persona', 'ablar con alguien', 'kiero un asesor']
+    .filter(function (m) { return !conv.respuestaA(m, null, HOY).pasa; });
+  ok('pedir una persona sigue funcionando, bien y mal escrito', mal, []);
+}
+
 console.log('\n== EL BOT ENTIENDE SUS PROPIOS BOTONES ==');
 {
   /* Ofrecer un boton que el bot no sabe leer es la peor forma de
