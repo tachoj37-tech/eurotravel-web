@@ -437,3 +437,63 @@ manda al cliente fuera del sitio**, y es justo donde va a teclear su tarjeta.
 son el código ya arreglado, que Snyk no reconoce saneado. Vale la pena volver
 a correrlo cuando se toque código nuevo, pero el número por sí solo no dice
 nada: hay que mirar si aparece algo distinto de esta lista.
+
+---
+
+# El aviso de errores del navegador (Sentry)
+
+Instalado el 31-ago-2026. Antes de esto, cuando la pantalla tronaba con un
+cliente, **nadie se enteraba**: él cerraba la pestaña y ya.
+
+## Por qué NO se usó el SDK de Sentry
+
+Se escribió a mano (`errores.js`, unas 30 lineas, sin dependencias). Tres
+razones, y la primera es la que manda:
+
+1. **El SDK manda la direccion completa de la pagina.** Las ligas de viaje
+   llevan el token firmado en la direccion (`viaje.html?ev=...`), asi que el
+   SDK le estaria entregando a un tercero **la llave de entrada de cada
+   cliente**. El propio `viaje.html` tiene escrito arriba que ese token «no se
+   manda a analitica». `errores.js` recorta la direccion y solo manda la ruta.
+2. **El SDK graba lo que la gente teclea** como migajas, y esta es la pagina
+   donde el cliente escribe su nombre, su telefono y a donde va.
+3. Meter el SDK obligaba a **abrirle la puerta a un script de fuera en la
+   misma pagina donde se paga**. Asi no: `errores.js` es nuestro y lo cubre el
+   `'self'` que ya estaba.
+
+Lo unico que sale: que error fue, en que archivo y renglon, en que ruta, y que
+navegador.
+
+## El unico cambio a la politica de seguridad
+
+En `vercel.json`, a `connect-src` se le agrego
+`https://o4512003711041536.ingest.us.sentry.io`.
+
+**`script-src` no se toco.** No corre codigo de nadie mas en la pagina; lo
+unico que se permitio es *mandar* avisos a ese buzon.
+
+Se comprobo en el navegador con las dos politicas:
+
+| politica | resultado |
+|---|---|
+| la anterior | **bloqueado** |
+| la nueva | pasa, y Sentry contesta 200 |
+
+Esa primera fila es la que importa: sin tocar `connect-src`, Sentry habria
+quedado **instalado y mudo** — que es la peor forma de romperlo, porque no se
+nota.
+
+## Frenos que trae
+
+- **No reporta desde `localhost`**, para no ensuciar el tablero mientras se
+  desarrolla.
+- **Tope de 5 avisos distintos por visita**, y no repite el mismo. Un error
+  dentro de un bucle de dibujado se dispara cientos de veces por segundo.
+- **Todo va envuelto en `try`**: un aviso de error jamas puede ser el que
+  rompa la pagina.
+- La clave del DSN es **publica por diseño**: solo sirve para ESCRIBIR
+  reportes, no para leer nada de la cuenta.
+
+## Dónde se ve
+
+https://ejd.sentry.io/issues/ — proyecto `eurotravel-web`.

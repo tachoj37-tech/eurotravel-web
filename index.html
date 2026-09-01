@@ -12,6 +12,12 @@
 <meta property="og:image" content="img/hero2.jpg" />
 <title>Eurotravel</title>
 
+<!-- Va aquí arriba y sin «defer» a propósito: tiene que estar
+     escuchando ANTES de que corra cualquier otro script, o los
+     errores de arranque se pierden. Pesa 4 KB y no pide nada de
+     fuera. Lee errores.js para saber qué manda y qué no. -->
+<script src="errores.js"></script>
+
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <!-- La foto nocturna ES el LCP y viene por CSS (background-image), así que
