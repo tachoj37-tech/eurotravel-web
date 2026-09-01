@@ -497,3 +497,31 @@ nota.
 ## Dónde se ve
 
 https://ejd.sentry.io/issues/ — proyecto `eurotravel-web`.
+
+## Las peticiones al servidor (agregado el mismo dia)
+
+El primer intento cazaba solo lo que **truena**. Y la pagina esta escrita a la
+defensiva: hay **19 peticiones que atrapan su propia falla** y le enseñan «No
+hubo conexion.» al cliente. Un `.catch()` asi se traga el error y
+`window.onerror` nunca se entera.
+
+O sea que, tal cual quedo instalado al principio, **un cliente podia fallar al
+pagar tres veces seguidas y el tablero seguia en cero.**
+
+Se envolvio `fetch` UNA vez dentro de `errores.js`, en lugar de tocar las 19.
+Solo mira de paso: no cambia lo que devuelve y no lee el cuerpo de la
+respuesta —eso rompe a quien la pidio—.
+
+| situacion | se reporta |
+|---|---|
+| El servidor contesto 500 o peor | **si**, siempre. Ese es nuestro |
+| El servidor contesto 400-499 | **no**. Contraseña mal, codigo vencido, sesion caida: es lo normal |
+| La peticion salio bien | no |
+| Se corto la conexion en `/api/pagar` o `/api/confirmar` | **si**. Ahi se quiere saber pase lo que pase |
+| Se corto la conexion en cualquier otra | no. Casi siempre es el wifi del cliente, no un defecto |
+| Peticion a otro sitio | no se vigila |
+
+Lo cubre `pruebas/probar-errores.cjs` (19 comprobaciones), que corre un
+navegador de mentiras y revisa que salio por el cable. Se verifico que la
+prueba **muerde**: al cambiar `>= 500` por `>= 900` se ponen 6 en rojo, y al
+quitarle el recorte a la direccion salta la fuga del token con todo y token.

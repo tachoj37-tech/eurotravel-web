@@ -40,6 +40,11 @@
   var BUZON = CASA + '/api/' + PROYECTO + '/envelope/?sentry_key=' + CLAVE +
     '&sentry_version=7';
 
+  // Se guarda el fetch de fábrica ANTES de envolverlo, más abajo. El aviso
+  // tiene que salir por aquí: si saliera por el envuelto, un aviso que falla
+  // provocaría otro aviso, y ese otro, sin fin.
+  var fetchOriginal = window.fetch ? window.fetch.bind(window) : null;
+
   // En la computadora del desarrollador no reportamos: ensuciaría
   // el tablero con errores que estamos provocando a propósito.
   var esLocal = /^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname) ||
@@ -116,7 +121,8 @@
       // keepalive: si el error tumbó la página y el cliente la cierra,
       // el envío sigue en pie. text/plain evita el trámite previo de
       // permiso entre sitios, que retrasaría y a veces perdería el aviso.
-      fetch(BUZON, {
+      if (!fetchOriginal) return;
+      fetchOriginal(BUZON, {
         method: 'POST',
         body: sobre,
         keepalive: true,
@@ -152,4 +158,75 @@
   window.avisaError = function (mensaje, detalle) {
     reporta('Aviso', mensaje, '', 0, 0, detalle ? String(detalle) : '');
   };
+
+  /* ----------------------------------------------------------
+     Las peticiones al servidor
+     ----------------------------------------------------------
+     Lo de arriba solo caza lo que TRUENA. Pero la página está
+     escrita a la defensiva: hay 19 peticiones que atrapan su
+     propia falla y le enseñan «No hubo conexión.» al cliente.
+     Un .catch() así se traga el error y nadie se entera.
+
+     Sin esto, un cliente podía fallar al pagar tres veces
+     seguidas y el tablero seguía en cero.
+
+     Se envuelve fetch UNA vez, aquí, en lugar de tocar las 19.
+     Solo mira de paso: no cambia lo que devuelve, no lee el
+     cuerpo de la respuesta —eso rompería a quien la pidió— y si
+     algo sale mal se calla.
+
+     Qué se reporta y qué no:
+
+       · Solo lo nuestro (/api/…). Lo de fuera no es asunto suyo,
+         y de paso esto deja fuera al propio aviso a Sentry.
+       · El servidor contestó 500 o peor  → SIEMPRE. Ese es tuyo.
+       · El servidor contestó 400-499     → NUNCA. Eso es normal:
+         contraseña mal, código vencido, sesión caída.
+       · Se cayó la conexión              → solo en /api/pagar y
+         /api/confirmar. En los demás casi siempre es el wifi del
+         cliente en el camión, no un defecto; pero si se cae a la
+         mitad de un pago, eso se quiere saber pase lo que pase.
+     ---------------------------------------------------------- */
+
+  function comoUrl(entrada) {
+    try {
+      if (typeof entrada === 'string') return new URL(entrada, location.href);
+      if (entrada instanceof URL) return entrada;
+      if (entrada && typeof entrada.url === 'string') {
+        return new URL(entrada.url, location.href);
+      }
+    } catch (e) { /* si no se puede leer, no se vigila */ }
+    return null;
+  }
+
+  if (fetchOriginal) {
+    window.fetch = function (entrada, opciones) {
+      var promesa = fetchOriginal.apply(null, arguments);
+      try {
+        var u = comoUrl(entrada);
+        var nuestra = u && u.origin === location.origin &&
+          u.pathname.indexOf('/api/') === 0;
+        if (nuestra) {
+          var esDinero = /^\/api\/(pagar|confirmar)$/.test(u.pathname);
+          // Esta rama cuelga de la promesa pero NO la reemplaza: quien
+          // pidió sigue recibiendo la de siempre, con su mismo resultado.
+          promesa.then(function (r) {
+            if (r && r.status >= 500) {
+              reporta('ServidorFallo',
+                'El servidor contesto ' + r.status + ' en ' + u.pathname,
+                u.pathname, 0, 0, '');
+            }
+          }, function (e) {
+            if (esDinero) {
+              reporta('PagoSinConexion',
+                'Se corto la conexion en ' + u.pathname + ': ' +
+                  (e && e.message ? e.message : String(e)),
+                u.pathname, 0, 0, '');
+            }
+          });
+        }
+      } catch (e) { /* vigilar jamas puede romper la peticion */ }
+      return promesa;
+    };
+  }
 })();
