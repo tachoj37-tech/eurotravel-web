@@ -1,0 +1,16 @@
+# Lo que NO se sube a Vercel.
+#
+# `pendiente/` guarda código terminado que todavía no sale al aire —hoy el
+# webhook de WhatsApp, que no cabe en las 12 funciones del plan—. Sin esta
+# línea Vercel lo publicaba como archivo suelto: se comprobó pidiendo
+# https://eurotravel-web.vercel.app/pendiente/whatsapp.mjs y contestaba 200.
+#
+# No filtraba secretos —las llaves viven en variables de entorno y ahí solo
+# se nombran—, pero una carpeta que se llama «pendiente» no tiene por qué
+# estar publicada.
+#
+# Las pruebas lo siguen encontrando: corren desde el disco, no desde Vercel.
+pendiente/
+
+# Las pruebas tampoco se publican: no las ocupa nadie en el servidor.
+pruebas/
