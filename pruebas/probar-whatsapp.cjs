@@ -435,22 +435,32 @@ console.log('\n== LA SOLICITUD PARA QUIEN PONE EL PRECIO ==');
     r.estado && [r.estado.paso, r.estado.unidad], ['destino', 'suburban']);
 }
 
-console.log('\n== POR ESTE CANAL NO SE COBRA IVA ==');
+console.log('\n== EL IVA NO SE NOMBRA, PERO SE COBRA IGUAL ==');
 {
-  /* Sus precios de lista YA traen el IVA (ivaIncluido: true en
-     _tarifa.js). Que aqui no se cobre significa 16% menos, no la misma
-     cifra sin etiqueta. */
-  const casos = [[9000, 7759], [20500, 17672], [12400, 10690]];
-  const mal = casos.filter(function (c) {
+  /* Este es de dinero, asi que se revisa con varios numeros y no con
+     uno. Si algun dia alguien vuelve a «quitarle el IVA», esto lo caza:
+     el precio del chat tiene que ser IDENTICO al de la pagina. */
+  const casos = [9000, 20500, 12400, 66000, 3500];
+  const mal = [];
+  casos.forEach(function (total) {
     const t = conv.textoDeCotizacion(
-      { total: c[0], dias: 3, porcentajeAnticipo: 20 }, {}).texto;
-    return t.indexOf('$' + c[1].toLocaleString('es-MX')) === -1;
-  }).map(function (c) { return c[0] + ' deberia dar ' + c[1]; });
-  ok('le quita el 16% al precio de lista', mal, []);
+      { total: total, anticipo: Math.round(total * 0.2), saldo: total - Math.round(total * 0.2),
+        dias: 3, porcentajeAnticipo: 20 }, {}).texto;
+    if (t.indexOf('$' + total.toLocaleString('es-MX')) === -1) {
+      mal.push(total + ': no enseña el precio del motor');
+    }
+    const bajado = Math.round(total / 1.16);
+    if (t.indexOf('$' + bajado.toLocaleString('es-MX')) !== -1) {
+      mal.push(total + ': lo bajo a ' + bajado + ', que seria cobrar de menos');
+    }
+    if (/iva/i.test(conv.normaliza(t))) mal.push(total + ': menciona el IVA');
+  });
+  ok('el precio del chat es el MISMO que el de la pagina, en 5 montos', mal, []);
 }
 {
-  const t = conv.textoDeCotizacion({ total: 9000, dias: 3, porcentajeAnticipo: 20 }, {}).texto;
-  okQue('el anticipo y el saldo suman el total de aca', (function () {
+  const t = conv.textoDeCotizacion(
+    { total: 9000, anticipo: 1800, saldo: 7200, dias: 3, porcentajeAnticipo: 20 }, {}).texto;
+  okQue('el anticipo y el saldo suman el total', (function () {
     const n = t.match(/\$([\d,]+)/g).map(function (s) { return Number(s.replace(/[$,]/g, '')); });
     return n[0] === n[1] + n[2];
   })());
@@ -501,21 +511,19 @@ console.log('\n== EL PRECIO QUE DEVUELVE /api/cotizar ==');
 {
   const resumen = { destino: 'Chapala', origen: 'Guadalajara',
     salida: '2026-09-10', regreso: '2026-09-12' };
-  /* CAMBIO DE LADO — 31-ago-2026.
-     Antes se exigia que enseñara el total tal cual venia del motor
-     ($9,000). El dueño dicto que por este canal NO se cobra IVA:
-     «solamente se cobra cuando cotizan y pagan en linea».
-     Sus precios de lista YA traen el IVA dentro (_tarifa.js lo dice,
-     ivaIncluido: true), asi que no cobrarlo NO es quitarle la etiqueta
-     al mismo numero: es cobrar 16% menos. 9000 / 1.16 = 7,759. */
+  /* El IVA NO se menciona, pero SI se cobra. Aclarado por el dueño el
+     31-ago-2026: «no quiero que no lo cobres, solo no lo menciones».
+     Estuvo mal un rato —se le quitaba el 16%, o sea $1,241 menos por
+     viaje en este ejemplo— y por eso queda vigilado por los dos lados:
+     que el monto sea el del motor, y que la palabra no aparezca. */
   const r = conv.textoDeCotizacion(
     { total: 9000, anticipo: 1800, saldo: 7200, dias: 3, porcentajeAnticipo: 20,
       requiereAsesor: false }, resumen);
-  okQue('le quita el IVA al total del motor', /\$7,759/.test(r.texto));
-  okQue('  y NO enseña el precio con IVA', !/\$9,000/.test(r.texto));
-  okQue('  el anticipo sale del total de ACA, no del de la pagina',
-    /\$1,552/.test(r.texto) && !/\$1,800/.test(r.texto));
-  okQue('  y avisa que la factura se saca en linea', /factura/i.test(r.texto));
+  okQue('enseña el total TAL CUAL vino del motor', /\$9,000/.test(r.texto));
+  okQue('  con su anticipo y su saldo', /\$1,800/.test(r.texto) && /\$7,200/.test(r.texto));
+  okQue('  y NO lo baja quitandole el IVA', !/\$7,759/.test(r.texto));
+  okQue('  pero la palabra IVA no aparece', !/iva/i.test(conv.normaliza(r.texto)));
+  okQue('  ni se habla de factura', !/factura/i.test(r.texto));
   okQue('  repite QUE se cotizo', /Chapala/.test(r.texto) && /septiembre/.test(r.texto));
   ok('  sin necesitar persona', r.pasa, false);
 }

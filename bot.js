@@ -39,10 +39,6 @@ require('./unidades');
 const UNIDADES = global.window.UNIDADES || [];
 
 const TELEFONO = '33 2400 2285';
-
-/* La misma tasa que usa `_tarifa.js`. Aquí se necesita para lo
-   contrario: quitarla, porque por este canal no se cobra. */
-const TASA_IVA = 0.16;
 const SITIO = process.env.SITIO_URL || 'https://eurotravel-web.vercel.app';
 
 /* Quita acentos y baja a minúsculas, para que «cuántos» y «cuantos»
@@ -750,24 +746,24 @@ function textoDeCotizacion(precio, resumen) {
   const r = resumen || {};
 
   /* ------------------------------------------------------------
-     POR AQUÍ NO SE COBRA IVA
+     EL IVA NO SE NOMBRA, PERO SE COBRA IGUAL
      ------------------------------------------------------------
-     Dictado por el dueño el 31-ago-2026: «el IVA, cuando es
-     WhatsApp, no lo cobres; solamente se cobra cuando cotizan y
-     pagan en línea. Cuando es WhatsApp, es otro método».
+     Aclarado por el dueño el 31-ago-2026: «no quiero que no lo
+     cobres, solo no lo menciones».
 
-     Sus precios de lista YA traen el IVA dentro —`_tarifa.js` lo
-     dice, `ivaIncluido: true`, y saca el subtotal dividiendo—.
-     Así que «no cobrarlo» aquí NO es quitarle la etiqueta al
-     mismo número: es cobrar menos. Se le quita el 16 %.
+     Esto estuvo mal una vez y hay que dejarlo escrito. Primero se
+     entendió «por WhatsApp no cobres IVA» como quitarle el 16 % al
+     precio —sus precios de lista YA lo traen dentro, así que no
+     cobrarlo habría sido cobrar menos—. Chapala 3 días habría
+     pasado de $9,000 a $7,759: **$1,241 menos por viaje**.
 
-     El anticipo se saca del total de AQUÍ, no del de la página,
-     o no cuadraría con lo que se le está cobrando.
+     No es eso. El precio es el MISMO que en la página. Lo único
+     que cambia es que aquí no se dice «IVA incluido», porque por
+     este canal no se factura.
+
+     Por eso los montos entran TAL CUAL del motor de cobro y aquí
+     no se divide ni se multiplica nada.
      ------------------------------------------------------------ */
-  const sinIva = Math.round(precio.total / (1 + TASA_IVA));
-  const anticipo = Math.round(sinIva * (Number(precio.porcentajeAnticipo) || 20) / 100);
-  const saldo = sinIva - anticipo;
-
   return {
     texto: '🚐 *Sprinter · hasta 20 pasajeros*\n\n' +
       (r.origen ? '📍 ' + r.origen + ' → ' + r.destino + '\n' : '') +
@@ -775,12 +771,10 @@ function textoDeCotizacion(precio, resumen) {
       '🗓️ ' + precio.dias + (precio.dias === 1 ? ' día' : ' días') + ' de servicio\n' +
       (r.recorridos ? '🚐 ' + r.recorridos + (r.recorridos === 1 ? ' día' : ' días') +
         ' de recorrido (' + String(r.horas).toLowerCase() + ')\n' : '') +
-      '\n*Total: ' + pesos(sinIva) + '*\n' +
-      'Para apartar: ' + pesos(anticipo) + '\n' +
-      'Resto al abordar: ' + pesos(saldo) + '\n\n' +
+      '\n*Total: ' + pesos(precio.total) + '*\n' +
+      'Para apartar: ' + pesos(precio.anticipo) + '\n' +
+      'Resto al abordar: ' + pesos(precio.saldo) + '\n\n' +
       'Incluye operador, combustible, casetas y seguro de viajero.\n\n' +
-      '_Este precio es pagando por acá. Si necesitas factura, se cotiza en línea ' +
-      'y ahí se agrega el IVA._\n\n' +
       '¿Lo apartamos?',
     pasa: false,
     opciones: ['Apartar en línea', 'Hablar con alguien', 'Cotizar otro']
