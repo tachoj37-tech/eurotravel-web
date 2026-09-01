@@ -200,6 +200,12 @@ function fechaEnPalabras(iso) {
    grupo de cincuenta por confundir eso es perder la venta.
    ------------------------------------------------------------ */
 function cuantaGente(t) {
+  /* Los botones que ofrece el propio bot. Si no se leyeran aquí, el bot
+     se atoraría con su propia opción — que fue lo que pasó al probarlo. */
+  if (/mas de (\d{1,3})/.test(t)) return Number(t.match(/mas de (\d{1,3})/)[1]) + 1;
+  if (/entre \d{1,3} y (\d{1,3})/.test(t)) return Number(t.match(/entre \d{1,3} y (\d{1,3})/)[1]);
+  if (/(\d{1,3}) o menos/.test(t)) return Number(t.match(/(\d{1,3}) o menos/)[1]);
+
   const pistas = /(\d{1,3})\s*(personas|pasajeros|pax|gente|alumnos|ninos|adultos|somos|alumnas)/;
   const alReves = /(somos|para|seriamos|van|vamos|iriamos|serian)\s*(?:como\s*)?(\d{1,3})/;
   let m = t.match(pistas);
@@ -270,6 +276,11 @@ const PASA = {
 /* Las horas del recorrido mueven el precio, así que se preguntan. Se
    ofrecen TRES, que es el máximo de botones de WhatsApp, y con
    etiquetas de menos de 20 caracteres, que es su tope. */
+/* Tres, porque tres son los botones de WhatsApp. La de en medio dice
+   «20» a propósito: es el corte real —hasta ahí llega la Sprinter, que
+   es la única que se cotiza sola—. */
+const OPCIONES_GENTE = ['Somos 10 o menos', 'Entre 11 y 20', 'Somos más de 20'];
+
 const HORAS_MOV = [
   { etiqueta: 'Hasta 8 horas', fin: '16:00' },
   { etiqueta: 'Hasta 10 horas', fin: '18:00' },
@@ -615,11 +626,16 @@ function respuestaA(mensaje, estado, hoy) {
     }
     /* Sin saber cuántos son no se puede escoger unidad, y sin unidad no
        se sabe si el precio se puede dar aquí o lo tiene que dar una
-       persona. Así que primero eso. */
+       persona. Así que primero eso.
+
+       Va con opciones y no a teclear libre: se probó con Playwright y
+       esta pregunta era la única del camino que dejaba al cliente
+       solo frente a la caja de texto. */
     return {
       texto: 'Con gusto 🚌 ¿Cuántas personas viajan?\n\n' +
-        'Si son *20 o menos* te saco el precio aquí mismo en un minuto.',
-      pasa: false
+        'Si son *20 o menos* te saco el precio aquí mismo.',
+      pasa: false,
+      opciones: OPCIONES_GENTE
     };
   }
 

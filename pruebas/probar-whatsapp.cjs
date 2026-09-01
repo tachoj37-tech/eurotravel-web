@@ -351,10 +351,51 @@ console.log('\n== LO QUE PREGUNTA TIENE QUE CABER EN WHATSAPP ==');
   okQue('en un viaje larguisimo la lista sigue cabiendo', p.opciones.length <= 10);
 }
 {
-  const dias = [['2026-09-10', '2026-09-10', 1], ['2026-09-10', '2026-09-12', 3],
-    ['2026-12-30', '2027-01-02', 4]];
+  const dias = [['2026-09-10', '2026-09-10', 1], ['2026-09-12', '2026-09-12', 1],
+    ['2026-09-10', '2026-09-12', 3], ['2026-12-30', '2027-01-02', 4]];
   const mal = dias.filter(function (d) { return conv.diasEntre(d[0], d[1]) !== d[2]; });
   ok('los dias se cuentan con los dos extremos, y cruzando el año', mal, []);
+}
+
+console.log('\n== EL BOT ENTIENDE SUS PROPIOS BOTONES ==');
+{
+  /* Ofrecer un boton que el bot no sabe leer es la peor forma de
+     romperlo: el cliente toca lo que le ofreciste y el bot le repite
+     la misma pregunta, para siempre. Ya paso al probar con Playwright
+     con las opciones de cuantas personas son.
+
+     Aqui se le devuelve CADA opcion que ofrece y se exige que avance. */
+  const base = { destino: 'Chapala', origen: 'Guadalajara',
+    salida: '2026-09-10', regreso: '2026-09-15' };
+  const estados = [
+    { paso: 'origen' },
+    Object.assign({ paso: 'recorridos' }, base),
+    Object.assign({ paso: 'horas', recorridos: 2 }, base),
+    Object.assign({ paso: 'confirmar', recorridos: 2, banda: 0 }, base),
+    Object.assign({ paso: 'cambiar', recorridos: 2, banda: 0 }, base)
+  ];
+  const atorados = [];
+  estados.forEach(function (e) {
+    (conv.pregunta(e).opciones || []).forEach(function (o) {
+      const r = conv.respuestaA(o, e, HOY);
+      const avanzo = !!r.cotiza || (r.estado && r.estado.paso !== e.paso);
+      if (!avanzo) atorados.push(e.paso + ' + «' + o + '» se queda atorado');
+    });
+  });
+  ok('toda opcion que ofrece, la sabe leer', atorados, []);
+}
+{
+  /* Las de «cuantas personas» no vienen de `pregunta`, pero es donde
+     se atoro de verdad. */
+  const r = conv.respuestaA('quiero cotizar', null, HOY);
+  const atorados = (r.opciones || []).filter(function (o) {
+    const s = conv.respuestaA(o, null, HOY);
+    /* Tiene que reconocer el tamaño del grupo: o arranca la cotizacion
+       (Sprinter) o pasa con una persona (autobus). Repetir la misma
+       pregunta seria quedarse atorado. */
+    return !s.estado && !s.pasa;
+  });
+  ok('tambien lee los botones de «cuantas personas»', atorados, []);
 }
 
 console.log('\n== EL PRECIO QUE DEVUELVE /api/cotizar ==');
