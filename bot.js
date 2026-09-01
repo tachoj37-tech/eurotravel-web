@@ -345,8 +345,13 @@ function fechaEnPalabras(iso) {
    ------------------------------------------------------------ */
 function cuantaGente(t) {
   /* Los botones que ofrece el propio bot. Si no se leyeran aquí, el bot
-     se atoraría con su propia opción — que fue lo que pasó al probarlo. */
-  if (/mas de (\d{1,3})/.test(t)) return Number(t.match(/mas de (\d{1,3})/)[1]) + 1;
+     se atoraría con su propia opción — que fue lo que pasó al probarlo.
+
+     «Más de 20» NO se lee aquí a propósito: no es un número, es la
+     ausencia de uno. Antes se traducía a 21 y el bot contestaba «andan
+     por poquito arriba», que a un grupo de 60 le suena absurdo y a
+     nadie le sirve. Se detecta aparte, en `masDeQue`, para PREGUNTAR
+     cuántos son. */
   if (/entre \d{1,3} y (\d{1,3})/.test(t)) return Number(t.match(/entre \d{1,3} y (\d{1,3})/)[1]);
   if (/(\d{1,3}) o menos/.test(t)) return Number(t.match(/(\d{1,3}) o menos/)[1]);
 
@@ -361,6 +366,15 @@ function cuantaGente(t) {
 
 /* La unidad más chica en la que cabe el grupo. Se ordena por
    capacidad para no depender del orden del catálogo. */
+/* «somos más de 20», «como unos 40 o más», «bastantes». Dice que son
+   MUCHOS, no cuántos. Devuelve el piso que mencionó, o 0 si ni eso. */
+function masDeQue(t) {
+  const m = t.match(/mas de (\d{1,3})|arriba de (\d{1,3})|(\d{1,3}) o mas/);
+  if (m) return Number(m[1] || m[2] || m[3]);
+  if (/\b(muchos|bastantes|un chingo|somos varios|harta gente)\b/.test(t)) return 0;
+  return null;
+}
+
 function unidadPara(gente) {
   const caben = UNIDADES
     .filter(function (u) { return Number(u.max) >= gente; })
@@ -546,6 +560,17 @@ function resumenDe(e) {
 function pregunta(estado) {
   const e = estado;
   switch (e.paso) {
+    case 'cuantos':
+      /* Sin opciones a propósito: cualquier rango que ofreciera sería
+         otra vez «más de 20». Lo que hace falta es el número. */
+      return {
+        texto: e.piso
+          ? '¿Como cuántos van? 🤔\n\nCon el número te digo qué unidad les ' +
+            'conviene — no es lo mismo un grupo de ' + (e.piso + 5) + ' que de ' +
+            (e.piso * 2) + '.'
+          : '¿Como cuántos van?\n\nUn número aproximado me basta.',
+        opciones: []
+      };
     case 'elegirChica':
       return {
         texto: '¿La Sprinter o la Suburban?',
@@ -605,10 +630,22 @@ function pregunta(estado) {
   return null;
 }
 
-/* Hace la pregunta de la casilla en la que quedó. */
-function siguiente(e) {
+/* ------------------------------------------------------------
+   Hace la pregunta de la casilla en la que quedó, y antes acusa
+   recibo de lo que acaba de contestar.
+
+   Ese acuse no es adorno: en una conversación de verdad uno
+   repite lo que oyó antes de seguir —«Chapala, va»— y así el
+   otro se entera de inmediato si entendiste mal, en vez de
+   descubrirlo hasta el final. Sin él, el bot se siente un
+   formulario que no escucha.
+   ------------------------------------------------------------ */
+function siguiente(e, acuse) {
   const p = pregunta(e);
-  return { texto: p.texto, opciones: p.opciones, pasa: false, estado: e };
+  return {
+    texto: (acuse ? acuse + '\n\n' : '') + p.texto,
+    opciones: p.opciones, pasa: false, estado: e
+  };
 }
 
 function pasoDeCotizacion(t, crudo, estado, hoy) {
@@ -618,6 +655,23 @@ function pasoDeCotizacion(t, crudo, estado, hoy) {
   if (tiene(t, ['cancelar', 'olvidalo', 'ya no', 'mejor no'])) {
     return { texto: 'Listo, lo dejamos ahí 👍\n\n¿Te ayudo con algo más?',
       pasa: false, estado: null, opciones: [] };
+  }
+
+  /* ---- ¿cuántos son, de verdad? ---- */
+  if (e.paso === 'cuantos') {
+    const n = cuantaGente(t) || (t.match(/^\s*(\d{1,3})\s*$/) ? Number(RegExp.$1) : null);
+    if (!n) {
+      /* Se vuelve a preguntar DISTINTO. Repetir la misma frase palabra
+         por palabra es lo que más delata a un robot, y además no ayuda:
+         si no se entendió la primera vez, decirlo igual no arregla nada. */
+      return {
+        texto: 'Perdón, no me quedó claro 🙈\n\nNada más el número: ¿son como *30*? ' +
+          '¿*45*? Lo que sea, aunque no sea exacto.',
+        pasa: false, estado: e, opciones: []
+      };
+    }
+    const r = recomienda(n);
+    return { texto: r.texto, pasa: false, estado: r.estado, opciones: r.opciones };
   }
 
   /* ---- ¿Sprinter o Suburban? ---- */
@@ -664,25 +718,32 @@ function pasoDeCotizacion(t, crudo, estado, hoy) {
 
   /* ---- a dónde ---- */
   if (e.paso === 'destino') {
-    if (dicho.length < 3) return siguiente(e);
+    if (dicho.length < 3) {
+      return {
+        texto: 'No alcancé a leer el lugar 🙈 ¿A qué ciudad van?',
+        pasa: false, estado: e, opciones: []
+      };
+    }
     e.destino = dicho.slice(0, 120);
     e.paso = e.origen ? 'confirmar' : 'origen';
-    return siguiente(e);
+    return siguiente(e, '*' + e.destino + '*, va 📍');
   }
 
   /* ---- de dónde ---- */
-  if (e.paso === 'origen') {
-    if (/otro/.test(t)) { e.paso = 'origenLibre'; return siguiente(e); }
-    if (dicho.length < 3) return siguiente(e);
+  if (e.paso === 'origen' || e.paso === 'origenLibre') {
+    if (e.paso === 'origen' && /otro/.test(t)) {
+      e.paso = 'origenLibre';
+      return siguiente(e);
+    }
+    if (dicho.length < 3) {
+      return {
+        texto: '¿De qué ciudad salen?', pasa: false, estado: e,
+        opciones: e.paso === 'origen' ? pregunta(e).opciones : []
+      };
+    }
     e.origen = dicho.slice(0, 120);
     e.paso = e.salida ? 'confirmar' : 'salida';
-    return siguiente(e);
-  }
-  if (e.paso === 'origenLibre') {
-    if (dicho.length < 3) return siguiente(e);
-    e.origen = dicho.slice(0, 120);
-    e.paso = e.salida ? 'confirmar' : 'salida';
-    return siguiente(e);
+    return siguiente(e, 'Salen de *' + e.origen + '* 👍');
   }
 
   /* ---- cuándo ---- */
@@ -696,7 +757,7 @@ function pasoDeCotizacion(t, crudo, estado, hoy) {
     /* Si ya había regreso y quedó antes, se vuelve a preguntar. */
     if (e.regreso && e.regreso < f) e.regreso = null;
     e.paso = e.regreso ? 'confirmar' : 'regreso';
-    return siguiente(e);
+    return siguiente(e, 'Salen el *' + fechaEnPalabras(f) + '* 📅');
   }
 
   if (e.paso === 'regreso') {
@@ -713,16 +774,17 @@ function pasoDeCotizacion(t, crudo, estado, hoy) {
       };
     }
     e.regreso = f;
+    const dias = diasEntre(e.salida, f);
     /* R22: el viaje de un día no cobra movimientos, así que preguntarlos
        sería pedirle un dato al cliente para después ignorarlo. Se salta
        la casilla y se deja en cero. */
-    if (diasEntre(e.salida, f) === 1) {
+    if (dias === 1) {
       e.recorridos = 0;
       e.paso = 'confirmar';
-    } else {
-      e.paso = typeof e.recorridos === 'number' ? 'confirmar' : 'recorridos';
+      return siguiente(e, 'Van y vuelven el mismo día, perfecto 👍');
     }
-    return siguiente(e);
+    e.paso = typeof e.recorridos === 'number' ? 'confirmar' : 'recorridos';
+    return siguiente(e, 'Entonces son *' + dias + ' días* de viaje.');
   }
 
   /* ---- recorridos ---- */
@@ -743,8 +805,12 @@ function pasoDeCotizacion(t, crudo, estado, hoy) {
       };
     }
     e.recorridos = n;
-    e.paso = n === 0 ? 'confirmar' : 'horas';
-    return siguiente(e);
+    if (n === 0) {
+      e.paso = 'confirmar';
+      return siguiente(e, 'Va, solo el traslado 👍');
+    }
+    e.paso = 'horas';
+    return siguiente(e, n + (n === 1 ? ' día' : ' días') + ' de paseo, anotado 🚐');
   }
 
   if (e.paso === 'horas') {
@@ -752,7 +818,12 @@ function pasoDeCotizacion(t, crudo, estado, hoy) {
     if (/todo|12|doce/.test(t)) b = 2;
     else if (/10|diez/.test(t)) b = 1;
     else if (/8|ocho/.test(t)) b = 0;
-    if (b === null) return siguiente(e);
+    if (b === null) {
+      return {
+        texto: '¿Como cuántas horas al día ocuparían la unidad?',
+        pasa: false, estado: e, opciones: pregunta(e).opciones
+      };
+    }
     e.banda = b;
     e.paso = 'confirmar';
     return siguiente(e);
@@ -957,6 +1028,14 @@ function respuestaA(mensaje, estado, hoy) {
      «vale, gracias» acababa contestando una explicación de precios. */
   if (tiene(t, ['precio', 'precios', 'costo', 'costos', 'cuesta', 'cuanto',
     'tarifa', 'tarifas', 'cotiz\\w*', 'presupuesto', 'cobran', 'cobras'])) {
+    /* «Más de 20» no dice cuántos son. Antes se leía como 21 y el bot
+       contestaba «andan por poquito arriba», que a un grupo de 60 le
+       suena absurdo. Ahora pregunta. */
+    const piso = masDeQue(t);
+    if (piso !== null) {
+      const p = siguiente({ paso: 'cuantos', piso: piso });
+      return { texto: p.texto, pasa: false, estado: p.estado, opciones: p.opciones };
+    }
     const gente = cuantaGente(t);
     if (gente) {
       const r = recomienda(gente);
@@ -978,6 +1057,11 @@ function respuestaA(mensaje, estado, hoy) {
   }
 
   /* ---- cuántos caben / qué unidad ---- */
+  const piso = masDeQue(t);
+  if (piso !== null) {
+    const p = siguiente({ paso: 'cuantos', piso: piso });
+    return { texto: p.texto, pasa: false, estado: p.estado, opciones: p.opciones };
+  }
   const gente = cuantaGente(t);
   if (gente) {
     const r = recomienda(gente);

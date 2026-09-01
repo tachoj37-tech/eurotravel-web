@@ -417,6 +417,64 @@ console.log('\n== QUE UNIDAD LE OFRECE A CADA GRUPO ==');
   ok('cada tamaño de grupo va por donde debe', mal, []);
 }
 
+console.log('\n== «MAS DE 20» NO ES UN NUMERO ==');
+{
+  /* Lo reporto el dueño: tocaba «Somos más de 20» y el bot le contestaba
+     como si fueran 21 —«andan por poquito arriba»—, que a un grupo de 60
+     le suena absurdo. No es un numero, es la AUSENCIA de uno. */
+  const r = conv.respuestaA('Somos más de 20', null, HOY);
+  ok('pregunta cuantos son en vez de suponer', r.estado && r.estado.paso, 'cuantos');
+  okQue('  y NO le habla de estar por poquito arriba',
+    !/poquito arriba/i.test(conv.normaliza(r.texto)));
+}
+{
+  const mal = ['somos mas de 20', 'somos mas de 40', 'arriba de 30', '50 o mas',
+    'somos muchos', 'somos bastantes']
+    .filter(function (m) {
+      const r = conv.respuestaA(m, null, HOY);
+      return !r.estado || r.estado.paso !== 'cuantos';
+    });
+  ok('seis formas de decir «muchos» acaban preguntando el numero', mal, []);
+}
+{
+  const r = conv.respuestaA('Somos más de 20', null, HOY);
+  const con38 = conv.respuestaA('somos 38', r.estado, HOY);
+  ok('y al dar el numero, recomienda con ese numero',
+    con38.estado && con38.estado.gente, 38);
+  okQue('  el autobus, no la Sprinter', /autobus/i.test(conv.normaliza(con38.texto)));
+}
+{
+  /* Que no se atore si vuelve a contestar vago. */
+  const r = conv.respuestaA('Somos más de 20', null, HOY);
+  const vago = conv.respuestaA('pues varios', r.estado, HOY);
+  ok('si vuelve a contestar vago sigue en la misma casilla',
+    vago.estado && vago.estado.paso, 'cuantos');
+  okQue('  pero lo pregunta DISTINTO, no repite palabra por palabra',
+    vago.texto !== r.texto);
+  const bien = conv.respuestaA('40', vago.estado, HOY);
+  ok('  y con el numero ya avanza', bien.estado && bien.estado.gente, 40);
+}
+
+console.log('\n== ACUSA RECIBO ANTES DE PREGUNTAR LO SIGUIENTE ==');
+{
+  /* En una conversacion de verdad uno repite lo que oyo antes de seguir.
+     Sin eso el bot se siente un formulario que no escucha — y ademas el
+     cliente no se entera de que entendio mal hasta el final. */
+  const pares = [
+    [{ paso: 'destino', unidad: 'sprinter' }, 'Mazamitla', /mazamitla/],
+    [{ paso: 'origen', unidad: 'sprinter', destino: 'X' }, 'Zapopan', /zapopan/],
+    [{ paso: 'salida', unidad: 'sprinter', destino: 'X', origen: 'Y' }, '15 de octubre', /15 de octubre/],
+    [{ paso: 'regreso', unidad: 'sprinter', destino: 'X', origen: 'Y', salida: '2026-10-15' },
+      '18 de octubre', /4 dias/],
+    [{ paso: 'recorridos', unidad: 'sprinter', destino: 'X', origen: 'Y',
+      salida: '2026-10-15', regreso: '2026-10-18' }, '2 dias', /2 dias de paseo/]
+  ];
+  const mudos = pares.filter(function (p) {
+    return !p[2].test(conv.normaliza(conv.respuestaA(p[1], p[0], HOY).texto));
+  }).map(function (p) { return p[0].paso; });
+  ok('cada respuesta se repite antes de seguir', mudos, []);
+}
+
 console.log('\n== LA SOLICITUD PARA QUIEN PONE EL PRECIO ==');
 {
   /* «Sacame toda la info para que el empleado nomas vea y saque el
