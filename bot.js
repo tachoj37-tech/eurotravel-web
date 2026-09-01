@@ -1083,17 +1083,108 @@ function respuestaA(mensaje, estado, hoy) {
 
   /* ------------------------------------------------------------
      No entendió. Y aquí NO adivina.
+     ------------------------------------------------------------
+     `noEntendio` es la señal para quien llama: aquí —y solo aquí—
+     vale la pena gastar una llamada a la IA para que traduzca lo
+     que quiso decir. Si no hay IA configurada, o falla, este
+     mismo texto es la respuesta y el bot sigue funcionando.
      ------------------------------------------------------------ */
   return {
     texto: 'Esa no me la sé bien, y prefiero no contestarte mal 🙏\n\n' +
       'Te paso con una persona: márcale al *' + TELEFONO + '*.\n\n' +
       'O si quieres, dime *cuántos son y a dónde van* y te oriento.',
-    pasa: true
+    pasa: true,
+    noEntendio: true
+  };
+}
+
+/* ------------------------------------------------------------
+   LO QUE LA IA ALCANZÓ A LEER
+   ------------------------------------------------------------
+   Recibe los datos sueltos que sacó `_entender.js` y los mete en
+   el mismo camino de siempre, saltándose lo que el cliente ya
+   dijo. La IA NO escribe la respuesta: solo traduce. Todo lo que
+   se le contesta lo redacta este archivo, y el precio lo sigue
+   poniendo el motor de cobro.
+
+   Devuelve null cuando lo entendido no alcanza para nada, y
+   entonces quien llama se queda con la respuesta de siempre.
+   ------------------------------------------------------------ */
+function aplicaEntendido(datos, hoy) {
+  if (!datos) return null;
+
+  /* Intenciones que ya tienen respuesta escrita: se contesta esa. Es
+     gratis y está mejor redactada que cualquier improvisación. */
+  if (datos.intencion === 'persona') return respuestaA('quiero hablar con una persona', null, hoy);
+  if (datos.intencion === 'unidades') return respuestaA('que unidades tienen', null, hoy);
+  if (datos.intencion === 'incluye') return respuestaA('que incluye', null, hoy);
+  if (datos.intencion === 'saludo') return respuestaA('hola', null, hoy);
+
+  /* Para cotizar hace falta AL MENOS una pista de qué quiere. Con nada
+     de nada, preguntar de cero es mejor que fingir que se entendió. */
+  const algo = datos.gente || datos.unidad || datos.destino || datos.salida;
+  if (!algo) return null;
+
+  /* Qué unidad. Si dijo cuántos son, manda el número —es más confiable
+     que el nombre que haya alcanzado a escribir—. */
+  let unidad = datos.unidad;
+  if (datos.gente) {
+    if (datos.gente <= Number(SPRINTER.max)) unidad = 'sprinter';
+    else if (datos.gente > CASI_SPRINTER) unidad = 'autobus';
+    else unidad = null;                      // en la orilla: mejor preguntarle
+  }
+
+  /* Sin unidad clara se le devuelve al camino normal, que ya sabe
+     preguntar bien lo que falta. */
+  if (!unidad) {
+    if (datos.gente) {
+      const r = recomienda(datos.gente);
+      return { texto: r.texto, pasa: false, estado: r.estado, opciones: r.opciones };
+    }
+    return null;
+  }
+
+  const e = { unidad: unidad, gente: datos.gente || null };
+  if (datos.destino) e.destino = datos.destino;
+  if (datos.origen) e.origen = datos.origen;
+  if (datos.salida) e.salida = datos.salida;
+  if (datos.regreso) e.regreso = datos.regreso;
+
+  /* Solo ida: se cotiza como salir y volver el mismo día, que es lo que
+     el motor sabe cobrar. Y así R22 le quita los movimientos solo. */
+  if (datos.soloIda && e.salida && !e.regreso) e.regreso = e.salida;
+
+  /* Al primer hueco que quede. El orden es el mismo de siempre. */
+  if (!e.destino) e.paso = 'destino';
+  else if (!e.origen) e.paso = 'origen';
+  else if (!e.salida) e.paso = 'salida';
+  else if (!e.regreso) e.paso = 'regreso';
+  else if (diasEntre(e.salida, e.regreso) === 1) { e.recorridos = 0; e.paso = 'confirmar'; }
+  else if (typeof e.recorridos !== 'number') e.paso = 'recorridos';
+  else e.paso = 'confirmar';
+
+  const p = siguiente(e);
+  const leido = [];
+  if (unidad === 'sprinter') leido.push(SPRINTER.name);
+  else if (unidad === 'suburban') leido.push(SUBURBAN.name);
+  else leido.push('autobús');
+  if (e.destino) leido.push('a ' + e.destino);
+  if (e.salida) leido.push(fechaEnPalabras(e.salida));
+
+  return {
+    /* Se le repite lo que se entendió ANTES de seguir. Si la IA leyó
+       mal, el cliente lo ve de inmediato y lo corrige, en vez de
+       enterarse hasta el final. */
+    texto: 'Creo que entendí: *' + leido.join(', ') + '* 🤔\n\n' +
+      'Si me equivoqué dime *cambiar algo*.\n\n' + p.texto,
+    pasa: false, estado: p.estado, opciones: p.opciones
   };
 }
 
 module.exports = {
-  respuestaA, textoDeCotizacion,
+  respuestaA, textoDeCotizacion, textoDeSolicitud, aplicaEntendido,
+  /* Para probar la tolerancia a faltas sin pasar por todo el bot. */
+  esLaPalabra, fonetica, distancia,
   normaliza, cuantaGente, unidadPara, fechaDe, fechaEnPalabras, hoyISO,
   /* `pregunta` y `diasEntre` se exportan para poder vigilarlos desde las
      pruebas: que ninguna opción se pase de los topes de WhatsApp —3

@@ -4,10 +4,16 @@
 const crypto = require('crypto');
 const conv = require('../bot');
 const hook = require('../api/_whatsapp-webhook');
+const ia = require('../api/_entender');
 
 /* El dia se fija a proposito: si se preguntara al reloj, las pruebas de
    fechas cambiarian de resultado en año nuevo. */
 const HOY = '2026-08-31';
+
+/* Las comprobaciones de la IA son asincronas. Se juntan aqui y se
+   esperan ANTES de contar: sin esto el archivo terminaria antes de que
+   corrieran, y saldrian en verde sin haber probado nada. */
+const pendientes = [];
 
 const SECRETO = 'secreto-de-prueba';
 const TOKEN = 'token-de-alta';
@@ -520,6 +526,108 @@ console.log('\n== ESCRIBIR MAL NO PUEDE COSTAR UNA VENTA ==');
   ok('pedir una persona sigue funcionando, bien y mal escrito', mal, []);
 }
 
+console.log('\n== LA IA: SOLO CUANDO EL BOT SE RINDIO ==');
+{
+  /* Lo caro de un bot con IA es llamarla de mas. Aqui se revisa lo
+     contrario de lo normal: que la MAYORIA de los mensajes NO la
+     necesiten. */
+  const gratis = ['hola', 'cuanto cuesta', 'somos 15', 'lla kiero uan spter 4 sep ida',
+    'que unidades tienen', 'ke incluye', 'quiero hablar con alguien',
+    'q onda, para 12 chavos a tequila', 'gracias'];
+  const caros = gratis.filter(function (m) {
+    return conv.respuestaA(m, null, HOY).noEntendio;
+  });
+  ok('lo que ya sabe contestar NO gasta una llamada', caros, []);
+  okQue('y lo que de plano no entiende SI la pide',
+    conv.respuestaA('xq no me contestan', null, HOY).noEntendio === true);
+}
+{
+  /* Que la IA falte o falle NO puede tumbar el bot. */
+  const sinClave = ia.entiende('lo que sea', { clave: '', hoy: HOY });
+  pendientes.push(sinClave.then(function (r) {
+    ok('sin clave configurada devuelve null, no truena', r, null); }));
+}
+{
+  const rota = ia.entiende('hola', {
+    clave: 'x', hoy: HOY,
+    pide: function () { return Promise.resolve({ ok: false, status: 500 }); }
+  });
+  pendientes.push(rota.then(function (r) {
+    ok('si la IA contesta error, devuelve null', r, null); }));
+  const tronada = ia.entiende('hola', {
+    clave: 'x', hoy: HOY,
+    pide: function () { return Promise.reject(new Error('sin red')); }
+  });
+  pendientes.push(tronada.then(function (r) {
+    ok('si la IA se cae, devuelve null', r, null); }));
+}
+{
+  /* El modelo a veces envuelve el JSON. */
+  ok('saca el JSON aunque venga envuelto',
+    ia.sacaJSON('Claro:\n```json\n{"intencion":"cotizar"}\n```'), { intencion: 'cotizar' });
+  ok('y devuelve null si no hay JSON', ia.sacaJSON('no se'), null);
+}
+{
+  /* NADA de lo que devuelva la IA se cree sin revisar. */
+  const sucio = ia.limpia({
+    intencion: 'borrar_la_base', gente: 999999, unidad: 'helicoptero',
+    destino: 'x', origen: '   ', salida: 'el jueves', regreso: '2020-01-01',
+    soloIda: 'quiza'
+  });
+  ok('una intencion inventada se vuelve «otro»', sucio.intencion, 'otro');
+  ok('un numero absurdo de gente se tira', sucio.gente, null);
+  ok('una unidad que no existe se tira', sucio.unidad, null);
+  ok('una fecha que no es fecha se tira', sucio.salida, null);
+  ok('un texto de una letra se tira', sucio.destino, null);
+  ok('soloIda solo es true si es exactamente true', sucio.soloIda, false);
+}
+{
+  const alReves = ia.limpia({ salida: '2026-09-10', regreso: '2026-09-05' });
+  ok('un regreso anterior a la salida se tira: preguntar es barato', alReves.regreso, null);
+}
+{
+  /* Con una IA de mentiras se comprueba el camino completo. */
+  const falsa = function (respuesta) {
+    return function () {
+      return Promise.resolve({
+        ok: true, status: 200,
+        json: function () {
+          return Promise.resolve({ content: [{ type: 'text', text: JSON.stringify(respuesta) }] });
+        }
+      });
+    };
+  };
+  pendientes.push(ia.entiende('lla kiero uan spter 4 sep ida', {
+    clave: 'x', hoy: HOY,
+    pide: falsa({ intencion: 'cotizar', unidad: 'sprinter', salida: '2026-09-04', soloIda: true })
+  }).then(function (d) {
+    ok('lee el mensaje enredado', [d.unidad, d.salida, d.soloIda],
+      ['sprinter', '2026-09-04', true]);
+    const r = conv.aplicaEntendido(d, HOY);
+    okQue('  y el bot sigue desde ahi', r && r.estado && r.estado.unidad === 'sprinter');
+    okQue('  repitiendo lo que entendio, para poder corregirlo',
+      /creo que entendi/i.test(conv.normaliza(r.texto)));
+    okQue('  sin soltar ningun precio', !/\$\s*[\d,]+/.test(r.texto));
+    ok('  y solo ida se cotiza como salir y volver el mismo dia',
+      r.estado.regreso, '2026-09-04');
+  }));
+}
+{
+  /* Las intenciones que ya tienen respuesta escrita NO se improvisan. */
+  const mal = [['persona', /paso con una persona/], ['unidades', /unidades/],
+    ['incluye', /incluyen/], ['saludo', /bienvenido/]]
+    .filter(function (c) {
+      const r = conv.aplicaEntendido({ intencion: c[0] }, HOY);
+      return !r || !c[1].test(conv.normaliza(r.texto));
+    }).map(function (c) { return c[0]; });
+  ok('una intencion conocida usa la respuesta de siempre, no una nueva', mal, []);
+}
+{
+  ok('si la IA no saco nada util, el bot se queda como estaba',
+    conv.aplicaEntendido({ intencion: 'otro' }, HOY), null);
+  ok('  y con null tampoco truena', conv.aplicaEntendido(null, HOY), null);
+}
+
 console.log('\n== EL BOT ENTIENDE SUS PROPIOS BOTONES ==');
 {
   /* Ofrecer un boton que el bot no sabe leer es la peor forma de
@@ -645,5 +753,10 @@ hook.olvidaTodo();
     hook.procesa(cuerpo, firma(cuerpo), ENV).status, 200);
 }
 
-console.log('\n' + buenas + ' buenas, ' + malas + ' malas');
-process.exit(malas === 0 ? 0 : 1);
+/* Se esperan las de la IA antes de contar. Sin esto el archivo
+   terminaria antes de que corrieran y saldria en verde de mentiras. */
+Promise.all(pendientes).then(function () {
+  console.log('\n' + buenas + ' buenas, ' + malas + ' malas  (' +
+    pendientes.length + ' de ellas esperaron a la IA de mentiras)');
+  process.exit(malas === 0 ? 0 : 1);
+});
