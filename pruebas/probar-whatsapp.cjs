@@ -159,8 +159,16 @@ okQue('con mas gente que la unidad mas grande, avisa que son varias',
 
 console.log('\n== EL PRECIO: LO MAS DELICADO ==');
 {
+  /* CAMBIO DE LADO — 31-ago-2026.
+     Antes esto exigia que el bot mandara la liga /#/cotizar. Ya no:
+     el dueño pidio que el bot COTICE la Sprinter el mismo, sin sacar
+     al cliente de la conversacion. Mandarlo a otra pantalla era
+     perder al que ya estaba escribiendo.
+     Lo que se revisa ahora es que ARRANQUE el paso a paso, y sigue
+     revisandose que no necesite persona: la Sprinter se cotiza sola. */
   const r = conv.respuestaA('cuanto cuesta para 15 personas');
-  okQue('con 15 personas (Sprinter) manda al cotizador en linea', /\/#\/cotizar/.test(r.texto));
+  ok('con 15 personas (Sprinter) arranca la cotizacion aqui mismo',
+    r.estado && r.estado.paso, 'destino');
   ok('  y NO necesita persona', r.pasa, false);
 }
 {
@@ -175,6 +183,90 @@ console.log('\n== EL PRECIO: LO MAS DELICADO ==');
 {
   const r = conv.respuestaA('asdkjhasd kjahsd');
   ok('lo que no entiende NO lo adivina: pasa con persona', r.pasa, true);
+}
+
+console.log('\n== LAS FECHAS, COMO LAS ESCRIBE LA GENTE ==');
+{
+  /* El dia se fija a proposito: si se preguntara al reloj, estas
+     pruebas cambiarian de resultado en año nuevo. */
+  const HOY = '2026-08-31';
+  const casos = [
+    ['10 de septiembre', '2026-09-10'], ['10 sept', '2026-09-10'],
+    ['10/9', '2026-09-10'], ['10-09-2026', '2026-09-10'],
+    ['hoy', '2026-08-31'], ['manana', '2026-09-01'],
+    ['el 15', '2026-09-15'],
+    /* Sin año, una fecha ya pasada se entiende del año que viene:
+       nadie cotiza un viaje para atras. */
+    ['1 de enero', '2027-01-01'],
+    /* 2026 no es bisiesto, asi que esa fecha no existe. */
+    ['29 de febrero', null],
+    ['32/13', null], ['el jueves ese', null], ['', null]
+  ];
+  const mal = casos.filter(function (c) { return conv.fechaDe(c[0], HOY) !== c[1]; })
+    .map(function (c) { return c[0] + ' -> ' + conv.fechaDe(c[0], HOY) + ' (esperaba ' + c[1] + ')'; });
+  ok('lee la fecha escrita de 12 formas distintas', mal, []);
+}
+
+console.log('\n== COTIZAR LA SPRINTER, PASO A PASO ==');
+{
+  const HOY = '2026-08-31';
+  let e = null, r;
+  const dichos = [];
+  ['somos 15 personas', 'Chapala', 'Guadalajara', '10 de septiembre', '12 de septiembre']
+    .forEach(function (m) { r = conv.respuestaA(m, e, HOY); e = r.estado; dichos.push(r); });
+
+  ok('al final pide cotizar', !!r.cotiza, true);
+  ok('  con la unidad correcta', r.cotiza && r.cotiza.unidad, 'sprinter');
+  ok('  con las fechas en aaaa-mm-dd',
+    r.cotiza && [r.cotiza.salida, r.cotiza.regreso], ['2026-09-10', '2026-09-12']);
+  ok('  con origen y destino como los escribio el cliente',
+    r.cotiza && [r.cotiza.origen.direccion, r.cotiza.destino.direccion],
+    ['Guadalajara', 'Chapala']);
+  ok('  y NINGUN precio: eso lo dice /api/cotizar, no el bot',
+    dichos.some(function (d) { return /\$\s*[\d,]+/.test(d.texto); }), false);
+}
+{
+  const HOY = '2026-08-31';
+  let e = { paso: 'regreso', destino: 'Chapala', origen: 'GDL', salida: '2026-09-10' };
+  const r = conv.respuestaA('5 de septiembre', e, HOY);
+  okQue('no deja regresar antes de salir', !r.cotiza && /antes de la salida/.test(r.texto));
+}
+{
+  const r = conv.respuestaA('el jueves ese', { paso: 'salida' }, '2026-08-31');
+  okQue('una fecha que no entiende la vuelve a pedir, no la inventa',
+    !r.cotiza && /no entendi la fecha/i.test(conv.normaliza(r.texto)));
+}
+{
+  const r = conv.respuestaA('cancelar', { paso: 'destino' }, '2026-08-31');
+  ok('se puede cancelar a media cotizacion', r.estado, null);
+}
+{
+  /* A media cotizacion, «Chapala» es el destino — no un saludo fallido. */
+  const r = conv.respuestaA('Chapala', { paso: 'destino' }, '2026-08-31');
+  ok('a media cotizacion, lo que escribe es la RESPUESTA, no un tema nuevo',
+    r.estado && r.estado.destino, 'Chapala');
+}
+
+console.log('\n== EL PRECIO QUE DEVUELVE /api/cotizar ==');
+{
+  const resumen = { destino: 'Chapala', origen: 'Guadalajara',
+    salida: '2026-09-10', regreso: '2026-09-12' };
+  const r = conv.textoDeCotizacion(
+    { total: 9000, anticipo: 1800, saldo: 7200, dias: 3, requiereAsesor: false }, resumen);
+  okQue('enseña el total tal cual vino', /\$9,000/.test(r.texto));
+  okQue('  y el anticipo', /\$1,800/.test(r.texto));
+  okQue('  y repite QUE se cotizo', /Chapala/.test(r.texto) && /septiembre/.test(r.texto));
+  ok('  sin necesitar persona', r.pasa, false);
+}
+{
+  const r = conv.textoDeCotizacion(null, {});
+  ok('si /api/cotizar falla NO se inventa un precio: pasa con persona', r.pasa, true);
+  okQue('  y no suelta ninguna cifra', !/\$\s*[\d,]+/.test(r.texto));
+}
+{
+  const r = conv.textoDeCotizacion({ total: 90000, requiereAsesor: true }, {});
+  ok('si el motor pide asesor, se respeta', r.pasa, true);
+  okQue('  y NO se enseña ese total', !/\$\s*90/.test(r.texto));
 }
 
 console.log('\n== NUNCA DICE UN PRECIO (R12) ==');

@@ -1946,6 +1946,85 @@
   color: rgba(255,255,255,.85);
 }
 .wa-fab-texto b + b { font-size: 14.5px; font-weight: 600; font-variant-numeric: tabular-nums; }
+/* Era un <a>; ahora es un <button> y hay que devolverle lo que el
+   navegador le quita de fábrica. */
+.wa-fab { border: 0; padding: 0; font: inherit; cursor: pointer; text-align: left; }
+
+/* ---------- el chat ---------- */
+.wa-chat {
+  position: fixed; right: 22px; bottom: 96px; z-index: 60;
+  width: min(380px, calc(100vw - 32px)); height: min(560px, calc(100vh - 130px));
+  background: #0b141a; border-radius: 16px; overflow: hidden;
+  display: flex; flex-direction: column;
+  box-shadow: 0 24px 60px rgba(0,0,0,.45);
+  font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  animation: wa-sube .22s ease-out;
+}
+@keyframes wa-sube { from { opacity: 0; transform: translateY(14px); } }
+.wa-chat[hidden] { display: none; }
+.wa-chat-barra {
+  background: #202c33; padding: 11px 14px; display: flex; align-items: center;
+  gap: 11px; flex: none;
+}
+.wa-chat-foto {
+  width: 38px; height: 38px; border-radius: 50%; background: #25d366;
+  display: grid; place-items: center; color: #fff; flex: none;
+}
+.wa-chat-quien { flex: 1; line-height: 1.25; }
+.wa-chat-quien b { color: #e9edef; font-size: 15px; display: block; }
+.wa-chat-quien small { color: #8696a0; font-size: 11.5px; }
+.wa-chat-cerrar {
+  background: none; border: 0; color: #8696a0; font-size: 17px; cursor: pointer;
+  padding: 6px 8px; line-height: 1; border-radius: 6px;
+}
+.wa-chat-cerrar:hover { color: #e9edef; background: rgba(255,255,255,.06); }
+.wa-chat-hilo {
+  flex: 1; overflow-y: auto; padding: 14px; display: flex;
+  flex-direction: column; gap: 7px;
+}
+.wa-b {
+  max-width: 86%; padding: 8px 10px; border-radius: 8px; font-size: 14px;
+  line-height: 1.45; white-space: pre-wrap; word-wrap: break-word; color: #e9edef;
+}
+.wa-yo { align-self: flex-end; background: #005c4b; }
+.wa-bot { align-self: flex-start; background: #202c33; }
+.wa-b a { color: #53bdeb; }
+.wa-b b { font-weight: 600; }
+.wa-puntos { display: flex; gap: 4px; padding: 12px 12px; }
+.wa-puntos span {
+  width: 7px; height: 7px; border-radius: 50%; background: #8696a0;
+  animation: wa-brinca 1.2s infinite;
+}
+.wa-puntos span:nth-child(2) { animation-delay: .15s; }
+.wa-puntos span:nth-child(3) { animation-delay: .3s; }
+@keyframes wa-brinca { 0%, 60%, 100% { opacity: .3; } 30% { opacity: 1; } }
+.wa-real {
+  align-self: flex-start; background: #25d366; color: #05271a !important;
+  font-size: 13px; font-weight: 600; padding: 8px 14px; border-radius: 18px;
+  text-decoration: none;
+}
+.wa-chat-atajos {
+  display: flex; flex-wrap: wrap; gap: 6px; padding: 0 12px 8px; flex: none;
+}
+.wa-chat-atajos:empty { display: none; }
+.wa-chat-atajos button {
+  background: #2a3942; color: #d6dde1; border: 0; border-radius: 14px;
+  padding: 6px 12px; font-size: 12.5px; cursor: pointer;
+}
+.wa-chat-atajos button:hover { background: #3a4a54; }
+.wa-chat-forma { display: flex; gap: 8px; padding: 10px 12px; background: #202c33; flex: none; }
+.wa-chat-forma input {
+  flex: 1; padding: 10px 15px; border-radius: 20px; border: 0;
+  background: #2a3942; color: #e9edef; font-size: 14.5px; outline: none;
+}
+.wa-chat-forma button {
+  width: 40px; height: 40px; border-radius: 50%; border: 0; flex: none;
+  background: #25d366; color: #fff; font-size: 15px; cursor: pointer;
+}
+@media (max-width: 560px) {
+  .wa-chat { right: 12px; left: 12px; bottom: 84px; width: auto;
+    height: min(72vh, calc(100vh - 110px)); }
+}
 
 @keyframes wa-flota { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
 @keyframes wa-latir {
@@ -6080,16 +6159,74 @@ window.IMGS = {
 })();
 </script>
 <!-- /INICIO-NUEVO:GUION -->
-<a class="wa-fab" href="https://wa.me/523321832993" target="_blank" rel="noopener"
-   aria-label="Escríbenos por WhatsApp">
+<!-- Antes se iba directo a wa.me. Ahora abre el chat de aquí mismo, que
+     contesta al instante y cotiza la Sprinter sin esperar a nadie. El
+     WhatsApp de verdad sigue a un clic: el bot lo ofrece en cuanto hace
+     falta una persona, y el pie de página lo tiene siempre. -->
+<button class="wa-fab" type="button" id="wa-abrir"
+   aria-label="Abrir el chat de Eurotravel" aria-expanded="false" aria-controls="wa-chat">
   <span class="wa-fab-icono">
     <span class="wa-fab-onda" aria-hidden="true"></span>
     <svg width="22" height="22" viewBox="0 0 16 16" aria-hidden="true"><use href="#ei-wasap"/></svg>
   </span>
   <span class="wa-fab-texto">
     <b>Respuesta el mismo día</b>
-    <b>WhatsApp 33 2183 2993</b>
+    <b>Escríbenos ahora</b>
   </span>
-</a>
+</button>
+
+<!-- ============================================================
+     EL CHAT
+     ------------------------------------------------------------
+     Corre `bot.js`, el MISMO archivo que va a correr el webhook de
+     WhatsApp cuando se dé de alta con Meta. No es una imitación ni
+     una copia: lo que el cliente lee aquí es exactamente lo que va a
+     leer allá.
+
+     El precio NO se calcula aquí. El bot junta los datos y quien
+     cobra sigue siendo `/api/cotizar` — la misma puerta que usa el
+     cotizador de la página. Aquí no vive ninguna tarifa.
+     ============================================================ -->
+<div class="wa-chat" id="wa-chat" hidden role="dialog" aria-modal="false"
+     aria-label="Chat con Eurotravel">
+  <div class="wa-chat-barra">
+    <span class="wa-chat-foto" aria-hidden="true">
+      <svg width="20" height="20" viewBox="0 0 16 16"><use href="#ei-wasap"/></svg>
+    </span>
+    <span class="wa-chat-quien">
+      <b>Eurotravel</b>
+      <small>contesta al instante</small>
+    </span>
+    <button type="button" class="wa-chat-cerrar" id="wa-cerrar" aria-label="Cerrar el chat">✕</button>
+  </div>
+
+  <div class="wa-chat-hilo" id="wa-hilo" role="log" aria-live="polite"></div>
+
+  <div class="wa-chat-atajos" id="wa-atajos"></div>
+
+  <form class="wa-chat-forma" id="wa-forma" autocomplete="off">
+    <input id="wa-caja" maxlength="300" placeholder="Escribe un mensaje"
+           aria-label="Tu mensaje" />
+    <button type="submit" aria-label="Enviar">➤</button>
+  </form>
+</div>
+
+<!-- `bot.js` está escrito para Node, porque el webhook de WhatsApp lo va a
+     cargar allá. Se le prestan las cuatro cosas que espera encontrar y
+     enseguida se quitan, para no dejar `module` ni `require` sueltos en la
+     página: otro script podría preguntar por ellos y creerse en Node.
+     `unidades.js` ya se cargó más arriba, que es lo único que necesita. -->
+<script>
+  window.global = window;
+  window.process = window.process || { env: {} };
+  window.module = { exports: {} };
+  window.require = function () { return null; };
+</script>
+<script src="bot.js"></script>
+<script>
+  window.BOT = window.module.exports;
+  delete window.module; delete window.require; delete window.global;
+</script>
+<script src="bot-navegador.js"></script>
 </body>
 </html>

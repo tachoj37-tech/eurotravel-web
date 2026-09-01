@@ -83,6 +83,115 @@ function tiene(t, palabras) {
 }
 
 /* ------------------------------------------------------------
+   FECHAS
+   ------------------------------------------------------------
+   El cliente escribe la fecha como se le da la gana, igual que en
+   el papel: «10 de septiembre», «10/9», «mañana», «el 15».
+
+   Todo viaja como texto `aaaa-mm-dd` y NUNCA se arma un `Date` a
+   partir de pedazos: `new Date('2026-09-10')` es medianoche UTC,
+   o sea las 18:00 del día ANTERIOR aquí. Ese defecto no se ve en
+   la computadora de la oficina, solo en el servidor — y aquí
+   correría en los dos lados.
+
+   En formato ISO el orden alfabético ES el cronológico, así que
+   comparar cadenas basta y no hay zona horaria que se cuele.
+   ------------------------------------------------------------ */
+const MESES = {
+  enero: 1, ene: 1, febrero: 2, feb: 2, marzo: 3, mar: 3, abril: 4, abr: 4,
+  mayo: 5, may: 5, junio: 6, jun: 6, julio: 7, jul: 7, agosto: 8, ago: 8,
+  septiembre: 9, setiembre: 9, sep: 9, sept: 9, octubre: 10, oct: 10,
+  noviembre: 11, nov: 11, diciembre: 12, dic: 12
+};
+
+function dosDigitos(n) { return (n < 10 ? '0' : '') + n; }
+
+/* El día de hoy en `aaaa-mm-dd`, con la hora LOCAL. Se usan las
+   partes locales del reloj, no `toISOString`, que convierte a UTC y
+   después de las 6 de la tarde daría mañana. */
+function hoyISO(reloj) {
+  const d = reloj || new Date();
+  return d.getFullYear() + '-' + dosDigitos(d.getMonth() + 1) + '-' + dosDigitos(d.getDate());
+}
+
+/* Suma días a una fecha ISO sin construir un Date con texto. */
+function masDias(iso, n) {
+  const p = iso.split('-');
+  const d = new Date(Number(p[0]), Number(p[1]) - 1, Number(p[2]));
+  d.setDate(d.getDate() + n);
+  return hoyISO(d);
+}
+
+function diasDelMes(anio, mes) {
+  return new Date(anio, mes, 0).getDate();
+}
+
+/* Devuelve `aaaa-mm-dd` o null. `hoy` entra como parámetro —y no se
+   pregunta al reloj aquí dentro— para que las pruebas puedan fijar
+   el día y no cambien de resultado en año nuevo. */
+function fechaDe(texto, hoy) {
+  const t = normaliza(texto);
+  const base = hoy || hoyISO();
+
+  if (/\bhoy\b/.test(t)) return base;
+  if (/\bmanana\b/.test(t)) return masDias(base, 1);
+  if (/\bpasado manana\b/.test(t)) return masDias(base, 2);
+
+  const anioHoy = Number(base.slice(0, 4));
+
+  /* «10 de septiembre», «10 septiembre», «10 de sep del 2027» */
+  let m = t.match(/(\d{1,2})\s*(?:de\s*)?([a-z]+)(?:\s*(?:de(?:l)?\s*)?(\d{4}))?/);
+  if (m && MESES[m[2]]) {
+    return armaFecha(Number(m[3]) || null, MESES[m[2]], Number(m[1]), base);
+  }
+
+  /* «10/9», «10-09-2026», «10.9.26» */
+  m = t.match(/\b(\d{1,2})[\/\-.](\d{1,2})(?:[\/\-.](\d{2,4}))?\b/);
+  if (m) {
+    let a = m[3] ? Number(m[3]) : null;
+    if (a !== null && a < 100) a += 2000;
+    return armaFecha(a, Number(m[2]), Number(m[1]), base);
+  }
+
+  /* «el 15», a secas: el 15 más cercano que no haya pasado. */
+  m = t.match(/^(?:el\s*)?(\d{1,2})$/);
+  if (m) {
+    const dia = Number(m[1]);
+    const mesHoy = Number(base.slice(5, 7));
+    const diaHoy = Number(base.slice(8, 10));
+    let mes = mesHoy, anio = anioHoy;
+    if (dia < diaHoy) { mes += 1; if (mes > 12) { mes = 1; anio += 1; } }
+    return armaFecha(anio, mes, dia, base);
+  }
+
+  return null;
+}
+
+function armaFecha(anio, mes, dia, base) {
+  if (!(mes >= 1 && mes <= 12)) return null;
+  const anioHoy = Number(base.slice(0, 4));
+  let a = anio || anioHoy;
+  if (!(dia >= 1 && dia <= diasDelMes(a, mes))) return null;
+  let iso = a + '-' + dosDigitos(mes) + '-' + dosDigitos(dia);
+  /* Sin año escrito, una fecha ya pasada se entiende del año que viene:
+     nadie cotiza un viaje para atrás. Con año escrito se respeta. */
+  if (!anio && iso < base) {
+    a += 1;
+    if (dia > diasDelMes(a, mes)) return null;      // 29 de febrero
+    iso = a + '-' + dosDigitos(mes) + '-' + dosDigitos(dia);
+  }
+  return iso;
+}
+
+/* Para enseñarla como la diría una persona. */
+const NOMBRE_MES = ['', 'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
+  'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+function fechaEnPalabras(iso) {
+  return Number(iso.slice(8, 10)) + ' de ' + NOMBRE_MES[Number(iso.slice(5, 7))] +
+    ' de ' + iso.slice(0, 4);
+}
+
+/* ------------------------------------------------------------
    «Somos 30» · «para 45 personas» · «45 pax»
    ------------------------------------------------------------
    Se busca un número que venga acompañado de algo que hable de
@@ -139,8 +248,153 @@ const PASA = {
    conversación necesita una persona: quien llame decide si eso
    es avisarle al dueño, marcarla en un tablero, o nada.
    ------------------------------------------------------------ */
-function respuestaA(mensaje) {
+/* ------------------------------------------------------------
+   LA COTIZACIÓN, PASO A PASO
+   ------------------------------------------------------------
+   Solo para la Sprinter: es la única unidad con
+   `cotizadorAutomatico` en el catálogo. Para las demás el precio
+   lo da una persona, y el bot no lo inventa.
+
+   El estado NO vive aquí dentro. Entra y sale como parámetro,
+   por dos razones:
+
+     · en el servidor esto corre sin memoria entre mensajes; una
+       variable de módulo se mezclaría entre clientes distintos
+     · así se puede probar cada paso sin fingir una conversación
+
+   Cuando ya juntó los cuatro datos NO cotiza: devuelve `cotiza`
+   con lo que hay que preguntarle a `/api/cotizar`. Quien llama es
+   el que tiene la red. El precio SIEMPRE sale del motor de cobro,
+   nunca de aquí (R12).
+   ------------------------------------------------------------ */
+function pasoDeCotizacion(t, crudo, estado, hoy) {
+  const e = estado;
+
+  if (tiene(t, ['cancelar', 'olvidalo', 'ya no', 'mejor no', 'empezar de nuevo'])) {
+    return { texto: 'Listo, lo dejamos ahí 👍\n\n¿Te ayudo con algo más?',
+      pasa: false, estado: null };
+  }
+
+  if (e.paso === 'destino') {
+    const d = String(crudo).trim().slice(0, 120);
+    if (d.length < 3) {
+      return { texto: '¿A qué ciudad o lugar van?', pasa: false, estado: e };
+    }
+    return {
+      texto: 'Perfecto, *' + d + '* 📍\n\n¿Y de dónde salen?',
+      pasa: false,
+      estado: { paso: 'origen', destino: d }
+    };
+  }
+
+  if (e.paso === 'origen') {
+    const o = String(crudo).trim().slice(0, 120);
+    if (o.length < 3) {
+      return { texto: '¿De qué ciudad salen?', pasa: false, estado: e };
+    }
+    return {
+      texto: '¿Qué día salen? Puedes escribirlo como quieras: *10 de septiembre*, ' +
+        '*10/9*, o *mañana*.',
+      pasa: false,
+      estado: { paso: 'salida', destino: e.destino, origen: o }
+    };
+  }
+
+  if (e.paso === 'salida') {
+    const f = fechaDe(crudo, hoy);
+    if (!f) {
+      return { texto: 'No entendí la fecha 🙈 Escríbela como *10 de septiembre* o *10/9*.',
+        pasa: false, estado: e };
+    }
+    return {
+      texto: 'Salen el *' + fechaEnPalabras(f) + '*.\n\n¿Y qué día regresan?',
+      pasa: false,
+      estado: { paso: 'regreso', destino: e.destino, origen: e.origen, salida: f }
+    };
+  }
+
+  if (e.paso === 'regreso') {
+    const f = fechaDe(crudo, hoy);
+    if (!f) {
+      return { texto: 'Esa fecha no la entendí. ¿Qué día regresan?', pasa: false, estado: e };
+    }
+    if (f < e.salida) {
+      return {
+        texto: 'El regreso queda antes de la salida 🤔 Salen el *' +
+          fechaEnPalabras(e.salida) + '*. ¿Qué día vuelven?',
+        pasa: false, estado: e
+      };
+    }
+    return {
+      texto: 'Va, déjame sacar el precio…',
+      pasa: false,
+      estado: null,
+      cotiza: {
+        unidad: 'sprinter',
+        origen: { direccion: e.origen },
+        destino: { direccion: e.destino },
+        salida: e.salida,
+        regreso: f,
+        redondo: true
+      },
+      /* Se guarda en palabras para poder repetirlo al dar el precio: el
+         cliente tiene que ver QUÉ se cotizó, no solo cuánto. */
+      resumen: { destino: e.destino, origen: e.origen, salida: e.salida, regreso: f }
+    };
+  }
+
+  return null;
+}
+
+/* ------------------------------------------------------------
+   Arma el mensaje con el precio que devolvió `/api/cotizar`.
+   El número entra tal cual del motor de cobro: aquí NO se
+   calcula ni se redondea nada.
+   ------------------------------------------------------------ */
+function textoDeCotizacion(precio, resumen) {
+  if (!precio || typeof precio.total !== 'number') {
+    return {
+      texto: 'No pude sacar el precio de ese viaje 🙈\n\nMárcale al *' + TELEFONO +
+        '* y te lo cotizan al momento.',
+      pasa: true
+    };
+  }
+  if (precio.requiereAsesor) {
+    return {
+      texto: 'Ese viaje lo tenemos que cotizar a la medida.\n\nMárcale al *' +
+        TELEFONO + '* y te atienden.',
+      pasa: true
+    };
+  }
+
+  const pesos = function (n) { return '$' + Number(n).toLocaleString('es-MX'); };
+  const r = resumen || {};
+
+  return {
+    texto: '🚐 *Sprinter · hasta 20 pasajeros*\n\n' +
+      (r.origen ? '📍 ' + r.origen + ' → ' + r.destino + '\n' : '') +
+      (r.salida ? '📅 ' + fechaEnPalabras(r.salida) + ' al ' + fechaEnPalabras(r.regreso) + '\n' : '') +
+      '🗓️ ' + precio.dias + (precio.dias === 1 ? ' día' : ' días') + ' de servicio\n\n' +
+      '*Total: ' + pesos(precio.total) + '* (IVA incluido)\n' +
+      'Para apartar: ' + pesos(precio.anticipo) + '\n' +
+      'Resto al abordar: ' + pesos(precio.saldo) + '\n\n' +
+      'Incluye operador, combustible, casetas y seguro de viajero.\n\n' +
+      '¿Lo apartamos? Puedes hacerlo en línea aquí:\n' + SITIO + '/#/cotizar\n' +
+      'O márcale al *' + TELEFONO + '* si prefieres.',
+    pasa: false
+  };
+}
+
+function respuestaA(mensaje, estado, hoy) {
   const t = normaliza(mensaje);
+
+  /* Si va a media cotización, ese paso manda: lo que escriba es la
+     respuesta a lo que se le acaba de preguntar, no un tema nuevo.
+     Sin esto, contestar «Chapala» se leería como saludo fallido. */
+  if (estado && estado.paso) {
+    const seguir = pasoDeCotizacion(t, mensaje, estado, hoy);
+    if (seguir) return seguir;
+  }
 
   if (!t) {
     return {
@@ -169,13 +423,14 @@ function respuestaA(mensaje) {
     /* Solo la unidad marcada con `cotizadorAutomatico` tiene precio en
        línea. Para las demás el precio se da personalmente, y el bot no
        tiene ningún negocio inventándolo. */
+    /* La Sprinter SÍ se cotiza aquí mismo, porque es la única con
+       `cotizadorAutomatico` en el catálogo. Se arranca el paso a paso. */
     if (u && u.cotizadorAutomatico) {
       return {
         texto: 'Para ' + gente + ' personas te va la *' + u.name + '* (' + u.cap + ').\n\n' +
-          'Esa la puedes cotizar tú mismo en un minuto, con fechas y todo:\n' +
-          SITIO + '/#/cotizar\n\n' +
-          'Te da el precio al momento y puedes apartar en línea.',
-        pasa: false
+          'Te saco el precio ahorita mismo 👇\n\n¿A dónde van?',
+        pasa: false,
+        estado: { paso: 'destino' }
       };
     }
     if (u) {
@@ -187,13 +442,12 @@ function respuestaA(mensaje) {
         pasa: true
       };
     }
+    /* Sin saber cuántos son no se puede escoger unidad, y sin unidad no
+       se sabe si el precio se puede dar aquí o lo tiene que dar una
+       persona. Así que primero eso. */
     return {
-      texto: 'Con gusto 🚌 El precio depende de a dónde van, cuántos días y ' +
-        'cuántas personas son.\n\n' +
-        'Si son *20 personas o menos*, cotiza tú mismo aquí y te da el precio ' +
-        'al momento:\n' + SITIO + '/#/cotizar\n\n' +
-        'Si son más, dime cuántos son y a dónde van, o márcale al *' +
-        TELEFONO + '*.',
+      texto: 'Con gusto 🚌 ¿Cuántas personas viajan?\n\n' +
+        'Si son *20 o menos* te saco el precio aquí mismo en un minuto.',
       pasa: false
     };
   }
@@ -216,9 +470,10 @@ function respuestaA(mensaje) {
     return {
       texto: 'Para ' + gente + ' personas te va la *' + u.name + '*.\n\n' + fichaDe(u) +
         (u.cotizadorAutomatico
-          ? '\n\nCotízala en línea aquí:\n' + SITIO + '/#/cotizar'
+          ? '\n\n¿Te saco el precio? Dime *a dónde van*.'
           : '\n\n¿A dónde van y qué días? Con eso te cotizan.'),
-      pasa: !u.cotizadorAutomatico
+      pasa: !u.cotizadorAutomatico,
+      estado: u.cotizadorAutomatico ? { paso: 'destino' } : null
     };
   }
 
@@ -288,4 +543,8 @@ function respuestaA(mensaje) {
   };
 }
 
-module.exports = { respuestaA, normaliza, cuantaGente, unidadPara, UNIDADES, TELEFONO };
+module.exports = {
+  respuestaA, textoDeCotizacion,
+  normaliza, cuantaGente, unidadPara, fechaDe, fechaEnPalabras, hoyISO,
+  UNIDADES, TELEFONO
+};
