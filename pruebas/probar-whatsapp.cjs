@@ -5,6 +5,10 @@ const crypto = require('crypto');
 const conv = require('../bot');
 const hook = require('../api/_whatsapp-webhook');
 
+/* El dia se fija a proposito: si se preguntara al reloj, las pruebas de
+   fechas cambiarian de resultado en año nuevo. */
+const HOY = '2026-08-31';
+
 const SECRETO = 'secreto-de-prueba';
 const TOKEN = 'token-de-alta';
 const ENV = { WHATSAPP_APP_SECRET: SECRETO, WHATSAPP_VERIFY_TOKEN: TOKEN };
@@ -172,9 +176,17 @@ console.log('\n== EL PRECIO: LO MAS DELICADO ==');
   ok('  y NO necesita persona', r.pasa, false);
 }
 {
-  const r = conv.respuestaA('cuanto cuesta para 45 personas');
-  okQue('con 45 personas NO manda al cotizador', !/\/#\/cotizar/.test(r.texto));
-  ok('  y SI pasa con una persona', r.pasa, true);
+  /* CAMBIO DE LADO — 31-ago-2026.
+     Antes con 45 personas el bot mandaba con una persona de inmediato.
+     El dueño pidio lo contrario: que le junte TODOS los datos primero,
+     «para que el empleado nomas vea y saque el precio en chinga».
+     Asi que ahora NO pasa de golpe (pasa: false): arranca a preguntar,
+     y pasa al final, ya con la solicitud armada. Eso se revisa abajo,
+     en la seccion de la solicitud. */
+  const r = conv.respuestaA('cuanto cuesta para 45 personas', null, HOY);
+  okQue('con 45 personas NO cotiza en linea', !r.cotiza);
+  ok('  y en vez de despacharlo, empieza a juntar los datos',
+    r.estado && r.estado.unidad, 'autobus');
 }
 {
   const r = conv.respuestaA('quiero hablar con una persona, cuanto cuesta');
@@ -206,8 +218,6 @@ console.log('\n== LAS FECHAS, COMO LAS ESCRIBE LA GENTE ==');
     .map(function (c) { return c[0] + ' -> ' + conv.fechaDe(c[0], HOY) + ' (esperaba ' + c[1] + ')'; });
   ok('lee la fecha escrita de 12 formas distintas', mal, []);
 }
-
-const HOY = '2026-08-31';
 
 /* Corre una conversacion entera y devuelve el ultimo turno mas todo lo
    que se dijo, para poder revisar el camino y no solo el final. */
@@ -357,6 +367,95 @@ console.log('\n== LO QUE PREGUNTA TIENE QUE CABER EN WHATSAPP ==');
   ok('los dias se cuentan con los dos extremos, y cruzando el año', mal, []);
 }
 
+console.log('\n== QUE UNIDAD LE OFRECE A CADA GRUPO ==');
+{
+  /* Pedido por el dueño el 31-ago-2026 despues de probarlo: con 21
+     personas el bot le saltaba a un autobus sin preguntarle nada. */
+  const r = conv.respuestaA('somos 21 personas', null, HOY);
+  okQue('con 21 NO salta al autobus: pregunta si se acomodan en 20',
+    /poquito arriba/i.test(conv.normaliza(r.texto)));
+  ok('  con boton para cada respuesta', r.opciones, ['Sí, somos 20', 'Somos 21']);
+}
+{
+  const r = conv.respuestaA('somos 21 personas', null, HOY);
+  const si = conv.respuestaA('Sí, somos 20', r.estado, HOY);
+  ok('si aceptan ser 20, cotiza la Sprinter', si.estado && si.estado.unidad, 'sprinter');
+  const no = conv.respuestaA('Somos 21', r.estado, HOY);
+  ok('si insisten en 21, se va por autobus', no.estado && no.estado.unidad, 'autobus');
+}
+{
+  /* Tambien pedido: con grupo chico hay DOS unidades, no una. */
+  const r = conv.respuestaA('somos 4 personas', null, HOY);
+  okQue('con 4 ofrece la Sprinter Y la Suburban',
+    /Sprinter/.test(r.texto) && /Suburban/.test(r.texto));
+  okQue('  y dice que la Suburban es la premium',
+    /premium|ejecutivo/i.test(conv.normaliza(r.texto)));
+  ok('  con boton para cada una', r.opciones, ['La Sprinter', 'La Suburban']);
+}
+{
+  const r = conv.respuestaA('somos 4 personas', null, HOY);
+  const sub = conv.respuestaA('La Suburban', r.estado, HOY);
+  ok('escoger la Suburban NO cotiza en linea', sub.estado && sub.estado.unidad, 'suburban');
+  const spr = conv.respuestaA('La Sprinter', r.estado, HOY);
+  ok('escoger la Sprinter si', spr.estado && spr.estado.unidad, 'sprinter');
+}
+{
+  const mal = [];
+  [[3, 'elegirChica'], [6, 'elegirChica'], [7, 'destino'], [18, 'destino'],
+   [20, 'destino'], [21, 'ajustar'], [24, 'ajustar'], [25, 'destino'], [60, 'destino']]
+    .forEach(function (c) {
+      const r = conv.respuestaA('somos ' + c[0] + ' personas', null, HOY);
+      const paso = r.estado && r.estado.paso;
+      if (paso !== c[1]) mal.push(c[0] + ' personas -> ' + paso + ' (esperaba ' + c[1] + ')');
+    });
+  ok('cada tamaño de grupo va por donde debe', mal, []);
+}
+
+console.log('\n== LA SOLICITUD PARA QUIEN PONE EL PRECIO ==');
+{
+  /* «Sacame toda la info para que el empleado nomas vea y saque el
+     precio en chinga» — el dueño, 31-ago-2026. */
+  const c = conversa(['somos 45 personas', 'Puerto Vallarta', 'Guadalajara',
+    '12 de diciembre', '16 de diciembre', '2 dias', 'Todo el día', 'si']);
+  const r = c.ultimo;
+  ok('al final entrega una solicitud armada', !!r.solicitud, true);
+  ok('  y AHI si pasa con una persona', r.pasa, true);
+  const falta = ['45', 'Puerto Vallarta', 'Guadalajara', 'diciembre', '5 días', '2 días']
+    .filter(function (d) { return r.texto.indexOf(d) === -1; });
+  ok('  con TODO lo que necesita quien cotiza', falta, []);
+  okQue('  y sin ningun precio: eso lo pone la persona (R12)',
+    !/\$\s*[\d,]+/.test(r.texto));
+  ok('  el resumen guarda la unidad', r.solicitud.unidad, 'autobus');
+}
+{
+  /* Nombrar una unidad que no se cotiza sola tampoco puede acabar en
+     la ficha y ya: hay que juntarle los datos igual. */
+  const r = conv.respuestaA('quiero una suburban', null, HOY);
+  ok('nombrar la Suburban tambien junta los datos',
+    r.estado && [r.estado.paso, r.estado.unidad], ['destino', 'suburban']);
+}
+
+console.log('\n== POR ESTE CANAL NO SE COBRA IVA ==');
+{
+  /* Sus precios de lista YA traen el IVA (ivaIncluido: true en
+     _tarifa.js). Que aqui no se cobre significa 16% menos, no la misma
+     cifra sin etiqueta. */
+  const casos = [[9000, 7759], [20500, 17672], [12400, 10690]];
+  const mal = casos.filter(function (c) {
+    const t = conv.textoDeCotizacion(
+      { total: c[0], dias: 3, porcentajeAnticipo: 20 }, {}).texto;
+    return t.indexOf('$' + c[1].toLocaleString('es-MX')) === -1;
+  }).map(function (c) { return c[0] + ' deberia dar ' + c[1]; });
+  ok('le quita el 16% al precio de lista', mal, []);
+}
+{
+  const t = conv.textoDeCotizacion({ total: 9000, dias: 3, porcentajeAnticipo: 20 }, {}).texto;
+  okQue('el anticipo y el saldo suman el total de aca', (function () {
+    const n = t.match(/\$([\d,]+)/g).map(function (s) { return Number(s.replace(/[$,]/g, '')); });
+    return n[0] === n[1] + n[2];
+  })());
+}
+
 console.log('\n== EL BOT ENTIENDE SUS PROPIOS BOTONES ==');
 {
   /* Ofrecer un boton que el bot no sabe leer es la peor forma de
@@ -402,11 +501,22 @@ console.log('\n== EL PRECIO QUE DEVUELVE /api/cotizar ==');
 {
   const resumen = { destino: 'Chapala', origen: 'Guadalajara',
     salida: '2026-09-10', regreso: '2026-09-12' };
+  /* CAMBIO DE LADO — 31-ago-2026.
+     Antes se exigia que enseñara el total tal cual venia del motor
+     ($9,000). El dueño dicto que por este canal NO se cobra IVA:
+     «solamente se cobra cuando cotizan y pagan en linea».
+     Sus precios de lista YA traen el IVA dentro (_tarifa.js lo dice,
+     ivaIncluido: true), asi que no cobrarlo NO es quitarle la etiqueta
+     al mismo numero: es cobrar 16% menos. 9000 / 1.16 = 7,759. */
   const r = conv.textoDeCotizacion(
-    { total: 9000, anticipo: 1800, saldo: 7200, dias: 3, requiereAsesor: false }, resumen);
-  okQue('enseña el total tal cual vino', /\$9,000/.test(r.texto));
-  okQue('  y el anticipo', /\$1,800/.test(r.texto));
-  okQue('  y repite QUE se cotizo', /Chapala/.test(r.texto) && /septiembre/.test(r.texto));
+    { total: 9000, anticipo: 1800, saldo: 7200, dias: 3, porcentajeAnticipo: 20,
+      requiereAsesor: false }, resumen);
+  okQue('le quita el IVA al total del motor', /\$7,759/.test(r.texto));
+  okQue('  y NO enseña el precio con IVA', !/\$9,000/.test(r.texto));
+  okQue('  el anticipo sale del total de ACA, no del de la pagina',
+    /\$1,552/.test(r.texto) && !/\$1,800/.test(r.texto));
+  okQue('  y avisa que la factura se saca en linea', /factura/i.test(r.texto));
+  okQue('  repite QUE se cotizo', /Chapala/.test(r.texto) && /septiembre/.test(r.texto));
   ok('  sin necesitar persona', r.pasa, false);
 }
 {

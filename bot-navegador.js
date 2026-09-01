@@ -101,10 +101,20 @@
     hilo.scrollTop = hilo.scrollHeight;
   }
 
-  /* Dos opciones no son mensajes, son acciones: llevan a otro lado en
+  /* Lo último que el bot armó para pasarle a una persona. Se guarda para
+     que «Enviar por WhatsApp» lo mande YA ESCRITO: el cliente contestó
+     seis preguntas, sería una grosería pedirle que las repita tecleando. */
+  var solicitudPendiente = null;
+
+  /* Algunas opciones no son mensajes, son acciones: llevan a otro lado en
      vez de contestarle al bot. */
   function esAccion(texto) {
     var t = String(texto);
+    if (/enviar por whatsapp/i.test(t) && solicitudPendiente) {
+      window.open('https://wa.me/523321832993?text=' +
+        encodeURIComponent(solicitudPendiente), '_blank', 'noopener');
+      return true;
+    }
     if (/apartar en linea|apartar en línea/i.test(t)) {
       location.hash = '#/cotizar';
       cierra();
@@ -178,7 +188,14 @@
         pideElPrecio(r.cotiza, r.resumen);
         return;                       // el precio llega en el siguiente turno
       }
-      if (r.pasa) ligaAWhatsApp();
+      /* La solicitud se guarda SIN la última parte, que son las
+         instrucciones para el cliente y no le sirven a quien cotiza. */
+      if (r.solicitud) {
+        solicitudPendiente = r.texto.split('\n\nYa tengo todo')[0];
+      }
+      /* Si ya se le armó la solicitud, la liga suelta sobra: el botón
+         «Enviar por WhatsApp» hace lo mismo y además manda los datos. */
+      if (r.pasa && !r.solicitud) ligaAWhatsApp();
       /* Las opciones las decide el bot, no la pantalla: así en WhatsApp
          saldrán los MISMOS botones, que es donde tienen que caber en
          tres de veinte caracteres. */

@@ -39,6 +39,10 @@ require('./unidades');
 const UNIDADES = global.window.UNIDADES || [];
 
 const TELEFONO = '33 2400 2285';
+
+/* La misma tasa que usa `_tarifa.js`. Aquí se necesita para lo
+   contrario: quitarla, porque por este canal no se cobra. */
+const TASA_IVA = 0.16;
 const SITIO = process.env.SITIO_URL || 'https://eurotravel-web.vercel.app';
 
 /* Quita acentos y baja a minúsculas, para que «cuántos» y «cuantos»
@@ -281,6 +285,90 @@ const PASA = {
    es la única que se cotiza sola—. */
 const OPCIONES_GENTE = ['Somos 10 o menos', 'Entre 11 y 20', 'Somos más de 20'];
 
+function porId(id) {
+  for (let i = 0; i < UNIDADES.length; i++) if (UNIDADES[i].id === id) return UNIDADES[i];
+  return null;
+}
+const SPRINTER = porId('sprinter');
+const SUBURBAN = porId('suburban');
+const MAYOR = UNIDADES.reduce(function (a, b) {
+  return Number(b.max) > Number(a.max) ? b : a;
+}, UNIDADES[0]);
+
+/* Hasta cuántos se le pregunta si pueden acomodarse en la Sprinter en
+   vez de mandarlos derecho a un autobús. Arriba de esto ya no tiene
+   caso: nadie deja a seis personas fuera. */
+const CASI_SPRINTER = 24;
+
+/* ------------------------------------------------------------
+   QUÉ UNIDAD OFRECERLE
+   ------------------------------------------------------------
+   Esto lo pidió el dueño después de probarlo: con 21 personas el bot
+   le saltaba directo a un autobús, sin preguntarle nada. Un grupo de
+   21 casi siempre puede ser 20, y esa diferencia es la que decide si
+   el precio sale al momento o hay que esperar a una persona.
+
+   Y con grupos chicos hay DOS opciones y no una: la Suburban es
+   servicio ejecutivo —interiores en piel, puerta a puerta— y cuesta
+   distinto. Ofrecer solo la Sprinter era esconderle media flota.
+   ------------------------------------------------------------ */
+function recomienda(gente) {
+  /* Grupo chico: caben en las dos, y son unidades muy distintas. */
+  if (gente <= Number(SUBURBAN.max)) {
+    return {
+      texto: 'Para ' + gente + (gente === 1 ? ' persona' : ' personas') +
+        ' tienes dos opciones 👇\n\n' +
+        '🚐 *' + SPRINTER.name + '* — ' + SPRINTER.cap + '\n' +
+        'La de siempre. Te la cotizo aquí mismo, al momento.\n\n' +
+        '🚙 *' + SUBURBAN.name + '* — ' + SUBURBAN.cap + '\n' +
+        'Servicio ejecutivo: interiores en piel, puerta a puerta. Es más ' +
+        'premium y su precio lo da una persona.\n\n' +
+        '¿Cuál te late?',
+      opciones: ['La Sprinter', 'La Suburban'],
+      estado: { paso: 'elegirChica', gente: gente }
+    };
+  }
+
+  /* Le cabe a la Sprinter: derecho a cotizar. */
+  if (gente <= Number(SPRINTER.max)) {
+    const p = siguiente({ paso: 'destino', unidad: 'sprinter', gente: gente });
+    return {
+      texto: 'Para ' + gente + ' personas te va la *' + SPRINTER.name + '* (' +
+        SPRINTER.cap + ').\n\nTe saco el precio ahorita 👇\n\n' + p.texto,
+      opciones: p.opciones,
+      estado: p.estado
+    };
+  }
+
+  /* Por poquito arriba. Vale la pena preguntar antes de mandarlo con
+     una persona: si pueden ser 20, tiene precio en un minuto. */
+  if (gente <= CASI_SPRINTER) {
+    return {
+      texto: 'Andan por poquito arriba 🤏\n\nLa *' + SPRINTER.name + '* lleva ' +
+        SPRINTER.max + ', y ustedes son ' + gente + '.\n\n' +
+        'Si logran acomodarse en ' + SPRINTER.max + ', te saco el precio ahorita ' +
+        'mismo. Si no, les paso un autobús y lo cotiza una persona.',
+      opciones: ['Sí, somos ' + SPRINTER.max, 'Somos ' + gente],
+      estado: { paso: 'ajustar', gente: gente }
+    };
+  }
+
+  /* Ya es autobús. No se cotiza aquí, pero SÍ se le juntan todos los
+     datos para que quien conteste solo ponga el precio. */
+  const cabeEnUna = gente <= Number(MAYOR.max);
+  const p = siguiente({ paso: 'destino', unidad: 'autobus', gente: gente });
+  return {
+    texto: (cabeEnUna
+      ? 'Para ' + gente + ' personas les va un *autobús* (hasta ' + MAYOR.max + ' pasajeros).'
+      : 'Para ' + gente + ' personas se ocupa más de una unidad — la más grande que ' +
+        'tenemos lleva ' + MAYOR.max + '.') +
+      '\n\nEse precio lo da una persona del equipo. Déjame juntar los datos para que ' +
+      'te lo pasen rápido y no tengas que repetir nada 👇\n\n' + p.texto,
+    opciones: p.opciones,
+    estado: p.estado
+  };
+}
+
 const HORAS_MOV = [
   { etiqueta: 'Hasta 8 horas', fin: '16:00' },
   { etiqueta: 'Hasta 10 horas', fin: '18:00' },
@@ -318,6 +406,16 @@ function resumenDe(e) {
 function pregunta(estado) {
   const e = estado;
   switch (e.paso) {
+    case 'elegirChica':
+      return {
+        texto: '¿La Sprinter o la Suburban?',
+        opciones: ['La Sprinter', 'La Suburban']
+      };
+    case 'ajustar':
+      return {
+        texto: '¿Se acomodan en ' + SPRINTER.max + '?',
+        opciones: ['Sí, somos ' + SPRINTER.max, 'Somos ' + (e.gente || 21)]
+      };
     case 'destino':
       return { texto: '¿A dónde van? 📍\n\nEscríbeme la ciudad o el lugar.', opciones: [] };
     case 'origen':
@@ -380,6 +478,48 @@ function pasoDeCotizacion(t, crudo, estado, hoy) {
   if (tiene(t, ['cancelar', 'olvidalo', 'ya no', 'mejor no'])) {
     return { texto: 'Listo, lo dejamos ahí 👍\n\n¿Te ayudo con algo más?',
       pasa: false, estado: null, opciones: [] };
+  }
+
+  /* ---- ¿Sprinter o Suburban? ---- */
+  if (e.paso === 'elegirChica') {
+    if (/suburban/.test(t)) {
+      e.unidad = 'suburban';
+    } else if (/sprinter/.test(t)) {
+      e.unidad = 'sprinter';
+    } else {
+      return siguiente(e);
+    }
+    e.paso = 'destino';
+    const p = siguiente(e);
+    return {
+      texto: 'Va, la *' + (e.unidad === 'suburban' ? SUBURBAN.name : SPRINTER.name) + '*.\n\n' +
+        (e.unidad === 'suburban'
+          ? 'Su precio lo da una persona, así que déjame juntar los datos para que te ' +
+            'lo pasen rápido 👇\n\n'
+          : '') + p.texto,
+      pasa: false, estado: p.estado, opciones: p.opciones
+    };
+  }
+
+  /* ---- ¿se acomodan en 20? ---- */
+  if (e.paso === 'ajustar') {
+    /* «Sí, somos 20» contra «Somos 23». Se mira el número que dijo, no
+       el sí o el no: los dos botones empiezan distinto pero lo que
+       decide es cuántos son. */
+    const n = cuantaGente(t);
+    const cabe = /^si/.test(t) || (n !== null && n <= Number(SPRINTER.max));
+    e.unidad = cabe ? 'sprinter' : 'autobus';
+    if (n !== null) e.gente = cabe ? Number(SPRINTER.max) : n;
+    e.paso = 'destino';
+    const p = siguiente(e);
+    return {
+      texto: (cabe
+        ? '¡Perfecto! Con ' + SPRINTER.max + ' les va la *' + SPRINTER.name +
+          '* y te saco el precio ahorita 👇'
+        : 'Sin problema, les va un *autobús*. Déjame juntar los datos para que una ' +
+          'persona te pase el precio rápido 👇') + '\n\n' + p.texto,
+      pasa: false, estado: p.estado, opciones: p.opciones
+    };
   }
 
   /* ---- a dónde ---- */
@@ -490,6 +630,34 @@ function pasoDeCotizacion(t, crudo, estado, hoy) {
     for (let i = 0; i < (e.recorridos || 0); i++) {
       movimientos.push({ horaInicio: '08:00', horaFin: HORAS_MOV[e.banda || 0].fin });
     }
+
+    /* ------------------------------------------------------------
+       LO QUE NO SE COTIZA SOLO
+       ------------------------------------------------------------
+       Autobús y Suburban no tienen `cotizadorAutomatico`, así que el
+       precio lo pone una persona. Pero el cliente ya contestó todo:
+       sería una grosería —y una venta perdida— mandarlo a empezar de
+       nuevo por teléfono.
+
+       Se le entrega la solicitud armada. Quien conteste solo pone el
+       precio, que es justo lo que pidió el dueño.
+       ------------------------------------------------------------ */
+    if (e.unidad && e.unidad !== 'sprinter') {
+      return {
+        texto: textoDeSolicitud(e),
+        pasa: true,
+        estado: null,
+        opciones: ['Enviar por WhatsApp', 'Cotizar otro'],
+        solicitud: {
+          unidad: e.unidad, gente: e.gente || null,
+          origen: e.origen, destino: e.destino,
+          salida: e.salida, regreso: e.regreso,
+          recorridos: e.recorridos || 0,
+          horas: e.recorridos ? HORAS_MOV[e.banda || 0].etiqueta : null
+        }
+      };
+    }
+
     return {
       texto: 'Va, déjame sacar el precio…',
       pasa: false,
@@ -527,6 +695,37 @@ function pasoDeCotizacion(t, crudo, estado, hoy) {
 }
 
 /* ------------------------------------------------------------
+   LA SOLICITUD ARMADA
+   ------------------------------------------------------------
+   Para lo que no se cotiza solo. Sale con todo lo que necesita
+   quien vaya a poner el precio, en el orden en que lo va a
+   buscar, y de una pieza para que el cliente pueda copiarla y
+   pegarla en WhatsApp sin escribir nada.
+
+   NO trae precio. Ese lo pone la persona (R12).
+   ------------------------------------------------------------ */
+function textoDeSolicitud(e) {
+  const dias = diasEntre(e.salida, e.regreso);
+  const queUnidad = e.unidad === 'suburban' ? SUBURBAN.name : 'Autobús';
+
+  return '📋 *Solicitud de cotización*\n\n' +
+    '🚌 Unidad: ' + queUnidad + '\n' +
+    (e.gente ? '👥 Pasajeros: ' + e.gente + '\n' : '') +
+    '📍 Salen de: ' + e.origen + '\n' +
+    '📍 Van a: ' + e.destino + '\n' +
+    '📅 Salida: ' + fechaEnPalabras(e.salida) + '\n' +
+    '📅 Regreso: ' + fechaEnPalabras(e.regreso) + '\n' +
+    '🗓️ ' + dias + (dias === 1 ? ' día' : ' días') + ' de servicio\n' +
+    '🚐 Recorridos: ' + (e.recorridos
+      ? e.recorridos + (e.recorridos === 1 ? ' día' : ' días') + ', ' +
+        HORAS_MOV[e.banda || 0].etiqueta.toLowerCase()
+      : 'ninguno') + '\n\n' +
+    'Ya tengo todo ✅\n\n' +
+    'Mándale esto por WhatsApp al *' + TELEFONO + '* y te pasan el precio en ' +
+    'un momento — no tienes que volver a explicar nada.';
+}
+
+/* ------------------------------------------------------------
    Arma el mensaje con el precio que devolvió `/api/cotizar`.
    El número entra tal cual del motor de cobro: aquí NO se
    calcula ni se redondea nada.
@@ -550,6 +749,25 @@ function textoDeCotizacion(precio, resumen) {
   const pesos = function (n) { return '$' + Number(n).toLocaleString('es-MX'); };
   const r = resumen || {};
 
+  /* ------------------------------------------------------------
+     POR AQUÍ NO SE COBRA IVA
+     ------------------------------------------------------------
+     Dictado por el dueño el 31-ago-2026: «el IVA, cuando es
+     WhatsApp, no lo cobres; solamente se cobra cuando cotizan y
+     pagan en línea. Cuando es WhatsApp, es otro método».
+
+     Sus precios de lista YA traen el IVA dentro —`_tarifa.js` lo
+     dice, `ivaIncluido: true`, y saca el subtotal dividiendo—.
+     Así que «no cobrarlo» aquí NO es quitarle la etiqueta al
+     mismo número: es cobrar menos. Se le quita el 16 %.
+
+     El anticipo se saca del total de AQUÍ, no del de la página,
+     o no cuadraría con lo que se le está cobrando.
+     ------------------------------------------------------------ */
+  const sinIva = Math.round(precio.total / (1 + TASA_IVA));
+  const anticipo = Math.round(sinIva * (Number(precio.porcentajeAnticipo) || 20) / 100);
+  const saldo = sinIva - anticipo;
+
   return {
     texto: '🚐 *Sprinter · hasta 20 pasajeros*\n\n' +
       (r.origen ? '📍 ' + r.origen + ' → ' + r.destino + '\n' : '') +
@@ -557,10 +775,12 @@ function textoDeCotizacion(precio, resumen) {
       '🗓️ ' + precio.dias + (precio.dias === 1 ? ' día' : ' días') + ' de servicio\n' +
       (r.recorridos ? '🚐 ' + r.recorridos + (r.recorridos === 1 ? ' día' : ' días') +
         ' de recorrido (' + String(r.horas).toLowerCase() + ')\n' : '') +
-      '\n*Total: ' + pesos(precio.total) + '* (IVA incluido)\n' +
-      'Para apartar: ' + pesos(precio.anticipo) + '\n' +
-      'Resto al abordar: ' + pesos(precio.saldo) + '\n\n' +
+      '\n*Total: ' + pesos(sinIva) + '*\n' +
+      'Para apartar: ' + pesos(anticipo) + '\n' +
+      'Resto al abordar: ' + pesos(saldo) + '\n\n' +
       'Incluye operador, combustible, casetas y seguro de viajero.\n\n' +
+      '_Este precio es pagando por acá. Si necesitas factura, se cotiza en línea ' +
+      'y ahí se agrega el IVA._\n\n' +
       '¿Lo apartamos?',
     pasa: false,
     opciones: ['Apartar en línea', 'Hablar con alguien', 'Cotizar otro']
@@ -600,29 +820,9 @@ function respuestaA(mensaje, estado, hoy) {
   if (tiene(t, ['precio', 'precios', 'costo', 'costos', 'cuesta', 'cuanto',
     'tarifa', 'tarifas', 'cotiz\\w*', 'presupuesto', 'cobran', 'cobras'])) {
     const gente = cuantaGente(t);
-    const u = gente ? unidadPara(gente) : null;
-
-    /* Solo la unidad marcada con `cotizadorAutomatico` tiene precio en
-       línea. Para las demás el precio se da personalmente, y el bot no
-       tiene ningún negocio inventándolo. */
-    /* La Sprinter SÍ se cotiza aquí mismo, porque es la única con
-       `cotizadorAutomatico` en el catálogo. Se arranca el paso a paso. */
-    if (u && u.cotizadorAutomatico) {
-      const p = siguiente({ paso: 'destino' });
-      return {
-        texto: 'Para ' + gente + ' personas te va la *' + u.name + '* (' + u.cap + ').\n\n' +
-          'Te saco el precio ahorita 👇\n\n' + p.texto,
-        pasa: false, estado: p.estado, opciones: p.opciones
-      };
-    }
-    if (u) {
-      return {
-        texto: 'Para ' + gente + ' personas te va la *' + u.name + '* (' + u.cap + ').\n\n' +
-          'El precio de esa unidad lo damos personalmente, porque depende del ' +
-          'destino, los días y los recorridos.\n\n' +
-          'Márcale al *' + TELEFONO + '* y te lo cotizan al momento.',
-        pasa: true
-      };
+    if (gente) {
+      const r = recomienda(gente);
+      return { texto: r.texto, pasa: false, estado: r.estado, opciones: r.opciones };
     }
     /* Sin saber cuántos son no se puede escoger unidad, y sin unidad no
        se sabe si el precio se puede dar aquí o lo tiene que dar una
@@ -642,31 +842,8 @@ function respuestaA(mensaje, estado, hoy) {
   /* ---- cuántos caben / qué unidad ---- */
   const gente = cuantaGente(t);
   if (gente) {
-    const u = unidadPara(gente);
-    if (!u) {
-      const mayor = UNIDADES.reduce(function (a, b) {
-        return Number(b.max) > Number(a.max) ? b : a;
-      }, UNIDADES[0]);
-      return {
-        texto: 'Para ' + gente + ' personas se necesita más de una unidad — la ' +
-          'más grande que tenemos es la *' + mayor.name + '* (' + mayor.cap + ').\n\n' +
-          'Eso ya se arma a la medida. Márcale al *' + TELEFONO + '* y te lo cotizan.',
-        pasa: true
-      };
-    }
-    if (u.cotizadorAutomatico) {
-      const p = siguiente({ paso: 'destino' });
-      return {
-        texto: 'Para ' + gente + ' personas te va la *' + u.name + '* (' + u.cap + ').\n\n' +
-          'Te saco el precio ahorita 👇\n\n' + p.texto,
-        pasa: false, estado: p.estado, opciones: p.opciones
-      };
-    }
-    return {
-      texto: 'Para ' + gente + ' personas te va la *' + u.name + '*.\n\n' + fichaDe(u) +
-        '\n\n¿A dónde van y qué días? Con eso te cotizan.',
-      pasa: true, opciones: []
-    };
+    const r = recomienda(gente);
+    return { texto: r.texto, pasa: false, estado: r.estado, opciones: r.opciones };
   }
 
   /* ------------------------------------------------------------
@@ -681,16 +858,24 @@ function respuestaA(mensaje, estado, hoy) {
     const u = UNIDADES[i];
     if (t.indexOf(normaliza(u.name)) !== -1) {
       if (u.cotizadorAutomatico) {
-        const p = siguiente({ paso: 'destino' });
+        const p = siguiente({ paso: 'destino', unidad: 'sprinter' });
         return {
           texto: '*' + u.name + '* — ' + u.cap + ' 🚐\n\nTe saco el precio ahorita.\n\n' +
             p.texto,
           pasa: false, estado: p.estado, opciones: p.opciones
         };
       }
+      /* Las que no se cotizan solas TAMPOCO se quedan en la ficha: se
+         le juntan los datos igual, para que quien ponga el precio no
+         tenga que preguntarle todo otra vez. */
+      const p = siguiente({
+        paso: 'destino',
+        unidad: u.id === 'suburban' ? 'suburban' : 'autobus'
+      });
       return {
-        texto: fichaDe(u) + '\n\n¿A dónde van y qué días? Con eso te cotizan.',
-        pasa: true, opciones: []
+        texto: '*' + u.name + '* — ' + u.cap + '\n\nSu precio lo da una persona del ' +
+          'equipo. Déjame juntar los datos para que te lo pasen rápido 👇\n\n' + p.texto,
+        pasa: false, estado: p.estado, opciones: p.opciones
       };
     }
   }
