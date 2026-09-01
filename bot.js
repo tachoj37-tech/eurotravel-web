@@ -1,0 +1,291 @@
+/* ============================================================
+   Qué contesta el bot de WhatsApp
+   ------------------------------------------------------------
+   Aquí NO hay red, ni Meta, ni claves: solo texto que entra y
+   texto que sale. Por eso se puede probar entero sin conectar
+   nada, y por eso vive aparte de `whatsapp.js`.
+
+   TRES REGLAS QUE NO SE ROMPEN
+
+   1. NO INVENTA PRECIOS. Nunca. Los precios los dicta el dueño
+      (R12 del criterio). Si el cliente pide precio, el bot manda
+      la liga del cotizador o pasa la conversación a una persona,
+      pero jamás dice una cifra que no salió del motor de cobro.
+
+   2. NO INVENTA DATOS. Todo lo que dice de las unidades sale de
+      `unidades.js`, que el propio archivo declara FUENTE ÚNICA.
+      Si algo no está ahí, el bot no lo sabe y lo dice.
+
+   3. NO USA IA. Es puro texto contra palabras clave. Cuesta cero
+      por mensaje y contesta igual de rápido de noche que de día.
+      Cuando no entiende, no adivina: pasa con una persona.
+      Adivinar mal el precio de un viaje cuesta más que no
+      contestar.
+   ============================================================ */
+
+/* ------------------------------------------------------------
+   Las unidades salen del catálogo del sitio, no de una copia.
+   `unidades.js` es un archivo de navegador: hace
+   `window.UNIDADES = [...]`. En el servidor no hay `window`, así
+   que se le presta uno antes de pedirlo. Es la misma maña que ya
+   usan las pruebas del proyecto.
+
+   Se hace así, y no copiando la lista aquí, porque una copia se
+   desactualiza en silencio: el dueño daría de alta una unidad y
+   el bot seguiría ofreciendo la flota vieja.
+   ------------------------------------------------------------ */
+global.window = global.window || {};
+require('./unidades');
+const UNIDADES = global.window.UNIDADES || [];
+
+const TELEFONO = '33 2400 2285';
+const SITIO = process.env.SITIO_URL || 'https://eurotravel-web.vercel.app';
+
+/* Quita acentos y baja a minúsculas, para que «cuántos» y «cuantos»
+   sean la misma palabra. Sin esto, media conversación se pierde por
+   un acento. */
+function normaliza(t) {
+  return String(t || '')
+    .toLowerCase()
+    .normalize('NFD')
+    /* Los acentos van con escape, no con el caracter suelto: son
+       invisibles en el editor y cualquier copiar-pegar los borra sin
+       que se note. U+0300 a U+036F son las tildes que `NFD` separo. */
+    .replace(/[̀-ͯ]/g, '')
+    .trim();
+}
+
+/* ------------------------------------------------------------
+   PALABRA COMPLETA, NO PEDAZO
+   ------------------------------------------------------------
+   Esto empezó buscando con `indexOf`, y estaba mal de tres formas
+   que las pruebas cazaron de golpe:
+
+     «somos 45 PERSONAS»        -> casaba con «persona» y en vez de
+                                   recomendar unidad, pasaba con
+                                   alguien sin contestar nada
+     «CUÁNTOS caben»            -> casaba con «cuanto» y lo trataba
+                                   como pregunta de precio
+     «BUSCO un camión»          -> casaba con «bus»
+
+   Con `\b` a los lados, «persona» ya no casa dentro de «personas»
+   porque después viene una letra.
+
+   Aquí `\b` SÍ es de fiar, y en otras partes de este proyecto no:
+   `\b` no reconoce las acentuadas, pero `normaliza` ya les quitó
+   el acento antes de llegar, así que a esta altura todo es ASCII.
+   ------------------------------------------------------------ */
+function tiene(t, palabras) {
+  for (let i = 0; i < palabras.length; i++) {
+    if (new RegExp('\\b' + palabras[i] + '\\b').test(t)) return true;
+  }
+  return false;
+}
+
+/* ------------------------------------------------------------
+   «Somos 30» · «para 45 personas» · «45 pax»
+   ------------------------------------------------------------
+   Se busca un número que venga acompañado de algo que hable de
+   gente. Un número suelto NO cuenta: «salimos el 15» es una
+   fecha, no quince pasajeros, y recomendarle una Sprinter a un
+   grupo de cincuenta por confundir eso es perder la venta.
+   ------------------------------------------------------------ */
+function cuantaGente(t) {
+  const pistas = /(\d{1,3})\s*(personas|pasajeros|pax|gente|alumnos|ninos|adultos|somos|alumnas)/;
+  const alReves = /(somos|para|seriamos|van|vamos|iriamos|serian)\s*(?:como\s*)?(\d{1,3})/;
+  let m = t.match(pistas);
+  if (m) return parseInt(m[1], 10);
+  m = t.match(alReves);
+  if (m) return parseInt(m[2], 10);
+  return null;
+}
+
+/* La unidad más chica en la que cabe el grupo. Se ordena por
+   capacidad para no depender del orden del catálogo. */
+function unidadPara(gente) {
+  const caben = UNIDADES
+    .filter(function (u) { return Number(u.max) >= gente; })
+    .sort(function (a, b) { return Number(a.max) - Number(b.max); });
+  return caben.length ? caben[0] : null;
+}
+
+function listaDeUnidades() {
+  return UNIDADES.map(function (u) {
+    return '• *' + u.name + '* — ' + u.cap;
+  }).join('\n');
+}
+
+/* Lo que trae una unidad, con sus palabras del catálogo. */
+function fichaDe(u) {
+  const cosas = (u.spec || []).map(function (s) {
+    return Array.isArray(s) ? s[1] : s;
+  });
+  return '*' + u.name + '* — ' + u.cap + '\n\n' +
+    cosas.map(function (c) { return '✓ ' + c; }).join('\n');
+}
+
+const PASA = {
+  texto: 'Con gusto te paso con una persona del equipo 🙌\n\n' +
+    'Escríbele o márcale al *' + TELEFONO + '* y te atienden directo.\n\n' +
+    'Si prefieres, déjame aquí a dónde vas y cuántos son, y alguien te ' +
+    'contesta en cuanto pueda.',
+  pasa: true
+};
+
+/* ------------------------------------------------------------
+   LA RESPUESTA
+   ------------------------------------------------------------
+   Devuelve { texto, pasa }. `pasa` en true significa que esta
+   conversación necesita una persona: quien llame decide si eso
+   es avisarle al dueño, marcarla en un tablero, o nada.
+   ------------------------------------------------------------ */
+function respuestaA(mensaje) {
+  const t = normaliza(mensaje);
+
+  if (!t) {
+    return {
+      texto: 'No alcancé a leer eso. ¿Me lo escribes de nuevo?',
+      pasa: false
+    };
+  }
+
+  /* Que pida una persona gana sobre todo lo demás. Si alguien
+     escribe «quiero hablar con alguien, cuánto cuesta», lo que
+     quiere es la persona, no el precio. */
+  if (tiene(t, ['persona', 'humano', 'asesor', 'alguien', 'agente',
+    'me atienda', 'hablar con', 'ejecutivo', 'operador'])) {
+    return PASA;
+  }
+
+  /* ---- el precio: lo más delicado ---- */
+  /* «cotiz» va con comodín porque cubre cotizar, cotización y cotizame.
+     «vale» se quitó a propósito: en México «vale» es «de acuerdo», y
+     «vale, gracias» acababa contestando una explicación de precios. */
+  if (tiene(t, ['precio', 'precios', 'costo', 'costos', 'cuesta', 'cuanto',
+    'tarifa', 'tarifas', 'cotiz\\w*', 'presupuesto', 'cobran', 'cobras'])) {
+    const gente = cuantaGente(t);
+    const u = gente ? unidadPara(gente) : null;
+
+    /* Solo la unidad marcada con `cotizadorAutomatico` tiene precio en
+       línea. Para las demás el precio se da personalmente, y el bot no
+       tiene ningún negocio inventándolo. */
+    if (u && u.cotizadorAutomatico) {
+      return {
+        texto: 'Para ' + gente + ' personas te va la *' + u.name + '* (' + u.cap + ').\n\n' +
+          'Esa la puedes cotizar tú mismo en un minuto, con fechas y todo:\n' +
+          SITIO + '/#/cotizar\n\n' +
+          'Te da el precio al momento y puedes apartar en línea.',
+        pasa: false
+      };
+    }
+    if (u) {
+      return {
+        texto: 'Para ' + gente + ' personas te va la *' + u.name + '* (' + u.cap + ').\n\n' +
+          'El precio de esa unidad lo damos personalmente, porque depende del ' +
+          'destino, los días y los recorridos.\n\n' +
+          'Márcale al *' + TELEFONO + '* y te lo cotizan al momento.',
+        pasa: true
+      };
+    }
+    return {
+      texto: 'Con gusto 🚌 El precio depende de a dónde van, cuántos días y ' +
+        'cuántas personas son.\n\n' +
+        'Si son *20 personas o menos*, cotiza tú mismo aquí y te da el precio ' +
+        'al momento:\n' + SITIO + '/#/cotizar\n\n' +
+        'Si son más, dime cuántos son y a dónde van, o márcale al *' +
+        TELEFONO + '*.',
+      pasa: false
+    };
+  }
+
+  /* ---- cuántos caben / qué unidad ---- */
+  const gente = cuantaGente(t);
+  if (gente) {
+    const u = unidadPara(gente);
+    if (!u) {
+      const mayor = UNIDADES.reduce(function (a, b) {
+        return Number(b.max) > Number(a.max) ? b : a;
+      }, UNIDADES[0]);
+      return {
+        texto: 'Para ' + gente + ' personas se necesita más de una unidad — la ' +
+          'más grande que tenemos es la *' + mayor.name + '* (' + mayor.cap + ').\n\n' +
+          'Eso ya se arma a la medida. Márcale al *' + TELEFONO + '* y te lo cotizan.',
+        pasa: true
+      };
+    }
+    return {
+      texto: 'Para ' + gente + ' personas te va la *' + u.name + '*.\n\n' + fichaDe(u) +
+        (u.cotizadorAutomatico
+          ? '\n\nCotízala en línea aquí:\n' + SITIO + '/#/cotizar'
+          : '\n\n¿A dónde van y qué días? Con eso te cotizan.'),
+      pasa: !u.cotizadorAutomatico
+    };
+  }
+
+  /* ---- una unidad por su nombre ---- */
+  for (let i = 0; i < UNIDADES.length; i++) {
+    const u = UNIDADES[i];
+    if (t.indexOf(normaliza(u.name)) !== -1) {
+      return { texto: fichaDe(u), pasa: false };
+    }
+  }
+
+  /* ---- la flota ---- */
+  if (tiene(t, ['unidad', 'unidades', 'camion', 'autobus', 'autobuses', 'bus',
+    'flota', 'vehiculo', 'transporte', 'capacidad', 'caben'])) {
+    return {
+      texto: 'Estas son nuestras unidades:\n\n' + listaDeUnidades() +
+        '\n\n¿Cuántas personas viajan? Con eso te digo cuál te conviene.',
+      pasa: false
+    };
+  }
+
+  /* ---- qué incluye ---- */
+  if (tiene(t, ['incluye', 'incluyen', 'servicio', 'baño', 'bano', 'aire',
+    'seguro', 'gasolina', 'combustible', 'caseta', 'chofer', 'gps'])) {
+    return {
+      texto: 'Todos nuestros servicios incluyen:\n\n' +
+        '✓ Operador profesional\n' +
+        '✓ Seguro de viajero\n' +
+        '✓ Monitoreo GPS 24/7\n' +
+        '✓ Combustible y casetas\n\n' +
+        'Cada unidad además trae lo suyo. ¿Cuál te interesa?\n\n' + listaDeUnidades(),
+      pasa: false
+    };
+  }
+
+  /* ---- saludo ---- */
+  if (tiene(t, ['hola', 'buenas', 'buenos dias', 'buen dia', 'buenas tardes',
+    'buenas noches', 'que tal', 'saludos', 'informacion', 'informes'])) {
+    return {
+      texto: '¡Hola! 👋 Bienvenido a *Eurotravel*, renta de autobuses en ' +
+        'Tlaquepaque, Jalisco.\n\n' +
+        'Puedo ayudarte con:\n\n' +
+        '🚌 Nuestras unidades y cuántos caben\n' +
+        '✅ Qué incluye el servicio\n' +
+        '💬 Pasarte con una persona\n\n' +
+        'Dime qué necesitas, o de una vez *a dónde vas y cuántos son*.',
+      pasa: false
+    };
+  }
+
+  /* ---- gracias / despedida ---- */
+  if (tiene(t, ['gracias', 'muchas gracias', 'adios', 'hasta luego', 'bye'])) {
+    return {
+      texto: '¡Con gusto! Aquí andamos para lo que necesites 🚌',
+      pasa: false
+    };
+  }
+
+  /* ------------------------------------------------------------
+     No entendió. Y aquí NO adivina.
+     ------------------------------------------------------------ */
+  return {
+    texto: 'Esa no me la sé bien, y prefiero no contestarte mal 🙏\n\n' +
+      'Te paso con una persona: márcale al *' + TELEFONO + '*.\n\n' +
+      'O si quieres, dime *cuántos son y a dónde van* y te oriento.',
+    pasa: true
+  };
+}
+
+module.exports = { respuestaA, normaliza, cuantaGente, unidadPara, UNIDADES, TELEFONO };

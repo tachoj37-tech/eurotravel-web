@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="robots" content="noindex, nofollow" />
+<title>Prueba del bot · Eurotravel</title>
+<!--
+  ============================================================
+  TEMPORAL. Para platicar con el bot antes de darlo de alta con
+  Meta. Se borra junto con api/prueba-whatsapp.js cuando el bot
+  ya esté al aire.
+
+  Se ve como WhatsApp a propósito: la idea es juzgar si las
+  respuestas se sienten bien EN WHATSAPP, no leerlas en una
+  tabla. Una respuesta que en un JSON parece correcta puede
+  sentirse fría o larguísima en un chat.
+  ============================================================
+-->
+<style>
+  :root {
+    --fondo: #0b141a; --burbuja-yo: #005c4b; --burbuja-bot: #202c33;
+    --texto: #e9edef; --tenue: #8696a0; --barra: #202c33; --verde: #00a884;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--fondo); color: var(--texto);
+    font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    display: flex; flex-direction: column; height: 100vh;
+  }
+  header {
+    background: var(--barra); padding: 12px 16px; display: flex;
+    align-items: center; gap: 12px; flex: none;
+  }
+  .foto {
+    width: 40px; height: 40px; border-radius: 50%; background: var(--verde);
+    display: grid; place-items: center; font-size: 20px; flex: none;
+  }
+  header b { display: block; font-size: 15px; }
+  header small { color: var(--tenue); font-size: 12px; }
+  .aviso {
+    background: #182229; color: #ffd279; font-size: 12px; text-align: center;
+    padding: 8px 16px; flex: none; line-height: 1.5;
+  }
+  #chat { flex: 1; overflow-y: auto; padding: 16px; display: flex;
+    flex-direction: column; gap: 8px; }
+  .b {
+    max-width: min(78%, 520px); padding: 8px 10px; border-radius: 8px;
+    font-size: 14.5px; line-height: 1.45; white-space: pre-wrap;
+    word-wrap: break-word; position: relative;
+  }
+  .yo { align-self: flex-end; background: var(--burbuja-yo); }
+  .bot { align-self: flex-start; background: var(--burbuja-bot); }
+  .b b { font-weight: 600; }
+  .marca {
+    align-self: flex-start; font-size: 11px; color: #f0a; margin: -4px 0 4px 4px;
+  }
+  form { display: flex; gap: 8px; padding: 12px; background: var(--barra); flex: none; }
+  input {
+    flex: 1; padding: 12px 16px; border-radius: 22px; border: 0;
+    background: #2a3942; color: var(--texto); font-size: 15px; outline: none;
+  }
+  button {
+    width: 46px; height: 46px; border-radius: 50%; border: 0; flex: none;
+    background: var(--verde); color: #fff; font-size: 18px; cursor: pointer;
+  }
+  button:disabled { opacity: .5; cursor: default; }
+  .sugerencias { display: flex; flex-wrap: wrap; gap: 6px; padding: 0 12px 10px;
+    background: var(--barra); flex: none; }
+  .sugerencias button {
+    width: auto; height: auto; border-radius: 14px; padding: 6px 12px;
+    font-size: 12.5px; background: #2a3942; color: var(--tenue);
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="foto">🚌</div>
+  <div>
+    <b>Eurotravel</b>
+    <small id="estado">bot de prueba · en línea</small>
+  </div>
+</header>
+
+<div class="aviso">
+  Esto NO está conectado a WhatsApp todavía. Es el mismo texto que contestaría
+  el bot, para revisarlo antes del trámite con Meta.
+  <br>Cuando veas <span style="color:#f0a">↪ te pasaría con una persona</span>,
+  esa conversación acabaría contigo.
+</div>
+
+<div id="chat"></div>
+
+<div class="sugerencias" id="sugerencias"></div>
+
+<form id="forma" autocomplete="off">
+  <input id="caja" placeholder="Escribe un mensaje" maxlength="1000" />
+  <button type="submit" id="enviar">➤</button>
+</form>
+
+<!--
+  ============================================================
+  Corre EL MISMO ARCHIVO que va a correr el servidor
+  ------------------------------------------------------------
+  No es una copia de la lógica ni una imitación: es `bot.js` tal
+  cual, el mismo que carga el webhook. Si fuera una copia, se
+  desactualizaría y esta pantalla acabaría enseñando un bot que
+  ya no existe — que es justo lo que no queremos al revisarlo.
+
+  Ese archivo está escrito para Node, así que se le prestan las
+  cuatro cosas que espera encontrar. `require` devuelve null a
+  propósito: el archivo no usa lo que devuelve, solo necesita que
+  `unidades.js` ya se haya cargado, y arriba se cargó.
+
+  Y por eso NO hay endpoint: correrlo aquí no gasta ninguna de
+  las 12 funciones que permite el plan de Vercel.
+  ============================================================
+-->
+<script src="unidades.js"></script>
+<script>
+  var global = window;
+  var process = { env: {} };
+  var module = { exports: {} };
+  function require() { return null; }
+</script>
+<script src="bot.js"></script>
+<script>
+  window.BOT = module.exports;
+</script>
+
+<script>
+(function () {
+  var chat = document.getElementById('chat');
+  var caja = document.getElementById('caja');
+  var forma = document.getElementById('forma');
+  var enviar = document.getElementById('enviar');
+
+  /* El mismo escapador que el resto del sitio: lo que se teclea NUNCA
+     entra como HTML. Aquí solo se prueba, pero una costumbre que se
+     rompe en la herramienta interna se rompe después en la de verdad. */
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+
+  /* WhatsApp pone en negritas lo que va entre asteriscos. Se imita para
+     que el mensaje se lea como se va a leer allá. Se aplica DESPUÉS de
+     escapar, así que nada de lo tecleado puede volverse etiqueta. */
+  function comoWhatsApp(s) {
+    return esc(s).replace(/\*([^*\n]+)\*/g, '<b>$1</b>');
+  }
+
+  function burbuja(texto, quien) {
+    var d = document.createElement('div');
+    d.className = 'b ' + quien;
+    d.innerHTML = comoWhatsApp(texto);
+    chat.appendChild(d);
+    chat.scrollTop = chat.scrollHeight;
+    return d;
+  }
+
+  function marca(texto) {
+    var d = document.createElement('div');
+    d.className = 'marca';
+    d.textContent = texto;
+    chat.appendChild(d);
+    chat.scrollTop = chat.scrollHeight;
+  }
+
+  function pregunta(texto) {
+    if (!texto.trim()) return;
+    burbuja(texto, 'yo');
+    caja.value = '';
+    var d;
+    try {
+      d = window.BOT.respuestaA(texto);
+    } catch (e) {
+      burbuja('[tronó el bot: ' + e.message + ']', 'bot');
+      return;
+    }
+    burbuja(d.texto, 'bot');
+    if (d.pasa) marca('↪ te pasaría con una persona');
+    caja.focus();
+  }
+
+  forma.addEventListener('submit', function (e) {
+    e.preventDefault();
+    pregunta(caja.value);
+  });
+
+  /* Atajos con los casos que más se van a querer revisar, incluidos los
+     dos que más importan: el grupo grande (que NO debe cotizar solo) y
+     el chico (que sí). */
+  var atajos = ['Hola', '¿Qué unidades tienen?', 'Somos 15 personas',
+    'Somos 45 personas', '¿Cuánto cuesta?', '¿Qué incluye?',
+    'Quiero hablar con una persona', 'asdkjh qwe'];
+  var cont = document.getElementById('sugerencias');
+  atajos.forEach(function (a) {
+    var b = document.createElement('button');
+    b.type = 'button';
+    b.textContent = a;
+    b.addEventListener('click', function () { pregunta(a); });
+    cont.appendChild(b);
+  });
+
+  pregunta('Hola');
+})();
+</script>
+
+</body>
+</html>
