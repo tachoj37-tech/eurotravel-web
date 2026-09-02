@@ -203,6 +203,12 @@ const ORIGENES = [
       'Tenacatita': 4000,
       'Zacatecas': 4000,
       'Chapala': 4500,
+      /* R28 · «San Juan Cosalá y Chapala deberían ser lo mismo, literal
+         están a 10 minutos» (1-sep-2026). El ancla de R11 no se queda en
+         el precio base: arrastra también el recargo de salida. Antes
+         heredaba el precio y no el recargo, y esa inconsistencia era mía
+         —Magdalena sí heredaba el de Tequila—. */
+      'San Juan Cosalá (ribera de Chapala)': 4500,
       'Punta Perula': 4500,
       'Rincón de Guayabitos': 4500,
       'Tequila / Guachimontones': 5000,
@@ -307,6 +313,7 @@ const ORIGENES = [
       'Puerto Vallarta y alrededores': 9000,
       'Mismaloya': 9000,
       'Chapala': 10000,
+      'San Juan Cosalá (ribera de Chapala)': 10000,   // R28, igual que Chapala
       'Tequila / Guachimontones': 10000,
       'Barrancas del Cobre': 10000,
       'Talpa de Allende': 10000,

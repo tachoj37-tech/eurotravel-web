@@ -454,6 +454,12 @@ const DESTINOS_CON_REGLA = [
     nombre: 'Ciudad de México',
     enTexto: /ciudad de m[eé]xico|cdmx/i,
     estadiaPorDia: true,
+    /* R29 · «No aplica para Huasteca, CDMX» (1-sep-2026). Aquí el día NO
+       sube con las horas: son $3,000 dure lo que dure, igual que en la
+       Huasteca. Su precio del Excel ya está definido como base más días
+       CON movimientos, así que escalonarlo encima lo sacaba de su celda.
+       Sin esta línea, catorce horas cobraban $2,000 de más. */
+    movimientoPorDia: 3000,
     /* R30 · Los tres paseos con nombre, de su propia hoja: «CON TAXCO
        $15,000 EXTRAS», «CON CHALMA $8,000», «CON XOCHIMILCO $2,000».
        Un día marcado con uno de éstos cuesta eso EN VEZ del movimiento
