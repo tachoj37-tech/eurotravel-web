@@ -408,6 +408,24 @@ const TOPE_DIAS_MOVIMIENTO = 60;
    en `movimientosDe`. */
 const PASEOS_CDMX = { taxco: 15000, chalma: 8000, xochimilco: 2000 };
 
+/* ------------------------------------------------------------
+   R29 · UN RECORRIDO QUE SE ALEJA MUCHO YA NO ES UN RECORRIDO
+   ------------------------------------------------------------
+   Dictado el 1-sep-2026: «no pueden exceder los 80 km de radio», y
+   enseguida: «si cobra un recorrido de 120 km, o sea que supere
+   los 80 km en lejanía, cóbralo en 5500».
+
+   Un movimiento normal es salir a pasear desde donde están. Pasando
+   los 80 km ya es medio traslado: más gasolina, más casetas, más
+   horas del operador. Por eso tiene su propio precio y no una banda
+   de horas.
+
+   Se cobra por LEJANIA, no por horas: da igual si son seis horas o
+   diez, si se fueron a 120 km son $5,500.
+   ------------------------------------------------------------ */
+const RADIO_MOVIMIENTO_KM = 80;
+const MOVIMIENTO_LEJOS = 5500;
+
 const DESTINOS_CON_REGLA = [
   {
     nombre: 'Huasteca Potosina',
@@ -634,6 +652,17 @@ function movimientosDe(lista, diasDeServicio, regla) {
       salida.push({ horas: horas, precio: regla.paseos[cual], paseo: cual });
       continue;
     }
+
+    /* R29 · Pasando los 80 km ya no es un paseo, es medio traslado: son
+       $5,500 y las horas dejan de importar. Va DESPUES del paseo con
+       nombre —Taxco está a 170 km de CDMX y aun así cuesta lo suyo— y
+       ANTES de la banda, que es a la que sustituye. */
+    const lejos = Number(d.km);
+    if (Number.isFinite(lejos) && lejos > RADIO_MOVIMIENTO_KM) {
+      salida.push({ horas: horas, precio: gratis ? 0 : MOVIMIENTO_LEJOS, lejos: true });
+      continue;
+    }
+
     const precio = fijo === null ? bandaDe(horas).precio : fijo;
     salida.push({ horas: horas, precio: gratis ? 0 : precio });
   }

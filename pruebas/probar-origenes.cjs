@@ -229,32 +229,28 @@ titulo('Desde Ocotlán, un destino que su fila no menciona no paga');
 titulo('Tala, Zacoalco y Cocula, dictados el 28-ago');
 ok('Tala 2 días desde Ocotlán llega a los 9,000 que pidió',
   cotiza('Tala', 2, 0, OCOTLAN), 9000);
-/* CAMBIO DE LADO — 1-sep-2026, por R34, Y ESTA PENDIENTE DE EL.
+/* RESUELTO — 1-sep-2026 (R38), y vale la pena saber cómo.
 
-   Zacoalco daba $9,000 desde Ocotlán porque el piso de $3,000/día lo subía
-   a $6,000 y encima iban los $3,000 del recargo. Al quitarse el piso (R34)
-   manda su precio de lista: $5,000 + $3,000 = $8,000.
+   Al quitarse el piso (R34) Zacoalco cayó a $8,000 y Tala se quedó en
+   $9,000, teniendo los dos el mismo recargo. La frase de él era «estos DOS
+   muy caros, deben ser mínimo 9,000»: los dos, no uno.
 
-   Los $9,000 que él dictó el 28-ago los dijo mirando renglones de dos días,
-   cuando el piso todavía existía. NO es obvio si quiso decir «Zacoalco vale
-   9,000 a dos días» o «el recargo de Ocotlán son 3,000». Tala da 9,000 por
-   las dos lecturas; Zacoalco es el único donde se separan.
+   Se fue a buscar Zacoalco al Excel y NO ESTA. Sus 48 destinos van de la
+   columna B a la AX y ninguno es éste; Tala y Cocula tampoco. Los tres
+   salieron de la hoja de 50 viajes, o sea que sus precios base los puse yo:
+   Tala en $6,000 y Zacoalco en $5,000, sin razón para la diferencia.
 
-   Se deja en lo que manda la regla nueva y queda anotado en
-   PREGUNTAS-ABIERTAS nº 10. Si él dice que son 9,000, Zacoalco necesita
-   piso propio. */
-ok('Zacoalco 2 días desde Ocotlán: su lista + el recargo (PENDIENTE, ver nº 10)',
-  cotiza('Zacoalco de Torres', 2, 0, OCOTLAN), 8000);
+   Mientras el piso existía no se notaba —subía a los dos a $6,000—. Se
+   igualan, que es lo que su frase pide. */
+ok('Zacoalco 2 días desde Ocotlán llega a los 9,000, igual que Tala',
+  cotiza('Zacoalco de Torres', 2, 0, OCOTLAN), 9000);
 ok('Cocula 2 días: su precio propio es $6,500, así que da 9,500',
   cotiza('Cocula', 2, 0, OCOTLAN), 9500);
 /* Y desde Guadalajara ninguno se movió: el recargo es del origen, no del
    destino. Si esto se pusiera rojo, le habría subido el precio a todos. */
 ok('Tala 2 días desde Guadalajara sigue en 6,000', cotiza('Tala', 2, 0, GDL), 6000);
-/* Los 6,000 de aquí también eran el piso, no su precio. Con R34 manda su
-   celda: $5,000. Lo que esta aserción vigila —que desde Guadalajara NO se
-   le pegue el recargo de Ocotlán— sigue igual de vivo. */
-ok('Zacoalco 2 días desde Guadalajara: su celda, sin recargo',
-  cotiza('Zacoalco de Torres', 2, 0, GDL), 5000);
+ok('Zacoalco 2 días desde Guadalajara sigue en 6,000',
+  cotiza('Zacoalco de Torres', 2, 0, GDL), 6000);
 ok('Cocula 2 días desde Guadalajara sigue en 6,500', cotiza('Cocula', 2, 0, GDL), 6500);
 
 /* ------------------------------------------------------------

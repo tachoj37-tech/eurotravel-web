@@ -805,6 +805,29 @@ igual('sin nada no vale', t.horasDe(null, undefined), 0);
   igual('Cancún 18 días: su día extra también son $4,000',
     q('Cancún', 18, 0) - q('Cancún', 17, 0), 4000);
 
+  /* R29 · Un recorrido que pasa de 80 km ya no es paseo: son $5,500, y las
+     horas dejan de importar. Dictado el 1-sep-2026: «si cobra un recorrido
+     de 120 km, o sea que supere los 80 km en lejanía, cóbralo en 5500». */
+  {
+    const conKm = function (km, fin) {
+      return t.calcula(620, 4, {
+        destino: en('Puerto Vallarta, Jalisco, México'), noches: 3, unidad: 'sprinter',
+        movimientos: [{ horaInicio: '08:00', horaFin: fin || '16:00', km: km }]
+      }).total;
+    };
+    const normal = conKm(40);
+    igual('un recorrido de 120 km cuesta $5,500', conKm(120) - normal, 2500);
+    igual('80 km exactos todavía es cerca: sigue en $3,000', conKm(80), normal);
+    igual('81 km ya es lejos', conKm(81) - normal, 2500);
+    /* Por lejanía, no por horas: da igual cuánto dure. */
+    igual('a 120 km las horas dejan de importar', conKm(120, '20:00'), conKm(120, '16:00'));
+    /* Sin km declarado se cobra como siempre: no se supone que sea lejos. */
+    igual('sin decir los km, se cobra como siempre',
+      t.calcula(620, 4, { destino: en('Puerto Vallarta, Jalisco, México'), noches: 3,
+        unidad: 'sprinter', movimientos: [{ horaInicio: '08:00', horaFin: '16:00' }] }).total,
+      normal);
+  }
+
   /* R30 · Los tres paseos de CDMX SUSTITUYEN el movimiento de $3,000. */
   {
     const conMov = function (paseo) {

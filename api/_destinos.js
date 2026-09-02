@@ -95,7 +95,22 @@ const DESTINOS = [
     precio: { sprinter: 6000 } },
   { nombre: "Zacoalco de Torres", km: 136,
     busca: /zacoalco/i,
-    precio: { sprinter: 5000 } },
+    /* R38 (1-sep-2026) · De $5,000 a $6,000, y con eso vuelve a dar los
+       $9,000 que él pidió desde Ocotlán.
+
+       ZACOALCO NO ESTA EN SU EXCEL — se comprobó leyendo el archivo: sus
+       48 destinos van de la columna B a la AX y ninguno es éste. Tala y
+       Cocula tampoco. Los tres salieron de la hoja de 50 viajes que yo
+       le armé, donde él marcó: «estos dos muy caros, deben ser mínimo
+       9,000» — Tala y Zacoalco, los DOS.
+
+       Así que el $5,000 lo puse yo, no él. Tala quedó en $6,000 y daba
+       los $9,000; Zacoalco en $5,000 y daba $8,000. Mientras el piso de
+       $3,000/día existía la diferencia no se veía —los subía a los dos a
+       $6,000—, y al quitarse el piso (R34) quedó a la vista.
+
+       Se iguala a Tala, que es lo que su frase dice: los dos a $9,000. */
+    precio: { sprinter: 6000 } },
   { nombre: "Cocula", km: 145,
     busca: /\bcocula\b/i,
     precio: { sprinter: 6500 } },

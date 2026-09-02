@@ -1240,3 +1240,51 @@ cotizados con la fórmula que yo calibré. Contestó **«sí»**.
 **$6,500 de base + $22 el kilómetro** deja de ser invento mío y pasa a ser
 suyo. Era el número que más viajes cotizaba sin respaldo: todo destino que no
 está en su lista.
+
+---
+
+### R38 · Zacoalco se iguala a Tala, y de paso: no está en el Excel (1-sep-2026)
+
+Preguntó dónde estaba Zacoalco en su Excel porque no lo encontraba. **No está.**
+
+Se leyó el archivo: sus **48 destinos van de la columna B a la AX** —VALLARTA
+hasta MORELIA 1 DIA— y ninguno es Zacoalco. **Tala y Cocula tampoco.**
+
+Los tres salieron de la hoja de 50 viajes desde su zona que yo le armé, donde
+él marcó: *«estos dos muy caros, deben ser mínimo 9,000»* — Tala y Zacoalco,
+**los dos**.
+
+O sea que sus precios base **los puse yo**: Tala en $6,000 y Zacoalco en
+$5,000, sin ninguna razón para la diferencia. Con el mismo recargo de $3,000,
+Tala daba los $9,000 que él pidió y Zacoalco daba $8,000.
+
+**Mientras el piso de $3,000/día existía, la diferencia no se veía** —el piso
+los subía a los dos a $6,000— y al quitarse (R34) quedó a la vista. Zacoalco
+sube a $6,000 y los dos vuelven a dar $9,000.
+
+> Lo que esto enseña: cuando un precio no viene del Excel, hay que escribir de
+> dónde vino. Estos tres llevaban semanas pareciendo precios suyos.
+
+---
+
+### R29 (completada) · Pasando 80 km, el recorrido cuesta $5,500 (1-sep-2026)
+
+Dictado: *«si cobra un recorrido de 120 km, o sea que supere los 80 km en
+lejanía, cóbralo en 5500»*.
+
+Un movimiento normal es salir a pasear desde donde están. Pasando los **80 km
+de radio** ya es medio traslado —más gasolina, más casetas, más horas del
+operador— y tiene su propio precio.
+
+| | |
+|---|---|
+| hasta 80 km | la banda de horas: $3,000 a $5,000 |
+| **más de 80 km** | **$5,500**, y las horas dejan de importar |
+
+Se cobra por **lejanía, no por horas**: da igual si son seis horas o diez.
+
+Los paseos con nombre de CDMX (R30) **mandan sobre esto**: Taxco está a 170 km
+y aun así cuesta sus $15,000, no los $5,500.
+
+> El movimiento tiene que traer su `km` para que esto aplique. Sin ese dato se
+> cobra como siempre — no se supone que sea lejos.
