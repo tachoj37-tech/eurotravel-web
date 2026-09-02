@@ -529,6 +529,37 @@ const HORAS_MOV = [
   { etiqueta: 'Todo el día', fin: '20:00' }
 ];
 
+/* ------------------------------------------------------------
+   LOS PASEOS CON NOMBRE, PARA PODER OFRECERLOS
+   ------------------------------------------------------------
+   Dictado el 1-sep-2026: «los 3 destinos de CDMX ofrécelos: si el
+   cliente puso CDMX de destino y quiere movimientos, despliega esas
+   3 opciones […] tanto en la app como en el chatbot».
+
+   Esta tabla es un ESPEJO de la que cobra, que vive en
+   `api/_tarifa.js`. Se duplica porque el navegador no puede leer
+   `api/`, y un espejo se despega solo: si allá se agrega un paseo y
+   aquí no, el bot deja de ofrecerlo y nadie se entera.
+
+   Por eso `probar-whatsapp.cjs` compara las dos listas y se pone en
+   rojo si dejan de coincidir. Los PRECIOS no se copian —esos solo
+   viven allá, con el motor de cobro— aquí solo están los nombres.
+   ------------------------------------------------------------ */
+const PASEOS_POR_DESTINO = [
+  { busca: /ciudad de m[eé]xico|cdmx|distrito federal/i,
+    opciones: ['Taxco', 'Chalma', 'Xochimilco'] },
+  { busca: /huasteca/i,
+    opciones: ['El Meco', 'El Naranjo'] }
+];
+
+function paseosDe(destino) {
+  const t = String(destino || '');
+  for (let i = 0; i < PASEOS_POR_DESTINO.length; i++) {
+    if (PASEOS_POR_DESTINO[i].busca.test(t)) return PASEOS_POR_DESTINO[i].opciones;
+  }
+  return null;
+}
+
 /* Días de servicio contando los dos extremos: salir el 10 y volver el
    12 son tres días. Se arma el Date con NÚMEROS, nunca con el texto:
    `new Date('2026-09-10')` es medianoche UTC, o sea el día anterior. */
@@ -547,6 +578,11 @@ function resumenDe(e) {
   if (e.recorridos > 0) {
     t += '\n🚐 ' + e.recorridos + (e.recorridos === 1 ? ' día' : ' días') +
       ' de recorrido, ' + HORAS_MOV[e.banda || 0].etiqueta.toLowerCase();
+    if (e.lejos) t += ', lejos';
+    /* El paseo se enseña aparte y con estrella: es lo que más mueve el
+       precio de todo lo que se preguntó. Si el cliente lo escogió por
+       error, aquí lo ve antes de que se le cobre. */
+    if (e.paseo) t += '\n⭐ Con *' + e.paseo + '*';
   } else if (e.recorridos === 0) {
     t += '\n🚐 Sin recorridos, solo ida y vuelta';
   }
@@ -611,6 +647,24 @@ function pregunta(estado) {
         opciones: ops
       };
     }
+    case 'paseo': {
+      const ops = paseosDe(e.destino) || [];
+      return {
+        texto: 'En *' + e.destino + '* tenemos estos paseos 👇\n\n' +
+          ops.map(function (o) { return '• ' + o; }).join('\n') +
+          '\n\n¿Van a alguno? Si no, dime *ninguno* y contamos recorridos normales.',
+        /* «Ninguno» va al final y no al principio: primero se enseña lo que
+           sí se ofrece. Con los tres de CDMX son cuatro filas, y WhatsApp
+           aguanta diez. */
+        opciones: ops.concat(['Ninguno'])
+      };
+    }
+    case 'lejos':
+      return {
+        texto: 'Esos recorridos, ¿son por la zona o se van lejos?\n\n' +
+          'Lejos es *más de 80 km* — como irse a otra ciudad y volver.',
+        opciones: ['Por la zona', 'Nos vamos lejos']
+      };
     case 'horas':
       return {
         texto: '¿Cuántas horas al día, más o menos?',
@@ -809,8 +863,40 @@ function pasoDeCotizacion(t, crudo, estado, hoy) {
       e.paso = 'confirmar';
       return siguiente(e, 'Va, solo el traslado 👍');
     }
-    e.paso = 'horas';
+    /* Si el destino tiene paseos con nombre, se ofrecen ANTES de las horas:
+       un paseo trae su propio precio y su propia duración, así que
+       preguntarle las horas primero sería preguntar de más. */
+    e.paso = paseosDe(e.destino) ? 'paseo' : 'lejos';
     return siguiente(e, n + (n === 1 ? ' día' : ' días') + ' de paseo, anotado 🚐');
+  }
+
+  /* ---- ¿alguno de los paseos con nombre? ---- */
+  if (e.paso === 'paseo') {
+    const ops = paseosDe(e.destino) || [];
+    if (/ningun|no\b|nada|normales/.test(t)) {
+      e.paseo = null;
+    } else {
+      let escogido = null;
+      for (let i = 0; i < ops.length && !escogido; i++) {
+        if (esLaPalabra(t, normaliza(ops[i])) ||
+            palabrasDe(t).some(function (p) { return esLaPalabra(p, normaliza(ops[i].split(' ').pop())); })) {
+          escogido = ops[i];
+        }
+      }
+      if (!escogido) return siguiente(e);
+      e.paseo = escogido;
+    }
+    e.paso = 'lejos';
+    return siguiente(e, e.paseo ? '*' + e.paseo + '*, anotado ✅' : 'Va, recorridos normales.');
+  }
+
+  /* ---- ¿dentro de 80 km? ---- */
+  if (e.paso === 'lejos') {
+    if (/lejos|otra ciudad|fuera|si\b/.test(t)) e.lejos = true;
+    else if (/zona|cerca|aqui|no\b/.test(t)) e.lejos = false;
+    else return siguiente(e);
+    e.paso = 'horas';
+    return siguiente(e, e.lejos ? 'Recorridos largos, anotado.' : 'Por la zona, va.');
   }
 
   if (e.paso === 'horas') {
@@ -839,7 +925,15 @@ function pasoDeCotizacion(t, crudo, estado, hoy) {
        quien contesta «va», «sale», «dale» o «ok». */
     const movimientos = [];
     for (let i = 0; i < (e.recorridos || 0); i++) {
-      movimientos.push({ horaInicio: '08:00', horaFin: HORAS_MOV[e.banda || 0].fin });
+      const m = { horaInicio: '08:00', horaFin: HORAS_MOV[e.banda || 0].fin };
+      /* Los km solo se mandan cuando el cliente dijo que se van lejos. Si
+         no lo dijo, NO se inventa un número: sin `km` el motor cobra la
+         banda de horas de siempre. */
+      if (e.lejos) m.km = 120;
+      /* El paseo con nombre va en UN día, el primero. Es un producto que
+         se hace una vez, no todos los días del viaje. */
+      if (e.paseo && i === 0) m.paseo = e.paseo;
+      movimientos.push(m);
     }
 
     /* ------------------------------------------------------------
@@ -887,7 +981,8 @@ function pasoDeCotizacion(t, crudo, estado, hoy) {
          tiene que ver QUÉ se cotizó, no solo cuánto. */
       resumen: {
         destino: e.destino, origen: e.origen, salida: e.salida, regreso: e.regreso,
-        recorridos: e.recorridos || 0, horas: HORAS_MOV[e.banda || 0].etiqueta
+        recorridos: e.recorridos || 0, horas: HORAS_MOV[e.banda || 0].etiqueta,
+        paseo: e.paseo || null, lejos: !!e.lejos
       }
     };
   }
@@ -985,7 +1080,9 @@ function textoDeCotizacion(precio, resumen) {
       (r.salida ? '📅 ' + fechaEnPalabras(r.salida) + ' al ' + fechaEnPalabras(r.regreso) + '\n' : '') +
       '🗓️ ' + precio.dias + (precio.dias === 1 ? ' día' : ' días') + ' de servicio\n' +
       (r.recorridos ? '🚐 ' + r.recorridos + (r.recorridos === 1 ? ' día' : ' días') +
-        ' de recorrido (' + String(r.horas).toLowerCase() + ')\n' : '') +
+        ' de recorrido (' + String(r.horas).toLowerCase() +
+        (r.lejos ? ', lejos' : '') + ')\n' : '') +
+      (r.paseo ? '⭐ Con ' + r.paseo + '\n' : '') +
       '\n*Total: ' + pesos(precio.total) + '*\n' +
       'Para apartar: ' + pesos(precio.anticipo) + '\n' +
       'Resto al abordar: ' + pesos(precio.saldo) + '\n\n' +

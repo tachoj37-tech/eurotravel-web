@@ -256,7 +256,10 @@ console.log('\n== «QUIERO UNA SPRINTER» TIENE QUE COTIZAR ==');
 console.log('\n== COTIZAR LA SPRINTER, PASO A PASO ==');
 {
   const c = conversa(['quiero una sprinter', 'Chapala', 'Guadalajara',
-    '10 de septiembre', '13 de septiembre', '2 dias', 'Hasta 10 horas', 'si']);
+    /* «Por la zona» se agregó el 1-sep-2026: desde R40 se pregunta por cada
+       recorrido si pasa de los 80 km, y ese paso va antes de las horas. */
+    '10 de septiembre', '13 de septiembre', '2 dias', 'Por la zona',
+    'Hasta 10 horas', 'si']);
   const r = c.ultimo;
 
   ok('al final pide cotizar', !!r.cotiza, true);
@@ -480,7 +483,7 @@ console.log('\n== LA SOLICITUD PARA QUIEN PONE EL PRECIO ==');
   /* «Sacame toda la info para que el empleado nomas vea y saque el
      precio en chinga» — el dueño, 31-ago-2026. */
   const c = conversa(['somos 45 personas', 'Puerto Vallarta', 'Guadalajara',
-    '12 de diciembre', '16 de diciembre', '2 dias', 'Todo el día', 'si']);
+    '12 de diciembre', '16 de diciembre', '2 dias', 'Por la zona', 'Todo el día', 'si']);
   const r = c.ultimo;
   ok('al final entrega una solicitud armada', !!r.solicitud, true);
   ok('  y AHI si pasa con una persona', r.pasa, true);
@@ -684,6 +687,70 @@ console.log('\n== LA IA: SOLO CUANDO EL BOT SE RINDIO ==');
   ok('si la IA no saco nada util, el bot se queda como estaba',
     conv.aplicaEntendido({ intencion: 'otro' }, HOY), null);
   ok('  y con null tampoco truena', conv.aplicaEntendido(null, HOY), null);
+}
+
+console.log('\n== LOS PASEOS CON NOMBRE ==');
+{
+  /* El bot tiene su propia tabla de paseos porque el navegador no puede
+     leer `api/`. Un espejo se despega solo: si allá se agrega uno y aquí
+     no, el bot deja de ofrecerlo y NADIE SE ENTERA. Esto lo caza. */
+  const tarifa = require('../api/_tarifa');
+  const enElMotor = {
+    'Ciudad de México': Object.keys(tarifa.PASEOS_CDMX || {}),
+    'Huasteca Potosina': ['el meco', 'el naranjo']
+  };
+  const mal = [];
+  Object.keys(enElMotor).forEach(function (destino) {
+    const ofrece = (conv.respuestaA('x', { paso: 'paseo', destino: destino }, HOY).opciones || [])
+      .filter(function (o) { return o !== 'Ninguno'; })
+      .map(function (o) { return conv.normaliza(o); });
+    enElMotor[destino].forEach(function (p) {
+      if (ofrece.indexOf(conv.normaliza(p)) === -1) {
+        mal.push(destino + ': el motor cobra «' + p + '» y el bot no lo ofrece');
+      }
+    });
+    ofrece.forEach(function (o) {
+      if (enElMotor[destino].map(function (p) { return conv.normaliza(p); }).indexOf(o) === -1) {
+        mal.push(destino + ': el bot ofrece «' + o + '» y el motor no lo cobra');
+      }
+    });
+  });
+  ok('las dos tablas de paseos coinciden', mal, []);
+}
+{
+  const r = conv.respuestaA('x', { paso: 'recorridos', destino: 'Ciudad de México',
+    origen: 'GDL', salida: '2026-10-10', regreso: '2026-10-13' }, HOY);
+  ok('en un destino SIN paseos no se pregunta por ellos',
+    conv.respuestaA('2 dias', { paso: 'recorridos', destino: 'Chapala', origen: 'GDL',
+      salida: '2026-10-10', regreso: '2026-10-13' }, HOY).estado.paso, 'lejos');
+  ok('  y en CDMX sí',
+    conv.respuestaA('2 dias', { paso: 'recorridos', destino: 'Ciudad de México',
+      origen: 'GDL', salida: '2026-10-10', regreso: '2026-10-13' }, HOY).estado.paso, 'paseo');
+}
+{
+  const c = conversa(['sprinter', 'Ciudad de México', 'Guadalajara', '10 de octubre',
+    '13 de octubre', '3 dias', 'Taxco', 'Nos vamos lejos', 'Hasta 8 horas', 'si']);
+  const m = c.ultimo.cotiza.movimientos;
+  ok('el paseo va en UN día, el primero', m.filter(function (x) { return x.paseo; }).length, 1);
+  ok('  y es el que escogió', m[0].paseo, 'Taxco');
+  ok('los km solo se mandan si dijo que se van lejos',
+    m.every(function (x) { return x.km === 120; }), true);
+}
+{
+  const c = conversa(['sprinter', 'Ciudad de México', 'Guadalajara', '10 de octubre',
+    '13 de octubre', '3 dias', 'ninguno', 'Por la zona', 'Hasta 8 horas', 'si']);
+  const m = c.ultimo.cotiza.movimientos;
+  ok('sin paseo no se manda ninguno', m.some(function (x) { return x.paseo; }), false);
+  /* Si no dijo que se van lejos NO se inventa un kilometraje: sin `km` el
+     motor cobra la banda de horas de siempre. */
+  ok('  y sin «lejos» no se inventan km', m.some(function (x) { return x.km; }), false);
+}
+{
+  /* El paseo se enseña ANTES de cotizar: es lo que más mueve el precio. */
+  const r = conv.respuestaA('Hasta 8 horas', { paso: 'horas', destino: 'Ciudad de México',
+    origen: 'GDL', salida: '2026-10-10', regreso: '2026-10-13', recorridos: 3,
+    paseo: 'Taxco' }, HOY);
+  okQue('el resumen de confirmación dice el paseo', /taxco/i.test(r.texto));
 }
 
 console.log('\n== EL BOT ENTIENDE SUS PROPIOS BOTONES ==');

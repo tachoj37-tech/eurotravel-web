@@ -1294,6 +1294,10 @@ function calcula(kmTotal, dias, extras) {
 module.exports = {
   BASE_TRASLADO, POR_KM, TOPE_FORMULA_KM, POR_KM_LARGO,
   MINIMO_POR_DIA, REDONDEO, TASA_IVA, ANTICIPO,
+  /* Se exporta para que `probar-whatsapp.cjs` compare esta tabla contra el
+     espejo que tiene el bot. Si dejan de coincidir, el bot ofrecería un
+     paseo que el motor no cobra —o al revés— y nadie se enteraría. */
+  PASEOS_CDMX, RADIO_MOVIMIENTO_KM, MOVIMIENTO_LEJOS,
   NOCHES_INCLUIDAS, EXTRA_POR_NOCHE, TOPE_DIA_BARATO, DIA_BARATO, BANDAS_MOVIMIENTO, TOPE_DIAS_MOVIMIENTO,
   DESTINOS_CON_REGLA,
   recargoDeSalida,
