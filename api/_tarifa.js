@@ -561,24 +561,6 @@ const DESTINOS_CON_REGLA = [
     movimientoPorDia: 0
   },
   {
-    /* R49 (1-sep-2026) · «Esos días de Puebla ya incluyen mov como en CDMX».
-       El día extra de $4,000 ya trae su movimiento dentro, así que el
-       movimiento NO se cobra aparte. Sin esto, cuatro días con movimiento
-       daban $50,500 en vez de los $44,500 que él dictó.
-
-       Se hace con `movimientoPorDia: 0` —la misma forma que Barrancas— y no
-       subiendo `movimientosIncluidos`: ese campo son los DIAS que cubre su
-       columna del Excel, que en Puebla son dos, y falsearlo para conseguir
-       otro efecto haría mentir al desglose que ve la oficina.
-
-       Aplica igual a Puebla con Zacatlán: es el mismo viaje con un destino
-       de más, su nota dice también «DIA EXTRA», y su día extra son $2,000
-       para Sprinter. */
-    nombre: 'Puebla',
-    enTexto: /puebla|zacatl|chignahuapan|chignauapan/i,
-    movimientoPorDia: 0
-  },
-  {
     /* R48 (1-sep-2026) · OAXACA TIENE SU PASEO CON NOMBRE, y no lo tenía.
        Salió de revisar TODAS las notas de la fila 10 en vez de las que ya
        conocía. Su celda AH10 dice:

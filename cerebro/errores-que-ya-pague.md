@@ -68,4 +68,52 @@ Se cazó **volviendo a medir los precios**, no leyendo el código.
 
 ---
 
-Relacionado: [[quien-manda]] · [[noches-y-estadia]] · [[movimientos]] · [[MAPA]]
+---
+
+## Los tres del 1-sep-2026, todos de LEER MAL
+
+Un día completo de correcciones, y **los tres los cazó él, no yo**. Su
+reclamo, textual: *«de verdad revisa la tabla, me da inseguridad que salgas así
+al mundo»*. Era justo.
+
+### 6 · Mi lector del Excel mentía
+
+Una celda vacía se guarda cerrada en sí misma —`<c r="M25"/>`— y mi expresión
+se tragaba la diagonal, la tomaba como abierta, y le colgaba **el valor de la
+siguiente celda que sí tuviera**.
+
+Le reporté que CDMX tenía $16,000 dominical. **Está vacía.** Y encima construí
+una teoría entera sobre eso y se la presenté como hallazgo.
+
+> **Lección:** cuando un dato no encaja con lo que él sabe de su negocio, la
+> primera sospecha va sobre **la herramienta**, no sobre el dato. Dijo dos
+> veces «revisa la tabla» antes de que se me ocurriera revisar el lector.
+
+### 7 · Casi le quito dos precios suyos
+
+Tepic y León no están en su Excel y no había nota en el catálogo, así que los
+di por míos y **se los quité** para que los cotizara la fórmula. Los habría
+bajado $1,300 cada uno.
+
+Su razón sí estaba escrita — pero en `probar-tarifa.cjs`: «Leon, los 17,600 que
+corrigió el dueño». **La prueba los rescató.**
+
+> **Lección:** el precio y su razón **viven juntos**. Y «no encuentro de dónde
+> salió» no es lo mismo que «lo inventé yo».
+
+### 8 · Copié la nota de la columna de al lado
+
+Puebla traía $2,000 de día extra citando la celda **Q10**, que es de *Puebla
+con Zacatlán*. La suya, **P10**, dice $4,000.
+
+Salió al leer **las doce notas de la fila 10 completas** en vez de solo las
+tres que él había mandado en una foto. En la misma pasada apareció otra que no
+tenía: **Oaxaca con Huatulco, +$20,000**.
+
+> **Lección:** cuando una fila del Excel resulta tener información de precio,
+> se lee **entera**, no la celda que se andaba buscando.
+
+---
+
+Relacionado: [[quien-manda]] · [[noches-y-estadia]] · [[movimientos]] ·
+[[el-dia-con-movimiento]] · [[el-dominical]] · [[MAPA]]

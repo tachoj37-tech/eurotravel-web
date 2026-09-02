@@ -1746,3 +1746,44 @@ y el movimiento son dos cobros.
 
 CDMX y la Huasteca distinguen —su día baja a $1,000 si no se mueven—; Puebla
 no. Es lo que él dictó para cada uno, y no hay que uniformarlos.
+
+---
+
+### R50 · CORRIGE A R49 · Puebla distingue: $1,000 sin movimiento (1-sep-2026)
+
+Dictado: *«Puebla pon mil sin movimiento y ya está»*.
+
+**R49 se entendió a medias y duró una hora.** Su frase anterior era «esos días
+de Puebla ya incluyen mov como en CDMX», y se leyó como que el día extra de
+$4,000 traía el movimiento dentro y no se cobraba aparte. Daba los $44,500 que
+él pidió, **pero cobrando igual se movieran o no** — y eso no es «como en
+CDMX», donde el día baja a $1,000 si no hay movimiento.
+
+**Puebla distingue igual que CDMX y la Huasteca:**
+
+| Puebla | sin movimientos | con movimiento cada día |
+|---|---|---|
+| 2 días | $36,500 | $36,500 |
+| 3 días | $37,500 | $40,500 |
+| **4 días** | $38,500 | **$44,500** |
+| 5 días | $39,500 | $48,500 |
+
+`diaExtra` es **1,000** y los $3,000 del movimiento se suman por el camino
+normal, sin regla especial.
+
+**Puebla con Zacatlán se revirtió**: se le había aplicado la forma de Puebla
+por parecido y era pasarse. Es su propio renglón, con su día extra de $2,000
+para Sprinter (celda Q10).
+
+---
+
+## Cómo quedan los cuatro que cobran el día "con movimiento"
+
+| destino | el día sin movimiento | con movimiento |
+|---|---|---|
+| **CDMX** | $1,000 | $4,000 |
+| **Huasteca** | $1,000 | $4,000 |
+| **Puebla** | $1,000 | $4,000 |
+| **Puebla con Zacatlán** | $2,000 | $5,000 |
+
+Los tres primeros son la misma forma. Zacatlán va por su cuenta.

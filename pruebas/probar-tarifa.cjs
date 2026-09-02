@@ -965,18 +965,26 @@ igual('sin nada no vale', t.horasDe(null, undefined), 0);
   /* Y pasada la duración de la columna, el movimiento se cobra normal:
      ahí la columna ya se acabó, igual que en R2 y R14.
 
-     CAMBIO DE LADO — 1-sep-2026 (R49). Puebla se salió de esta regla: el
-     dueño dictó «esos días de Puebla ya incluyen mov como en CDMX», así que
-     su día extra de $4,000 trae el movimiento dentro y no se cobra aparte.
-     Lo que se prueba ahora es justo lo contrario, y con la cuenta suya:
-     cuatro días son $44,500 se muevan o no. */
-  igual('Puebla: el día extra ya trae su movimiento, no se cobra aparte',
-    q('Puebla', 3, 3) - q('Puebla', 3, 2), 0);
-  igual('  y cuatro días son sus $44,500, con movimiento', q('Puebla', 4, 4), 44500);
-  igual('  y sin movimiento también', q('Puebla', 4, 0), 44500);
-  /* Zacatlán es el mismo viaje con un destino de más: misma forma, y su día
-     extra son $2,000 para Sprinter (celda Q10). */
-  igual('Puebla con Zacatlán igual', q('Puebla con Zacatlán', 4, 4), 43500);
+     PUEBLA CAMBIO DE LADO DOS VECES EL MISMO DIA, y la segunda es la buena.
+
+     Primero se entendio «esos días de Puebla ya incluyen mov como en CDMX»
+     como que el día extra de $4,000 traía el movimiento dentro y no se
+     cobraba aparte. Daba los $44,500 que él pidió, pero cobrando igual se
+     movieran o no — y eso NO es «como en CDMX», donde el día baja a $1,000
+     si no se mueven.
+
+     El lo aclaró: «Puebla pon mil sin movimiento y ya está». O sea que
+     distingue, igual que CDMX y la Huasteca: $1,000 el día sin movimiento y
+     $4,000 con él. Su `diaExtra` es 1,000 y los $3,000 del movimiento se
+     suman por el camino normal, sin regla especial. */
+  igual('Puebla: el día extra sí cobra su movimiento aparte',
+    q('Puebla', 3, 3) - q('Puebla', 3, 2), 3000);
+  igual('  cuatro días CON movimiento son sus $44,500', q('Puebla', 4, 4), 44500);
+  igual('  y sin movimiento el día vale mil: $38,500', q('Puebla', 4, 0), 38500);
+  /* Zacatlán NO se toca: es su propio renglón, con su día extra de $2,000
+     para Sprinter (celda Q10). Se le habia aplicado la forma de Puebla por
+     parecido y era pasarse. */
+  igual('Puebla con Zacatlán va por su cuenta', q('Puebla con Zacatlán', 4, 4), 49500);
   /* Chiapas NO cambió: ahí la columna sí se acaba y el movimiento se cobra. */
   igual('Chiapas al 9o día sí cobra su movimiento',
     q('Chiapas', 9, 9) - q('Chiapas', 9, 8), 3000);

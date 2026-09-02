@@ -352,10 +352,22 @@ const DESTINOS = [
        El dueño lo cachó con la cuenta hecha: «Puebla debería costar 44,500
        a 4 días» — que es 36,500 + 2 × 4,000 exactos.
 
-       Q sí se queda en $2,000 para Sprinter: esa nota sí es suya. */
+       Q sí se queda en $2,000 para Sprinter: esa nota sí es suya.
+
+       R50 (1-sep-2026) · «Puebla pon mil sin movimiento y ya está.»
+       Puebla distingue igual que CDMX y la Huasteca: el día extra son
+       **$1,000 si no se mueven y $4,000 si sí**. Por eso `diaExtra` es
+       1,000 y los $3,000 del movimiento se suman aparte — que es el
+       camino normal, sin regla especial.
+
+           4 días sin movimiento    $38,500
+           4 días con movimiento    $44,500  <- su cuenta
+
+       Antes de esto se probó con `movimientoPorDia: 0`, que daba los
+       $44,500 pero cobrando igual se movieran o no. No era eso. */
     precio: { busNC47: 58000, bus4849: 59000, neobusI6: 62000, pbI6: 60000, marcopolo: 65000, irizar: 63000, sprinter: 36500 },
     porDias: { 2: 36500 },
-    diaExtra: 4000,
+    diaExtra: 1000,
     movimientosIncluidos: 2 },
   { nombre: "Puebla con Zacatlán", km: 1368,
     busca: /zacatl|chignahuapan|chignauapan/i,

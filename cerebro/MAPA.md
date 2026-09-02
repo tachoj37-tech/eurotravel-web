@@ -31,6 +31,7 @@ Y encima de todo: [[quien-manda|los precios los dicta el dueño]] (R12).
 | ¿Cuánto suma pasear estando allá? | [[movimientos]] |
 | ¿Y si no salen de Guadalajara? | [[de-donde-salen]] |
 | ¿Y si van y vuelven en domingo? | [[el-dominical]] |
+| ¿Por qué CDMX cobra por día? | [[el-dia-con-movimiento]] |
 | ¿Por qué este viaje no da precio en línea? | [[cuando-no-se-cotiza-solo]] |
 | ¿Quién decide un precio nuevo? | [[quien-manda]] |
 | ¿Qué NO sabemos todavía? | [[lo-que-no-se]] |
@@ -39,13 +40,19 @@ Y encima de todo: [[quien-manda|los precios los dicta el dueño]] (R12).
 
 ---
 
-## Las diecinueve del 1-sep-2026
+## Las veinticinco del 1-sep-2026
 
-En un solo día se contestaron **veintiséis preguntas abiertas**. Van primero
-porque son las más frescas y las que más dinero movieron.
+En un solo día se cerraron **veintiséis preguntas abiertas** y salieron
+veinticinco reglas. Van primero porque son las más frescas y las que más
+dinero movieron.
 
 | | dice | dónde |
 |---|---|---|
+| **R45** | **si no se sabe al 100 %, no se da precio** | [[cuando-no-se-cotiza-solo]] |
+| **R46** | Monterrey entra al catálogo con $49,200 | [[precio-de-lista]] |
+| **R47** | Puebla: el día extra son $4,000, no $2,000 | [[el-dia-con-movimiento]] |
+| **R48** | Oaxaca: con Huatulco o playas, **+$20,000** | [[movimientos]] |
+| **R49/R50** | Puebla distingue: $1,000 sin movimiento | [[el-dia-con-movimiento]] |
 | **R26** | 4 días y 3 noches por defecto | [[precio-de-lista]] |
 | **R27** | la casilla vacía de un origen **es un dato**: le queda de camino | [[de-donde-salen]] |
 | **R28** | San Juan Cosalá hereda el recargo de Chapala | [[de-donde-salen]] |

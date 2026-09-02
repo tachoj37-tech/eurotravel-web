@@ -17,13 +17,32 @@ entrega una solicitud armada. Ver [[el-bot]].
 
 ---
 
-## 2 · Arriba de 1,400 km (R16)
+## 2 · Arriba de 1,400 km · **R45, la regla que manda**
 
-Pasando ese kilometraje la fórmula se vuelve menos fiable, y el kilómetro sube
-de $22 a **$36**.
+> «Si no sabes un precio al 100 %, no se lo compartas al cliente: le dices que
+> un vendedor lo va a contactar.» — 1-sep-2026
 
-`requiereAsesor: true`, y **todos los montos vienen en cero**. Eso es a
-propósito: si viniera un número, el cliente lo creería.
+Pasando los 1,400 km, un destino que **no esté en su lista** ya no se cotiza.
+No es que la fórmula no dé un número: es que ese número no se sabe.
+
+La propia R16 lo dejó escrito: **$9,800 de error promedio** contra $1,534 del
+tramo corto. Y la razón: sus precios largos no son función del kilómetro
+—Oaxaca $75,000 a 1,988 km y Barrancas los mismos $75,000 a 2,882—.
+
+> **Antes de R45 esto era código muerto.** `requiereAsesor` no lo ponía nadie:
+> un viaje de 20,000 km cotizaba **$709,900**. Números inventados con cara de
+> precio.
+
+`requiereAsesor: true`, y **todos los montos vienen en cero**. El cero importa
+tanto como el aviso: la pantalla sabe leer un cero y decir lo correcto; un
+número a medias lo cobraría.
+
+**Los de su lista siguen cotizando**, por lejos que estén: Cancún a 4,282 km,
+Barrancas a 2,882, Chiapas a 2,848. Ésos son precios suyos, no estimaciones.
+
+Y el camino de vuelta está abierto: **el día que le ponga precio a un destino
+lejano, entra al catálogo y se cotiza solo.** Monterrey fue el primero en
+recorrerlo (R46).
 
 > `requiereAsesor` es de los pocos campos que `_publico.js` deja salir. Se
 > agregó a sabiendas: sin él la pantalla enseñaba **«$0»** y el cliente creía
