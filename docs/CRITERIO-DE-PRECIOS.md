@@ -990,3 +990,160 @@ dictados se excluyen a propósito porque ésos sí cambiaron.
 **Lección de este par de días:** una regla puede vivir dos días y morirse, y
 está bien — es su negocio, no mi modelo. Lo que no puede pasar es que el
 criterio siga diciendo que rige.
+
+---
+
+### R26 · Cuatro días y tres noches, por defecto (1-sep-2026)
+
+Dictado: *«todos los viajes por defecto son 4 días 3 noches, a excepción de los
+que tienen días en Excel y a los que yo te he dicho con el tiempo, como
+Barrancas 7 días, Cancún 17 y Chiapas 8»*.
+
+**El precio de lista cubre 4 días y 3 noches.** No es «un traslado + noches
+aparte»: ese número YA incluye la estancia normal.
+
+| duración | de dónde sale |
+|---|---|
+| **4 días / 3 noches** | por defecto, para todo destino |
+| la que diga el Excel | si su columna trae días («CDMX 2 DIAS») |
+| la que él dictó | Barrancas **7**, Cancún **17**, Chiapas **8**, Tolantongo **3**, Acapulco **4** |
+
+Esto **cierra el bloque E** de las preguntas abiertas.
+
+> **Y destapa un conflicto con el piso de $3,000/día.** Chapala vale $6,500 en
+> el Excel; con el piso, cuatro días cobran **$12,000**. Son $5,500 de más en
+> el destino más pedido. Le pasa a los 7 destinos baratos: Zacoalco, Tala, San
+> Juan Cosalá, Chapala, Cocula, Tequila y Magdalena. **Pendiente de resolver
+> con él** — está en PREGUNTAS-ABIERTAS nº 2.
+
+---
+
+### R27 · La casilla vacía de un origen significa «el mismo precio» (1-sep-2026)
+
+Dictado, y con su razón: *«cuando Ocotlán no tiene precio significa que el
+precio es igual. ¿Por qué? Porque si vas de GDL a Tepic pasas por Ocotlán, si
+vas a León pasas por Ocotlán»*.
+
+**Una celda en blanco en la fila de un origen no es un dato que falte: es un
+dato.** Dice que ese destino le queda de camino a ese origen, y por eso no
+cuesta más salir de ahí.
+
+Es la misma lógica de R19 —*«Tequila está de camino a Vallarta»*— pero al
+revés: R19 explica cuándo SÍ suma; ésta explica por qué el silencio significa
+que NO.
+
+**Consecuencia práctica:** Tepic y León desde Ocotlán cobran lo mismo que desde
+Guadalajara, y eso está BIEN. No son huérfanos que se me olvidaron.
+
+---
+
+### R28 · San Juan Cosalá es Chapala (1-sep-2026)
+
+Dictado: *«San Juan Cosalá y Chapala deberían ser lo mismo, literal están a 10
+minutos»*.
+
+El ancla de R11 no se queda en el precio base: **arrastra también el recargo de
+salida**. Si Chapala sube $4,500 saliendo de Ocotlán, San Juan Cosalá también.
+
+Antes heredaba el precio pero no el recargo, y esa inconsistencia era mía:
+Magdalena sí heredaba el de Tequila y San Juan Cosalá no heredaba el de Chapala.
+
+---
+
+### R29 · Las bandas de horas sí van, con dos límites (1-sep-2026)
+
+Dictado: *«sí, no aplica para Huasteca, CDMX, no pueden exceder los 80 km de
+radio»*.
+
+Los cinco escalones quedan **confirmados**:
+
+| el día dura | cobra |
+|---|---|
+| hasta 8 horas | $3,000 |
+| más de 8 y hasta 9 | $3,500 |
+| más de 9 y hasta 10 | $4,000 |
+| más de 10 y hasta 12 | $4,500 |
+| más de 12 | $5,000 |
+
+**Con dos límites que no existían:**
+
+1. **No aplican a la Huasteca ni a CDMX.** Esos destinos ya traen sus
+   movimientos en la base (R3), así que ahí el día no sube con las horas.
+2. **Un movimiento no puede pasar de 80 km de radio.** Más lejos ya no es un
+   recorrido: es otro traslado, y se cotiza como tal.
+
+El segundo es nuevo del todo y **todavía no está en el código**.
+
+---
+
+### R30 · Los movimientos personalizados de CDMX (1-sep-2026)
+
+Dictado: *«son movimientos personalizados, esos movimientos aplican para
+Sprinter en CDMX; si el movimiento es uno de esos 3, la ficha cambiaría de
+$3,000 a lo establecido en la tabla»*.
+
+No son movimientos normales: son **tres paseos con nombre y precio propio**, y
+solo existen **en CDMX y solo para Sprinter**.
+
+| paseo | en vez de $3,000, cobra |
+|---|---|
+| **Taxco** | **$15,000** |
+| **Chalma** | **$8,000** |
+| **Xochimilco** | **$2,000** |
+
+La mecánica es de sustitución, no de suma: ese día **no** se cobra el movimiento
+normal de $3,000 *más* el extra — se cobra el precio del paseo **en lugar** del
+movimiento.
+
+Hoy la página cobra $3,000 los tres. Lo que eso cuesta cada vez que alguien va:
+
+| | cobra hoy | debería | diferencia |
+|---|---|---|---|
+| **Taxco** | $3,000 | $15,000 | **−$12,000** |
+| **Chalma** | $3,000 | $8,000 | **−$5,000** |
+| Xochimilco | $3,000 | $2,000 | +$1,000 |
+
+**Taxco es la más cara de todas las diferencias abiertas.**
+
+**Falta decidir cómo se piden.** Que el cliente lo escriba es frágil; lo natural
+es que al cotizar CDMX aparezcan como casillas —«¿van a Taxco? ¿a Chalma? ¿a
+Xochimilco?»— y en el bot como botones, que además caben en los tres que
+permite WhatsApp.
+
+> **El Meco / El Naranjo** es de la **Huasteca**, no de CDMX, y sigue en $3,000
+> como el movimiento normal. Lo había juntado con éstos por error.
+
+---
+
+### R33 · Puebla y Zacatlán: el día extra son $2,000 (confirmada 1-sep-2026)
+
+Ya era R8 y él la volvió a confirmar sin que se le preguntara. Queda cerrada:
+el día extra de esos destinos **no** son los $1,000 de todos, son **$2,000**.
+
+---
+
+### R31 · DOMINICAL es ida y vuelta el domingo, el mismo día (1-sep-2026)
+
+Dictado: *«dominical es mismo día ida y vuelta el domingo»*.
+
+Las filas 25 y 27 del Excel —`DOMINICAL SPRINTER` y `DOM SPR OCO`— son **un
+producto distinto**: viaje de un día, salir y volver el domingo. Por eso CDMX
+baja de $30,000 a $16,000.
+
+Mi lectura de «salida de domingo» era correcta a medias: no es cualquier viaje
+que salga en domingo, es el que **sale y regresa** ese mismo domingo.
+
+**Todavía no está en el código.** Falta decidir si la página lo cotiza sola
+cuando el cliente pide un viaje de un día en domingo, o si es producto aparte.
+
+---
+
+### R32 · Camécuaro desde Yurécuaro sube $2,000 (1-sep-2026)
+
+Dictado: *«Yurécuaro sí debe estar 2,000 más caro porque se desvía 30 km»*.
+
+El Excel decía $14,500, igual que desde Guadalajara, y eso era lo que olía raro:
+Camécuaro está a 30 km de Yurécuaro y a 157 de Guadalajara.
+
+La razón que dio es la de R19 al derecho: **no le queda de camino, se desvía**,
+y por eso suma.
