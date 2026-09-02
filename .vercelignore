@@ -14,3 +14,8 @@ pendiente/
 
 # Las pruebas tampoco se publican: no las ocupa nadie en el servidor.
 pruebas/
+
+# El cerebro es documentacion interna: no tiene por que estar publicado.
+# Se comprobo antes con pendiente/: Vercel sirve como archivo suelto todo
+# lo que no se excluya.
+cerebro/

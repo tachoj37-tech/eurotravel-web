@@ -17,3 +17,9 @@ node_modules
 # con el se vuelven a instalar iguales en otra maquina.
 .agents/
 .claude/
+
+# Obsidian
+# Su configuracion es de cada maquina —que notas quedaron abiertas, el
+# zoom del grafo, el tema— y no del proyecto. Las NOTAS si se versionan;
+# esto no.
+.obsidian/
