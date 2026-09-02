@@ -249,12 +249,15 @@ igual('cruzando de mes: 3 días', t.diasDeServicio('2026-10-31', '2026-11-02'), 
 
 /* Un destino que NO esta en la lista: 621.2 km redondos, 4 dias.
    6,500 + 621.2 × 22 = 20,166.4  ·  minimo 4 × 3,000 = 12,000  ·  gana la formula
-   20,166.4 cortado a la centena de abajo = 20,100 */
+
+   CAMBIO DE LADO — 1-sep-2026, por R41. Antes se cortaba a la centena de
+   ABAJO y daba 20,100; el dueño lo cambió a la centena MAS CERCANA —«solo
+   redondea a la centena más cercana»— y 20,166.4 queda en 20,200. */
 (function () {
   const p = t.calcula(621.2, 4);
-  igual('un destino fuera de la lista: total 20,100', p.total, 20100);
+  igual('un destino fuera de la lista: total 20,200', p.total, 20200);
   igual('no aplicó el mínimo', p.interno.aplicoMinimo, false);
-  igual('anticipo 20% redondeado al peso', p.anticipo, 4020);
+  igual('anticipo 20% redondeado al peso', p.anticipo, 4040);
   igual('saldo = total − anticipo, exacto', p.saldo, p.total - p.anticipo);
   igual('subtotal + IVA = total', Math.round((p.subtotal + p.iva) * 100) / 100, p.total);
 })();

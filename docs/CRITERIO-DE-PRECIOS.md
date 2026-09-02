@@ -1338,3 +1338,52 @@ horas: de ahí sacas tiempos y km»*.
 > Antes de esto, el tope de 80 km estaba en el motor y **no se cobraba nunca**,
 > porque la página jamás mandaba los kilómetros del movimiento. Cobrar bien y
 > no tener por dónde pedirlo es no cobrar.
+
+---
+
+### R41 · El redondeo va a la centena MAS CERCANA (1-sep-2026)
+
+Dictado: *«lo que la fórmula diría ya está bien, es precio sin movimientos,
+solo redondea a la centena más cercana»*.
+
+Antes cortaba **siempre hacia abajo**, a favor del cliente. Ahora va a la más
+cercana: puede subir hasta $49 o bajar hasta $50.
+
+| | antes | ahora |
+|---|---|---|
+| León, $16,268 | $16,200 | **$16,300** |
+| Monterrey | $49,100 | **$49,200** |
+| un viaje de $20,166 | $20,100 | **$20,200** |
+
+A los precios de lista no les hace nada: ya son múltiplos de cien. Solo toca
+lo que sale de la fórmula.
+
+Y de paso queda dicho: **la fórmula es precio SIN movimientos.** Los
+movimientos se suman aparte, siempre.
+
+---
+
+## EL ERROR DEL 1-sep-2026 · Casi le quito dos precios suyos
+
+Vale más que las reglas de arriba, porque es de método.
+
+Se leyó su Excel buscando de dónde salía cada precio y se encontró que **seis
+destinos no están ahí**: Tala, Zacoalco, Cocula, Tepic, León y Zirahuén.
+
+De cuatro había nota en este archivo o en el catálogo. De **Tepic y León no
+había ninguna**, así que se dieron por precios míos y **se quitaron de la
+lista** para que los cotizara la fórmula. Habrían bajado de $16,900 y $17,600
+a $15,600 y $16,300.
+
+**No eran míos.** La razón estaba escrita, pero en otro lado:
+`pruebas/probar-tarifa.cjs` decía «Leon, los 17,600 que corrigió el dueño». La
+prueba los rescató; sin ella se habrían ido sin que nadie lo notara.
+
+> **La lección: el precio y su razón viven juntos.** Una razón guardada solo en
+> la prueba es una razón que el siguiente que abra el catálogo no va a
+> encontrar. Cada precio que no venga del Excel lleva su nota **al lado del
+> número**, con fecha y con la frase de él.
+
+Y una segunda, más incómoda: **«no encuentro de dónde salió» no es lo mismo que
+«lo inventé yo»**. Antes de quitar un precio hay que buscarlo en las pruebas,
+en el criterio y en el historial — no solo en el archivo que se está mirando.

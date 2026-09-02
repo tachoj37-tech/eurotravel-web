@@ -918,9 +918,15 @@ function calcula(kmTotal, dias, extras) {
   const aplicoMinimo = minimo > km.total;
   const bruto = aplicoMinimo ? minimo : km.total;
 
-  /* Hacia abajo, siempre a favor del cliente. Los precios de la lista ya son
-     múltiplos de cien, así que a ésos el corte no les hace nada. */
-  const traslado = Math.floor(bruto / REDONDEO) * REDONDEO;
+  /* R41 (1-sep-2026) · A la centena MAS CERCANA, no hacia abajo.
+     Dictado: «solo redondea a la centena más cercana».
+
+     Antes cortaba siempre hacia abajo, a favor del cliente. Con eso,
+     $8,502 daba $8,500 —igual— pero $16,268 daba $16,200 en vez de
+     $16,300: hasta $99 regalados por viaje sin que nadie lo decidiera.
+
+     A los precios de lista no les hace nada: ya son múltiplos de cien. */
+  const traslado = Math.round(bruto / REDONDEO) * REDONDEO;
 
   const noches = Math.max(0, Math.floor(Number(extras.noches) || 0));
 

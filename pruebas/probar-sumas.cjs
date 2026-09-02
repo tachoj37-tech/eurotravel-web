@@ -98,10 +98,17 @@ function cierto(nombre, v) { igual(nombre, !!v, true); }
         if (d.servicio + d.importeMovimientos !== p.total) {
           rotos.partes.push({ km, dias, p });
         }
-        /* El corte a la centena nunca sube el precio. Se mira contra el
-           TRASLADO, no contra el total: desde que hay noches y movimientos, el
-           total pasa del bruto por kilómetro con toda razón. */
-        if (p.interno.traslado > p.interno.sinRedondear) rotos.redondeo.push({ km, dias, p });
+        /* CAMBIO DE LADO — 1-sep-2026, por R41.
+           Antes se exigía que el corte a la centena NUNCA subiera el precio:
+           siempre hacia abajo, a favor del cliente. El dueño lo cambió —
+           «solo redondea a la centena más cercana»—, así que ahora puede
+           subir hasta $49 o bajar hasta $50.
+           Lo que se vigila es que NO SE ALEJE MAS DE MEDIA CENTENA, que es
+           lo que significa «la más cercana». Un redondeo que se pase de ahí
+           ya no es redondeo, es otro precio. */
+        if (Math.abs(p.interno.traslado - p.interno.sinRedondear) > 50) {
+          rotos.redondeo.push({ km, dias, p });
+        }
       }
     }
   }
@@ -112,7 +119,7 @@ function cierto(nombre, v) { igual(nombre, !!v, true); }
   igual('el anticipo nunca pasa del total', rotos.anticipo.length, 0);
   igual('el total nunca queda bajo el mínimo por día', rotos.minimo.length, 0);
   igual('el bruto es km x la tarifa que aplico', rotos.tramos.length, 0);
-  igual('el redondeo nunca sube el precio', rotos.redondeo.length, 0);
+  igual('el redondeo va a la centena MAS CERCANA, sin pasarse', rotos.redondeo.length, 0);
   igual('lo que ve el cliente suma el total exacto', rotos.partes.length, 0);
 })();
 

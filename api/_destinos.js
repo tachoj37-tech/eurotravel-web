@@ -167,6 +167,18 @@ const DESTINOS = [
     porDias: { 1: 15000, 2: 16500 },
     diaExtra: 1500,
     movimientosIncluidos: 2 },
+  /* Tepic y León LOS CORRIGIO EL DUEÑO, aunque la razón no estaba
+     escrita aquí sino en `pruebas/probar-tarifa.cjs` —«los 17,600 que
+     corrigió el dueño»—.
+
+     El 1-sep-2026 estuvieron a punto de perderse: al no encontrarlos en
+     su Excel ni hallar nota en este archivo, se dieron por precios míos
+     y se quitaron para que los cotizara la fórmula. Los habría bajado a
+     $15,600 y $16,300. La prueba los rescató.
+
+     De ahí la costumbre: **el precio y la razón viven juntos**. Una
+     razón guardada solo en la prueba es una razón que el siguiente que
+     lea el catálogo no va a encontrar. */
   { nombre: "Tepic", km: 414,
     busca: /tepic/i,
     precio: { sprinter: 16900 } },
