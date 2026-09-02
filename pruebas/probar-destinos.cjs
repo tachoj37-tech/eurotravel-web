@@ -144,7 +144,12 @@ const CRUCE = {
   'Bernal': null,
   'Teotihuacán': null,
   'San Luis Potosí': null,
-  'Monterrey': null,
+  /* CAMBIO DE LADO — 1-sep-2026 (R46). Monterrey estaba aquí porque lo
+     cotizaba la fórmula. Al entrar R45 pasó a vendedor —1,730 km, arriba
+     del tope y sin columna en el Excel— y al avisárselo el dueño contestó
+     «Monterrey ya lo habías cotizado y lo hiciste bien». Con eso sus
+     $49,200 dejaron de ser estimación mía y entró al catálogo. */
+  'Monterrey': 'Monterrey',
   'Saltillo': null,
   'Torreón': null,
   'Durango': null,

@@ -179,6 +179,25 @@ const DESTINOS = [
      De ahí la costumbre: **el precio y la razón viven juntos**. Una
      razón guardada solo en la prueba es una razón que el siguiente que
      lea el catálogo no va a encontrar. */
+  /* R46 (1-sep-2026) · MONTERREY, aprobado por el dueño.
+
+     Al entrar R45 —«si no sabes un precio al 100 %, no se lo compartas»—
+     Monterrey pasó a vendedor: está a 1,730 km, arriba del tope de la
+     fórmula, y no tiene columna en su Excel. Se le avisó y contestó:
+
+         «Monterrey ya lo habías cotizado y lo hiciste bien.»
+
+     Con eso los $49,200 dejan de ser una estimación mía y pasan a ser
+     precio suyo, así que entra al catálogo. Es exactamente el camino que
+     la propia R45 dejó escrito: el día que le ponga precio a un destino
+     lejano, entra a la lista y se cotiza solo.
+
+     El número salió de la fórmula del tramo largo —$37,300 de ancla más
+     330 km a $36— y él lo revisó. Se guarda como precio de lista y ya no
+     se recalcula: si mañana cambia la fórmula, Monterrey no se mueve. */
+  { nombre: "Monterrey", km: 1730,
+    busca: /monterrey|\bmty\b|san pedro garza/i,
+    precio: { sprinter: 49200 } },
   { nombre: "Tepic", km: 414,
     busca: /tepic/i,
     precio: { sprinter: 16900 } },

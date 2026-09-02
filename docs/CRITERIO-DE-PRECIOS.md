@@ -1605,3 +1605,37 @@ Quien tiene que moverse es la empresa, no él.
 en su Excel, así que pasa a vendedor. El día que le ponga precio entra al
 catálogo y se cotiza solo — como ya pasa con Oaxaca, Chiapas, Cancún y
 Barrancas.
+
+---
+
+### R46 · Monterrey entra al catálogo (1-sep-2026)
+
+Al entrar R45, Monterrey pasó a vendedor: está a **1,730 km**, arriba del tope
+de la fórmula, y no tiene columna en el Excel. Se le avisó y contestó:
+
+> «Monterrey ya lo habías cotizado y lo hiciste bien.»
+
+Con eso los **$49,200** dejan de ser una estimación mía y pasan a ser precio
+suyo. Entra a la lista.
+
+**Es exactamente el camino que R45 dejó escrito:** el día que le ponga precio a
+un destino lejano, entra al catálogo y se cotiza solo. Monterrey es el primero
+en recorrerlo.
+
+| días | antes | ahora |
+|---|---|---|
+| 1 a 4 | $49,200 | $49,200 |
+| 5 | $50,200 | $50,200 |
+| 7 | $52,200 | $52,200 |
+| **20** | $76,000 | **$65,200** |
+
+Solo cambia a 20 días, y no por Monterrey: es R34 haciendo su trabajo. Siendo
+ya precio de lista, el piso de $3,000 por día no le puede ganar.
+
+**El número se congela.** Salió de la fórmula del tramo largo —$37,300 de ancla
+más 330 km a $36— pero ya no se recalcula: si mañana cambia la fórmula,
+Monterrey no se mueve. Es un precio, no una cuenta.
+
+> Y con esto **la tabla congelada de 570 combinaciones no tiene ni un solo
+> destino en cero**: todo lo que la página cotiza hoy, lo cotiza con un precio
+> que él aprobó.
