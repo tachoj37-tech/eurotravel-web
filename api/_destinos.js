@@ -340,12 +340,22 @@ const DESTINOS = [
     precio: { busNC47: 38000, bus4849: 40000, neobusI6: 42000, pbI6: 40000, marcopolo: 46500, irizar: 44000, sprinter: 26500 } },
   { nombre: "Puebla", km: 1338,
     busca: /puebla/i,
-    /* «PUEBLA 2 DIAS $36,500». El día extra de $2,000 lo dictó el dueño el
-       26-ago-2026 («el día tres súbele a dos mil») y cuadra con la fila 10
-       del Excel: «$4,000 bus y $2,000 SPR». */
+    /* «PUEBLA 2 DIAS $36,500».
+       R47 (1-sep-2026) · EL DIA EXTRA SON $4,000, NO $2,000.
+
+       El error fue mío y de los que dan vergüenza: **copié la nota de la
+       columna de al lado**. La fila 10 de Puebla —celda P10— dice
+       limpiamente «$ 4000 DIA EXTRA», sin distinguir unidad. Los «$4,000
+       bus y $2,000 SPR» son de **Q10**, que es PUEBLA CON ZACATLAN, otra
+       columna y otro producto.
+
+       El dueño lo cachó con la cuenta hecha: «Puebla debería costar 44,500
+       a 4 días» — que es 36,500 + 2 × 4,000 exactos.
+
+       Q sí se queda en $2,000 para Sprinter: esa nota sí es suya. */
     precio: { busNC47: 58000, bus4849: 59000, neobusI6: 62000, pbI6: 60000, marcopolo: 65000, irizar: 63000, sprinter: 36500 },
     porDias: { 2: 36500 },
-    diaExtra: 2000,
+    diaExtra: 4000,
     movimientosIncluidos: 2 },
   { nombre: "Puebla con Zacatlán", km: 1368,
     busca: /zacatl|chignahuapan|chignauapan/i,

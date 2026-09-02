@@ -560,6 +560,25 @@ const DESTINOS_CON_REGLA = [
     enTexto: /barranca|creel/i,
     movimientoPorDia: 0
   },
+  {
+    /* R48 (1-sep-2026) · OAXACA TIENE SU PASEO CON NOMBRE, y no lo tenía.
+       Salió de revisar TODAS las notas de la fila 10 en vez de las que ya
+       conocía. Su celda AH10 dice:
+
+           «CON HUATULCO O PLAYAS $20000 EXTRAS»
+
+       Es la misma forma que Taxco en CDMX y El Meco en la Huasteca, y es
+       **la más cara de las cuatro**: veinte mil pesos que no se estaban
+       cobrando cada vez que un grupo de Oaxaca bajaba a la costa.
+
+       No confundir con el otro asunto de Oaxaca: que «oaxaca» a secas ya
+       NO arrastra a Puerto Escondido ni a Huatulco al precio de la
+       capital —esos están 500 km más allá y los cotiza un vendedor—.
+       Esto es distinto: es ir a Oaxaca Y ADEMAS bajar a la playa. */
+    nombre: 'Oaxaca',
+    enTexto: /^oaxaca\b|oaxaca de ju[aá]rez/i,
+    paseos: { huatulco: 20000, playas: 20000, playa: 20000 }
+  },
 
   /* ------------------------------------------------------------
      R18 · LOS CUATRO DONDE EL DIA NO ES GRATIS

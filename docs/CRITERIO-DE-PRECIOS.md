@@ -1639,3 +1639,66 @@ Monterrey no se mueve. Es un precio, no una cuenta.
 > Y con esto **la tabla congelada de 570 combinaciones no tiene ni un solo
 > destino en cero**: todo lo que la página cotiza hoy, lo cotiza con un precio
 > que él aprobó.
+
+---
+
+### R47 · Puebla: el día extra son $4,000 (1-sep-2026)
+
+**Copié la nota de la columna de al lado.** Es de los errores que dan vergüenza
+y por eso queda escrito completo.
+
+| celda | qué dice | de quién es |
+|---|---|---|
+| **P10** | «$ 4000 DIA EXTRA» | **PUEBLA 2 DIAS** |
+| **Q10** | «DIA EXTRA $ 4,000 BUS Y $ 2,000 SPR» | **PUEBLA CON ZACATLAN** |
+
+El catálogo traía $2,000 para Puebla citando la nota de Q. Son columnas
+distintas y productos distintos.
+
+Lo cachó él con la cuenta hecha: *«Puebla debería costar 44,500 a 4 días»* —
+que es 36,500 + 2 × 4,000 exactos. Ya da eso.
+
+Puebla con Zacatlán **sí se queda en $2,000** para Sprinter: esa nota sí es la
+suya.
+
+---
+
+### R48 · Oaxaca tiene su paseo con nombre: Huatulco o playas, $20,000 (1-sep-2026)
+
+No lo tenía. Salió de revisar **todas** las notas de la fila 10 en vez de solo
+las que ya conocía. Su celda **AH10** dice:
+
+> «CON HUATULCO O PLAYAS $20000 EXTRAS»
+
+Es la misma forma que Taxco en CDMX y El Meco en la Huasteca, y **es la más
+cara de las cuatro**: veinte mil pesos que no se cobraban cada vez que un grupo
+en Oaxaca bajaba a la costa.
+
+| Oaxaca 4 días, 2 movimientos | |
+|---|---|
+| normales | $81,000 |
+| uno es **Huatulco** | **$101,000** |
+
+No se confunde con el otro asunto de Oaxaca: «oaxaca» a secas ya **no** arrastra
+a Puerto Escondido ni a Huatulco al precio de la capital —están 500 km más allá
+y los cotiza un vendedor—. Esto es distinto: es ir a Oaxaca **y además** bajar a
+la playa.
+
+---
+
+## LA AUDITORIA QUE DEBIO HACERSE ANTES
+
+Los dos hallazgos de arriba salieron de lo mismo: **leer las doce notas de la
+fila 10 completas**, en vez de solo las que ya se conocían.
+
+Estaban ahí desde el principio. Se habían leído tres —las de CDMX— porque él
+las mandó en una foto, y nunca se preguntó qué más decía esa fila.
+
+> **La lección:** cuando una fila del Excel resulta tener información de precio,
+> se lee **entera**, no la celda que se andaba buscando. Doce notas, dos con
+> dinero que no se estaba cobrando.
+
+Su reclamo fue justo: *«de verdad revisa la tabla, me da inseguridad que salgas
+así al mundo»*. Tres errores de lectura el mismo día —el lector que mentía, la
+nota de la columna de al lado, y esta fila a medio leer— y los tres los cazó
+él, no yo.
