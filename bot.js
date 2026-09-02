@@ -1044,11 +1044,20 @@ function textoDeCotizacion(precio, resumen) {
       pasa: true
     };
   }
+  /* R45 · Ese viaje NO se sabe al 100 %, así que no se le pone precio.
+     Dictado el 1-sep-2026: «si no sabes un precio al 100 % no se lo
+     compartas al cliente; le dices que un vendedor lo va a contactar».
+
+     Se promete el contacto, no se le pide que llame: quien se mueve somos
+     nosotros. Y se le deja el teléfono por si prefiere no esperar. */
   if (precio.requiereAsesor) {
     return {
-      texto: 'Ese viaje lo tenemos que cotizar a la medida.\n\nMárcale al *' +
-        TELEFONO + '* y te atienden.',
-      pasa: true
+      texto: 'Ese viaje se lo tengo que pasar a un vendedor 🙌\n\n' +
+        'No te doy un número al aventón: prefiero que te llegue el bueno.\n\n' +
+        '*Te contacta hoy mismo* con tu precio. Y si no quieres esperar, ' +
+        'márcale al *' + TELEFONO + '*.',
+      pasa: true,
+      opciones: ['Hablar con alguien', 'Cotizar otro']
     };
   }
 

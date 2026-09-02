@@ -110,15 +110,25 @@ function en(direccion, placeId) { return { direccion: direccion, placeId: placeI
   /* Puerto Escondido esta 500 km MAS ALLA de Oaxaca: cobrarle el precio de
      Oaxaca era regalar el viaje.
 
-     CAMBIO DE LADO el 26-ago-2026. Antes estas tres exigian `requiereAsesor`
-     porque arriba de 1,400 km no se cotizaba. El dueño quito el asesor
-     («animate a cotizar tu»), asi que ahora las contesta el tramo largo.
+     CAMBIO DE LADO DOS VECES, y la segunda vuelve al principio.
+
+     26-ago-2026: antes exigian `requiereAsesor` porque arriba de 1,400 km no
+     se cotizaba. El dueño quito el asesor —«animate a cotizar tu»— y paso a
+     contestarlas el tramo largo.
+
+     1-sep-2026 (R45): el dueño dicto «si no sabes un precio al 100% no se lo
+     compartas al cliente». La propia R16 dejo escrito que ese tramo tiene
+     $9,800 de error promedio contra $1,534 del corto, y por que: sus precios
+     largos no son funcion del kilometro —Oaxaca $75,000 a 1,988 km y
+     Barrancas los mismos $75,000 a 2,882—. Nueve mil ochocientos de error no
+     es saberlo al 100%, asi que vuelve al vendedor.
+
      Lo que se prueba sigue siendo lo mismo y es lo que importa: que NO
      hereden el precio de su vecino de la lista. */
   cierto('Puerto Escondido ya NO es Oaxaca',
     t.trasladoDe(2400, en('Puerto Escondido, Oaxaca, México')).deLista === undefined);
-  cierto('y lo cotiza el tramo largo',
-    t.trasladoDe(2400, en('Puerto Escondido, Oaxaca, México')).tramoLargo === true);
+  cierto('y NO se le inventa precio: lo cotiza un vendedor',
+    t.trasladoDe(2400, en('Puerto Escondido, Oaxaca, México')).requiereAsesor === true);
   cierto('Huatulco tampoco',
     t.trasladoDe(2500, en('Huatulco, Oaxaca, México')).deLista === undefined);
   igual('pero la capital sigue en su precio',
@@ -177,61 +187,77 @@ function en(direccion, placeId) { return { direccion: direccion, placeId: placeI
   igual('de 0 a 1,400 km el precio nunca baja ni se queda igual', rompe, null);
 })();
 
-/* ---- 6. ARRIBA DEL TOPE: EL TRAMO LARGO ----
-   CAMBIO DE LADO el 26-ago-2026. Antes arriba de 1,400 km no habia precio y
-   se contestaba «lo cotiza un asesor». El dueño lo quito: «que no haya
-   asesor, animate a cotizar tu». Ahora hay un segundo tramo, a $36 el
-   kilometro, anclado en lo que vale la formula corta en los 1,400.
+/* ---- 6. ARRIBA DEL TOPE: NO SE INVENTA PRECIO ----
+   CAMBIO DE LADO DOS VECES, y la segunda vuelve al principio.
 
-   Lo que se prueba ahora es que NO haya escalon en la costura: un destino
-   un kilometro mas lejos no puede costar de golpe miles mas. */
+   26-ago-2026: arriba de 1,400 km no habia precio y se contestaba «lo cotiza
+   un asesor». El dueño lo quito —«que no haya asesor, animate a cotizar
+   tu»— y se hizo un segundo tramo a $36 el kilometro.
+
+   1-sep-2026 (R45): «asegura que si no sabes un precio al 100% no se lo
+   compartas al cliente; le dices que un vendedor lo va a contactar».
+
+   Ese tramo NO se sabe al 100%, y lo dejo escrito la propia R16: $9,800 de
+   error promedio contra $1,534 del corto, porque sus precios largos no son
+   funcion del kilometro —Oaxaca $75,000 a 1,988 km y Barrancas los mismos
+   $75,000 a 2,882—.
+
+   Lo que se prueba ahora: que arriba del tope NO salga un numero, y que el
+   tramo corto siga intacto. */
 (function () {
-  cierto('arriba del tope YA se cotiza, sin asesor',
-    !t.trasladoDe(1400.001, null).requiereAsesor);
-  cierto('y se marca como tramo largo', t.trasladoDe(2000, null).tramoLargo === true);
+  cierto('arriba del tope NO se cotiza: lo pasa a un vendedor',
+    t.trasladoDe(1400.001, null).requiereAsesor === true);
+  cierto('y no sale ningun numero', t.trasladoDe(2000, null).total === 0);
+  cierto('ni a 4,282 km', t.trasladoDe(4282, null).total === 0);
+  cierto('ni a 20,000', t.trasladoDe(20000, null).total === 0);
 
-  /* LA TARIFA MISMA, fijada. Se descubrio probando en rojo: bajando el
-     tramo largo de $36 a $22 NO se caia ni una asercion, porque todas
-     miraban la forma —sin escalon, siempre subiendo, partes que cuadran—
-     y ninguna el numero. Una tarifa de dinero sin prueba que la fije se
-     puede cambiar por accidente y nadie se entera. */
-  igual('el tramo largo cobra $36 el kilómetro', t.POR_KM_LARGO, 36);
-  igual('y el corto sigue en $22', t.POR_KM, 22);
-  igual('2,000 km: 37,300 del ancla + 600 × 36',
-    t.trasladoDe(2000, null).total, 37300 + 600 * 36);
-  igual('4,282 km (lo que mide Cancún): el ancla + 2,882 × 36',
-    t.trasladoDe(4282, null).total, 37300 + 2882 * 36);
+  /* La tarifa del tramo corto sigue fijada. Se descubrio probando en rojo:
+     bajandola NO se caia ni una asercion, porque todas miraban la forma y
+     ninguna el numero. */
+  igual('el corto sigue en $22', t.POR_KM, 22);
 
   const justoAntes = t.trasladoDe(1400, null).total;
-  const justoDespues = t.trasladoDe(1401, null).total;
-  igual('en los 1,400 justos vale lo de siempre', justoAntes, 37300);
-  cierto('un km mas cuesta mas, no menos', justoDespues > justoAntes);
-  cierto('y el salto en la costura es de centavos, no de miles',
-    justoDespues - justoAntes < 100);
+  igual('en los 1,400 justos todavia se cotiza, y vale lo de siempre',
+    justoAntes, 37300);
+  cierto('un kilometro mas arriba ya no',
+    t.trasladoDe(1401, null).requiereAsesor === true);
 
-  /* El tramo largo tambien tiene que subir siempre. */
-  let ant = -1, rompe = null;
-  for (let km = 1400; km <= 5000; km += 7) {
-    const v = t.trasladoDe(km, null).total;
-    if (v <= ant) { rompe = km; break; }
-    ant = v;
+  /* Y los destinos lejanos que SI estan en su lista siguen cotizando: esos
+     son precios suyos, no estimaciones mias. */
+  cierto('Cancún, que es de su lista, sigue cotizando aunque esté a 4,282 km',
+    !t.trasladoDe(4282, en('Cancún, Quintana Roo, México'), 'sprinter', 17).requiereAsesor);
+  igual('  y con SU precio, no con una fórmula',
+    t.trasladoDe(4282, en('Cancún, Quintana Roo, México'), 'sprinter', 17).total, 145000);
+  cierto('Barrancas también',
+    !t.trasladoDe(2882, en('Barrancas del Cobre'), 'sprinter', 7).requiereAsesor);
+
+  /* Arriba del tope, NINGUNO da precio. Se recorre igual que antes, pero lo
+     que se exige es lo contrario: que ninguno suelte un numero. */
+  let colado = null;
+  for (let km = 1401; km <= 5000; km += 7) {
+    const r = t.trasladoDe(km, null);
+    if (!r.requiereAsesor || r.total !== 0) { colado = km; break; }
   }
-  igual('de 1,400 a 5,000 km el precio nunca baja', rompe, null);
+  igual('de 1,401 a 5,000 km NINGUNO da precio', colado, null);
 
-  /* Y el viaje completo ya da un numero, con sus noches y movimientos. */
+  /* CAMBIO DE LADO (R45) · Un viaje larguísimo fuera de su lista YA NO trae
+     precio. Y lo importante no es solo que pida vendedor: es que TODOS los
+     montos vengan en CERO. Un cero con `requiereAsesor` la pantalla lo sabe
+     leer; un numero a medias lo cobraria. */
   const p = t.calcula(4282, 4, {
     noches: 3,
     movimientos: [{ horaInicio: '08:00', horaFin: '16:00' },
                   { horaInicio: '08:00', horaFin: '18:00' }]
   });
-  cierto('un viaje larguisimo ya trae precio', p.total > 0);
-  cierto('y ya no pide asesor', !p.requiereAsesor);
-  igual('el anticipo sigue siendo el 20%', p.anticipo, Math.round(p.total * 0.2));
-  igual('y las dos partes suman el total',
-    p.desglose.servicio + p.desglose.importeMovimientos, p.total);
+  cierto('un viaje larguísimo fuera de su lista pide vendedor', p.requiereAsesor === true);
+  igual('  y el total viene en cero', p.total, 0);
+  igual('  el anticipo también', p.anticipo, 0);
+  igual('  y el saldo', p.saldo, 0);
+  igual('  ni el desglose trae nada que cobrar',
+    p.desglose.servicio + p.desglose.importeMovimientos, 0);
   /* la oficina si necesita saber los kilometros, para revisarlo */
-  igual('la oficina si ve los kilometros', p.interno.km, 4282);
-  igual('y los dias que se pidieron con movimiento', p.desglose.diasMovimiento, 2);
+  igual('la oficina sí ve los kilómetros, para poder cotizarlo a mano',
+    p.interno.km, 4282);
 })();
 
 /* ============ DIAS DE SERVICIO ============ */

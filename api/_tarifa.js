@@ -314,15 +314,41 @@ function trasladoDe(kmTotal, destino, unidad, dias, dominical) {
     };
   }
 
-  /* El tramo largo, sin escalón: arranca donde termina el corto. */
+  /* ------------------------------------------------------------
+     R45 · SI NO SE SABE AL 100 %, NO SE DA PRECIO (1-sep-2026)
+     ------------------------------------------------------------
+     Dictado: «asegura que si no sabes un precio al 100 % no se lo
+     compartas al cliente; le dices que un vendedor lo va a
+     contactar».
+
+     ESTO REVOCA LA PARTE DE R16 QUE COTIZABA EL TRAMO LARGO.
+
+     R16 también era suya —«que no haya asesor, anímate a cotizar
+     tú»— y por eso se hizo el segundo tramo de $36 el kilómetro.
+     Pero la propia R16 dejó escrito lo que costaba: **$9,800 de
+     error promedio**, contra $1,534 del tramo corto. Y la razón:
+     sus precios largos NO son función del kilómetro. Oaxaca son
+     $75,000 a 1,988 km y Barrancas los mismos $75,000 a 2,882.
+
+     Un número con nueve mil ochocientos pesos de error no es un
+     precio que se sepa al 100 %. Con la regla nueva, ese tramo
+     deja de cotizarse y pasa a un vendedor.
+
+     El tramo corto SI se sigue cotizando: su error es de $1,534 y
+     además él aprobó cuatro de sus precios uno por uno (R37).
+
+     El día que le ponga precio a un destino lejano, entra al
+     catálogo y se cotiza solo — como pasa hoy con Oaxaca, Chiapas,
+     Cancún y Barrancas, que están en su lista.
+     ------------------------------------------------------------ */
   if (km > TOPE_FORMULA_KM) {
-    const ancla = BASE_TRASLADO + POR_KM * TOPE_FORMULA_KM;
-    return {
-      total: ancla + POR_KM_LARGO * (km - TOPE_FORMULA_KM),
-      porFormula: true, tramoLargo: true, porKm: POR_KM_LARGO, km: km
-    };
+    return { requiereAsesor: true, porQue: 'lejos', km: km, total: 0, porKm: null };
   }
 
+  /* Los 0 km NO se mandan con un vendedor, y se intentó: son el costo de
+     sacar la unidad, que es una decisión suya y está en `probar-tarifa`.
+     Y el caso de verdad —que no venga destino— ya lo rechaza `cotizar.js`
+     con un 400 antes de llegar aquí. */
   return { total: BASE_TRASLADO + POR_KM * km, porFormula: true, porKm: POR_KM, km: km };
 }
 const MINIMO_POR_DIA = 3000;          // piso por día de servicio, IVA incluido

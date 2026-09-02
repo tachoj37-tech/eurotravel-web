@@ -1554,3 +1554,54 @@ sin ninguno señalado.
 > diferencia está en algo del negocio que yo no sabía. Pasó con el bloque D
 > (R36), con Tepic y León, y ahora con Mazatlán. La regla que sale de ahí es
 > preguntar antes de "corregir".
+
+---
+
+### R45 · Si no se sabe al 100 %, no se da precio (1-sep-2026)
+
+Dictado: *«asegura que si no sabes un precio al 100 % no se lo compartas al
+cliente; le dices que un vendedor lo va a contactar»*.
+
+**Primero lo que estaba roto:** `requiereAsesor` era **código muerto**. Nadie
+lo ponía en true. Se comprobó:
+
+| lo que se pedía | lo que cobraba |
+|---|---|
+| un viaje de 3,000 km | $94,900 |
+| uno de **20,000 km** | **$709,900** |
+
+Números inventados, con cara de precio, sin que nadie los hubiera revisado.
+
+**ESTO REVOCA LA PARTE DE R16 QUE COTIZABA EL TRAMO LARGO.**
+
+R16 también era suya —*«que no haya asesor, anímate a cotizar tú»*— y por eso
+se hizo el segundo tramo de $36 el kilómetro. Pero la propia R16 dejó escrito
+lo que costaba:
+
+> **$9,800 de error promedio**, contra $1,534 del tramo corto. Y la razón: sus
+> precios largos **no son función del kilómetro**. Oaxaca son $75,000 a 1,988
+> km y Barrancas los mismos $75,000 a 2,882.
+
+Nueve mil ochocientos de error no es saber un precio al 100 %.
+
+**Lo que queda:**
+
+| | qué pasa |
+|---|---|
+| destino **de su lista** | su precio, aunque esté a 4,282 km |
+| **hasta 1,400 km** por fórmula | se cotiza — error $1,534, y él aprobó cuatro de sus precios (R37) |
+| **más de 1,400 km** fuera de su lista | **vendedor**, y todos los montos en cero |
+
+**El cero importa tanto como el aviso.** La pantalla sabe leer un cero con
+`requiereAsesor` y decir lo correcto; un número a medias lo cobraría.
+
+**Lo que se le dice al cliente promete contacto, no le pide que llame:**
+
+> *«Este viaje lo cotiza un vendedor: te contacta hoy mismo con tu precio.»*
+
+Quien tiene que moverse es la empresa, no él.
+
+**El que se notó al cambiarlo: Monterrey.** Está a 1,940 km y no tiene columna
+en su Excel, así que pasa a vendedor. El día que le ponga precio entra al
+catálogo y se cotiza solo — como ya pasa con Oaxaca, Chiapas, Cancún y
+Barrancas.

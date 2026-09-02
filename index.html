@@ -5382,7 +5382,11 @@ window.IMGS = {
          hoy mismo.
          ------------------------------------------------------------ */
       if (c.requiereAsesor) {
-        precioNoDisponible('Este viaje lo cotiza uno de nuestros asesores.');
+        /* R45 · Se PROMETE el contacto, no se le pide al cliente que llame.
+           Dictado el 1-sep-2026: «le dices que un vendedor lo va a
+           contactar». La diferencia importa: quien tiene que moverse es
+           nosotros, no él. */
+        precioNoDisponible('Este viaje lo cotiza un vendedor: te contacta hoy mismo con tu precio.');
         return;
       }
 
