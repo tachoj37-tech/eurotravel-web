@@ -432,6 +432,23 @@ const DESTINOS_CON_REGLA = [
     placeId: 'ChIJv8IdsTSP1oURPsKDyokOts4',   // el de lugares.js
     enTexto: /huasteca/i,
     movimientoPorDia: 3000,
+    /* R39 (1-sep-2026) · «Recuerda que la Huasteca ya tiene movimientos,
+       pero si uno de los movimientos es El Meco, ofrécelo como en CDMX
+       con los 3 destinos; si lo seleccionas, le subes 3,000».
+
+       OJO CON LA DIFERENCIA CONTRA CDMX, que costó una vuelta:
+
+       · En CDMX dijo «la ficha cambiaría DE 3,000 A lo establecido en la
+         tabla». Eso es SUSTITUIR: Taxco vale $15,000 en vez de $3,000, o
+         sea $12,000 más.
+       · Aquí dijo «le subes 3,000». Eso es SUMAR. Y en la Huasteca el
+         movimiento normal ya cuesta sus $3,000 —no viene incluido, se
+         comprobó: su base son $26,500 y cuatro movimientos $12,000—, así
+         que El Meco vale $6,000 para acabar subiendo los $3,000 que pidió.
+
+       Escrito como precio final y no como suma porque el mecanismo de los
+       paseos es de sustitución. El resultado es el que él pidió. */
+    paseos: { 'el meco': 6000, 'el naranjo': 6000 },
     estadiaPorDia: true
   },
   /* La CDMX comparte con la Huasteca la forma de cobrarse (criterio R3,
@@ -1128,6 +1145,7 @@ function calcula(kmTotal, dias, extras) {
     const diasDelPaquete = nochesIncluidas + 1;
     cobroNoches = nochesExtra * EXTRA_POR_NOCHE;
     cobroMovimientos = precioMovimientos(movimientos.slice(diasDelPaquete));
+
   }
 
   /* SOLO IDA manda sobre todo lo demás: 65% del precio de UN DÍA sin

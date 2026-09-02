@@ -1288,3 +1288,53 @@ y aun así cuesta sus $15,000, no los $5,500.
 
 > El movimiento tiene que traer su `km` para que esto aplique. Sin ese dato se
 > cobra como siempre — no se supone que sea lejos.
+
+---
+
+### R39 · El Meco es paseo con nombre, pero SUMA en vez de sustituir (1-sep-2026)
+
+Dictado: *«recuerda que la Huasteca ya tiene movimientos, pero si uno de los
+movimientos es El Meco, ofrécelo como en CDMX con los 3 destinos; si lo
+seleccionas, le subes 3,000»*.
+
+**La diferencia contra CDMX importa, y costó una vuelta encontrarla:**
+
+| | lo que dijo | qué significa |
+|---|---|---|
+| **CDMX** | «la ficha cambiaría **de** 3,000 **a** lo de la tabla» | **sustituye**: Taxco vale $15,000 en vez de $3,000 |
+| **Huasteca** | «le **subes** 3,000» | **suma**: el día vale $6,000 en vez de $3,000 |
+
+En la Huasteca el movimiento normal **sí se cobra** —se comprobó: su base son
+$26,500 y cuatro movimientos $12,000, que dan sus $42,500—. Así que para que
+El Meco «suba 3,000» tiene que valer $6,000.
+
+| Huasteca 4 días | |
+|---|---|
+| 4 movimientos normales | $42,500 |
+| 3 + **El Meco** | **$45,500** |
+
+Aplica igual a **El Naranjo**, que va en la misma celda de su Excel.
+
+---
+
+### R40 · Cómo se piden los paseos y el recorrido lejos (1-sep-2026)
+
+Dictado: *«los 3 destinos de CDMX ofrécelos: si el cliente puso CDMX de
+destino y quiere movimientos, despliega esas 3 opciones. Obviamente el cliente
+puede elegir otra cosa, pero ofrécelos, tanto en la app como en el chatbot.
+Pregúntale al cliente si el movimiento se encuentra en un radio de 80 km y
+horas: de ahí sacas tiempos y km»*.
+
+**Tres cosas quedan definidas:**
+
+1. **Los paseos se OFRECEN, no se imponen.** Con CDMX de destino y movimientos
+   pedidos, salen las tres opciones —Taxco, Chalma, Xochimilco— y el cliente
+   puede escoger otra cosa. Lo mismo con El Meco en la Huasteca.
+2. **En los dos lados**: la pantalla de cotizar y el chat.
+3. **Por cada movimiento se preguntan DOS cosas**: si queda dentro de los 80 km
+   y cuántas horas. De ahí salen el kilometraje —que decide si son $5,500
+   (R29)— y la banda de horas.
+
+> Antes de esto, el tope de 80 km estaba en el motor y **no se cobraba nunca**,
+> porque la página jamás mandaba los kilómetros del movimiento. Cobrar bien y
+> no tener por dónde pedirlo es no cobrar.
