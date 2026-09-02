@@ -1432,3 +1432,44 @@ leí como lo que era. Eran **$3,000 por viaje** en Taxco y **$3,000** en Chalma.
 > Xochimilco es el que más cambia de sentido: como sustitución **bajaba** el
 > precio $1,000; como extra lo **sube** $2,000. Tres mil de diferencia en el
 > mismo renglón, según cómo se lea una palabra.
+
+---
+
+## EL SEGUNDO ERROR DEL 1-sep-2026 · Mi lector del Excel mentía
+
+Se le reportaron al dueño precios que **no existen en su hoja**, dos veces
+seguidas, y las dos veces él tuvo que corregirme mirando su propia pantalla.
+
+**Lo que pasó.** Una celda vacía con formato se guarda cerrada en sí misma:
+
+```xml
+<c r="M25" s="12"/>
+```
+
+La expresión que la leía era `/<c r="…"([^>]*)>([\s\S]*?)<\/c>/`. El `[^>]*`
+se tragaba la diagonal final y tomaba esa celda como **abierta**; entonces el
+`[\s\S]*?</c>` corría hacia adelante hasta el cierre de **otra** celda y le
+colgaba a la vacía el valor de la siguiente que sí tuviera.
+
+**Lo que produjo:** que CDMX tenía $16,000 en la fila dominical. Está
+**vacía**. Y que Chapala tenía $6,500 ahí; también está vacía —ese número es
+de la columna de al lado—.
+
+Y lo peor: sobre ese dato falso construí una teoría entera —«dominical no es
+un solo producto, para los lejanos ha de ser otra cosa»— y se la presenté como
+hallazgo. **No había nada que explicar: el dato estaba mal leído.**
+
+> **La lección.** Cuando un dato no encaja con lo que la persona sabe de su
+> propio negocio, **la primera sospecha va sobre la herramienta, no sobre el
+> dato**. Él dijo dos veces «revisa la tabla» antes de que se me ocurriera
+> revisar el lector.
+>
+> Y la segunda: un parser escrito a mano necesita probarse contra un caso que
+> se sepa de antemano. Este nunca se probó contra una celda vacía, que es
+> justo el caso donde fallaba.
+
+El lector corregido queda en el borrador de trabajo, partiendo por celda y
+descartando explícitamente las que cierran en sí mismas. Con él, la fila 25
+—`DOMINICAL SPRINTER`— trae precio en **13 destinos, todos de un día**, y
+está vacía en CDMX, Puebla, Huasteca, Barrancas y Cancún. Que es justo lo que
+él dijo desde el principio.
