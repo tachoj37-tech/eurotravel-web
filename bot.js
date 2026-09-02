@@ -1372,5 +1372,9 @@ module.exports = {
      botones de 20 caracteres o 10 filas de 24— y que los días se cuenten
      con los dos extremos. */
   pregunta, diasEntre, HORAS_MOV,
+  /* `paseosDe` lo usa TAMBIEN la pantalla de cotizar, no solo el chat. Se
+     comparte a propósito: una tercera copia de esa tabla sería una tercera
+     cosa que se despega sola. */
+  paseosDe,
   UNIDADES, TELEFONO, SITIO
 };

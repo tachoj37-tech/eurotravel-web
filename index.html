@@ -885,6 +885,11 @@
   .mov-dia { border: 1px solid var(--line); border-radius: var(--radius); padding: 18px; margin-top: 16px; background: #fcfcfb; }
   .mov-dia-cab { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
   .mov-dia-cab b { font-family: 'Archivo'; font-size: 13px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+  /* El «se van lejos» de cada día (R40). Va como renglón propio y no dentro
+     de la rejilla: es una pregunta de sí o no, no un campo que llenar. */
+  .mov-lejos { display: flex; align-items: center; gap: 9px; margin-top: 12px;
+    font-size: 14px; color: var(--muted); cursor: pointer; }
+  .mov-lejos input { width: 17px; height: 17px; accent-color: var(--rojo); cursor: pointer; }
 
   .mov-quitar {
     background: none; border: none; color: var(--muted); cursor: pointer;
@@ -5749,6 +5754,55 @@ window.IMGS = {
         rej.appendChild(campo('Hora de inicio', 'time', dia.horaInicio, function (v) { dia.horaInicio = v; }));
         rej.appendChild(campo('Hora de fin', 'time', dia.horaFin, function (v) { dia.horaFin = v; }));
         caja.appendChild(rej);
+
+        /* ------------------------------------------------------------
+           LOS DOS QUE MUEVEN EL PRECIO Y NADIE PODIA PEDIR (R40)
+
+           Hasta el 1-sep-2026 el motor cobraba bien los paseos con
+           nombre y el recorrido de más de 80 km, y **no se cobraban
+           nunca**, porque esta pantalla no tenía por dónde pedirlos.
+
+           La lista de paseos sale de `bot.js`, la misma que usa el
+           chat: una tercera copia sería una tercera cosa que se
+           despega sola.
+           ------------------------------------------------------------ */
+        var paseos = (window.BOT && window.BOT.paseosDe)
+          ? window.BOT.paseosDe(VIAJE.destino && (VIAJE.destino.direccion || VIAJE.destino.texto || ''))
+          : null;
+
+        if (paseos) {
+          var fP = document.createElement('div');
+          fP.className = 'field';
+          var lP = document.createElement('label');
+          lP.textContent = '¿Van a alguno de estos?';
+          fP.appendChild(lP);
+          var sel = document.createElement('select');
+          sel.className = 'input';
+          [''].concat(paseos).forEach(function (p) {
+            var o = document.createElement('option');
+            o.value = p;
+            o.textContent = p || 'Recorrido normal';
+            if (p === dia.paseo) o.selected = true;
+            sel.appendChild(o);
+          });
+          /* Solo se guarda, como las horas: el precio se pide al enviar,
+             no en cada tecla. */
+          sel.addEventListener('change', function () { dia.paseo = sel.value; });
+          fP.appendChild(sel);
+          caja.appendChild(fP);
+        }
+
+        var fL = document.createElement('label');
+        fL.className = 'mov-lejos';
+        var chk = document.createElement('input');
+        chk.type = 'checkbox';
+        chk.checked = !!dia.lejos;
+        chk.addEventListener('change', function () { dia.lejos = chk.checked; });
+        fL.appendChild(chk);
+        var txt = document.createElement('span');
+        txt.textContent = 'Ese día se van lejos (más de 80 km)';
+        fL.appendChild(txt);
+        caja.appendChild(fL);
 
         movLista.appendChild(caja);
       });

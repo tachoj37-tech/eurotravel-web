@@ -53,7 +53,22 @@
     return Math.max(0, Math.round((b - a) / 86400000));
   }
 
-  function diaVacio() { return { fecha: '', horaInicio: '', horaFin: '' }; }
+  /* `paseo` y `lejos` se agregaron el 1-sep-2026 (R40): los dos MUEVEN EL
+     PRECIO, así que tienen que viajar hasta `/api/cotizar` —no basta con
+     enseñarlos en pantalla—.
+
+     · paseo  Taxco / Chalma / Xochimilco en CDMX, El Meco / El Naranjo en
+              la Huasteca. Suma su precio encima del día (R42).
+     · lejos  el recorrido pasa de 80 km: son $5,500 y las horas dejan de
+              importar (R29). */
+  function diaVacio() {
+    return { fecha: '', horaInicio: '', horaFin: '', paseo: '', lejos: false };
+  }
+
+  /* Los km no se preguntan: se pregunta si pasa de los 80, que es lo que el
+     cliente sí sabe contestar. El número solo existe para que el motor
+     decida de qué lado del corte cae. */
+  var KM_LEJOS = 120;
 
   /* ------------------------------------------------------------
      ¿ESTA COMPLETO ESTO?
@@ -121,12 +136,28 @@
   function paraCotizar(estado) {
     if (!estado.incluye) return [];
     return estado.dias.map(function (d) {
-      return { horaInicio: d.horaInicio || '', horaFin: d.horaFin || '' };
+      /* `paseo` y `lejos` van AQUI TAMBIEN, no solo en `paraCobrar`.
+         Si solo fueran al cobrar, la pantalla enseñaría un precio y se
+         cobraría otro —hasta $15,000 de diferencia con Taxco—, que es
+         justo lo que `probar-cotiza-vs-cobra.cjs` existe para impedir. */
+      var m = { horaInicio: d.horaInicio || '', horaFin: d.horaFin || '' };
+      if (d.paseo) m.paseo = d.paseo;
+      if (d.lejos) m.km = KM_LEJOS;
+      return m;
     });
   }
 
   function paraCobrar(estado) {
-    return estado.incluye ? estado.dias.slice() : [];
+    if (!estado.incluye) return [];
+    /* Se copia día por día para poder traducir `lejos` a los km que el
+       motor entiende, sin tocar lo que guarda la pantalla. */
+    return estado.dias.map(function (d) {
+      var m = { fecha: d.fecha || '', horaInicio: d.horaInicio || '',
+        horaFin: d.horaFin || '' };
+      if (d.paseo) m.paseo = d.paseo;
+      if (d.lejos) m.km = KM_LEJOS;
+      return m;
+    });
   }
 
   /* ------------------------------------------------------------

@@ -198,5 +198,48 @@ igual('febrero bisiesto: 2', M.noches('2028-02-28T08:00', '2028-03-01T18:00'), 2
     tarifa.movimientosDe(m.paraCotizar(), 3).length, 3);
 })();
 
+/* ============ EL PASEO Y EL «SE VAN LEJOS» LLEGAN AL MOTOR ============
+   Agregados el 1-sep-2026 (R40). Los dos MUEVEN EL PRECIO —Taxco son
+   $15,000 y el recorrido lejos $5,500— así que si se quedaran en la
+   pantalla, el cliente escogería algo que no se le cobra.
+
+   Y tienen que ir en LAS DOS listas. Si `paraCobrar` los llevara y
+   `paraCotizar` no, se enseñaría un precio y se cobraría otro. */
+(function () {
+  const estado = { incluye: true, dias: [
+    { fecha: '2026-10-10', horaInicio: '08:00', horaFin: '16:00', paseo: 'Taxco', lejos: false },
+    { fecha: '2026-10-11', horaInicio: '08:00', horaFin: '16:00', paseo: '', lejos: true },
+    { fecha: '2026-10-12', horaInicio: '08:00', horaFin: '16:00', paseo: '', lejos: false }
+  ] };
+  const cotizar = M.paraCotizar(estado);
+  const cobrar = M.paraCobrar(estado);
+
+  igual('el paseo llega al cotizar', cotizar[0].paseo, 'Taxco');
+  igual('el paseo llega al cobrar', cobrar[0].paseo, 'Taxco');
+  igual('«se van lejos» se vuelve km al cotizar', cotizar[1].km, 120);
+  igual('«se van lejos» se vuelve km al cobrar', cobrar[1].km, 120);
+  igual('el día normal no lleva km inventados', cotizar[2].km, undefined);
+  igual('  ni paseo vacío', cotizar[2].paseo, undefined);
+
+  /* La que de verdad importa: que las dos listas digan LO MISMO. */
+  const distintos = cotizar.filter(function (c, i) {
+    return c.paseo !== cobrar[i].paseo || c.km !== cobrar[i].km;
+  });
+  igual('cotizar y cobrar mandan los mismos paseos y km', distintos.length, 0);
+
+  /* Y que el motor de verdad los cobre desde aquí. */
+  const conTaxco = tarifa.calcula(1102, 3, {
+    destino: { nombre: 'Ciudad de México' }, noches: 2, unidad: 'sprinter',
+    movimientos: M.paraCotizar(estado)
+  }).total;
+  const sinNada = tarifa.calcula(1102, 3, {
+    destino: { nombre: 'Ciudad de México' }, noches: 2, unidad: 'sprinter',
+    movimientos: [{ horaInicio: '08:00', horaFin: '16:00' },
+      { horaInicio: '08:00', horaFin: '16:00' }, { horaInicio: '08:00', horaFin: '16:00' }]
+  }).total;
+  /* Taxco suma $15,000 y el día lejos pasa de $3,000 a $5,500: +$2,500. */
+  igual('lo que la pantalla manda sí sube el precio', conTaxco - sinNada, 17500);
+})();
+
 console.log('\n' + buenas + ' buenas, ' + malas + ' malas');
 process.exit(malas ? 1 : 0);
