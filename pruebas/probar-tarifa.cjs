@@ -843,11 +843,17 @@ igual('sin nada no vale', t.horasDe(null, undefined), 0);
         ]
       }).total;
     };
+    /* CAMBIO DE LADO — 1-sep-2026, y es de dinero.
+       Primero se entendió que el paseo SUSTITUIA el movimiento de $3,000
+       —de ahí +$12,000 por Taxco—. El dueño lo aclaró: «si eligen esos 3
+       destinos, SE LE SUMA a esa cantidad preestablecida, no se le suman
+       3,000 más eso». O sea que el día sigue costando sus $4,000 y el
+       paseo va ENCIMA, que es lo que dice su hoja: «$15,000 EXTRAS».
+       Taxco pasa de +$12,000 a +$15,000: eran $3,000 por viaje. */
     const normal = conMov(null);
-    igual('CDMX · Taxco cuesta $15,000 en vez de los $3,000', conMov('Taxco') - normal, 12000);
-    igual('CDMX · Chalma cuesta $8,000 en vez de los $3,000', conMov('chalma') - normal, 5000);
-    igual('CDMX · Xochimilco cuesta $2,000, o sea MENOS que un movimiento',
-      conMov('XOCHIMILCO') - normal, -1000);
+    igual('CDMX · Taxco suma sus $15,000 encima', conMov('Taxco') - normal, 15000);
+    igual('CDMX · Chalma suma sus $8,000', conMov('chalma') - normal, 8000);
+    igual('CDMX · Xochimilco suma sus $2,000', conMov('XOCHIMILCO') - normal, 2000);
     igual('un paseo que no existe se ignora, no truena', conMov('Cancun'), normal);
     /* Solo en CDMX: en cualquier otro destino el nombre no significa nada. */
     igual('en Chapala un «paseo» no existe: cobra su movimiento normal',

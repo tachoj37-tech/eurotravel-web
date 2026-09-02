@@ -436,19 +436,14 @@ const DESTINOS_CON_REGLA = [
        pero si uno de los movimientos es El Meco, ofrécelo como en CDMX
        con los 3 destinos; si lo seleccionas, le subes 3,000».
 
-       OJO CON LA DIFERENCIA CONTRA CDMX, que costó una vuelta:
+       Va como EXTRA, igual que los tres de CDMX: el día sigue costando
+       sus $4,000 —$3,000 de movimiento más $1,000 de estadía— y encima
+       se suman los $3,000 de El Meco. Aclarado el 1-sep: «a ese precio
+       se le suman lo de Meco».
 
-       · En CDMX dijo «la ficha cambiaría DE 3,000 A lo establecido en la
-         tabla». Eso es SUSTITUIR: Taxco vale $15,000 en vez de $3,000, o
-         sea $12,000 más.
-       · Aquí dijo «le subes 3,000». Eso es SUMAR. Y en la Huasteca el
-         movimiento normal ya cuesta sus $3,000 —no viene incluido, se
-         comprobó: su base son $26,500 y cuatro movimientos $12,000—, así
-         que El Meco vale $6,000 para acabar subiendo los $3,000 que pidió.
-
-       Escrito como precio final y no como suma porque el mecanismo de los
-       paseos es de sustitución. El resultado es el que él pidió. */
-    paseos: { 'el meco': 6000, 'el naranjo': 6000 },
+           Huasteca 4 días con 4 movimientos    $42,500
+           uno de ellos es El Meco              $45,500 */
+    paseos: { 'el meco': 3000, 'el naranjo': 3000 },
     estadiaPorDia: true
   },
   /* La CDMX comparte con la Huasteca la forma de cobrarse (criterio R3,
@@ -670,9 +665,28 @@ function movimientosDe(lista, diasDeServicio, regla) {
     /* Un paseo con nombre manda sobre todo lo demás: sobre la banda de
        horas, sobre la tarifa fija del destino, y sobre el perdón del
        viaje de un día. Es un producto aparte que el cliente pidió. */
+    /* R30 corregida (1-sep-2026) · EL PASEO SE SUMA, NO SUSTITUYE.
+
+       Primero se entendió como sustitución —«la ficha cambiaría de 3,000
+       a lo de la tabla»— y daba +$12,000 por Taxco. El dueño lo aclaró:
+       «si eligen esos 3 destinos, SE LE SUMA a esa cantidad
+       preestablecida, no se le suman 3,000 más eso».
+
+       O sea: el día sigue costando lo que cuesta —en CDMX y la Huasteca
+       son $4,000, $3,000 de movimiento más $1,000 de estadía— y el paseo
+       va ENCIMA. Su hoja lo dice con esa palabra: «CON TAXCO $15,000
+       EXTRAS».
+
+           CDMX 3 días con 3 movimientos      $34,000
+           uno de ellos es Taxco              $49,000   (+15,000) */
     const cual = paseoDe(d.paseo, regla && regla.paseos);
     if (cual) {
-      salida.push({ horas: horas, precio: regla.paseos[cual], paseo: cual });
+      const normal = fijo === null ? bandaDe(horas).precio : fijo;
+      salida.push({
+        horas: horas,
+        precio: (gratis ? 0 : normal) + regla.paseos[cual],
+        paseo: cual
+      });
       continue;
     }
 

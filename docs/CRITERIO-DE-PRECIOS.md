@@ -1387,3 +1387,48 @@ prueba los rescató; sin ella se habrían ido sin que nadie lo notara.
 Y una segunda, más incómoda: **«no encuentro de dónde salió» no es lo mismo que
 «lo inventé yo»**. Antes de quitar un precio hay que buscarlo en las pruebas,
 en el criterio y en el historial — no solo en el archivo que se está mirando.
+
+---
+
+### R42 · CORRIGE A R30 y R39 · Los paseos SE SUMAN, nunca sustituyen (1-sep-2026)
+
+Aclarado por el dueño, y **corrige lo que se había implementado esa misma
+tarde**:
+
+> «Tanto CDMX como la Huasteca son destinos que en la tabla ya incluyen
+> movimientos. Al contrario: si un día no tiene movimientos, se le cobra solo
+> $1,000 de esos $4,000 por día que tiene CDMX. ¿No te das cuenta que el día 1
+> es más barato que el día 2 por $4,000? O sea, $4,000 el día. Pero si eligen
+> esos 3 destinos, **se le suma a esa cantidad preestablecida, no se le suman
+> $3,000 más eso**. Lo mismo con la Huasteca […] y a ese precio se le suman lo
+> de Meco.»
+
+**El modelo de CDMX y la Huasteca, que ya estaba bien:**
+
+| | |
+|---|---|
+| el día CON movimiento | **$4,000** ($3,000 de movimiento + $1,000 de estadía) |
+| el día SIN movimiento | **$1,000** |
+
+Y cuadra exacto con sus celdas: CDMX 1 día $26,000, 2 días $30,000, 3 días
+$34,000 — cuatro mil de diferencia cada uno.
+
+**Lo que estaba mal era el paseo.** Se había implementado como sustitución
+—Taxco «en vez de» los $3,000, o sea +$12,000—. Va **encima**:
+
+| CDMX 3 días, celda $34,000 | total | sube |
+|---|---|---|
+| con **Taxco** | **$49,000** | +$15,000 |
+| con **Chalma** | $42,000 | +$8,000 |
+| con **Xochimilco** | $36,000 | +$2,000 |
+
+| Huasteca 4 días, celda $42,500 | total | sube |
+|---|---|---|
+| con **El Meco** | **$45,500** | +$3,000 |
+
+Su hoja ya lo decía con esa palabra —«CON TAXCO $15,000 **EXTRAS**»— y no la
+leí como lo que era. Eran **$3,000 por viaje** en Taxco y **$3,000** en Chalma.
+
+> Xochimilco es el que más cambia de sentido: como sustitución **bajaba** el
+> precio $1,000; como extra lo **sube** $2,000. Tres mil de diferencia en el
+> mismo renglón, según cómo se lea una palabra.
