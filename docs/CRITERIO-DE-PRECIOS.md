@@ -1702,3 +1702,47 @@ Su reclamo fue justo: *«de verdad revisa la tabla, me da inseguridad que salgas
 así al mundo»*. Tres errores de lectura el mismo día —el lector que mentía, la
 nota de la columna de al lado, y esta fila a medio leer— y los tres los cazó
 él, no yo.
+
+---
+
+### R49 · Los días de Puebla ya incluyen el movimiento (1-sep-2026)
+
+Dictado: *«esos días de Puebla ya incluyen mov como en CDMX»*.
+
+Su día extra de $4,000 **trae el movimiento dentro**, así que no se cobra
+aparte. Sin esto, cuatro días con movimiento daban $50,500 en vez de los
+$44,500 que él dictó.
+
+| Puebla | sin movimientos | con movimiento cada día |
+|---|---|---|
+| 2 días | $36,500 | $36,500 |
+| 3 días | $40,500 | $40,500 |
+| **4 días** | **$44,500** | **$44,500** |
+| 5 días | $48,500 | $48,500 |
+
+**Aplica igual a Puebla con Zacatlán**: es el mismo viaje con un destino de
+más, su nota dice también «DIA EXTRA», y el suyo son $2,000 para Sprinter.
+
+Se hizo con `movimientoPorDia: 0` —la misma forma que Barrancas— y **no**
+subiendo `movimientosIncluidos`: ese campo son los DIAS que cubre su columna
+del Excel, que en Puebla son dos, y falsearlo para conseguir otro efecto haría
+mentir al desglose que ve la oficina.
+
+**Chiapas NO cambió**: ahí la columna sí se acaba en el día ocho y del nueve en
+adelante el movimiento se cobra normal. Son cosas distintas y conviene no
+confundirlas: en Puebla el día extra ES con movimiento; en Chiapas el día extra
+y el movimiento son dos cobros.
+
+---
+
+## Cómo quedaron los cuatro destinos que cobran el día "con movimiento"
+
+| destino | el día con movimiento | sin movimiento |
+|---|---|---|
+| **CDMX** | $4,000 | $1,000 |
+| **Huasteca** | $4,000 | $1,000 |
+| **Puebla** | $4,000 | **$4,000** |
+| **Puebla con Zacatlán** | $2,000 | **$2,000** |
+
+CDMX y la Huasteca distinguen —su día baja a $1,000 si no se mueven—; Puebla
+no. Es lo que él dictó para cada uno, y no hay que uniformarlos.

@@ -963,10 +963,22 @@ igual('sin nada no vale', t.horasDe(null, undefined), 0);
     q('Rincón de Guayabitos', 4, 2), 18500 + 2 * 3000);
 
   /* Y pasada la duración de la columna, el movimiento se cobra normal:
-     ahí la columna ya se acabó, igual que en R2 y R14. */
-  igual('Puebla al 3er día ya cobra su movimiento',
-    q('Puebla', 3, 3) - q('Puebla', 3, 2), 3000);
-  igual('Chiapas al 9o día también',
+     ahí la columna ya se acabó, igual que en R2 y R14.
+
+     CAMBIO DE LADO — 1-sep-2026 (R49). Puebla se salió de esta regla: el
+     dueño dictó «esos días de Puebla ya incluyen mov como en CDMX», así que
+     su día extra de $4,000 trae el movimiento dentro y no se cobra aparte.
+     Lo que se prueba ahora es justo lo contrario, y con la cuenta suya:
+     cuatro días son $44,500 se muevan o no. */
+  igual('Puebla: el día extra ya trae su movimiento, no se cobra aparte',
+    q('Puebla', 3, 3) - q('Puebla', 3, 2), 0);
+  igual('  y cuatro días son sus $44,500, con movimiento', q('Puebla', 4, 4), 44500);
+  igual('  y sin movimiento también', q('Puebla', 4, 0), 44500);
+  /* Zacatlán es el mismo viaje con un destino de más: misma forma, y su día
+     extra son $2,000 para Sprinter (celda Q10). */
+  igual('Puebla con Zacatlán igual', q('Puebla con Zacatlán', 4, 4), 43500);
+  /* Chiapas NO cambió: ahí la columna sí se acaba y el movimiento se cobra. */
+  igual('Chiapas al 9o día sí cobra su movimiento',
     q('Chiapas', 9, 9) - q('Chiapas', 9, 8), 3000);
 })();
 
