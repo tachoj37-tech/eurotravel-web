@@ -258,8 +258,36 @@ function precioPorDuracion(enLista, dias) {
   return tabla[base] + (d - base) * extra;
 }
 
-function trasladoDe(kmTotal, destino, unidad, dias) {
+function trasladoDe(kmTotal, destino, unidad, dias, dominical) {
   const km = Math.max(0, Number(kmTotal) || 0);
+
+  /* ------------------------------------------------------------
+     R43 · EL DOMINICAL MANDA SOBRE TODO LO DEMAS
+     ------------------------------------------------------------
+     Va ANTES de mirar la lista: es un producto distinto, con su
+     propio renglón en el Excel, no un descuento sobre el normal.
+
+     Solo aplica cuando se cumplen las tres: un día, domingo, y el
+     destino tiene precio dominical. Si falta cualquiera, sigue
+     todo como siempre.
+
+     Solo para Sprinter: sus filas 25 y 27 se llaman `DOMINICAL
+     SPRINTER` y `DOM SPR OCO`. La 24 es `DOMINICAL CENTURY`, que
+     es otra unidad y aquí no se cotiza.
+     ------------------------------------------------------------ */
+  if (dominical && (claveDeUnidad(unidad) || 'sprinter') === 'sprinter') {
+    const p = destinos.precioDominical(destino, dominical.desdeOcotlan);
+    if (p) {
+      return {
+        total: p, deLista: (destinos.buscaDestino(destino) || {}).nombre || null,
+        porKm: null, km: km,
+        /* `porDuracion` en true: el precio dominical ES el del día completo,
+           así que no se le suman noches ni se le aplica el piso. */
+        porDuracion: true, esDominical: true,
+        diasIncluidos: 1, movimientosIncluidos: 0, precioConMovimientos: null
+      };
+    }
+  }
 
   /* La unidad se traduce a la columna de la lista. Si no se sabe cotizar,
      NO se adivina: cae en sprinter porque quien llama ya debió rechazarla
@@ -407,6 +435,24 @@ const TOPE_DIAS_MOVIMIENTO = 60;
    `DESTINOS_CON_REGLA` los usa en su propio renglón. Lo explicado está
    en `movimientosDe`. */
 const PASEOS_CDMX = { taxco: 15000, chalma: 8000, xochimilco: 2000 };
+
+/* ------------------------------------------------------------
+   ¿ESE DIA ES DOMINGO? (R43)
+   ------------------------------------------------------------
+   El Date se arma con NUMEROS sueltos, nunca con el texto:
+   `new Date('2026-09-06')` es medianoche UTC, o sea las 18:00 del
+   sábado aquí — y un viaje dominical se cotizaría como normal,
+   perdiendo la tarifa. Es la misma trampa de siempre con las
+   fechas, y aquí cambia el precio.
+
+   Acepta 'aaaa-mm-dd' y también 'aaaa-mm-ddTHH:MM', que es como
+   llegan del formulario.
+   ------------------------------------------------------------ */
+function esDomingo(texto) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(texto || ''));
+  if (!m) return false;
+  return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3])).getDay() === 0;
+}
 
 /* ------------------------------------------------------------
    R29 · UN RECORRIDO QUE SE ALEJA MUCHO YA NO ES UN RECORRIDO
@@ -857,6 +903,14 @@ function recargoDeSalida(km, extras, dias) {
   const vacio = { importe: 0, origen: null, dictado: false };
   if (!km || !km.deLista) return vacio;          // fórmula: ya lo cobró el km
 
+  /* R43 · El dominical de Ocotlán NO lleva recargo encima: su fila 27 es un
+     precio COMPLETO, no el de Guadalajara más un extra. Se ve en que
+     Mazamitla y Tapalpa salen más BARATOS desde allá —les quedan más
+     cerca—, cosa que un recargo no podría hacer nunca.
+     Sin esta línea, Vallarta dominical desde Ocotlán daba $28,000 en vez de
+     los $22,000 de su celda. */
+  if (km.esDominical) return vacio;
+
   const dictado = origenes.recargoDictado(extras.origen, km.deLista, dias);
   if (dictado === null) return vacio;            // él no lo escribió: no se cobra
 
@@ -880,7 +934,14 @@ function recargoDeSalida(km, extras, dias) {
 function calcula(kmTotal, dias, extras) {
   extras = extras || {};
 
-  const km = trasladoDe(kmTotal, extras.destino, extras.unidad, dias);
+  /* R43 · El dominical necesita saber dos cosas que el resto del cálculo no
+     mira: qué día de la semana sale, y si sale de la zona de Ocotlán —que
+     tiene su propio renglón, la fila 27, no un recargo—. */
+  const esDom = dias === 1 && esDomingo(extras.salida);
+  const origenDominical = esDom
+    ? { desdeOcotlan: (origenes.buscaOrigen(extras.origen) || {}).nombre === 'Ocotlán' }
+    : null;
+  const km = trasladoDe(kmTotal, extras.destino, extras.unidad, dias, origenDominical);
 
   /* ----------------------------------------------------------
      ARRIBA DEL TOPE NO HAY PRECIO — Y NO ES LO MISMO QUE UNO BAJO

@@ -148,7 +148,12 @@ module.exports = async function handler(req, res) {
       movimientos: cuerpo.movimientos,
       destino: cuerpo.destino,
       origen: cuerpo.origen,
-      redondo: redondo
+      redondo: redondo,
+      /* R43 · La fecha de salida decide el precio cuando el viaje es de un
+         día y cae en domingo. Tiene que ir TAMBIEN en `pagar.js`: si solo
+         fuera aquí, se cotizaría el dominical y se cobraría el normal —
+         hasta $12,000 de diferencia en Vallarta—. */
+      salida: cuerpo.salida
     });
 
     /* Qué del precio puede salir NO se decide aquí: lo decide `_publico.js`,

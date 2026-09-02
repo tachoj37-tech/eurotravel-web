@@ -1473,3 +1473,61 @@ descartando explícitamente las que cierran en sí mismas. Con él, la fila 25
 —`DOMINICAL SPRINTER`— trae precio en **13 destinos, todos de un día**, y
 está vacía en CDMX, Puebla, Huasteca, Barrancas y Cancún. Que es justo lo que
 él dijo desde el principio.
+
+---
+
+### R43 · DOMINICAL — ida y vuelta el mismo domingo (1-sep-2026)
+
+Dictado: *«dominical es mismo día ida y vuelta el domingo»*, y sus dos filas:
+**25 = `DOMINICAL SPRINTER`** (desde Guadalajara) y **27 = `DOM SPR OCO`**
+(desde Ocotlán).
+
+**Se cobra el precio dominical cuando se cumplen las TRES:**
+
+1. el viaje es de **un día**
+2. cae en **domingo**
+3. el destino **tiene celda** en esa fila
+
+Si falta cualquiera, todo sigue como siempre.
+
+**Los doce que tienen celda:**
+
+| destino | normal | domingo | domingo · Ocotlán |
+|---|---|---|---|
+| Puerto Vallarta y alrededores | $19,000 | $16,000 | $22,000 |
+| Mismaloya | $20,000 | $17,000 | $23,000 |
+| Sayulita / San Pancho | $18,000 | $15,000 | $21,000 |
+| Mazamitla | $14,500 | $14,500 | **$13,500** |
+| Tapalpa | $14,500 | $14,500 | **$13,500** |
+| Tequila / Guachimontones | $7,000 | $6,500 | $11,500 |
+| Chacala | $16,500 | $14,000 | $21,000 |
+| Punta Perula | $20,500 | $18,500 | $23,000 |
+| Rincón de Guayabitos | $18,500 | $15,000 | $21,000 |
+| Mazatlán | $28,000 | $23,500 | $30,000 |
+| Tenacatita | $20,000 | $16,000 | $19,000 |
+| Manzanillo | $18,500 | $15,000 | $20,000 |
+
+**Que estén vacías CDMX, Puebla, la Huasteca, Barrancas y Cancún ES EL DATO,
+no una lista incompleta.** A esos no se va y se vuelve en un día, y por eso su
+celda está en blanco. La regla se explica sola.
+
+**Lo de Ocotlán es un PRECIO, no un recargo.** Su fila 27 vale completa: no se
+le suma el recargo de salida encima. Se ve en que **Mazamitla y Tapalpa salen
+más baratos desde allá** —les quedan más cerca—, cosa que un recargo no podría
+hacer nunca. Sin esa guarda, Vallarta dominical desde Ocotlán daba $28,000 en
+vez de sus $22,000.
+
+**Solo Sprinter.** La fila 24 es `DOMINICAL CENTURY`, que es otra unidad y no
+se cotiza en línea.
+
+**La fecha se lee por partes**, nunca con `new Date(texto)`: eso es medianoche
+UTC, o sea el sábado aquí, y el viaje se cotizaría como normal perdiendo la
+tarifa.
+
+**Va en las DOS puertas**, `cotizar` y `pagar`. Si faltara en cualquiera, se
+enseñaría un precio y se cobraría otro — hasta $12,000 de diferencia en
+Vallarta.
+
+> Señalado sin cambiar (R12): **Mazatlán** son ~500 km por lado, o sea mil en
+> el día. Es su dato y se respeta, pero es el único que no cuadra con «ida y
+> vuelta el mismo día».

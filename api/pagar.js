@@ -183,7 +183,10 @@ module.exports = async function handler(req, res) {
       movimientos: cuerpo.movimientos,
       destino: cuerpo.destino,
       origen: cuerpo.origen,
-      redondo: redondo
+      redondo: redondo,
+      /* R43 · Va aquí Y en `cotizar.js`. Si faltara en cualquiera de las
+         dos, se enseñaría un precio y se cobraría otro. */
+      salida: cuerpo.salida
     });
 
     /* ------------------------------------------------------------

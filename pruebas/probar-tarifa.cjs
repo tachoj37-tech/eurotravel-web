@@ -808,6 +808,69 @@ igual('sin nada no vale', t.horasDe(null, undefined), 0);
   igual('Cancún 18 días: su día extra también son $4,000',
     q('Cancún', 18, 0) - q('Cancún', 17, 0), 4000);
 
+  /* ============================================================
+     R43 · DOMINICAL — ida y vuelta el mismo domingo
+     ------------------------------------------------------------
+     Sus filas 25 y 27 del Excel. Cada aserción es su celda tal
+     cual: si alguna se mueve, es que se está cobrando otra cosa.
+     ============================================================ */
+  {
+    const OCO = { lat: 20.3529, lng: -102.7745, direccion: 'Ocotlán, Jal.' };
+    const dom = function (nombre, origen) {
+      const d = require('../api/_destinos').buscaDestino({ nombre: nombre });
+      return t.calcula(d.km, 1, { destino: { nombre: nombre }, origen: origen,
+        unidad: 'sprinter', noches: 0, movimientos: [], salida: '2026-09-06' }).total;
+    };
+    /* 2026-09-06 es domingo; 2026-09-07 es lunes. */
+    const celdas = [
+      ['Puerto Vallarta y alrededores', 16000, 22000], ['Mismaloya', 17000, 23000],
+      ['Sayulita / San Pancho', 15000, 21000], ['Mazamitla', 14500, 13500],
+      ['Tapalpa', 14500, 13500], ['Tequila / Guachimontones', 6500, 11500],
+      ['Chacala', 14000, 21000], ['Punta Perula', 18500, 23000],
+      ['Rincón de Guayabitos', 15000, 21000], ['Mazatlán', 23500, 30000],
+      ['Tenacatita', 16000, 19000], ['Manzanillo', 15000, 20000]
+    ];
+    const mal = [];
+    celdas.forEach(function (c) {
+      if (dom(c[0], null) !== c[1]) mal.push(c[0] + ' desde GDL: ' + dom(c[0], null) + ' ≠ ' + c[1]);
+      if (dom(c[0], OCO) !== c[2]) mal.push(c[0] + ' desde Ocotlán: ' + dom(c[0], OCO) + ' ≠ ' + c[2]);
+    });
+    igual('los 12 destinos dominicales cuadran con sus dos celdas', mal, []);
+
+    /* Lo de Ocotlán es un PRECIO, no un recargo: se ve en que Mazamitla y
+       Tapalpa salen más baratos desde allá. Un recargo no puede restar. */
+    cierto('desde Ocotlán puede salir MAS BARATO, que un recargo no podría',
+      dom('Mazamitla', OCO) < dom('Mazamitla', null));
+
+    /* Y las tres condiciones tienen que cumplirse todas. */
+    const unDia = function (nombre, salida, dias) {
+      const d = require('../api/_destinos').buscaDestino({ nombre: nombre });
+      return t.calcula(d.km, dias || 1, { destino: { nombre: nombre }, unidad: 'sprinter',
+        noches: (dias || 1) - 1, movimientos: [], salida: salida }).total;
+    };
+    igual('en lunes NO aplica', unDia('Puerto Vallarta y alrededores', '2026-09-07'), 19000);
+    igual('en domingo pero DOS días tampoco',
+      unDia('Puerto Vallarta y alrededores', '2026-09-06', 2), 19000);
+    igual('sin fecha de salida tampoco', unDia('Puerto Vallarta y alrededores', ''), 19000);
+    igual('un destino sin celda dominical se cobra normal',
+      unDia('Chapala', '2026-09-06'), 6500);
+    /* CDMX está EN BLANCO en su hoja: no se va y se vuelve en un día.
+       Se compara contra $23,000 y no contra los $26,000 de su celda porque
+       aquí va SIN movimiento: su celda de un día los trae dentro, y sin
+       ellos el día vale $1,000 en vez de $4,000 (R42). */
+    igual('CDMX no tiene dominical, aunque caiga en domingo',
+      unDia('Ciudad de México', '2026-09-06'), 23000);
+    igual('  y con su movimiento vuelve a ser su celda de $26,000',
+      t.calcula(1102, 1, { destino: en('Ciudad de México'), unidad: 'sprinter', noches: 0,
+        movimientos: [{ horaInicio: '08:00', horaFin: '16:00' }], salida: '2026-09-06' }).total,
+      26000);
+
+    /* La fecha se lee por partes, nunca con `new Date(texto)`: eso es
+       medianoche UTC y aquí sería el sábado, perdiendo la tarifa. */
+    igual('lee la fecha aunque traiga hora',
+      unDia('Mazatlán', '2026-09-06T08:00'), 23500);
+  }
+
   /* R29 · Un recorrido que pasa de 80 km ya no es paseo: son $5,500, y las
      horas dejan de importar. Dictado el 1-sep-2026: «si cobra un recorrido
      de 120 km, o sea que supere los 80 km en lejanía, cóbralo en 5500». */

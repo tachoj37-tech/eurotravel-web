@@ -481,4 +481,50 @@ function precioDeLista(destino, unidad) {
   };
 }
 
-module.exports = { DESTINOS, buscaDestino, precioDeLista };
+/* ============================================================
+   R43 · DOMINICAL — ida y vuelta el mismo domingo (1-sep-2026)
+   ------------------------------------------------------------
+   Dictado: «dominical es mismo día ida y vuelta el domingo». Son
+   sus filas 25 (`DOMINICAL SPRINTER`) y 27 (`DOM SPR OCO`) del
+   Excel, leídas celda por celda.
+
+   SOLO ESTOS DOCE TIENEN PRECIO DOMINICAL, y eso es el dato, no
+   una lista incompleta: en su hoja están **en blanco** CDMX,
+   Puebla, la Huasteca, Barrancas y Cancún, porque a esos no se va
+   y se vuelve en un día. La regla se explica sola.
+
+   La columna de Ocotlán NO es el precio normal más un recargo:
+   es un precio propio, y en Mazamitla y Tapalpa sale MAS BARATO
+   que desde Guadalajara —le quedan más cerca—. Por eso se guarda
+   completo y no como diferencia.
+
+   Ojo con el que no cuadra a simple vista: Mazatlán son ~500 km
+   por lado, o sea mil en el día. Es su dato y se respeta (R12),
+   pero queda señalado.
+   ============================================================ */
+const DOMINICAL = {
+  'Puerto Vallarta y alrededores': { gdl: 16000, ocotlan: 22000 },
+  'Mismaloya': { gdl: 17000, ocotlan: 23000 },
+  'Sayulita / San Pancho': { gdl: 15000, ocotlan: 21000 },
+  'Mazamitla': { gdl: 14500, ocotlan: 13500 },
+  'Tapalpa': { gdl: 14500, ocotlan: 13500 },
+  'Tequila / Guachimontones': { gdl: 6500, ocotlan: 11500 },
+  'Chacala': { gdl: 14000, ocotlan: 21000 },
+  'Punta Perula': { gdl: 18500, ocotlan: 23000 },
+  'Rincón de Guayabitos': { gdl: 15000, ocotlan: 21000 },
+  'Mazatlán': { gdl: 23500, ocotlan: 30000 },
+  'Tenacatita': { gdl: 16000, ocotlan: 19000 },
+  'Manzanillo': { gdl: 15000, ocotlan: 20000 }
+};
+
+/* Devuelve el precio dominical de un destino, o null si no tiene.
+   `desdeOcotlan` decide de cuál de las dos filas sale. */
+function precioDominical(destino, desdeOcotlan) {
+  const d = buscaDestino(destino);
+  if (!d) return null;
+  const p = DOMINICAL[d.nombre];
+  if (!p) return null;
+  return desdeOcotlan ? p.ocotlan : p.gdl;
+}
+
+module.exports = { DESTINOS, buscaDestino, precioDeLista, DOMINICAL, precioDominical };
