@@ -296,10 +296,16 @@ igual('cruzando de mes: 3 días', t.diasDeServicio('2026-10-31', '2026-11-02'), 
      destino y un precio, tres noches y mil por cada noche arriba» (R25).
      Chapala recupera sus tres noches.
 
-         minimo 5 × 3,000 = 15,000 gana a los 6,500
-         4 noches - 3 incluidas = 1 extra, a los mil de siempre */
-  igual('Chapala cinco días: manda el mínimo, 15,000 + 1,000 de noche',
-    t.calcula(100, 5, { destino: en('Chapala, Jalisco, México'), noches: 4 }).total, 16000);
+     CAMBIO DE LADO — 1-sep-2026, por R34.
+     Aquí se exigía que el piso de $3,000 por día le ganara al precio de
+     Chapala: cinco días eran $16,000. El dueño lo corto: «cobra 6500
+     Chapala 4 días». Su precio de lista cubre el paquete —cuatro días y
+     tres noches, R26— y el piso que yo inventé no le puede ganar a un
+     número suyo.
+
+         6,500 de su Excel + 1 noche extra de las mil = 7,500 */
+  igual('Chapala cinco días: su precio de lista + la noche extra',
+    t.calcula(100, 5, { destino: en('Chapala, Jalisco, México'), noches: 4 }).total, 7500);
   /* y a un precio de lista que ya pasa el piso, el piso no le hace nada */
   igual('Vallarta cuatro días: sus 19,000, el piso ni se asoma',
     t.calcula(620, 4, { destino: en('Puerto Vallarta, Jalisco, México'), noches: 3 }).total, 19000);
@@ -750,11 +756,16 @@ igual('sin nada no vale', t.horasDe(null, undefined), 0);
     igual(n.split(' ')[0] + ': la 5ª, otros mil', q(n, 6, 0), base + 2000);
   });
 
-  /* Y donde el piso de $3,000 por día alcanza al precio de tabla, el escalón
-     deja de ser $1,000 — es el piso haciendo su trabajo, no un defecto. */
-  igual('Morelia 7 días: manda el piso (7×3,000 + 3 noches)', q('Morelia', 7, 0), 21000 + 3000);
-  igual('Mariposa 8 días: manda el piso (8×3,000 + 4 noches)',
-    q('Santuario de la Mariposa Monarca', 8, 0), 24000 + 4000);
+  /* CAMBIO DE LADO — 1-sep-2026, por R34.
+     Estas dos exigían que el piso le ganara al precio de tabla. Ya no le
+     gana a ninguno: el precio del Excel manda y arriba de sus tres noches
+     corren los mil de siempre.
+
+         Morelia   19,000 + 3 noches extra = 22,000
+         Mariposa  23,000 + 4 noches extra = 27,000 */
+  igual('Morelia 7 días: su precio + las noches de más', q('Morelia', 7, 0), 22000);
+  igual('Mariposa 8 días: su precio + las noches de más',
+    q('Santuario de la Mariposa Monarca', 8, 0), 27000);
 
   /* ============================================================
      R24 · LO QUE LA COLUMNA YA TRAE, NO SE COBRA OTRA VEZ
@@ -766,17 +777,57 @@ igual('sin nada no vale', t.horasDe(null, undefined), 0);
      Cada aserción es la CELDA DE SU EXCEL con movimiento todos los
      días de esa columna. Si alguna sube, es que se está cobrando
      dos veces lo mismo.
+
+     ACAPULCO SE FUE DE ESTA LISTA — 1-sep-2026, por R35.
+     Estaba aquí porque yo le había puesto los cuatro días de
+     movimientos incluidos. El dueño lo corrigió con la cuenta
+     hecha: «Acapulco dice 60,000 4 días, si fueran 5 serían 64,000,
+     y con mov 3,000 el día». O sea que SUS MOVIMIENTOS SE COBRAN,
+     igual que en Guayabitos, que ya había corregido igual. Con dos
+     movimientos son $66,000 y eso ahora se comprueba abajo.
      ============================================================ */
   [['Talpa de Allende', 2, 16500], ['Tlalpujahua', 2, 26500],
    ['El Manto', 3, 19000], ['Puebla', 2, 36500],
    ['Puebla con Zacatlán', 2, 39500],
-   ['Talpa Burrita (peregrinación)', 4, 26500], ['Acapulco', 4, 60000],
+   ['Talpa Burrita (peregrinación)', 4, 26500],
    ['Chiapas', 8, 85000], ['Camécuaro / Zamora', 1, 14500]
   ].forEach(function (f) {
     const [n, dias, celda] = f;
     igual(n.slice(0, 24) + ' ' + dias + 'd con movimiento todos los días = su celda',
       q(n, dias, dias), celda);
   });
+
+  /* R35 · ACAPULCO Y CANCUN — dictados el 1-sep-2026 con la resta hecha.
+     Los dos cobran sus movimientos aparte, y su día extra son $4,000. */
+  igual('Acapulco 4 días sin movimientos = su celda', q('Acapulco', 4, 0), 60000);
+  igual('Acapulco 5 días: su día extra son $4,000, no mil', q('Acapulco', 5, 0), 64000);
+  igual('Acapulco 4 días con 2 movimientos: los cobra', q('Acapulco', 4, 2), 66000);
+  igual('Cancún 18 días: su día extra también son $4,000',
+    q('Cancún', 18, 0) - q('Cancún', 17, 0), 4000);
+
+  /* R30 · Los tres paseos de CDMX SUSTITUYEN el movimiento de $3,000. */
+  {
+    const conMov = function (paseo) {
+      return t.calcula(1102, 3, {
+        destino: en('Ciudad de México'), noches: 2, unidad: 'sprinter',
+        movimientos: [
+          { horaInicio: '08:00', horaFin: '16:00' },
+          { horaInicio: '08:00', horaFin: '16:00' },
+          { horaInicio: '08:00', horaFin: '16:00', paseo: paseo }
+        ]
+      }).total;
+    };
+    const normal = conMov(null);
+    igual('CDMX · Taxco cuesta $15,000 en vez de los $3,000', conMov('Taxco') - normal, 12000);
+    igual('CDMX · Chalma cuesta $8,000 en vez de los $3,000', conMov('chalma') - normal, 5000);
+    igual('CDMX · Xochimilco cuesta $2,000, o sea MENOS que un movimiento',
+      conMov('XOCHIMILCO') - normal, -1000);
+    igual('un paseo que no existe se ignora, no truena', conMov('Cancun'), normal);
+    /* Solo en CDMX: en cualquier otro destino el nombre no significa nada. */
+    igual('en Chapala un «paseo» no existe: cobra su movimiento normal',
+      t.calcula(100, 3, { destino: en('Chapala, Jalisco, México'), noches: 2, unidad: 'sprinter',
+        movimientos: [{ horaInicio: '08:00', horaFin: '16:00', paseo: 'taxco' }] }).total, 9500);
+  }
 
   /* LAS TRES EXCEPCIONES, y las tres salen de él */
   igual('Cancún SÍ cobra sus movimientos aparte — su palabra',

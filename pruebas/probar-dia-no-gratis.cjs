@@ -62,28 +62,45 @@ function q(nombre, km, dias, movs) {
   }).total;
 }
 
-/* ============ 1. TODO VOLVIO A COMO ESTABA ANTES DE R18 ============
-   La aserción más valiosa del archivo, y la que más barata sale: el mismo
-   archivo congelado, leído al revés. Antes probaba que nada bajara; ahora
-   prueba que todo volvió a su sitio. Un retiro a medias se ve aquí.
+/* ============ 1. NINGUN PRECIO SE MUEVE SIN QUE ALGUIEN LO DECIDA ==========
 
-   Los tres dictados se excluyen A PROPOSITO: ésos NO volvieron, y el punto
-   2 comprueba que siguen cobrando lo suyo. */
+   CAMBIO DE BASE — 1-sep-2026, y hay que entender por qué.
+
+   Esta aserción vigilaba que los precios hubieran vuelto EXACTO a como
+   estaban antes de R18. Esa misión se cumplió el 30-ago y ya no se puede
+   repetir: **R34 los cambió a propósito**.
+
+   R34 salió de una orden del dueño —«cobra 6500 Chapala 4 días»— al
+   descubrir que mi piso de $3,000 por día le ganaba a los precios de su
+   propio Excel. Chapala a cuatro días cobraba $12,000 valiendo $6,500.
+
+   Contra la base vieja se movieron **219 de 570**: 189 bajaron —el piso
+   que se fue— y 30 subieron, que es Acapulco cobrando sus movimientos y
+   su día extra de $4,000 (R35).
+
+   La base vieja se DEJA en el repositorio: es el registro de qué cobraba
+   la página antes, y con ella se reconstruye cualquier precio viejo si
+   un cliente reclama.
+
+   Lo que vigila ahora es lo mismo de siempre, contra la base nueva: que
+   ningún precio se mueva sin que alguien lo haya decidido. Si esta
+   aserción se pone en rojo, o hubo una regla nueva —y entonces se
+   recongela y se escribe por qué— o se rompió algo sin querer. */
 {
-  const ANTES = require('./datos/precios-antes-de-r18.json');
+  const BASE = require('./datos/precios-1-sep-2026.json');
   const DICTADOS = ['Comala', 'Autlán de Navarro', 'Bernal'];
   const distintos = [];
-  Object.keys(ANTES).forEach(function (clave) {
+  Object.keys(BASE).forEach(function (clave) {
     const partes = clave.split('|');
     const nombre = partes[0], dias = Number(partes[1]), km = Number(partes[2]);
     if (DICTADOS.indexOf(nombre) >= 0) return;
     const ahora = q(nombre, km, dias, 0);
-    if (ahora !== ANTES[clave]) {
-      distintos.push(nombre + ' a ' + dias + 'd: era $' + ANTES[clave] + ', ahora $' + ahora);
+    if (ahora !== BASE[clave]) {
+      distintos.push(nombre + ' a ' + dias + 'd: era $' + BASE[clave] + ', ahora $' + ahora);
     }
   });
-  igual('los precios volvieron EXACTO a antes de R18, en ' +
-    Object.keys(ANTES).length + ' combinaciones', distintos, []);
+  igual('ningun precio se movio solo, en ' +
+    Object.keys(BASE).length + ' combinaciones', distintos, []);
 }
 
 /* ============ 2. LOS TRES DICTADOS SIGUEN COBRANDO LO SUYO ============

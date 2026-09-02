@@ -403,6 +403,11 @@ const TOPE_DIAS_MOVIMIENTO = 60;
    rebote por el texto de la dirección, para cuando el cliente
    marca un hotel de allá en vez de elegir la región.
    ------------------------------------------------------------ */
+/* R30 · Los tres paseos con nombre de CDMX. Van aquí arriba porque
+   `DESTINOS_CON_REGLA` los usa en su propio renglón. Lo explicado está
+   en `movimientosDe`. */
+const PASEOS_CDMX = { taxco: 15000, chalma: 8000, xochimilco: 2000 };
+
 const DESTINOS_CON_REGLA = [
   {
     nombre: 'Huasteca Potosina',
@@ -430,7 +435,12 @@ const DESTINOS_CON_REGLA = [
   {
     nombre: 'Ciudad de México',
     enTexto: /ciudad de m[eé]xico|cdmx/i,
-    estadiaPorDia: true
+    estadiaPorDia: true,
+    /* R30 · Los tres paseos con nombre, de su propia hoja: «CON TAXCO
+       $15,000 EXTRAS», «CON CHALMA $8,000», «CON XOCHIMILCO $2,000».
+       Un día marcado con uno de éstos cuesta eso EN VEZ del movimiento
+       de $3,000. Solo aquí. */
+    paseos: PASEOS_CDMX
   },
   /* Barrancas del Cobre: «3,000 el día, CON O SIN movimientos» (dueño,
      26-ago-2026). Es el primer destino donde moverse no cuesta aparte — allá
@@ -535,6 +545,36 @@ function bandaDe(horas) {
    Devuelve solo horas y precio. Las direcciones y los puntos a
    visitar no cambian el dinero, así que no entran aquí.
    ------------------------------------------------------------ */
+/* ------------------------------------------------------------
+   R30 · LOS TRES PASEOS CON NOMBRE DE CDMX
+   ------------------------------------------------------------
+   Dictado el 1-sep-2026, con su hoja enfrente: «CON TAXCO $15,000
+   EXTRAS», «CON CHALMA $8,000», «CON XOCHIMILCO $2,000».
+
+   No son movimientos normales: SUSTITUYEN el precio del día. Si
+   ese día van a Taxco, ese día cuesta $15,000 en vez de $3,000 —
+   no se suman los dos.
+
+   Solo existen en CDMX y solo para Sprinter. Un destino los
+   habilita poniendo `paseos` en su regla; los demás ni se
+   enteran.
+
+   Lo que costaba no tenerlos: Taxco se cobraba a $3,000. **Doce
+   mil pesos de menos** cada vez que un grupo iba.
+
+   La tabla se declara ARRIBA, junto a `DESTINOS_CON_REGLA`, porque
+   ese arreglo la usa y un `const` no se puede leer antes de su
+   renglón.
+   ------------------------------------------------------------ */
+
+/* Cómo lo escribió el cliente -> cuál de los tres es. Con tolerancia:
+   «Taxco», «taxco», «TAXCO» y «xochimilco» sin acento son el mismo. */
+function paseoDe(texto, tabla) {
+  if (!texto || !tabla) return null;
+  const t = String(texto).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim();
+  return typeof tabla[t] === 'number' ? t : null;
+}
+
 function movimientosDe(lista, diasDeServicio, regla) {
   if (!Array.isArray(lista)) return [];
   const dias = Math.max(0, Math.floor(Number(diasDeServicio) || 0));
@@ -586,6 +626,14 @@ function movimientosDe(lista, diasDeServicio, regla) {
     const horas = horasDe(d.horaInicio, d.horaFin);
     /* Con regla propia las horas no cambian el precio, pero SÍ se guardan:
        el operador necesita saber a qué hora, aunque cueste lo mismo. */
+    /* Un paseo con nombre manda sobre todo lo demás: sobre la banda de
+       horas, sobre la tarifa fija del destino, y sobre el perdón del
+       viaje de un día. Es un producto aparte que el cliente pidió. */
+    const cual = paseoDe(d.paseo, regla && regla.paseos);
+    if (cual) {
+      salida.push({ horas: horas, precio: regla.paseos[cual], paseo: cual });
+      continue;
+    }
     const precio = fijo === null ? bandaDe(horas).precio : fijo;
     salida.push({ horas: horas, precio: gratis ? 0 : precio });
   }
@@ -794,13 +842,27 @@ function calcula(kmTotal, dias, extras) {
      MISMO DÍA. Pedida a siete días, la unidad se iba una semana por esos
      mismos $6,500 más las noches.
 
-     El piso de $3,000 por día no contradice ni un renglón de la lista: en
-     su duración normal, todos los precios lo pasan de sobra —Vallarta son
-     4 días y $19,000 contra un piso de $12,000— así que solo se levanta en
-     el caso que existe para atajar, que es el destino cercano apartado
-     muchos días.
+     EL PISO NO LE GANA A UN PRECIO DE LISTA (R34, 1-sep-2026)
+
+     Aquí decía que el piso «no contradice ni un renglón de la lista».
+     Era falso, y costaba dinero: Chapala vale $6,500 en el Excel y la
+     página cobraba $12,000 por cuatro días, porque cuatro por tres mil
+     le ganaba al precio de él.
+
+     El dueño lo cortó de tajo: «cobra 6500 Chapala 4 días». Su precio
+     de lista cubre el paquete —cuatro días y tres noches por defecto,
+     R26— y de ahí para arriba mandan las noches extra, no un piso que
+     yo inventé.
+
+     Le pasaba a los siete destinos baratos: Zacoalco, Tala, San Juan
+     Cosalá, Chapala, Cocula, Tequila y Magdalena. De Mazamitla para
+     arriba nunca se levantaba, porque su precio ya lo pasaba.
+
+     El piso SIGUE para lo que se cotiza por fórmula: ahí no hay precio
+     de él que respetar, y sin piso una unidad apartada diez días se
+     cobraría como un paseo.
      ---------------------------------------------------------- */
-  const minimo = dias * MINIMO_POR_DIA;
+  const minimo = km.deLista ? 0 : dias * MINIMO_POR_DIA;
   const aplicoMinimo = minimo > km.total;
   const bruto = aplicoMinimo ? minimo : km.total;
 
@@ -851,6 +913,11 @@ function calcula(kmTotal, dias, extras) {
      hora aunque no cueste, igual que en R22.
      ------------------------------------------------------------ */
   for (let i = 0; i < movimientos.length && i < km.movimientosIncluidos; i++) {
+    /* Un paseo con nombre NO se perdona aunque la columna traiga
+       movimientos incluidos. Su propia hoja lo dice: «CON TAXCO $15,000
+       EXTRAS» — extras, o sea encima de lo que ya cubre la columna.
+       Perdonarlo aquí regalaría los $15,000. */
+    if (movimientos[i].paseo) continue;
     movimientos[i].precio = 0;
   }
 

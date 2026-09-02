@@ -1147,3 +1147,96 @@ Camécuaro está a 30 km de Yurécuaro y a 157 de Guadalajara.
 
 La razón que dio es la de R19 al derecho: **no le queda de camino, se desvía**,
 y por eso suma.
+
+---
+
+### R34 · El piso NO le gana a un precio de lista (1-sep-2026)
+
+Dictado en cuatro palabras: *«cobra 6500 Chapala 4 días»*.
+
+**El piso de $3,000 por día que yo inventé le estaba ganando a los precios
+del Excel.** Chapala vale $6,500 y la página cobraba $12,000 por cuatro días,
+porque cuatro por tres mil le ganaba a su número.
+
+Ya no. Un destino de lista cobra **su celda**, y de sus tres noches para
+arriba corren los mil de siempre (R25):
+
+| Chapala | 1-4 días | 5 días | 6 días | 7 días | 10 días |
+|---|---|---|---|---|---|
+| antes | $6,500 → $12,000 | $16,000 | $20,000 | $24,000 | $36,000 |
+| **ahora** | **$6,500** | $7,500 | $8,500 | $9,500 | $12,500 |
+
+**El piso sigue vivo para lo que se cotiza por fórmula.** Ahí no hay precio
+suyo que respetar, y sin piso una unidad apartada diez días se cobraría como
+un paseo.
+
+**Cuánto se movió:** de 570 precios congelados, **219 cambiaron** — 189
+bajaron (el piso que se fue) y 30 subieron, que es Acapulco de R35.
+
+> Se volvió a congelar la tabla completa en
+> `pruebas/datos/precios-1-sep-2026.json`. La base vieja se deja en el
+> repositorio: con ella se reconstruye cualquier precio anterior si un
+> cliente reclama.
+
+---
+
+### R35 · Acapulco y Cancún: día extra $4,000, y sus movimientos SE COBRAN (1-sep-2026)
+
+Dictado con la resta hecha: *«Acapulco dice 60,000 4 días, si fueran 5 serían
+64,000, y con mov 3,000 el día; igual en Cancún»*.
+
+Dos cosas que estaban mal en Acapulco:
+
+| | antes | ahora |
+|---|---|---|
+| día extra | $2,000 *(lectura mía del 26-ago)* | **$4,000** |
+| sus movimientos | incluidos, no se cobraban | **$3,000 el día** |
+
+Acapulco tenía la misma forma que Guayabitos —playa, cuatro días, precio
+cerrado— y él ya había corregido Guayabitos igual el 30-ago. Era la misma
+pregunta y tenía la misma respuesta.
+
+| Acapulco | |
+|---|---|
+| 4 días, sin movimientos | $60,000 |
+| 5 días | **$64,000** ← su resta |
+| 4 días con 2 movimientos | $66,000 *(antes $60,000)* |
+
+Cancún ya tenía sus $4,000 desde el día 18 y sus movimientos aparte: quedó
+confirmado, no cambió.
+
+---
+
+### R36 · El bloque D confirmado: lo raro del Excel era correcto (1-sep-2026)
+
+Se le presentaron cuatro números que no cuadraban. Contestó: *«el bloque D
+solo te contesté eso porque todo lo demás que supusiste estaba bien»*.
+
+| | qué se hizo | veredicto |
+|---|---|---|
+| **Chiapas desde Yurécuaro** $16,500 | se dejó FUERA, cobra los $85,000 de Guadalajara | **correcto** |
+| **Puebla desde Yurécuaro** +$12,000 | se implementó como dice | **correcto** |
+| **Huasteca desde Ocotlán**, recargo que baja al crecer los días | se implementó como dice | **correcto** |
+| **Camécuaro desde Yurécuaro** | +$2,000 (R32) | corregido |
+
+Vale la pena guardarlo: **tres de los cuatro números que olían raro eran
+correctos.** Que un patrón no se cumpla no significa que el dato esté mal —
+cada ruta tiene su historia, que es justo lo que dice R12.
+
+---
+
+### R37 · La fórmula queda confirmada (1-sep-2026)
+
+Se le pusieron enfrente cuatro precios de destinos que NO están en su Excel,
+cotizados con la fórmula que yo calibré. Contestó **«sí»**.
+
+| | | |
+|---|---|---|
+| Sahuayo | 2 días | $13,500 |
+| Comala | 4 días | $17,200 |
+| Querétaro | 3 días | $21,900 |
+| Bernal | 3 días | $25,400 |
+
+**$6,500 de base + $22 el kilómetro** deja de ser invento mío y pasa a ser
+suyo. Era el número que más viajes cotizaba sin respaldo: todo destino que no
+está en su lista.

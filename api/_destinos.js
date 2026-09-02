@@ -267,6 +267,12 @@ const DESTINOS = [
     precio: { busNC47: 43000, bus4849: 44000, neobusI6: 46000, pbI6: 45000, marcopolo: 50000, irizar: 48000, sprinter: 29500 } },
   { nombre: "Ciudad de México", km: 1102,
     busca: /ciudad de m|cdmx|distrito federal/i,
+    /* R30 · Los tres paseos con nombre. Su hoja los pone como extras del
+       renglón de CDMX: «CON TAXCO $15,000 EXTRAS», «CON CHALMA $8,000»,
+       «CON XOCHIMILCO $2,000». Un día marcado con uno de éstos cuesta eso
+       EN VEZ del movimiento de $3,000, y no se perdona aunque la columna
+       traiga movimientos incluidos. Solo aquí y solo en Sprinter. */
+    paseos: { taxco: 15000, chalma: 8000, xochimilco: 2000 },
     precio: { busNC47: 40000, bus4849: 41000, neobusI6: 44000, pbI6: 42000, marcopolo: 48000, irizar: 46000, sprinter: 22000 } },
   { nombre: "Grutas Tolantongo", km: 1102,
     busca: /tolantongo/i,
@@ -304,13 +310,21 @@ const DESTINOS = [
     movimientosIncluidos: 2 },
   { nombre: "Acapulco", km: 1796,
     busca: /acapulco/i,
-    /* «ACAPULCO 4 DIAS $60,000». Sus cuatro días no estaban marcados y su
-       día extra valía la noche de $1,000; el dueño lo dictó en $2,000 el
-       26-ago-2026. Como todo día dictado, corre en los dos sentidos (R14). */
+    /* «ACAPULCO 4 DIAS $60,000».
+       R35 (1-sep-2026) · El dueño lo cerró con la cuenta hecha: «Acapulco
+       dice 60,000 4 días, si fueran 5 serían 64,000, y con mov 3,000 el
+       día; igual en Cancún».
+
+       Dos cambios contra lo que había:
+       · El día extra pasa de $2,000 a **$4,000**. Los $2,000 salieron de
+         una lectura mía del 26-ago; ahora hay una resta suya que no deja
+         lugar a dudas: 64,000 − 60,000.
+       · **Sus movimientos SE COBRAN**, $3,000 el día. Tenía los cuatro
+         días incluidos y era la misma forma de Guayabitos, que él ya
+         había corregido igual. Se quita `movimientosIncluidos`. */
     precio: { busNC47: 80000, bus4849: 85000, neobusI6: 90000, pbI6: 95000, marcopolo: 100000, irizar: 96500, sprinter: 60000 },
     diasIncluidos: 4,
-    diaExtra: 2000,
-    movimientosIncluidos: 4 },
+    diaExtra: 4000 },
   /* «oaxaca» a secas se llevaba a Puerto Escondido y a Huatulco —que estan en
      el estado, pero 500 km MAS ALLA de la capital— al precio de la capital.
      Ahora esos dos caen en «lo cotiza un asesor», que es lo correcto. */
@@ -430,7 +444,13 @@ function precioDeLista(destino, unidad) {
        campo al catálogo no basta: si no se copia aquí, llega en `undefined`
        y la regla no surte efecto sin que nada truene. Pasó al escribir R24 y
        solo se vio porque se midió el precio, no porque fallara. */
-    movimientosIncluidos: typeof d.movimientosIncluidos === 'number' ? d.movimientosIncluidos : 0
+    movimientosIncluidos: typeof d.movimientosIncluidos === 'number' ? d.movimientosIncluidos : 0,
+    /* SE COPIA A PROPOSITO, y hay que acordarse de hacerlo con cada campo
+       nuevo. Esta función arma un objeto NUEVO: lo que no se copie llega
+       `undefined` y no truena nada. Así se perdió `movimientosIncluidos`
+       una vez, y Chiapas estuvo $24,000 arriba de su propia celda sin que
+       ninguna prueba dijera una palabra. */
+    paseos: d.paseos || null
   };
 }
 

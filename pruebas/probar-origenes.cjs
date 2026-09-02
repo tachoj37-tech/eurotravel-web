@@ -229,14 +229,32 @@ titulo('Desde Ocotlán, un destino que su fila no menciona no paga');
 titulo('Tala, Zacoalco y Cocula, dictados el 28-ago');
 ok('Tala 2 días desde Ocotlán llega a los 9,000 que pidió',
   cotiza('Tala', 2, 0, OCOTLAN), 9000);
-ok('Zacoalco 2 días también',
-  cotiza('Zacoalco de Torres', 2, 0, OCOTLAN), 9000);
+/* CAMBIO DE LADO — 1-sep-2026, por R34, Y ESTA PENDIENTE DE EL.
+
+   Zacoalco daba $9,000 desde Ocotlán porque el piso de $3,000/día lo subía
+   a $6,000 y encima iban los $3,000 del recargo. Al quitarse el piso (R34)
+   manda su precio de lista: $5,000 + $3,000 = $8,000.
+
+   Los $9,000 que él dictó el 28-ago los dijo mirando renglones de dos días,
+   cuando el piso todavía existía. NO es obvio si quiso decir «Zacoalco vale
+   9,000 a dos días» o «el recargo de Ocotlán son 3,000». Tala da 9,000 por
+   las dos lecturas; Zacoalco es el único donde se separan.
+
+   Se deja en lo que manda la regla nueva y queda anotado en
+   PREGUNTAS-ABIERTAS nº 10. Si él dice que son 9,000, Zacoalco necesita
+   piso propio. */
+ok('Zacoalco 2 días desde Ocotlán: su lista + el recargo (PENDIENTE, ver nº 10)',
+  cotiza('Zacoalco de Torres', 2, 0, OCOTLAN), 8000);
 ok('Cocula 2 días: su precio propio es $6,500, así que da 9,500',
   cotiza('Cocula', 2, 0, OCOTLAN), 9500);
 /* Y desde Guadalajara ninguno se movió: el recargo es del origen, no del
    destino. Si esto se pusiera rojo, le habría subido el precio a todos. */
 ok('Tala 2 días desde Guadalajara sigue en 6,000', cotiza('Tala', 2, 0, GDL), 6000);
-ok('Zacoalco 2 días desde Guadalajara sigue en 6,000', cotiza('Zacoalco de Torres', 2, 0, GDL), 6000);
+/* Los 6,000 de aquí también eran el piso, no su precio. Con R34 manda su
+   celda: $5,000. Lo que esta aserción vigila —que desde Guadalajara NO se
+   le pegue el recargo de Ocotlán— sigue igual de vivo. */
+ok('Zacoalco 2 días desde Guadalajara: su celda, sin recargo',
+  cotiza('Zacoalco de Torres', 2, 0, GDL), 5000);
 ok('Cocula 2 días desde Guadalajara sigue en 6,500', cotiza('Cocula', 2, 0, GDL), 6500);
 
 /* ------------------------------------------------------------
@@ -273,13 +291,22 @@ titulo('Los movimientos se calculan igual, salga de donde salga');
 titulo('El recargo sobrevive al piso por día');
 const chapalaLargaGdl = cotiza('Chapala', 10, 0, GDL);
 const chapalaLargaOco = cotiza('Chapala', 10, 0, OCOTLAN);
-/* $30,000 de piso (10 días × $3,000) + $6,000 de noches.
+/* CAMBIO DE LADO DOS VECES, y la segunda es la buena.
 
-   CAMBIO DE LADO EL 30-ago-2026, de $37,000 a $36,000. Traía las noches de
-   R18 —2 destapadas a $500 y 6 a $1,000, o sea $7,000—. Al cerrar R25, el
-   dueño quitó el corte de los $15,000: Chapala vuelve a sus tres noches
-   incluidas, así que de sus 9 noches se cobran 6 y todas a mil. */
-ok('Chapala 10 días desde Guadalajara: manda el piso', chapalaLargaGdl, 36000);
+   30-ago-2026: de $37,000 a $36,000, al cerrar R25 y quitarse el corte de
+   los $15,000 de R18.
+
+   1-sep-2026, por R34: de $36,000 a $12,500. Ya no manda el piso —el dueño
+   lo corto con «cobra 6500 Chapala 4 días»—, manda su celda del Excel:
+
+       $6,500 de lista + 6 noches de más a mil = $12,500
+
+   Es una bajada de $23,500 en este renglón, y es la que él pidió: el piso
+   que yo inventé le estaba ganando a su propio precio. Lo que esta
+   aserción vigila de verdad —que el recargo de Ocotlán sobreviva, abajo—
+   sigue igual de vivo. */
+ok('Chapala 10 días desde Guadalajara: su celda + las noches de más',
+  chapalaLargaGdl, 12500);
 ok('Chapala 10 días desde Ocotlán: el piso NO se come el recargo',
   chapalaLargaOco - chapalaLargaGdl, 4500);
 
