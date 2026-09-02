@@ -1531,3 +1531,26 @@ Vallarta.
 > Señalado sin cambiar (R12): **Mazatlán** son ~500 km por lado, o sea mil en
 > el día. Es su dato y se respeta, pero es el único que no cuadra con «ida y
 > vuelta el mismo día».
+
+---
+
+### R44 · Mazatlán dominical es correcto (1-sep-2026)
+
+Se le señaló como el único de los doce que no cuadraba: son ~500 km por lado,
+o sea **mil kilómetros en el día**. Contestó:
+
+> «Mazatlán sí, por eso los precios están caros en Maza».
+
+Y ahí está la explicación completa: **no es que el dominical sea barato, es
+que Mazatlán es caro justamente porque es ese viaje.** $23,500 por un día de
+mil kilómetros es de los renglones más caros de toda su fila dominical —
+Vallarta, a la mitad de distancia, cuesta $16,000.
+
+Queda cerrado el bloque completo de DOMINICAL: los doce destinos confirmados,
+sin ninguno señalado.
+
+> Vale la pena guardar el patrón, porque ya van tres veces: **un número que
+> no cuadra con mi expectativa casi siempre cuadra con la suya**, y la
+> diferencia está en algo del negocio que yo no sabía. Pasó con el bloque D
+> (R36), con Tepic y León, y ahora con Mazatlán. La regla que sale de ahí es
+> preguntar antes de "corregir".

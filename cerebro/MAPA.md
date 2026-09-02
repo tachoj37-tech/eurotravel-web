@@ -30,6 +30,7 @@ Y encima de todo: [[quien-manda|los precios los dicta el dueño]] (R12).
 | ¿Cuánto suma dormir allá? | [[noches-y-estadia]] |
 | ¿Cuánto suma pasear estando allá? | [[movimientos]] |
 | ¿Y si no salen de Guadalajara? | [[de-donde-salen]] |
+| ¿Y si van y vuelven en domingo? | [[el-dominical]] |
 | ¿Por qué este viaje no da precio en línea? | [[cuando-no-se-cotiza-solo]] |
 | ¿Quién decide un precio nuevo? | [[quien-manda]] |
 | ¿Qué NO sabemos todavía? | [[lo-que-no-se]] |
@@ -38,7 +39,36 @@ Y encima de todo: [[quien-manda|los precios los dicta el dueño]] (R12).
 
 ---
 
-## Las 25 reglas, en una línea cada una
+## Las diecinueve del 1-sep-2026
+
+En un solo día se contestaron **veintiséis preguntas abiertas**. Van primero
+porque son las más frescas y las que más dinero movieron.
+
+| | dice | dónde |
+|---|---|---|
+| **R26** | 4 días y 3 noches por defecto | [[precio-de-lista]] |
+| **R27** | la casilla vacía de un origen **es un dato**: le queda de camino | [[de-donde-salen]] |
+| **R28** | San Juan Cosalá hereda el recargo de Chapala | [[de-donde-salen]] |
+| **R29** | bandas de horas confirmadas · +80 km = $5,500 | [[movimientos]] |
+| **R30** | Taxco $15,000 · Chalma $8,000 · Xochimilco $2,000 | [[movimientos]] |
+| **R31** | DOMINICAL es ida y vuelta el mismo domingo | [[el-dominical]] |
+| **R32** | Camécuaro desde Yurécuaro +$2,000 | [[de-donde-salen]] |
+| **R33** | Puebla y Zacatlán: día extra $2,000 | [[noches-y-estadia]] |
+| **R34** | **el piso NO le gana a un precio de lista** | [[como-se-arma-un-precio]] |
+| **R35** | Acapulco y Cancún: día extra $4,000, movimientos aparte | [[precio-de-lista]] |
+| **R36** | tres de los cuatro números raros del Excel eran correctos | [[quien-manda]] |
+| **R37** | la fórmula $6,500 + $22/km queda confirmada | [[como-se-arma-un-precio]] |
+| **R38** | Zacoalco se iguala a Tala; ninguno está en el Excel | [[precio-de-lista]] |
+| **R39** | El Meco suma $3,000 encima | [[movimientos]] |
+| **R40** | cómo se PIDEN los paseos y los 80 km | [[el-bot]] |
+| **R41** | el redondeo va a la centena más cercana | [[como-se-arma-un-precio]] |
+| **R42** | los paseos **se suman**, nunca sustituyen | [[movimientos]] |
+| **R43** | **DOMINICAL**, doce destinos y sus dos orígenes | [[el-dominical]] |
+| **R44** | Mazatlán dominical es correcto: por eso es caro | [[el-dominical]] |
+
+---
+
+## Las 25 primeras, en una línea cada una
 
 Las revocadas y resueltas se dejan escritas a propósito: saber que algo se
 intentó y no funcionó vale tanto como saber qué sí funciona.
