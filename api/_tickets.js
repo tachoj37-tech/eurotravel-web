@@ -354,6 +354,12 @@ function anotaEtapa(cliente, etapa, extra, ahora) {
        llegaría la misma ficha en cada mensaje que el cliente escriba
        después de completarla. */
     contratoAvisado: !!((extra && extra.contratoAvisado) || (antes && antes.contratoAvisado)),
+    /* El precio que el bot calculó y que espera el «va» del dueño. Se
+       reemplaza si viene uno nuevo, se borra si viene `null` explícito
+       (ya se mandó), y si no viene nada se conserva el que había. */
+    porConfirmar: (extra && Object.prototype.hasOwnProperty.call(extra, 'porConfirmar'))
+      ? (extra.porConfirmar || null)
+      : ((antes && antes.porConfirmar) || null),
     desde: (antes && antes.desde) || (ahora || Date.now()),
     visto: ahora || Date.now()
   };

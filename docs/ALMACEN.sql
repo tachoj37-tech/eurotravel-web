@@ -112,3 +112,25 @@ create index if not exists mensajes_cuando on mensajes (cuando);
 alter table fichas   enable row level security;
 alter table charlas  enable row level security;
 alter table mensajes enable row level security;
+
+-- ------------------------------------------------------------
+-- 5-SEP-2026 · EL PRECIO POR CONFIRMAR Y LOS TICKETS
+-- ------------------------------------------------------------
+-- Regla del dueño: el bot no da precio sin su «va». El precio que
+-- calculó se guarda en la ficha hasta que él conteste, para que
+-- sobreviva a que Vercel recicle la instancia entre el ticket y
+-- la respuesta. Y el ticket (id del mensaje de WhatsApp → cliente)
+-- se guarda por lo mismo: el «va» llega citando el ticket, y sin
+-- esto una instancia nueva no sabría de qué cliente habla.
+-- ------------------------------------------------------------
+alter table fichas add column if not exists por_confirmar jsonb;
+
+create table if not exists tickets (
+  id       text primary key,                 -- el id del mensaje, lo pone Meta
+  cliente  text not null,                    -- de qué cliente habla ese ticket
+  creado   timestamptz not null default now()
+);
+create index if not exists tickets_creado on tickets (creado desc);
+
+-- Nace cerrada, como las demás.
+alter table tickets enable row level security;

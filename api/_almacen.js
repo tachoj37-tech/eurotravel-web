@@ -130,6 +130,11 @@ async function guardaFicha(ficha) {
     contrato_avisado: !!ficha.contratoAvisado,
     visto: new Date(ficha.visto || Date.now()).toISOString()
   };
+  /* La columna va SOLO cuando hay algo que guardar. Si la base aún no
+     tiene la columna (el SQL del 5-sep-2026 corre a mano), una llave
+     desconocida haría fallar el UPSERT entero y se perdería la ficha de
+     todos los clientes, no solo el precio pendiente de uno. */
+  if (ficha.porConfirmar) fila.por_confirmar = ficha.porConfirmar;
   /* `merge-duplicates` es un UPSERT: si ya existe esa llave, la
      actualiza. Sin esto, el segundo mensaje de un cliente reventaría
      por llave repetida y su ficha se quedaría en el primer mensaje. */
@@ -153,6 +158,7 @@ function deLaFila(f) {
     agencia: !!f.agencia,
     contrato: f.contrato,
     contratoAvisado: !!f.contrato_avisado,
+    porConfirmar: f.por_confirmar || null,
     desde: f.desde ? Date.parse(f.desde) : Date.now(),
     visto: f.visto ? Date.parse(f.visto) : Date.now()
   };
@@ -258,7 +264,38 @@ async function tiraLoViejo() {
   const corte = new Date(Date.now() - VIDA_DIAS * 24 * 3600 * 1000).toISOString();
   await pide('mensajes?cuando=lt.' + corte, { metodo: 'DELETE', sinRespuesta: true });
   await pide('charlas?cuando=lt.' + corte, { metodo: 'DELETE', sinRespuesta: true });
+  await pide('tickets?creado=lt.' + corte, { metodo: 'DELETE', sinRespuesta: true })
+    .catch(function () { return null; });
   return true;
+}
+
+/* ------------------------------------------------------------
+   LOS TICKETS · qué cliente hay detrás de cada mensaje al dueño
+   ------------------------------------------------------------
+   El dueño contesta CITANDO el ticket, y WhatsApp manda el id del
+   citado. En memoria ya se recordaba (`recuerdaTicket`), pero la
+   memoria muere con la instancia, y entre el ticket y el «va»
+   pueden pasar horas. Aquí queda para siempre —bueno, un mes—.
+
+   Si la tabla aún no existe, se falla en silencio: la memoria
+   sigue funcionando dentro de la instancia, que es lo que había.
+   ------------------------------------------------------------ */
+async function guardaTicket(id, cliente) {
+  if (!id || !cliente) return false;
+  const r = await pide('tickets?on_conflict=id', {
+    metodo: 'POST',
+    cabeceras: { 'Prefer': 'resolution=merge-duplicates,return=minimal' },
+    cuerpo: { id: String(id), cliente: String(cliente) },
+    sinRespuesta: true
+  }).catch(function () { return null; });
+  return !!r;
+}
+
+async function leeTicket(id) {
+  if (!id) return null;
+  const filas = await pide('tickets?id=eq.' + encodeURIComponent(String(id)) +
+    '&select=cliente&limit=1').catch(function () { return null; });
+  return (filas && filas[0] && filas[0].cliente) || null;
 }
 
 module.exports = {
@@ -266,5 +303,6 @@ module.exports = {
   guardaFicha, leeFicha, fichasDelTablero,
   guardaCharla, leeCharla,
   anotaMensaje, mensajesDe, tiraLoViejo,
+  guardaTicket, leeTicket,
   VIDA_DIAS, VIDA_CHARLA_MS
 };

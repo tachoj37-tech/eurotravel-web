@@ -31,6 +31,7 @@ const conversacion = require('../bot');
 const tickets = require('./_tickets.js');
 const etapas = require('./_etapas.js');
 const contrato = require('./_datos-contrato.js');
+const confirmacion = require('./_confirmacion.js');
 
 /* ------------------------------------------------------------
    COMPARAR SIN FILTRAR EL TIEMPO
@@ -735,6 +736,39 @@ function procesa(crudo, firma, entorno) {
           }
 
           const dirigido = tickets.clienteDeLaRespuesta(m, tickets.tickets);
+
+          /* ------------------------------------------------------------
+             ¿ESTÁ CONTESTANDO UN PRECIO POR CONFIRMAR?
+             ------------------------------------------------------------
+             Regla del dueño (5-sep-2026): el bot no da precio sin su
+             «va». Si ese cliente tiene un precio esperando, «va» lo
+             manda tal cual, un número lo manda con ese total, y
+             cualquier otra cosa sigue el camino de siempre: sus
+             palabras, literales, y el bot se calla con ese cliente.
+
+             Aquí solo se DECIDE; el precio se rearma y se manda en
+             `whatsapp.mjs`, que es donde hay red y cotizador. Y el bot
+             NO se calla al confirmar: el cliente sigue hablando con la
+             misma voz, que es de lo que se trata.
+             ------------------------------------------------------------ */
+          const fichaDelCliente = dirigido && tickets.fichaDe(dirigido.cliente);
+          if (fichaDelCliente && fichaDelCliente.porConfirmar) {
+            const dicho = confirmacion.interpreta(dirigido.texto);
+            if (dicho.tipo !== 'texto') {
+              envios.push({
+                numeroDeOrigen: deQuien,
+                para: dirigido.cliente,
+                texto: '',
+                confirmaPrecio: true,
+                totalFijado: dicho.tipo === 'precio' ? dicho.total : null,
+                pasaAPersona: false,
+                escribio: '[precio · ' + (dicho.tipo === 'va' ? 'confirmado' : 'fijado en ' + dicho.total) + ']'
+              });
+              tickets.yaLoContesto(dirigido.cliente);
+              continue;
+            }
+          }
+
           if (dirigido && dirigido.texto) {
             /* Sus palabras van TAL CUAL. No se adornan ni se corrigen:
                si el dueño escribió eso, eso es lo que quiso decir. */

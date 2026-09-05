@@ -32,6 +32,7 @@ import entendedor from './_entender.js';
 import contrato from './_datos-contrato.js';
 import almacen from './_almacen.js';
 import etapas from './_etapas.js';
+import tarifa from './_tarifa.js';
 import conversacion from '../bot.js';
 
 /* ------------------------------------------------------------
@@ -143,11 +144,126 @@ async function disponibilidadDe(tipo, salida, regreso) {
 const TEXTO_REVISO_DISPONIBILIDAD =
   'Déjame revisar disponibilidad para esa fecha y te confirmo en un momento.';
 
-async function precioDe(envio) {
-  /* ---- primero el calendario, si toca ---- */
+/* ------------------------------------------------------------
+   LA COMPUERTA · el dueño confirma antes de que el cliente vea precio
+   ------------------------------------------------------------
+   Regla del dueño (5-sep-2026): «de momento necesitarás mi
+   confirmación para dar precios, disponibilidad y hacer contrato;
+   la disponibilidad solo al principio, después serás libre».
+
+   Dos interruptores, en Vercel, sin redeploy:
+     CONFIRMAR_PRECIOS=1          el precio pasa por él (hoy: sí)
+     CONFIRMAR_DISPONIBILIDAD=1   el calendario se revisa SIEMPRE y
+                                  lo que diga va en el ticket (hoy: sí);
+                                  en 0, solo en temporada alta o con
+                                  30 días o menos, como estaba.
+   Se apagan poniendo 0. Sin la variable, encendidos: lo seguro.
+
+   Con la compuerta cerrada el bot calcula igual —para que el ticket
+   traiga el número— pero NO lo manda: le llega a él, y su respuesta
+   (`_confirmacion.js`) decide qué recibe el cliente.
+   ------------------------------------------------------------ */
+function encendido(nombre) {
+  const v = process.env[nombre];
+  return v === undefined || v === '' ? true : !/^(0|no|false|off)$/i.test(String(v).trim());
+}
+const TEXTO_ESPERA_PRECIO =
+  'Déjame confirmar disponibilidad y te paso el precio en un momento.';
+
+/* Con un total fijado por el dueño, el anticipo se recalcula con la misma
+   regla del motor (20 % al múltiplo de $500 hacia arriba). Los demás
+   campos del precio —desglose, noches— se quedan como los calculó el
+   bot: el cliente solo ve el total y el anticipo. */
+function conTotalFijado(precio, total) {
+  const base = precio || {};
+  const anticipo = Math.ceil(total * tarifa.ANTICIPO / 500) * 500;
+  return Object.assign({}, base, {
+    total: total,
+    anticipo: Math.min(anticipo, total),
+    saldo: total - Math.min(anticipo, total),
+    requiereAsesor: false
+  });
+}
+
+function ticketDePrecio(res, precio, cal, cliente) {
+  const lineas = ['💰 *Precio por confirmar*', ''];
+  if (res.destino) lineas.push('📍 ' + (res.origen ? res.origen + ' → ' : '') + res.destino);
+  if (res.salida) {
+    lineas.push('📅 ' + tickets.comoSeDice(res.salida) +
+      (res.regreso ? ' al ' + tickets.comoSeDice(res.regreso) : ''));
+  }
+  if (res.unidad) lineas.push('🚌 ' + res.unidad + (res.pasajeros ? ' · ' + res.pasajeros + ' pax' : ''));
+  lineas.push('');
+  if (precio && typeof precio.total === 'number') {
+    lineas.push('Calculado: *$' + precio.total.toLocaleString('es-MX') + '*' +
+      (typeof precio.anticipo === 'number' ? ' (anticipo $' + precio.anticipo.toLocaleString('es-MX') + ')' : ''));
+  } else {
+    lineas.push('No pude calcularlo: escríbeme el precio.');
+  }
+  if (cal) lineas.push('Calendario: ' + cal.libres + ' de ' + cal.total + ' libres');
+  else if (cal === null) lineas.push('Calendario: EuroSystem no contestó');
+  lineas.push('');
+  lineas.push('Contéstame *este mensaje*: *va* y se lo mando tal cual, un *número* y va con ese precio, o escríbeme y se lo paso.');
+  lineas.push('_cliente: ' + cliente + '_');
+  return lineas.join('\n');
+}
+
+async function precioDe(envio, opciones) {
+  const confirmado = !!(opciones && opciones.confirmado);
+  const totalFijado = (opciones && typeof opciones.totalFijado === 'number') ? opciones.totalFijado : null;
   const res = envio.resumen || {};
   const hoy = process.env.HOY_DE_PRUEBA || new Date().toISOString().slice(0, 10);
-  if (conversacion.hayQueRevisarDisponibilidad(res.salida, hoy)) {
+
+  /* ---- la compuerta: todo pasa por el dueño ---- */
+  if (!confirmado && encendido('CONFIRMAR_PRECIOS')) {
+    let precio = null;
+    try {
+      const r = await nucleo.cotiza(envio.cotiza, process.env.GOOGLE_ROUTES_KEY);
+      if (r.ok) precio = r.precio;
+      else console.error('[whatsapp] no se pudo cotizar: ' + r.error);
+    } catch (e) {
+      console.error('[whatsapp] cotizador tronado: ' + e.message);
+    }
+    const revisa = encendido('CONFIRMAR_DISPONIBILIDAD') ||
+      conversacion.hayQueRevisarDisponibilidad(res.salida, hoy);
+    const cal = (revisa && res.salida)
+      ? await disponibilidadDe((envio.cotiza && envio.cotiza.unidad) || res.unidad || 'sprinter', res.salida, res.regreso)
+      : undefined;
+
+    tickets.anotaEtapa(envio.para, 'pidio_precio', {
+      porConfirmar: {
+        cotiza: envio.cotiza || null,
+        resumen: res,
+        total: precio && typeof precio.total === 'number' ? precio.total : null,
+        anticipo: precio && typeof precio.anticipo === 'number' ? precio.anticipo : null,
+        calendario: cal === undefined ? null : cal,
+        desde: Date.now()
+      }
+    });
+    const mios = [{
+      numeroDeOrigen: envio.numeroDeOrigen,
+      para: envio.para,
+      texto: TEXTO_ESPERA_PRECIO,
+      pasaAPersona: true,
+      escribio: '[precio por confirmar]'
+    }];
+    const dueno = tickets.numeroDelDueno(process.env);
+    if (dueno) {
+      mios.push({
+        numeroDeOrigen: envio.numeroDeOrigen,
+        para: dueno,
+        esTicket: true,
+        sobreCliente: envio.para,
+        texto: ticketDePrecio(res, precio, cal, envio.para),
+        pasaAPersona: false,
+        escribio: '[ticket precio]'
+      });
+    }
+    return mios;
+  }
+
+  /* ---- primero el calendario, si toca (con la compuerta apagada) ---- */
+  if (!confirmado && conversacion.hayQueRevisarDisponibilidad(res.salida, hoy)) {
     const cal = await disponibilidadDe(
       (envio.cotiza && envio.cotiza.unidad) || res.unidad || 'sprinter',
       res.salida, res.regreso);
@@ -192,6 +308,9 @@ async function precioDe(envio) {
   } catch (e) {
     console.error('[whatsapp] cotizador tronado: ' + e.message);
   }
+  /* El dueño contestó con un número: ése es el precio, calcule lo que
+     calcule el motor. Regla de la casa: los precios los pone él. */
+  if (totalFijado !== null) precio = conTotalFijado(precio, totalFijado);
 
   const salida = conversacion.textoDeCotizacion(precio, envio.resumen);
 
@@ -204,6 +323,8 @@ async function precioDe(envio) {
     tickets.anotaEtapa(envio.para, 'con_precio', {
       total: precio.total,
       anticipo: precio.anticipo,
+      porConfirmar: null, // ya se mandó: no queda nada esperando
+
       viaje: r.destino
         ? '📍 ' + (r.origen ? r.origen + ' → ' : '') + r.destino +
           (r.salida ? '\n📅 ' + tickets.comoSeDice(r.salida) +
@@ -548,7 +669,52 @@ async function conversacionDeVerdad(envio) {
   });
 }
 
+/* ------------------------------------------------------------
+   EL DUEÑO CONFIRMÓ UN PRECIO
+   ------------------------------------------------------------
+   El webhook decidió que su respuesta era «va» o un número; aquí
+   se rearma el precio con lo que quedó guardado en la ficha y se
+   manda al cliente por el camino de siempre (texto, fotos, etapa).
+
+   Si la ficha ya no trae nada —la instancia se recicló y la base
+   aún no tiene la columna, o ya se había mandado— se le dice al
+   dueño en vez de callarse: un «va» que no llega a nadie es una
+   venta perdida en silencio.
+   ------------------------------------------------------------ */
+async function precioConfirmado(envio) {
+  let ficha = tickets.fichaDe(envio.para);
+  if (!(ficha && ficha.porConfirmar) && almacen.hayAlmacen()) {
+    const deLaBase = await almacen.leeFicha(envio.para).catch(function () { return null; });
+    if (deLaBase) { tickets.siembraFicha(deLaBase); ficha = tickets.fichaDe(envio.para) || deLaBase; }
+  }
+  const pc = ficha && ficha.porConfirmar;
+  const dueno = tickets.numeroDelDueno(process.env);
+  if (!pc || !pc.cotiza) {
+    return [{
+      numeroDeOrigen: envio.numeroDeOrigen,
+      para: dueno || envio.numeroDeOrigen,
+      texto: 'Ya no tengo el precio de ese cliente guardado 🙈 (o ya se lo mandé). ' +
+        'Escríbeselo tú respondiendo su ticket, o pídele que me vuelva a preguntar.',
+      esTicket: true,
+      sobreCliente: envio.para,
+      pasaAPersona: false,
+      escribio: '[precio · sin nada que confirmar]'
+    }];
+  }
+  return precioDe({
+    numeroDeOrigen: envio.numeroDeOrigen,
+    para: envio.para,
+    cotiza: pc.cotiza,
+    resumen: pc.resumen || {}
+  }, { confirmado: true, totalFijado: envio.totalFijado });
+}
+
 async function reparte(envio) {
+  if (envio.confirmaPrecio) {
+    for (const p of await precioConfirmado(envio)) await manda(p);
+    return;
+  }
+
   if (envio.pideTablero) {
     const mejor = await tableroDeVerdad(envio);
     await manda(mejor || envio);
@@ -609,6 +775,32 @@ async function cargaLoQueSeSabe(crudo) {
 
   const numeros = webhook.numerosDelAviso(aviso);
   if (!numeros.length) return [];
+
+  /* ------------------------------------------------------------
+     SI EL DUEÑO CITÓ UN TICKET QUE ESTA INSTANCIA NO RECUERDA
+     ------------------------------------------------------------
+     La memoria de tickets muere con la instancia; el almacén no.
+     Se busca ahí el id citado y se siembra en memoria, y de paso
+     se carga la ficha de ESE cliente —el aviso solo trae el número
+     del dueño— para que el webhook vea su precio por confirmar.
+     ------------------------------------------------------------ */
+  const dueno = tickets.numeroDelDueno(process.env);
+  if (dueno) {
+    for (const e of (aviso.entry || [])) {
+      for (const c of (e.changes || [])) {
+        for (const m of (((c && c.value) || {}).messages || [])) {
+          if (!m || !tickets.mismoNumero(m.from, dueno)) continue;
+          const citado = m.context && m.context.id;
+          if (!citado || tickets.tickets.get(citado)) continue;
+          const cliente = await almacen.leeTicket(citado).catch(function () { return null; });
+          if (cliente) {
+            tickets.recuerdaTicket(citado, cliente);
+            if (numeros.indexOf(cliente) < 0) numeros.push(cliente);
+          }
+        }
+      }
+    }
+  }
 
   await Promise.all(numeros.map(async function (n) {
     const [ficha, charla] = await Promise.all([
@@ -885,7 +1077,12 @@ async function manda(envio) {
       try {
         const cuerpo = await r.json();
         const id = cuerpo && cuerpo.messages && cuerpo.messages[0] && cuerpo.messages[0].id;
-        if (id) tickets.recuerdaTicket(id, envio.sobreCliente);
+        if (id) {
+          tickets.recuerdaTicket(id, envio.sobreCliente);
+          /* Y al almacén, para cuando esta instancia ya no exista. Sin
+             esperar: a Meta hay que contestarle rápido. */
+          if (almacen.hayAlmacen()) almacen.guardaTicket(id, envio.sobreCliente).catch(function () {});
+        }
       } catch (e) { /* sin id: queda el camino del numero escrito */ }
     }
 

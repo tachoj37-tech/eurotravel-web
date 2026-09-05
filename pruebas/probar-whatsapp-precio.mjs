@@ -44,6 +44,13 @@ process.env.CONTRATOS_API_KEY = 'llave-de-mentiras';
 /* Con clave —de mentiras— para que el camino de la IA se recorra.
    Quien contesta es el `fetch` de abajo, no Anthropic. */
 process.env.ANTHROPIC_API_KEY = 'clave-de-mentiras';
+/* DESDE EL 5-SEP-2026 el precio pasa por el dueño (CONFIRMAR_PRECIOS) y
+   el calendario se revisa siempre (CONFIRMAR_DISPONIBILIDAD). Las pruebas
+   de aquí arriba son de ANTES y miden el precio directo y el calendario
+   solo en temporada: se corren con la compuerta apagada. La compuerta se
+   prueba encendida en su propia sección, al final. */
+process.env.CONFIRMAR_PRECIOS = '0';
+process.env.CONFIRMAR_DISPONIBILIDAD = '0';
 
 const atiende = (await import(pathToFileURL(path.join(RAIZ, 'api', 'whatsapp.mjs')).href)).default;
 const webhook = (await import(pathToFileURL(path.join(RAIZ, 'api', '_whatsapp-webhook.js')).href)).default;
@@ -395,6 +402,118 @@ async function cotizaChapala(C, salida, regreso) {
   process.env.CONTRATOS_API_KEY = llave;
 }
 calendarioDice = { libres: 3, total: 4 };
+
+/* ============================================================
+   LA COMPUERTA · el dueño confirma antes de que el cliente vea precio
+   ============================================================
+   Regla del dueño (5-sep-2026). Con CONFIRMAR_PRECIOS el bot calcula
+   pero no manda: el cliente recibe la espera, el dueño el ticket con
+   el número, y lo que él conteste decide.
+   ============================================================ */
+titulo('la compuerta del dueño');
+process.env.CONFIRMAR_PRECIOS = '1';
+process.env.CONFIRMAR_DISPONIBILIDAD = '1';
+/* `DUENO` viene de arriba: es el mismo número que `DUENO_WHATSAPP`. */
+
+/* El dueño contesta CITANDO un mensaje (WhatsApp manda `context.id`). */
+async function contesta(texto, citaId) {
+  contador++;
+  const cuerpo = JSON.stringify({
+    entry: [{ changes: [{ value: {
+      metadata: { phone_number_id: '111' },
+      messages: [{ id: 'wamid.d' + contador, from: DUENO, type: 'text',
+        text: { body: texto }, context: citaId ? { id: citaId } : undefined }]
+    } }] }]
+  });
+  await atiende(new Request('https://x/api/whatsapp', {
+    method: 'POST', body: cuerpo,
+    headers: { 'x-hub-signature-256': firma(cuerpo) }
+  }));
+}
+/* El id con el que Meta «devolvió» el último ticket al dueño: el fetch
+   de mentiras numera las salidas, y el ticket es la última al dueño. */
+function idDelUltimoTicket() {
+  let idx = -1;
+  mandados.forEach(function (m, i) { if (mismo(m.to, DUENO)) idx = i; });
+  return idx < 0 ? null : 'wamid.salida' + (idx + 1);
+}
+
+/* 1 · Con la compuerta cerrada: espera al cliente, ticket al dueño, y el
+   calendario se consultó aunque noviembre no sea temporada alta. */
+{
+  webhook.olvidaTodo(); mandados = []; llamadasAlCalendario = 0;
+  calendarioDice = { libres: 2, total: 4 };
+  const C = '5213366670010';
+  await cotizaChapala(C, '20 de noviembre', '22');
+  const alCliente = textos(C).join('\n');
+  const alDueno = textos(DUENO).join('\n');
+  okQue('el cliente NO ve precio', !/\*Total: \$/.test(alCliente));
+  okQue('  y recibe la espera', /te paso el precio en un momento/.test(alCliente));
+  okQue('  el dueño recibe el ticket de precio', /Precio por confirmar/.test(alDueno));
+  okQue('  con el precio calculado', /Calculado: \*\$[\d,]+\*/.test(alDueno));
+  ok('  y el calendario se consultó aunque no sea temporada', llamadasAlCalendario, 1);
+  okQue('  y lo que dijo va en el ticket', /Calendario: 2 de 4 libres/.test(alDueno));
+  okQue('  el ticket dice cómo contestar', /\*va\*/.test(alDueno) && /n[úu]mero/.test(alDueno));
+
+  /* 2 · «va» citando el ticket: el cliente recibe el precio tal cual. */
+  const ticket = idDelUltimoTicket();
+  mandados = [];
+  await contesta('va', ticket);
+  const despues = textos(C).join('\n');
+  okQue('con «va» el cliente recibe el precio', /\*Total: \$/.test(despues));
+  okQue('  y no le llegó la palabra «va»', !/^va$/m.test(despues));
+  okQue('  el bot no se calló con ese cliente', !webhook.iaCallada ? true : !webhook.iaCallada(C));
+
+  /* 3 · Y ya no queda nada por confirmar: un segundo «va» es texto normal
+     del dueño —se pasa literal, como cualquier palabra suya— y NO manda el
+     precio dos veces. (Primero se escribió esperando el aviso de «ya no
+     tengo el precio»; ése es solo para cuando el webhook SÍ decidió
+     confirmar y la ficha ya no traía nada: instancia reciclada sin
+     almacén. Sin precio pendiente, el webhook ni lo intenta.) */
+  mandados = [];
+  await contesta('va', ticket);
+  okQue('un segundo «va» no manda el precio otra vez', !/\*Total: \$/.test(textos(C).join('\n')));
+  okQue('  y llega literal, como cualquier texto del dueño', /^va$/m.test(textos(C).join('\n')));
+}
+
+/* 4 · Un número: ese es el precio, con el anticipo recalculado (20 % a $500). */
+{
+  webhook.olvidaTodo(); mandados = [];
+  calendarioDice = { libres: 2, total: 4 };
+  const C = '5213366670011';
+  await cotizaChapala(C, '20 de noviembre', '22');
+  const ticket = idDelUltimoTicket();
+  mandados = [];
+  await contesta('48,000', ticket);
+  const t = textos(C).join('\n');
+  okQue('con un número el cliente recibe ESE total', /\*Total: \$48,000\*/.test(t));
+  okQue('  con el anticipo recalculado a $10,000', /\$10,000/.test(t));
+}
+
+/* 5 · Cualquier otro texto: literal al cliente, y el bot se calla, como siempre. */
+{
+  webhook.olvidaTodo(); mandados = [];
+  const C = '5213366670012';
+  await cotizaChapala(C, '20 de noviembre', '22');
+  const ticket = idDelUltimoTicket();
+  mandados = [];
+  await contesta('déjame ver si me alcanza el camión grande, te digo en la tarde', ticket);
+  const t = textos(C).join('\n');
+  okQue('texto libre llega literal', /me alcanza el camión grande/.test(t));
+  okQue('  y sin precio', !/\*Total: \$/.test(t));
+}
+
+/* 6 · Honesto cuando ya no hay nada: la instancia se recicló y no hay almacén. */
+{
+  webhook.olvidaTodo(); mandados = [];
+  await contesta('5213366670013: va', null);   // por número, sin ticket en memoria
+  okQue('sin precio guardado no se inventa nada al cliente', !/\*Total: \$/.test(textos('5213366670013').join('\n')));
+  okQue('  el «va» llega literal, como cualquier texto (no había nada que confirmar)',
+    /^va$/m.test(textos('5213366670013').join('\n')));
+}
+
+process.env.CONFIRMAR_PRECIOS = '0';
+process.env.CONFIRMAR_DISPONIBILIDAD = '0';
 
 /* ============================================================ */
 console.log('\n' + buenas + ' buenas, ' + malas + ' malas');

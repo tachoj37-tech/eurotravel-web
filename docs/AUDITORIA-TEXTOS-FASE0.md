@@ -315,3 +315,28 @@ plazo («un mes» = ≤30 días entre hoy y la salida).
 ---
 
 **Fin de Fase 0. Espero tu respuesta antes de proponer un solo cambio.**
+
+---
+
+## 8 · Lo que el dueño autorizó después de Fase 0 (5-sep-2026)
+
+- **7.2 aprobado y construido** («va mirar el calendario de EuroSystem»): existe
+  `GET /api/disponibilidad` en EuroSystem (solo lectura, misma llave) y el bot lo llama.
+  Marzo sigue en temporada alta (confirmado).
+- **Regla nueva, autorizada con estas palabras:** «siempre debe haber confirmación de mi
+  parte, tanto para precios como en disponibilidad; la disponibilidad solo al principio,
+  después serás libre; de momento necesitarás mi confirmación para dar precios,
+  disponibilidad y hacer contrato». Construido como dos interruptores en Vercel
+  (`CONFIRMAR_PRECIOS`, `CONFIRMAR_DISPONIBILIDAD`, encendidos sin variable): el bot
+  calcula el precio y **no lo manda**; le llega al dueño en un ticket con el viaje, el
+  precio calculado y lo que dice el calendario; su respuesta al ticket decide («va» = tal
+  cual, un número = ese precio, otro texto = literal). El contrato ya pasaba por él
+  (ficha); subirlo a EuroSystem con su «va» queda pendiente de su respuesta sobre el
+  estado (CONFIRMADO o BORRADOR).
+
+| ID | Dónde | Cuándo | Texto | Estado |
+|---|---|---|---|---|
+| T-124 | `whatsapp.mjs` `TEXTO_ESPERA_PRECIO` | Cliente terminó de cotizar y la compuerta está cerrada | «Déjame confirmar disponibilidad y te paso el precio en un momento.» | **Pendiente de «va»** (propuesto; sustituye en este caso a T-122) |
+
+El ticket al dueño («💰 *Precio por confirmar* …») es texto hacia adentro, no lo ve el
+cliente: no entra al inventario.
