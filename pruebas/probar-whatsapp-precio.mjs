@@ -41,6 +41,8 @@ process.env.HOY_DE_PRUEBA = '2026-09-03';
 /* La llave con la que el bot le habla a EuroSystem. Sin ella el bot no
    consulta el calendario y —cerrado a fallos— tampoco promete. */
 process.env.CONTRATOS_API_KEY = 'llave-de-mentiras';
+/* Desde el 5-sep-2026 el calendario se abre con OTRA llave, solo de lectura. */
+process.env.DISPONIBILIDAD_API_KEY = 'llave-de-lectura-de-mentiras';
 /* Con clave —de mentiras— para que el camino de la IA se recorra.
    Quien contesta es el `fetch` de abajo, no Anthropic. */
 process.env.ANTHROPIC_API_KEY = 'clave-de-mentiras';
@@ -389,17 +391,20 @@ async function cotizaChapala(C, salida, regreso) {
   okQue('  y el precio sale normal', /\*Total: \$/.test(t));
 }
 
-/* Sin llave configurada no se consulta — y por eso tampoco se promete. */
+/* Sin llave DE LECTURA configurada no se consulta — y por eso tampoco se
+   promete. Cambió el 5-sep-2026: antes se usaba la de contratos; ahora esa
+   sigue puesta y NO basta, que es justo lo que se quiere (dos llaves, dos
+   puertas). */
 {
   webhook.olvidaTodo(); mandados = []; llamadasAlCalendario = 0;
   calendarioDice = { libres: 3, total: 4 };
-  const llave = process.env.CONTRATOS_API_KEY;
-  delete process.env.CONTRATOS_API_KEY;
+  const llave = process.env.DISPONIBILIDAD_API_KEY;
+  delete process.env.DISPONIBILIDAD_API_KEY;
   const C = '5213366670005';
   await cotizaChapala(C, '12 de septiembre', '14');
-  ok('sin llave no se llama', llamadasAlCalendario, 0);
+  ok('sin llave de lectura no se llama (aunque la de contratos esté)', llamadasAlCalendario, 0);
   okQue('  y cerrado a fallos: no se promete', !/\*Total: \$/.test(textos(C).join('\n')));
-  process.env.CONTRATOS_API_KEY = llave;
+  process.env.DISPONIBILIDAD_API_KEY = llave;
 }
 calendarioDice = { libres: 3, total: 4 };
 

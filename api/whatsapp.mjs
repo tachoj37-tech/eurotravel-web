@@ -112,7 +112,10 @@ const EUROSYSTEM = process.env.EUROSYSTEM_URL || 'https://eurosystem-smoky.verce
 const ESPERA_CALENDARIO_MS = 4000;
 
 async function disponibilidadDe(tipo, salida, regreso) {
-  const llave = (process.env.CONTRATOS_API_KEY || '').trim();
+  /* Llave APARTE de la de contratos, solo de lectura (dictado del dueño,
+     5-sep-2026: «la que tenga más seguridad»). Sin ella no se llama, y por
+     eso tampoco se promete. */
+  const llave = (process.env.DISPONIBILIDAD_API_KEY || '').trim();
   if (!llave || !tipo || !salida) return null;
   const t = String(tipo).toUpperCase();
   const u = EUROSYSTEM.replace(/\/+$/, '') + '/api/disponibilidad?tipo=' +

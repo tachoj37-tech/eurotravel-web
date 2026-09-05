@@ -1,7 +1,7 @@
 {
   "_": "Todo lo que el bot AFIRMA de la empresa sale de aqui. Si un campo dice PENDIENTE, el texto que lo use lleva {{PENDIENTE_*}} y no se aplica hasta que el dueno lo llene. Nada se inventa. Creado 5-sep-2026 al aprobarse la Fase 0.",
 
-  "NOMBRE_BOT": "PENDIENTE",
+  "NOMBRE_BOT": "Eurobot",
   "VENDEDOR_HUMANO": "PENDIENTE",
   "MINUTOS_RESPUESTA": "PENDIENTE",
 
