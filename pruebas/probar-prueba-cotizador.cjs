@@ -51,7 +51,15 @@ global.fetch = function (url, opc) {
 };
 process.env.GOOGLE_ROUTES_KEY = 'de_mentiras';
 
-const puerta = require('../api/prueba-cotizador.js');
+/* Se movio a `pendiente/` el 2-sep-2026 para dejarle su lugar a
+   `/api/entender`: el plan Hobby de Vercel deja 12 funciones y con la de
+   la IA eran 13. Se escogio esta porque su propio encabezado dice
+   «TEMPORAL, se borra cuando termine de revisarlos», y porque es la
+   unica puerta que ensena a proposito kilometros y tarifas — sacarla de
+   internet es ganancia, no perdida.
+
+   Sigue viva y probada: se abre en local con `npm start`. */
+const puerta = require('../pendiente/prueba-cotizador-api.js');
 const tarifa = require('../api/_tarifa.js');
 
 function res() {

@@ -40,6 +40,19 @@ Y encima de todo: [[quien-manda|los precios los dicta el dueño]] (R12).
 
 ---
 
+## Las del 2-sep-2026
+
+| | dice | dónde |
+|---|---|---|
+| **R51** | el anticipo sube al **medio millar**, y el «20 %» desaparece | [[como-se-arma-un-precio]] |
+| **R52** | un autobús **no hace ida y vuelta el mismo domingo** | [[el-dominical]] |
+
+El mismo día se corrigió el catálogo: el **Irizar i6 y el PB son de 47**, no de
+51. Decían «47 a 51» con `max: 51`, y con eso el bot le habría dicho a un grupo
+de 50 que sí cabía. Lo confirmó el dueño con la captura de su propia página.
+
+---
+
 ## Las veinticinco del 1-sep-2026
 
 En un solo día se cerraron **veintiséis preguntas abiertas** y salieron
@@ -135,7 +148,16 @@ npm run probar
 Las que tocan dinero: `probar-tarifa`, `probar-destinos`, `probar-sumas`,
 `probar-cotiza-vs-cobra`, `probar-origenes`, `probar-dia-no-gratis`.
 
-**`auditar-tarifa.cjs` lleva rato en rojo** con 3 fallas — espera que un viaje
-de un día cobre movimiento, que es justo lo que R22 prohibió. Está pendiente de
-actualizar, y mientras tanto corta la batería: lo que va después no se corre
-solo. Ver [[lo-que-no-se]].
+**Todo verde desde el 2-sep-2026: 1,937 pruebas, 38 archivos, 0 fallas.**
+
+Ese día se arreglaron dos cosas de fondo:
+
+- **La batería ya no se corta.** Corría con los 37 archivos encadenados con
+  `&&`, y `auditar-tarifa` —el octavo— llevaba tiempo en rojo: **las 29 que
+  iban después nunca se corrían.** Ahora `pruebas/correr-todas.cjs` los
+  descubre solos y los corre todos hasta el final.
+- **`probar-origenes.cjs` no estaba en la lista.** 236 pruebas de dinero —los
+  recargos de Ocotlán y Yurécuaro— que nunca corrieron.
+
+`auditar-tarifa` se puso al día con las reglas que la habían dejado atrás:
+R22, R24, R25, R34, R35, R38, R41, R45, R47 y R51.

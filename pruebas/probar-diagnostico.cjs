@@ -23,7 +23,10 @@ function igual(nombre, dio, esperado) {
 let fetchLlamado = false;
 global.fetch = function () { fetchLlamado = true; return Promise.reject(new Error('no debió llamarse')); };
 
-const handler = require('../api/diagnostico.js');
+/* Se movio a `pendiente/` el 2-sep-2026 para dejarle su lugar de
+   funcion al webhook de WhatsApp: el plan Hobby deja 12 y era la 13.
+   El dueno lo autorizo. Sigue probado desde aqui. */
+const handler = require('../pendiente/diagnostico.js');
 
 function req(clave) {
   return { method: 'POST', headers: { origin: 'https://eurotravel-web.vercel.app' },

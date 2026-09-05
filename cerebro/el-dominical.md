@@ -92,3 +92,19 @@ Relacionado: [[precio-de-lista]] · [[de-donde-salen]] ·
 [[como-se-arma-un-precio]] · [[MAPA]]
 
 Texto completo: `docs/CRITERIO-DE-PRECIOS.md`, reglas R31, R43 y R44.
+
+---
+
+## R52 · El autobús no hace dominical
+
+Es de operación, no de precio: **un autobús no puede ir y volver el mismo
+domingo.**
+
+`api/_tarifa.js` ya impedía que un autobús agarrara **tarifa** dominical —solo
+la Sprinter la toma—. Lo que faltaba era que el bot **no lo ofreciera**: sin
+R52 se cotizaba como viaje normal de un día y se le pasaba al vendedor una
+solicitud de un servicio que no existe.
+
+Dar un precio equivocado se corrige. **Prometer algo que no se puede dar, no.**
+
+Ver [[el-bot]] · `docs/GUION-DEL-BOT.md` §6.

@@ -1,3 +1,20 @@
+/* ------------------------------------------------------------
+   MOVIDO A `pendiente/` EL 2-sep-2026
+   ------------------------------------------------------------
+   El plan Hobby de Vercel deja 12 funciones y el webhook de
+   WhatsApp era la 13. El dueno lo autorizo: «si podemos quitar
+   el diagnostico, metemos esto del WhatsApp».
+
+   NO se borro. Sigue vivo y probado, y se abre en local con
+   `npm start` -> http://localhost:5175/api/... — no, ojo: en
+   local solo se sirven las funciones de `api/`. Para usarlo hay
+   que moverlo de vuelta un rato, o subir a Vercel Pro.
+
+   Lo que se pierde mientras tanto: la pantalla que dice si las
+   claves quedaron bien puestas en Vercel. Justo cuando se van a
+   meter tres nuevas (Groq, WhatsApp, Anthropic). Queda dicho.
+   ------------------------------------------------------------ */
+
 /* ============================================================
    Diagnóstico de claves — función serverless
    ------------------------------------------------------------
@@ -18,7 +35,7 @@
    ============================================================ */
 
 const crypto = require('crypto');
-const defensas = require('./_defensas');   // origen y freno, en un lugar
+const defensas = require('../api/_defensas');   // origen y freno, en un lugar
 
 /* La clave, comparada en tiempo constante (un === se corta en la primera
    letra distinta y ese tiempo delata la clave). Devuelve null si no está
@@ -137,7 +154,7 @@ module.exports = async function handler(req, res) {
   /* El correo. Por omisión NO se prueba contra Resend: solo se dice si está
      configurada y de dónde saldría. Con `probarCorreo: true` sí se manda uno
      de verdad — ver abajo. */
-  const correo = require('./_correo');
+  const correo = require('../api/_correo');
   salida.RESEND_API_KEY = {
     configurada: correo.hayClave(),
     sale_de: correo.DE,

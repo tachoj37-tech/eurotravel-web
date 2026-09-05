@@ -283,7 +283,10 @@ igual('cruzando de mes: 3 días', t.diasDeServicio('2026-10-31', '2026-11-02'), 
   const p = t.calcula(621.2, 4);
   igual('un destino fuera de la lista: total 20,200', p.total, 20200);
   igual('no aplicó el mínimo', p.interno.aplicoMinimo, false);
-  igual('anticipo 20% redondeado al peso', p.anticipo, 4040);
+  /* Cambió de bando con R51 (2-sep-2026). Esperaba 4,040 —el 20% al peso—.
+     Ahora el 20% sube al medio millar: 4,040 → 4,500. No es que la prueba
+     estuviera mal; es que la regla que probaba dejó de existir. */
+  igual('el anticipo sube al medio millar (R51)', p.anticipo, 4500);
   igual('saldo = total − anticipo, exacto', p.saldo, p.total - p.anticipo);
   igual('subtotal + IVA = total', Math.round((p.subtotal + p.iva) * 100) / 100, p.total);
 })();
@@ -368,9 +371,13 @@ igual('cruzando de mes: 3 días', t.diasDeServicio('2026-10-31', '2026-11-02'), 
      `requiereAsesor` se agrego el 25-ago-2026. Es un SI o un NO, no una
      cantidad, y cuando vale `true` todos los montos vienen en cero: no hay
      nada de donde dividir. Sin el, la pantalla enseñaria «$0». */
+  /* `porcentajeAnticipo` salió de esta lista con R51: al subir el anticipo al
+     medio millar dejó de ser el 20%, y un porcentaje que ya no es cierto no
+     tiene por qué llegar al navegador —ni al recibo de Stripe, que lo
+     imprimía—. */
   igual('las llaves que salen son solo estas',
     Object.keys(afuera).sort(),
-    ['anticipo', 'desglose', 'iva', 'ivaIncluido', 'porcentajeAnticipo',
+    ['anticipo', 'desglose', 'iva', 'ivaIncluido',
      'requiereAsesor', 'saldo', 'subtotal', 'total']);
   igual('y `interno` sí trae la tarifa, para el servidor', p.interno.tarifaKm, 22);
 })();
@@ -674,9 +681,11 @@ igual('sin nada no vale', t.horasDe(null, undefined), 0);
   /* El anticipo sale del total FINAL, no del traslado. Si saliera del
      traslado, se apartaria un viaje de 36,000 con el anticipo de uno de
      18,000: 3,600 en vez de 7,200. */
-  /* 20% de 32,000; eran 7,200 cuando el total era 36,000 */
-  igual('el anticipo es el 20% del total final', p.anticipo, 6400);
-  igual('y el saldo, lo que queda', p.saldo, 25600);
+  /* 20% de 32,000 son 6,400, y R51 lo sube al medio millar: 6,500. Lo que
+     esta prueba cuida no es el número sino de DÓNDE sale: del total final y
+     no del traslado. Eso no cambió con R51. */
+  igual('el anticipo sale del total final, ya al medio millar', p.anticipo, 6500);
+  igual('y el saldo, lo que queda', p.saldo, 25500);
   igual('anticipo + saldo = total', p.anticipo + p.saldo, p.total);
 })();
 

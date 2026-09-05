@@ -69,14 +69,26 @@ nombre de su columna. De cinco paquetes, los dos que confirmó **venían mal**.
 
 ---
 
-## Y una que no es de precios pero corta la batería
+## ~~La auditoría en rojo~~ · RESUELTO el 2-sep-2026
 
-**`auditar-tarifa.cjs` lleva rato en rojo**, con 3 fallas. Espera que un viaje
-de un día cobre movimiento, que es justo lo que **R22 prohibió**.
+Queda escrito porque la lección vale más que el arreglo.
 
-El problema no son las 3 fallas: es que la batería se corta ahí con `&&`, así
-que **las pruebas que van después no se corren solas**. Hay que actualizarla —
-y escribir al lado por qué cambió de lado.
+`auditar-tarifa.cjs` llevaba semanas en rojo esperando reglas que el dueño ya
+había cambiado. Eso se sabía. **Lo que no se sabía es lo que tapaba:** la
+batería encadenaba los 37 archivos con `&&` y esa auditoría era la octava, así
+que **las 29 pruebas siguientes no se corrían.** Quien veía el rojo creía estar
+viendo 37 archivos y estaba viendo 8.
+
+Se descubrió el mismo día, y por accidente: un cambio de dinero (R51) rompió
+tres pruebas y **la batería no las delató** — estaban del otro lado del corte.
+
+Y detrás de eso apareció otra: **`probar-origenes.cjs` ni siquiera estaba en la
+lista.** 236 comprobaciones de los recargos de Ocotlán y Yurécuaro, dinero,
+que nunca habían corrido.
+
+> **La lección:** una prueba que lleva tiempo en rojo no es solo una prueba
+> rota. Es una **venda**. Y una lista escrita a mano se olvida — por eso ahora
+> los archivos se descubren solos.
 
 ---
 

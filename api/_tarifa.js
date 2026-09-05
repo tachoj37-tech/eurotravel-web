@@ -356,6 +356,12 @@ const REDONDEO = 100;                 // el total se corta a la centena de abajo
 const TASA_IVA = 0.16;
 const ANTICIPO = 0.20;                // 20% para apartar la unidad
 
+/* R51 · Ese 20% se redondea HACIA ARRIBA al medio millar. Dictado del dueño
+   el 2-sep-2026: «si te da 4123 que sean 4500, si te dan 4501 que sean 5000».
+   Si cae justo en un medio millar ahí se queda —$10,000 apartan con $2,000,
+   no con $2,500—, porque es redondeo, no una suma fija. */
+const ANTICIPO_MULTIPLO = 500;
+
 /* ------------------------------------------------------------
    LAS NOCHES QUE VAN INCLUIDAS
    ------------------------------------------------------------
@@ -908,7 +914,6 @@ function sinPrecio(km, dias, extras) {
     ivaIncluido: true,
     subtotal: 0,
     iva: 0,
-    porcentajeAnticipo: Math.round(ANTICIPO * 100),
     anticipo: 0,
     saldo: 0,
     desglose: {
@@ -1308,11 +1313,24 @@ function calcula(kmTotal, dias, extras) {
 
   const total = cobroTraslado + cobroNoches + cobroMovimientos + cobroOrigen;
 
-  // El anticipo se redondea al peso y el saldo se saca por resta, para que
-  // las dos partes sumen exactamente el total y no sobre ni falte un centavo.
-  // Se saca del total FINAL: si saliera del traslado a secas, se apartaría un
-  // viaje de cincuenta mil con el anticipo de uno de treinta.
-  const anticipo = Math.round(total * ANTICIPO);
+  // El anticipo sale del total FINAL: si saliera del traslado a secas, se
+  // apartaría un viaje de cincuenta mil con el anticipo de uno de treinta. Y
+  // el saldo se saca por resta, para que las dos partes sumen exactamente el
+  // total y no sobre ni falte un peso.
+  //
+  // R51 · Antes esto era `Math.round(total * ANTICIPO)`. Ahora sube al medio
+  // millar (ver `ANTICIPO_MULTIPLO`). El cambio SUBE el anticipo y BAJA el
+  // saldo en la misma cantidad: el total no se mueve y nadie paga de más.
+  //
+  // Un viaje sin precio —`requiereAsesor`— trae total 0, y `Math.ceil` de 0
+  // es 0. El anticipo se queda en cero, que es lo correcto: no se aparta lo
+  // que todavía no tiene precio.
+  //
+  // R51 también se llevó el campo `porcentajeAnticipo`. Ya no existe un
+  // porcentaje que enseñar: $3,000 de $12,800 es 23.4%, y decir «20%» al lado
+  // de ese número sería mentira. Lo decía en cuatro lugares, uno de ellos el
+  // recibo de Stripe.
+  const anticipo = Math.ceil(total * ANTICIPO / ANTICIPO_MULTIPLO) * ANTICIPO_MULTIPLO;
   const saldo = total - anticipo;
 
   const subtotal = Math.round((total / (1 + TASA_IVA)) * 100) / 100;
@@ -1370,7 +1388,6 @@ function calcula(kmTotal, dias, extras) {
     ivaIncluido: true,
     subtotal: subtotal,
     iva: Math.round((total - subtotal) * 100) / 100,
-    porcentajeAnticipo: Math.round(ANTICIPO * 100),
     anticipo: anticipo,
     saldo: saldo,
     /* Qué sí puede ver el cliente.

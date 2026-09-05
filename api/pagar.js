@@ -251,7 +251,10 @@ module.exports = async function handler(req, res) {
           currency: 'mxn',
           unit_amount: p.anticipo * 100,     // Stripe cuenta en centavos
           product_data: {
-            name: paraStripe('Anticipo ' + p.porcentajeAnticipo + '% · ' + ruta),
+            /* Sin porcentaje: con R51 el anticipo sube al medio millar y deja
+               de ser el 20% exacto. Este renglón va en el recibo de Stripe,
+               que es lo último que uno quiere que traiga un número falso. */
+            name: paraStripe('Anticipo · ' + ruta),
             description: paraStripe(unidad + ' · ' + dias + (dias === 1 ? ' día' : ' días') +
               (p.desglose.diasMovimiento
                 ? ' · ' + p.desglose.diasMovimiento +

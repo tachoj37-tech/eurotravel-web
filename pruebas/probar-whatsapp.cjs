@@ -249,16 +249,20 @@ console.log('\n== «QUIERO UNA SPRINTER» TIENE QUE COTIZAR ==');
 }
 {
   const r = conv.respuestaA('quiero cotizar', null, HOY);
+  /* ORDEN NUEVO (2-sep-2026): contesta con el destino, no con cuantos son. */
   okQue('«quiero cotizar» no se queda callado',
-    /cuantas personas/i.test(conv.normaliza(r.texto)));
+    /a donde va el plan/i.test(conv.normaliza(r.texto)));
 }
 
 console.log('\n== COTIZAR LA SPRINTER, PASO A PASO ==');
 {
-  const c = conversa(['quiero una sprinter', 'Chapala', 'Guadalajara',
+  const c = conversa(['quiero una sprinter', 'Chapala',
+    /* ORDEN NUEVO (2-sep-2026, §2 del guion): destino, fechas, y hasta
+       despues «de donde salen». Antes el origen iba en tercer lugar. */
+    '10 de septiembre', '13 de septiembre', 'Guadalajara',
     /* «Por la zona» se agregó el 1-sep-2026: desde R40 se pregunta por cada
        recorrido si pasa de los 80 km, y ese paso va antes de las horas. */
-    '10 de septiembre', '13 de septiembre', '2 dias', 'Por la zona',
+    '2 dias', 'Por la zona',
     'Hasta 10 horas', 'si']);
   const r = c.ultimo;
 
@@ -277,7 +281,7 @@ console.log('\n== COTIZAR LA SPRINTER, PASO A PASO ==');
 }
 {
   /* Antes de cotizar tiene que enseñar QUE entendio. */
-  const c = conversa(['sprinter', 'Chapala', 'Guadalajara', '10/9', '13/9', 'ninguno']);
+  const c = conversa(['sprinter', 'Chapala', '10/9', '13/9', 'Guadalajara', 'ninguno']);
   const t = c.ultimo.texto;
   okQue('confirma antes de cotizar', /confirmar/i.test(t));
   okQue('  repitiendo el destino', /Chapala/.test(t));
@@ -287,12 +291,12 @@ console.log('\n== COTIZAR LA SPRINTER, PASO A PASO ==');
 
 console.log('\n== R22: EL VIAJE DE UN DIA NO PAGA MOVIMIENTOS ==');
 {
-  const c = conversa(['sprinter', 'Tequila', 'Guadalajara',
-    '10 de septiembre', '10 de septiembre']);
+  const c = conversa(['sprinter', 'Tequila', '10 de septiembre', '10 de septiembre',
+    'Guadalajara']);
   okQue('con salida y regreso el mismo dia NO pregunta recorridos',
     /confirmar/i.test(c.ultimo.texto));
-  const fin = conversa(['sprinter', 'Tequila', 'Guadalajara',
-    '10 de septiembre', '10 de septiembre', 'si']).ultimo;
+  const fin = conversa(['sprinter', 'Tequila', '10 de septiembre', '10 de septiembre',
+    'Guadalajara', 'si']).ultimo;
   ok('  y cotiza sin movimientos', fin.cotiza && fin.cotiza.movimientos.length, 0);
 }
 
@@ -316,7 +320,7 @@ console.log('\n== NO SE DEJA LLEVAR A UN IMPOSIBLE ==');
 
 console.log('\n== SE PUEDE CORREGIR SIN EMPEZAR DE CERO ==');
 {
-  const c = conversa(['sprinter', 'Chapala', 'Guadalajara', '10/9', '13/9', 'ninguno',
+  const c = conversa(['sprinter', 'Chapala', '10/9', '13/9', 'Guadalajara', 'ninguno',
     'cambiar algo', 'el destino', 'Mazamitla', 'si']);
   ok('cambiar el destino conserva las fechas',
     c.ultimo.cotiza && [c.ultimo.cotiza.destino.direccion, c.ultimo.cotiza.salida],
@@ -482,8 +486,18 @@ console.log('\n== LA SOLICITUD PARA QUIEN PONE EL PRECIO ==');
 {
   /* «Sacame toda la info para que el empleado nomas vea y saque el
      precio en chinga» — el dueño, 31-ago-2026. */
-  const c = conversa(['somos 45 personas', 'Puerto Vallarta', 'Guadalajara',
-    '12 de diciembre', '16 de diciembre', '2 dias', 'Por la zona', 'Todo el día', 'si']);
+  /* «Irizar i6S» es un paso NUEVO, del 3-sep-2026. Antes el viaje se iba
+     hasta el final como «autobús» a secas, y el dueño lo cachó:
+
+       «no me dijo ni cuál unidad es, necesita seleccionar una unidad,
+        no se puede quedar como autobús 50 personas»
+
+     Hay cuatro autobuses y no son el mismo —el i6S lleva 51 y el i6
+     lleva 47—, así que «autobús» ni siquiera dice si caben. Ahora el
+     cliente escoge, y por eso la conversación trae un paso más. */
+  const c = conversa(['somos 45 personas', 'Puerto Vallarta',
+    '12 de diciembre', '16 de diciembre', 'Irizar i6S', 'Guadalajara',
+    '2 dias', 'Por la zona', 'Todo el día', 'si']);
   const r = c.ultimo;
   ok('al final entrega una solicitud armada', !!r.solicitud, true);
   ok('  y AHI si pasa con una persona', r.pasa, true);
@@ -493,6 +507,10 @@ console.log('\n== LA SOLICITUD PARA QUIEN PONE EL PRECIO ==');
   okQue('  y sin ningun precio: eso lo pone la persona (R12)',
     !/\$\s*[\d,]+/.test(r.texto));
   ok('  el resumen guarda la unidad', r.solicitud.unidad, 'autobus');
+  /* Y CUÁL autobús. Sin esto, quien recibe la solicitud tiene que
+     volver a preguntárselo al cliente — que es justo lo que esta
+     solicitud existe para evitar. */
+  okQue('  y dice CUÁL, no solo «autobús»', /Irizar i6S/.test(r.texto));
 }
 {
   /* Nombrar una unidad que no se cotiza sola tampoco puede acabar en
@@ -546,11 +564,21 @@ console.log('\n== ESCRIBIR MAL NO PUEDE COSTAR UNA VENTA ==');
     ['lla kiero uan spter', /sprinter/],
     ['kiero una sprnter', /sprinter/],
     ['me interesa la suburvan', /suburban/],
-    ['cuanto kuesta', /cuantas personas/],
-    ['presio', /cuantas personas/],
+    /* ORDEN NUEVO (2-sep-2026): preguntar el precio ya no se contesta con
+       «¿cuantas personas?» sino con «¿a donde va el plan?». El destino es
+       lo unico que el cliente ya tiene decidido, y es lo que revela la
+       ocasion. Lo que esta prueba cuida sigue igual: que lo entienda
+       aunque venga mal escrito. */
+    ['cuanto kuesta', /a donde va el plan/],
+    ['presio', /a donde va el plan/],
     ['ke unidades tienen', /unidades/],
     ['ke incluye', /incluyen/],
-    ['ablar con una persona', /paso con una persona/],
+    /* El texto cambio el 2-sep-2026: el bot ya no ANUNCIA que pasa con
+       alguien —decision del dueño, el cliente no tiene por que enterarse—.
+       Lo que se prueba sigue siendo lo mismo: que entienda la peticion
+       aunque venga mal escrita. Por eso se busca el telefono, que es lo
+       que de verdad se le da. */
+    ['ablar con una persona', /marcame o escribeme/],
     ['kiero cotisar', /cuantas personas/]
   ];
   const mal = casos.filter(function (c) {
@@ -675,8 +703,18 @@ console.log('\n== LA IA: SOLO CUANDO EL BOT SE RINDIO ==');
 }
 {
   /* Las intenciones que ya tienen respuesta escrita NO se improvisan. */
-  const mal = [['persona', /paso con una persona/], ['unidades', /unidades/],
-    ['incluye', /incluyen/], ['saludo', /bienvenido/]]
+  /* Mismo cambio del 2-sep-2026: la respuesta de «persona» ya no dice que
+     pasa con nadie, pero sigue siendo LA MISMA para esa intencion, que es
+     lo que esta prueba cuida. */
+  const mal = [['persona', /marcame o escribeme/], ['unidades', /unidades/],
+    ['incluye', /incluyen/],
+    /* El saludo dejo de ser un menu con «bienvenido» y paso a una sola
+       pregunta abierta (§2 del guion). El 3-sep-2026 cambio otra vez
+       —el dueño: «el saludo esta de la chingada»— y ahora dice quien es
+       y que renta antes de preguntar. Lo que esta prueba cuida no
+       cambia: que la intencion «saludo» use LA MISMA respuesta escrita
+       y no una improvisada por la IA. */
+    ['saludo', /a donde van/]]
     .filter(function (c) {
       const r = conv.aplicaEntendido({ intencion: c[0] }, HOY);
       return !r || !c[1].test(conv.normaliza(r.texto));
@@ -728,8 +766,8 @@ console.log('\n== LOS PASEOS CON NOMBRE ==');
       origen: 'GDL', salida: '2026-10-10', regreso: '2026-10-13' }, HOY).estado.paso, 'paseo');
 }
 {
-  const c = conversa(['sprinter', 'Ciudad de México', 'Guadalajara', '10 de octubre',
-    '13 de octubre', '3 dias', 'Taxco', 'Nos vamos lejos', 'Hasta 8 horas', 'si']);
+  const c = conversa(['sprinter', 'Ciudad de México', '10 de octubre', '13 de octubre',
+    'Guadalajara', '3 dias', 'Taxco', 'Nos vamos lejos', 'Hasta 8 horas', 'si']);
   const m = c.ultimo.cotiza.movimientos;
   ok('el paseo va en UN día, el primero', m.filter(function (x) { return x.paseo; }).length, 1);
   ok('  y es el que escogió', m[0].paseo, 'Taxco');
@@ -737,8 +775,8 @@ console.log('\n== LOS PASEOS CON NOMBRE ==');
     m.every(function (x) { return x.km === 120; }), true);
 }
 {
-  const c = conversa(['sprinter', 'Ciudad de México', 'Guadalajara', '10 de octubre',
-    '13 de octubre', '3 dias', 'ninguno', 'Por la zona', 'Hasta 8 horas', 'si']);
+  const c = conversa(['sprinter', 'Ciudad de México', '10 de octubre', '13 de octubre',
+    'Guadalajara', '3 dias', 'ninguno', 'Por la zona', 'Hasta 8 horas', 'si']);
   const m = c.ultimo.cotiza.movimientos;
   ok('sin paseo no se manda ninguno', m.some(function (x) { return x.paseo; }), false);
   /* Si no dijo que se van lejos NO se inventa un kilometraje: sin `km` el

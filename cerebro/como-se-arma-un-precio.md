@@ -69,7 +69,17 @@ de la tabla. Chapala a 7 días sin piso serían $9,500; con piso son **$24,000**
 
 **El redondeo:** el total se corta a la centena de abajo.
 
-**El anticipo:** 20 % para apartar la unidad.
+**El anticipo · R51:** 20 % del total, **redondeado hacia arriba al medio
+millar**. $12,800 se apartan con **$3,000**, no con $2,560. Si el 20 % cae
+justo en un medio millar ahí se queda: $10,000 apartan con $2,000.
+
+> Sube el anticipo y **baja el saldo en la misma cantidad**. El total no se
+> mueve y nadie paga de más.
+
+> **Ya no se dice «el 20 %» en ningún lado.** Dejó de ser cierto —$3,000 de
+> $12,800 es 23.4 %— y el campo `porcentajeAnticipo` se borró. Lo peor que
+> alcanzó a decirlo fue el **recibo de Stripe**, que imprimía «Anticipo 20 % ·
+> ruta» en un documento de cobro que le queda al cliente.
 
 **El IVA ya viene dentro** de todos los precios de lista. Por eso «no cobrar
 IVA» nunca puede significar dividir entre 1.16 — eso sería cobrar 16 % menos.

@@ -51,7 +51,10 @@ function cierto(nombre, v) { igual(nombre, !!v, true); }
 
   igual('solo salen los campos de la lista',
     Object.keys(salida).sort(),
-    ['anticipo', 'desglose', 'ivaIncluido', 'porcentajeAnticipo', 'saldo', 'total']);
+    /* `porcentajeAnticipo` salió de la lista con R51. El objeto envenenado de
+       arriba lo sigue mandando adrede: si mañana alguien lo revive en el
+       servidor, esta prueba tiene que seguir tirándolo. */
+    ['anticipo', 'desglose', 'ivaIncluido', 'saldo', 'total']);
 
   igual('y del desglose, solo los suyos',
     Object.keys(salida.desglose).sort(),

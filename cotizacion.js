@@ -75,7 +75,9 @@
      tan largo que lo cotiza una persona, y entonces todos los montos vienen
      en cero. Si no estuviera en esta lista, el navegador lo tiraría en
      silencio y la pantalla enseñaría «$0» como si el viaje fuera gratis. */
-  var CAMPOS_COTIZACION = ['dias', 'redondo', 'total', 'ivaIncluido', 'porcentajeAnticipo', 'anticipo', 'saldo', 'desglose', 'requiereAsesor'];
+  /* `porcentajeAnticipo` salió con R51: el anticipo sube al medio millar y ya
+     no es un porcentaje que se pueda enseñar sin mentir. */
+  var CAMPOS_COTIZACION = ['dias', 'redondo', 'total', 'ivaIncluido', 'anticipo', 'saldo', 'desglose', 'requiereAsesor'];
 
   /* El desglose lleva su propia lista, aparte. Es un objeto anidado: copiarlo
      entero dejaría entrar cualquier campo que el servidor le agregue mañana,

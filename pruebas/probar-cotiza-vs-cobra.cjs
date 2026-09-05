@@ -303,7 +303,10 @@ function dia(fecha, inicio, fin) {
     [37100, 9000]);
   igual('los dos numeros suman el total',
     rm.cotiza.desglose.servicio + rm.cotiza.desglose.importeMovimientos, rm.cotiza.total);
-  igual('el anticipo es el 20% de los 46,100', rm.cotiza.anticipo, 9220);
+  /* Cambió con R51 (2-sep-2026): el 20% de 46,100 son 9,220 y ahora sube al
+     medio millar, 9,500. Lo que esta prueba cuida no es la cifra sino que
+     cotizar y cobrar den lo MISMO — y siguen dándolo. */
+  igual('el anticipo sube al medio millar (R51)', rm.cotiza.anticipo, 9500);
 
   /* LA HUASTECA, POR LOS DOS ENDPOINTS.
      Es el caso donde mas facil se separarian: si uno reconociera el destino y

@@ -100,7 +100,12 @@ const AUTOBUS = { id: 'irizar-i6s', name: 'Irizar i6S', cotizadorAutomatico: fal
   igual('sprinter: veredicto listo', v2.tipo, 'listo');
   igual('la cotización queda SOLO con los campos permitidos',
     Object.keys(m2.estadoVivo().cotizacion).sort(),
-    ['anticipo', 'desglose', 'dias', 'ivaIncluido', 'porcentajeAnticipo', 'redondo', 'saldo', 'total']);
+    /* Sin `porcentajeAnticipo` desde R51: el anticipo sube al medio millar y
+       dejó de ser el 20%, así que el campo se borró de raíz. La respuesta de
+       arriba todavía lo manda a propósito —el servidor de mentiras finge ser
+       una versión vieja—, y la lista blanca tiene que tirarlo igual que tira
+       los kilómetros. */
+    ['anticipo', 'desglose', 'dias', 'ivaIncluido', 'redondo', 'saldo', 'total']);
   igual('y el desglose también se filtra, campo por campo',
     Object.keys(m2.estadoVivo().cotizacion.desglose).sort(),
     ['diasMovimiento', 'importeMovimientos', 'servicio']);

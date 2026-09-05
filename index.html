@@ -1995,6 +1995,22 @@
 .wa-bot { align-self: flex-start; background: #202c33; }
 .wa-b a { color: #53bdeb; }
 .wa-b b { font-weight: 600; }
+
+/* Las fotos de la unidad, cuando el cliente las pide. Van en tres por
+   renglón: una ráfaga más larga satura y deja de mirarse. */
+.wa-medios {
+  align-self: flex-start; max-width: 85%; display: flex; flex-wrap: wrap;
+  gap: 4px; margin: -2px 0 2px;
+}
+.wa-medios img {
+  width: calc(33.33% - 3px); aspect-ratio: 4/3; object-fit: cover;
+  border-radius: 8px; display: block;
+}
+.wa-medios .wa-video {
+  width: 100%; text-align: center; padding: 7px; border-radius: 8px;
+  background: rgba(255,255,255,.08); color: #53bdeb; text-decoration: none;
+  font-size: 13px; font-weight: 600;
+}
 .wa-puntos { display: flex; gap: 4px; padding: 12px 12px; }
 .wa-puntos span {
   width: 7px; height: 7px; border-radius: 50%; background: #8696a0;
@@ -4109,7 +4125,7 @@ window.IMGS = {
         byId('pago-total').textContent = pesos.format(c.total);
         byId('pago-anticipo').textContent = pesos.format(c.anticipo);
         byId('pago-saldo').textContent = pesos.format(c.saldo);
-        byId('pago-titulo').textContent = 'Aparta con el ' + c.porcentajeAnticipo + '%';
+        byId('pago-titulo').textContent = 'Aparta con ' + pesos.format(c.anticipo);
         byId('listo-titulo').textContent = 'Revisa y aparta tu viaje';
         caja.classList.add('on');
       };
@@ -5956,7 +5972,7 @@ window.IMGS = {
             (d.diasMovimiento === 1 ? ' día' : ' días') + ')', pesos.format(d.importeMovimientos)]);
         }
         filas.push(['Total estimado', pesos.format(c.total) + ' IVA incluido']);
-        filas.push(['Para apartar (' + c.porcentajeAnticipo + '%)', pesos.format(c.anticipo)]);
+        filas.push(['Para apartar', pesos.format(c.anticipo)]);
         filas.push(['Queda por abonar', pesos.format(c.saldo)]);
       }
 
@@ -6274,6 +6290,9 @@ window.IMGS = {
      enseguida se quitan, para no dejar `module` ni `require` sueltos en la
      página: otro script podría preguntar por ellos y creerse en Node.
      `unidades.js` ya se cargó más arriba, que es lo único que necesita. -->
+<!-- Las fotos de las unidades, para cuando el cliente pida ver. VA ANTES
+     que `bot.js`: el bot las busca en `window.MEDIOS_UNIDADES` al cargarse. -->
+<script src="medios-unidades.js"></script>
 <script>
   window.global = window;
   window.process = window.process || { env: {} };

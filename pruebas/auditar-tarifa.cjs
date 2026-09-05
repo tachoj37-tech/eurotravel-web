@@ -39,16 +39,28 @@ function igual(nombre, dio, esperado) {
    LADOS, y que haya que hacerlo dos veces es justamente lo que
    hace util esta prueba.
    ============================================================ */
-const corta = n => Math.floor(n / 100) * 100;
+/* R41 (1-sep-2026) · A la centena MAS CERCANA, no a la de abajo. Antes esto
+   era `Math.floor` y por eso la fórmula de referencia daba 28,400 donde ahora
+   da 28,500. */
+const corta = n => Math.round(n / 100) * 100;
 
 /* El traslado de un destino que NO esta en la lista */
 function formulaAMano(km) {
   if (km > 1400) return null;                 // null = lo cotiza un asesor
   return 6500 + 22 * km;
 }
-/* El piso por dia defiende a la formula Y a la lista */
-function trasladoAMano(precioBase, dias) {
-  return corta(Math.max(precioBase, dias * 3000));
+/* R34 (1-sep-2026) · EL PISO YA NO DEFIENDE A LA LISTA.
+
+   Antes decia:
+       return corta(Math.max(precioBase, dias * 3000));
+   o sea que el minimo de $3,000 por dia se aplicaba a todo. El dueño lo
+   corrigio: un precio de SU lista es su precio, y el piso no puede subirlo.
+   El piso sigue existiendo, pero solo para la formula — para los destinos
+   que el no coti- zo nunca.
+
+   Por eso ahora hay que decirle si el precio viene de la lista. */
+function trasladoAMano(precioBase, dias, deLista) {
+  return corta(deLista ? precioBase : Math.max(precioBase, dias * 3000));
 }
 /* La estadia se cobra de dos formas, y cual depende de si hay movimientos.
 
@@ -79,14 +91,15 @@ function trasladoAMano(precioBase, dias) {
 
    `precioNormal` es el traslado ANTES del piso y del corte: el corte de los
    15,000 lo hace el precio del viaje, no el de la lista ni la distancia. */
+/* R25 REVOCA A R18 (30-ago-2026) · Tres noches incluidas para TODOS, sin
+   importar el precio del viaje. R18 —«abajo de $15,000 solo viene una noche y
+   las otras dos valen $500»— vivio dos dias y el dueño la deshizo.
+
+   Todo el enredo de `barato`, `incluidas` y `destapadas` que estaba aqui era
+   la copia a mano de R18. Se va completo. */
 function estadiaAMano(dias, noches, cuantosMovimientos, porDia, precioNormal) {
   if (porDia) return dias * 1000;                      // CDMX y Huasteca: dia por dia
-  const barato = precioNormal < 15000;
-  const incluidas = barato ? 1 : 3;
-  const extra = Math.max(0, noches - incluidas);
-  if (!barato) return extra * 1000;
-  const destapadas = Math.min(extra, 3 - incluidas);   // la segunda y la tercera
-  return destapadas * 500 + (extra - destapadas) * 1000;
+  return Math.max(0, noches - 3) * 1000;
 }
 
 /* El precio por duracion de los destinos que el Excel trae con varios dias
@@ -108,6 +121,36 @@ function diaDeMovimientoAMano(horas, esHuasteca) {
   if (horas <= 12) return 4500;
   return 5000;
 }
+
+/* R22 (29-ago-2026) · EL VIAJE DE UN DIA NO PAGA MOVIMIENTOS.
+
+   Un viaje de un dia ES el movimiento: se sale, se anda y se regresa. Cobrar
+   aparte por «moverse» seria cobrarlo dos veces.
+
+   Faltaba aqui, y era la causa de dos de las auditorias en rojo: la de los
+   5,184 viajes y la de los 528 con precio de lista. Las dos esperaban que
+   Chapala a un dia con movimientos costara $3,000 mas. */
+function movimientosAMano(movs, dias, esHuasteca) {
+  /* LA EXCEPCION DE R22, escrita en el criterio: a CDMX y la Huasteca NO se
+     les aplica. Su precio del Excel es una base MAS dias CON movimientos
+     —«son cuatro mil por dia extra, pero con movimientos», R3—, asi que
+     perdonarles el del primer dia tira su propia celda: CDMX un dia caeria a
+     $23,000 cuando su Excel dice $26,000.
+
+     La diferencia de fondo: «GUANAJUATO MISMO DIA $19,000» es el precio
+     COMPLETO de ese dia y ya trae el movimiento dentro; «CDMX 1 DIA $26,000»
+     es una BASE a la que se le suma el dia. */
+  if (dias <= 1 && !esHuasteca) return 0;
+  let suma = 0;
+  for (let i = 0; i < movs.length; i++) {
+    suma += diaDeMovimientoAMano(movs[i].horas, esHuasteca);
+  }
+  return suma;
+}
+
+/* R51 (2-sep-2026) · El anticipo es el 20% redondeado HACIA ARRIBA al medio
+   millar. Antes esta auditoria lo comparaba contra `Math.round(total * 0.2)`. */
+const anticipoAMano = total => Math.ceil(total * 0.20 / 500) * 500;
 
 /* ============================================================
    LOS PRECIOS DE SU LISTA, COPIADOS DEL EXCEL A MANO
@@ -133,7 +176,9 @@ const SU_LISTA = [
   /* Segunda tanda dictada (26-ago-2026). Zacoalco a 5,000 con los mismos
      kilometros que Tequila a 7,000: el precio no es funcion del km (R12). */
   ['Tala, Jalisco, México', 6000],
-  ['Zacoalco de Torres, Jalisco, México', 5000],
+  /* R38 (1-sep-2026) · De $5,000 a $6,000, para igualarlo a Tala: «estos dos
+     muy caros, deben ser minimo 9,000» — los DOS. Ninguno esta en el Excel. */
+  ['Zacoalco de Torres, Jalisco, México', 6000],
   ['Cocula, Jalisco, México', 6500],
   /* Cambió de 8,500 a 7,000 el 26-ago-2026. No es que la prueba estuviera
      mal: el dueño bajó el precio de lista de la Sprinter a Tequila. */
@@ -141,14 +186,21 @@ const SU_LISTA = [
   ['Tapalpa, Jalisco, México', 14500],
   ['Mazamitla, Jalisco, México', 14500],
   ['San Juan de los Lagos, Jalisco, México', 14000],
-  ['Zamora, Michoacán, México', 14500],
+  /* R24 · Su precio del Excel YA TRAE un dia de movimiento dentro, asi que
+     el primero no se cobra aparte. Faltaba aqui y era el ultimo rojo de esta
+     auditoria: pedia $17,500 a 4 dias con un movimiento donde van $14,500.
+
+     NOTA · Morelia y la Mariposa Monarca tambien llevan `movimientosIncluidos`
+     en el catalogo y NO hacen falta aqui: sus reglas del Excel los absorben
+     por otro camino. Si algun dia empiezan a fallar, es por esto. */
+  ['Zamora, Michoacán, México', 14500, { movimientosIncluidos: 1 }],
   /* El tercer campo es la regla del Excel para ese destino, cuando la hay:
      `porDias` son sus precios por duracion, `diasIncluidos` marca paquete.
      Entraron el 26-ago-2026, cuando el dueño tumbo el modelo de noches. */
   /* Los dias extra deducidos de los escalones (2,500 y 3,000) los bajo el
      dueño a 1,500 el 26-ago-2026, como el de Guanajuato. */
-  ['El Manto, Jalisco, México', 14000, { porDias: { 1: 14000, 3: 19000 }, diaExtra: 1500 }],
-  ['Talpa de Allende, Jalisco, México', 15000, { porDias: { 1: 15000, 2: 16500 }, diaExtra: 1500 }],
+  ['El Manto, Jalisco, México', 14000, { movimientosIncluidos: 3, porDias: { 1: 14000, 3: 19000 }, diaExtra: 1500 }],
+  ['Talpa de Allende, Jalisco, México', 15000, { movimientosIncluidos: 2, porDias: { 1: 15000, 2: 16500 }, diaExtra: 1500 }],
   ['Tepic, Nayarit, México', 16900],
   ['León, Guanajuato, México', 17600],
   ['Rincón de Guayabitos, Nayarit, México', 18500],
@@ -158,7 +210,7 @@ const SU_LISTA = [
      correccion del dueño el 26-ago-2026: «si queda muy caro». */
   ['Guanajuato, Guanajuato, México', 19000, { porDias: { 1: 19000, 3: 24500 }, diaExtra: 1500 }],
   ['Manzanillo, Colima, México', 18500],
-  ['Morelia, Michoacán, México', 19000],
+  ['Morelia, Michoacán, México', 19000, { movimientosIncluidos: 1 }],
   ['Puerto Vallarta, Jalisco, México', 19000],
   ['Punta Perula, Jalisco, México', 20500],
   ['Mismaloya, Puerto Vallarta, Jalisco, México', 20000],
@@ -166,7 +218,7 @@ const SU_LISTA = [
   ['San Miguel de Allende, Guanajuato, México', 26500],
   ['Barra de Navidad, Jalisco, México', 20500],
   ['Zacatecas, Zacatecas, México', 25000],
-  ['Tlalpujahua, Michoacán, México', 23500, { porDias: { 1: 23500, 2: 26500 }, diaExtra: 1500 }],
+  ['Tlalpujahua, Michoacán, México', 23500, { movimientosIncluidos: 2, porDias: { 1: 23500, 2: 26500 }, diaExtra: 1500 }],
   ['Tenacatita, Jalisco, México', 20000],
   ['Mayto, Jalisco, México', 26500],
   ['Mazatlán, Sinaloa, México', 28000],
@@ -179,14 +231,21 @@ const SU_LISTA = [
   ['Real de Catorce, San Luis Potosí, México', 34500],
   /* Puebla: 2 dias del Excel y $2,000 el dia extra («el dia tres subele a
      dos mil», 26-ago-2026; cuadra con su fila 10: «$2,000 SPR»). */
-  ['Puebla, Puebla, México', 36500, { porDias: { 2: 36500 }, diaExtra: 2000 }],
-  ['Zacatlán, Puebla, México', 39500, { porDias: { 2: 39500 }, diaExtra: 2000 }],
+  /* R47 y R50 (1-sep-2026) · El dia extra de Puebla son $4,000 CON
+     movimiento y $1,000 sin el. Aqui va el de sin, que es lo que audita
+     `sinMov`; el de con se comprueba en la seccion del dia con movimiento.
+     Traia $2,000 porque se habia copiado la nota de la celda de al lado
+     (Q10, que es Zacatlan) en vez de la suya (P10). */
+  ['Puebla, Puebla, México', 36500, { movimientosIncluidos: 2, porDias: { 2: 36500 }, diaExtra: 1000 }],
+  ['Zacatlán, Puebla, México', 39500, { movimientosIncluidos: 2, porDias: { 2: 39500 }, diaExtra: 2000 }],
   /* «ACAPULCO 4 DIAS», y su dia vale 2,000 en los dos sentidos (26-ago-2026) */
-  ['Acapulco, Guerrero, México', 60000, { diasIncluidos: 4, diaExtra: 2000 }],
+  /* R35 (1-sep-2026) · «acapulco dice 60,000 4 dias, si fueran 5 serian
+     64,000». El dia extra son $4,000, no $2,000. */
+  ['Acapulco, Guerrero, México', 60000, { diasIncluidos: 4, diaExtra: 4000 }],
   ['Oaxaca de Juárez, Oaxaca, México', 75000],
   /* Chiapas: 85,000 POR 8 DIAS, y su dia vale 4,000 en los dos sentidos,
      igual que Cancun («Chiapas igual que Cancun, 4000», 26-ago-2026). */
-  ['San Cristóbal de las Casas, Chiapas, México', 85000, { diasIncluidos: 8, diaExtra: 4000 }],
+  ['San Cristóbal de las Casas, Chiapas, México', 85000, { movimientosIncluidos: 8, diasIncluidos: 8, diaExtra: 4000 }],
   /* Barrancas: SIETE dias, y su dia vale 3,000 CON O SIN movimientos
      (dictado 26-ago-2026). Su columna del Excel no dice los dias. */
   ['Barrancas del Cobre, Chihuahua, México', 75000, { diasIncluidos: 7, diaExtra: 3000, movimientoCero: true }],
@@ -207,8 +266,10 @@ const SU_LISTA = [
     const regla = fila[2] || {};
     const dias = regla.diasIncluidos || 1;
     const dio = t.calcula(1, dias, { destino: { direccion: fila[0] }, noches: 0, movimientos: [] }).total;
-    /* un dia de servicio pone un piso de 3,000, que ninguno de estos alcanza */
-    const esperado = trasladoAMano(fila[1], dias);
+    /* R34 · Es precio DE LISTA: el piso de los $3,000 por día no lo toca.
+       Antes esta línea no lo distinguía, y por eso Zacoalco a un día salía
+       en $5,000 —el piso mandaba— cuando su precio es $6,000. */
+    const esperado = trasladoAMano(fila[1], dias, true);
     if (dio !== esperado) rotos.push({ destino: fila[0], dias: dias, dio: dio, esperaba: esperado });
   });
   console.log('(' + SU_LISTA.length + ' destinos de su lista, copiados del Excel a mano)');
@@ -331,9 +392,10 @@ const SU_LISTA = [
 
   /* --- la segunda tanda de correcciones del dueño (26-ago-2026) --- */
 
-  /* Puebla: «el dia tres subele a dos mil» */
+  /* Puebla · R47 y R50: el dia extra son $1,000 SIN movimiento. Zacatlan va
+     por su cuenta y si son $2,000 (su celda Q10 dice «$2,000 SPR»). */
   igual('Puebla 2 dias: sus 36,500', sinMov('Puebla, Puebla, México', 2), 36500);
-  igual('Puebla 3 dias: 36,500 + 2,000', sinMov('Puebla, Puebla, México', 3), 38500);
+  igual('Puebla 3 dias sin movimiento: 36,500 + 1,000', sinMov('Puebla, Puebla, México', 3), 37500);
   igual('Zacatlan 3 dias: 39,500 + 2,000', sinMov('Zacatlán, Puebla, México', 3), 41500);
 
   /* Tolantongo con movimientos: el precio del Excel, no la suma de bandas.
@@ -393,11 +455,13 @@ const SU_LISTA = [
   igual('solo ida ignora los movimientos',
     soloIda('Chapala, Jalisco, México', 3, { movimientos: [
       { horaInicio: '08:00', horaFin: '16:00' }, { horaInicio: '08:00', horaFin: '16:00' }] }), 4200);
-  /* Un destino de fórmula: 65% de su precio redondo de un día. A 999 km el
-     redondo de 1 día es floor((6500 + 22×999)/100)×100 = 28,400 → 0.65 =
-     18,460 → floor a 18,400. */
+  /* Un destino de fórmula: 65% de su precio redondo de un día. A 999 km,
+     6,500 + 22×999 = 28,478.
+
+     R41 (1-sep-2026) · Ese 28,478 va a la centena MÁS CERCANA: **28,500**.
+     Antes se cortaba hacia abajo y daba 28,400 — de ahí venía este número. */
   const redondoFormula = t.calcula(999, 1, { destino: { direccion: 'un pueblo cualquiera' }, noches: 0, movimientos: [] }).total;
-  igual('la fórmula redonda de referencia', redondoFormula, 28400);
+  igual('la fórmula redonda de referencia', redondoFormula, 28500);
   igual('fórmula solo ida: 65% de ese redondo', soloIda('un pueblo cualquiera'), 18400);
 
   /* --- fechas invertidas (26-ago-2026) ---
@@ -485,8 +549,8 @@ const SU_LISTA = [
      dia»), y como todo dia dictado corre en los dos sentidos (R14). */
   const ACA = 'Acapulco, Guerrero, México';
   igual('Acapulco 4 dias: sus 60,000 del Excel', sinMov(ACA, 4), 60000);
-  igual('Acapulco 5 dias: +2,000 (antes +1,000)', sinMov(ACA, 5), 62000);
-  igual('Acapulco 3 dias: 2,000 menos', sinMov(ACA, 3), 58000);
+  igual('Acapulco 5 dias: +4,000 (R35)', sinMov(ACA, 5), 64000);
+  igual('Acapulco 3 dias: 4,000 menos (R35)', sinMov(ACA, 3), 56000);
 
   /* --- BARRANCAS DEL COBRE: 3,000 el dia, CON O SIN movimientos ---
      Dictado el 26-ago-2026. Es el primer destino donde moverse no cuesta
@@ -543,27 +607,48 @@ const SU_LISTA = [
 
   /* el borde exacto del tope */
   igual('1,400 km justos valen lo de siempre', t.trasladoDe(1400, null).total, 6500 + 22 * 1400);
-  /* CAMBIO DE LADO el 26-ago-2026: arriba del tope ya NO se pide asesor
-     («animate a cotizar tu»); entra el tramo largo, a $36 el km. */
-  igual('1,400.001 ya entra al tramo largo', !!t.trasladoDe(1400.001, null).tramoLargo, true);
-  igual('y ya no pide asesor', !!t.trasladoDe(1400.001, null).requiereAsesor, false);
+  /* CAMBIO DE LADO DOS VECES, y la segunda deshizo a la primera.
 
-  /* Lo que hay que cuidar ahora es que el tramo largo SIEMPRE de un numero
-     coherente: nunca cero, nunca a la baja, y con sus partes cuadrando. */
-  let malosLargo = 0, anteriorLargo = -1, bajoLargo = 0;
+     26-ago-2026: arriba del tope YA NO se pedia asesor («animate a cotizar
+     tu»); entraba un «tramo largo» a $36 el km.
+
+     1-sep-2026 · R45, y manda ésta: «si no sabes un precio al 100%, no se lo
+     compartas al cliente: le dices que un vendedor lo va a contactar». El
+     tramo largo se fue. Arriba de 1,400 km, un destino que NO esté en su
+     lista deja de cotizarse.
+
+     La razón está medida: la fórmula se equivoca $9,800 en promedio en los
+     viajes largos contra $1,534 en los cortos, porque sus precios lejanos no
+     son función del kilómetro —Oaxaca $75,000 a 1,988 km y Barrancas los
+     mismos $75,000 a 2,882—.
+
+     Esta auditoría llevaba desde entonces exigiendo lo contrario de la regla:
+     pedía que SIEMPRE hubiera un precio arriba del tope. Eso es exactamente
+     lo que R45 prohíbe. */
+  igual('1,400.001 ya no se cotiza solo', !!t.trasladoDe(1400.001, null).requiereAsesor, true);
+  igual('y no hay tramo largo que valga', !!t.trasladoDe(1400.001, null).tramoLargo, false);
+
+  /* Lo que hay que cuidar ahora es lo opuesto: que arriba del tope NUNCA
+     salga un número. Y sobre todo que los montos vengan en CERO — un precio
+     a medias se cobraría; un cero la pantalla sabe leerlo. */
+  let malosLargo = 0;
   for (let km = 1401; km <= 5000; km += 37) {
     const p = t.calcula(km, 5, {
       noches: 4,
       movimientos: [{ horaInicio: '08:00', horaFin: '16:00' }, { horaInicio: '08:00', horaFin: '21:00' }]
     });
-    if (p.total <= 0 || p.requiereAsesor) malosLargo++;
-    if (p.anticipo !== Math.round(p.total * 0.2)) malosLargo++;
-    if (p.desglose.servicio + p.desglose.importeMovimientos !== p.total) malosLargo++;
-    if (p.total <= anteriorLargo) bajoLargo++;
-    anteriorLargo = p.total;
+    if (!p.requiereAsesor) malosLargo++;
+    if (p.total !== 0 || p.anticipo !== 0 || p.saldo !== 0) malosLargo++;
   }
-  igual('arriba del tope SIEMPRE hay un precio, y sus partes cuadran', malosLargo, 0);
-  igual('y nunca baja al alejarse', bajoLargo, 0);
+  igual('arriba del tope NUNCA hay precio, y todo viene en cero (R45)', malosLargo, 0);
+
+  /* Los de SU lista sí siguen cotizando, por lejos que estén: ésos son
+     precios suyos, no estimaciones. Cancún está a 4,282 km. */
+  const cancun = t.calcula(4282, 5, {
+    destino: { direccion: 'Cancún, Quintana Roo, México' }, noches: 4, movimientos: []
+  });
+  igual('pero un destino de su lista sí cotiza, aunque esté lejísimos',
+    cancun.requiereAsesor === true || cancun.total === 0, false);
 })();
 
 /* ============ 5. QUE TAN LEJOS QUEDA LA FORMULA DE SUS PRECIOS ============
@@ -637,20 +722,20 @@ const SU_LISTA = [
 
           // --- a mano ---
           const cuantos = Math.min(movs.length, dias);      // el tope son los DIAS
-          let movAMano = 0;
-          for (let i = 0; i < cuantos; i++) {
-            movAMano += diaDeMovimientoAMano(movs[i].horas, esHuasteca);
-          }
+          /* R22 · Si el viaje es de un dia, los movimientos NO se cobran. */
+          const movAMano = movimientosAMano(movs.slice(0, cuantos), dias, esHuasteca);
           /* La Huasteca cobra su estadia por dia SIEMPRE (criterio R3);
-             el destino cualquiera sigue con el paquete de 3 noches. */
-          const esperado = trasladoAMano(formulaAMano(km), dias) +
+             el destino cualquiera sigue con el paquete de 3 noches.
+             Aqui el precio sale de la formula, no de la lista: el piso SI
+             aplica (R34). */
+          const esperado = trasladoAMano(formulaAMano(km), dias, false) +
             estadiaAMano(dias, noches, cuantos, esHuasteca, formulaAMano(km)) + movAMano;
 
           // --- lo que hace la pagina ---
           const p = t.calcula(km, dias, { noches: noches, movimientos: movs, destino: destino });
 
           if (p.total !== esperado) rotos.total.push({ km, dias, noches, esHuasteca, dio: p.total, esperaba: esperado });
-          if (p.anticipo !== Math.round(esperado * 0.2)) rotos.anticipo.push({ km, dias, dio: p.anticipo });
+          if (p.anticipo !== anticipoAMano(esperado)) rotos.anticipo.push({ km, dias, dio: p.anticipo });
           if (p.desglose.servicio + p.desglose.importeMovimientos !== p.total) rotos.desglose.push({ km, dias });
           if (esHuasteca && p.desglose.importeMovimientos !== cuantos * 3000) {
             rotos.huasteca.push({ km, dias, dio: p.desglose.importeMovimientos, esperaba: cuantos * 3000 });
@@ -686,11 +771,14 @@ const SU_LISTA = [
       for (const movs of MOVS) {
         casos++;
         const cuantos = Math.min(movs.length, dias);
-        let movAMano = 0;
-        /* Barrancas cobra el dia igual se mueva o no: su banda vale cero. */
-        if (!(fila[2] && fila[2].movimientoCero)) {
-          for (let i = 0; i < cuantos; i++) movAMano += diaDeMovimientoAMano(movs[i].horas, false);
-        }
+        /* Barrancas cobra el dia igual se mueva o no: su banda vale cero.
+           Y R22: el viaje de un dia tampoco paga movimientos. */
+        /* R24 · Los dias de movimiento que el precio del Excel ya trae
+           dentro no se cobran otra vez: se saltan del principio. */
+        const incluidos = (fila[2] && fila[2].movimientosIncluidos) || 0;
+        const movAMano = (fila[2] && fila[2].movimientoCero)
+          ? 0
+          : movimientosAMano(movs.slice(incluidos, cuantos), dias, false);
 
         /* Tres formas de armar el esperado, segun la regla del Excel
            (cambio de lado el 26-ago-2026, criterio R1 y R2):
@@ -712,26 +800,31 @@ const SU_LISTA = [
              salia gratis. */
           const nochesPaq = reglaExcel.diasIncluidos ? reglaExcel.diasIncluidos - 1 : 3;
           let extra = Math.max(0, noches - nochesPaq) * 1000;
-          for (let i = nochesPaq + 1; i < cuantos; i++) extra += diaDeMovimientoAMano(movs[i].horas, false);
-          esperado = trasladoAMano(reglaExcel.conMovimientos, dias) + extra;
+          /* R22 · un viaje de un dia no paga movimientos, ni siquiera los que
+             se pasan del paquete. */
+          if (dias > 1) {
+            for (let i = nochesPaq + 1; i < cuantos; i++) extra += diaDeMovimientoAMano(movs[i].horas, false);
+          }
+          esperado = trasladoAMano(reglaExcel.conMovimientos, dias, true) + extra;
         } else if (reglaExcel && reglaExcel.porDias) {
-          esperado = trasladoAMano(porDuracionAMano(reglaExcel, dias), dias) + movAMano;
+          esperado = trasladoAMano(porDuracionAMano(reglaExcel, dias), dias, true) + movAMano;
         } else if (reglaExcel && reglaExcel.diasIncluidos && reglaExcel.diaExtra) {
           /* Paquete con tarifa de dia PROPIA (Cancun, $4,000): el precio se
              ajusta por duracion en los dos sentidos y ya no lleva estadia
              aparte. Dictado el 26-ago-2026. */
           const base = fila[1] + (dias - reglaExcel.diasIncluidos) * reglaExcel.diaExtra;
-          esperado = trasladoAMano(base, dias) + movAMano;
+          esperado = trasladoAMano(base, dias, true) + movAMano;
         } else if (reglaExcel && reglaExcel.diasIncluidos) {
           /* Paquete sin tarifa de dia propia: noches gratis hasta un dia antes
              del regreso, y moverse YA NO las borra (correccion del 26-ago).
              Sin piso de tres: manda lo que diga el destino. */
           const gratis = reglaExcel.diasIncluidos - 1;
-          esperado = trasladoAMano(fila[1], dias) + Math.max(0, noches - gratis) * 1000 + movAMano;
+          esperado = trasladoAMano(fila[1], dias, true) + Math.max(0, noches - gratis) * 1000 + movAMano;
         } else {
-          /* El precio de lista ES el precio normal de este destino, así que
-             es él quien decide si cae abajo de los 15,000 de R18. */
-          esperado = trasladoAMano(fila[1], dias) +
+          /* R34 · Precio de lista: sin piso. (Aqui decia que el precio
+             decidia si caia abajo de los $15,000 de R18; R18 la revoco R25
+             el 30-ago-2026 y ese corte ya no existe.) */
+          esperado = trasladoAMano(fila[1], dias, true) +
             estadiaAMano(dias, noches, cuantos, false, fila[1]) + movAMano;
         }
 

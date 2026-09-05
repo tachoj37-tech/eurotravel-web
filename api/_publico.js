@@ -45,7 +45,8 @@
 const CAMPOS_PRECIO = [
   'total',
   'ivaIncluido',
-  'porcentajeAnticipo',
+  /* `porcentajeAnticipo` se fue con R51 (2-sep-2026): el anticipo sube al
+     medio millar, así que ya no es un porcentaje fijo y enseñarlo mentía. */
   'anticipo',
   'saldo',
   /* Un SÍ o un NO, no una cantidad: dice que el viaje es tan largo que lo

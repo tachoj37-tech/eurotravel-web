@@ -1,7 +1,8 @@
 # Lo que NO se sube a Vercel.
 #
-# `pendiente/` guarda código terminado que todavía no sale al aire —hoy el
-# webhook de WhatsApp, que no cabe en las 12 funciones del plan—. Sin esta
+# `pendiente/` guarda código terminado que todavía no sale al aire. El webhook
+# de WhatsApp vivía aquí y ya salió a `api/`; hoy quedan `diagnostico` y la
+# pantalla del cotizador, que no caben en las 12 funciones del plan. Sin esta
 # línea Vercel lo publicaba como archivo suelto: se comprobó pidiendo
 # https://eurotravel-web.vercel.app/pendiente/whatsapp.mjs y contestaba 200.
 #

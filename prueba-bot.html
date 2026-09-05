@@ -1,0 +1,574 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- Página de trabajo: no tiene por qué salir en Google. -->
+<meta name="robots" content="noindex, nofollow">
+<title>Probar el bot · Eurotravel</title>
+
+<!--
+  ============================================================
+  PARA PROBAR EL BOT, APARTE DE LA PÁGINA
+  ------------------------------------------------------------
+  El chat de `index.html` está hecho para el cliente: se ve
+  bonito y no enseña nada de lo que pasa por dentro. Para
+  probar sirve poco — cuando el bot contesta algo raro no hay
+  forma de saber POR QUÉ.
+
+  Esta página corre EXACTAMENTE el mismo `bot.js` y el mismo
+  `/api/cotizar`, pero además enseña:
+
+    · en qué casilla va (`paso`)
+    · qué ocasión detectó, que es lo que cambia su discurso
+    · todo lo que lleva recordado
+    · si ese mensaje habría pasado con una persona
+
+  Y deja mover la fecha de HOY, que es la única forma de probar
+  R52 sin esperar al domingo.
+
+  NO reusa `bot-navegador.js` a propósito: ese archivo está
+  amarrado al panel flotante de la página. Aquí se llama al bot
+  directo, que es menos código y no arrastra la pantalla del
+  cliente.
+
+  No lleva contraseña porque no enseña nada que el cliente no
+  vea: los precios salen de `/api/cotizar`, que ya pasa por la
+  lista blanca de `api/_publico.js` —sin kilómetros y sin
+  tarifas—. Lo único de más son los nombres de las casillas.
+  ============================================================
+-->
+
+<style>
+  :root{
+    --fondo:#f4f4f2; --panel:#ffffff; --tinta:#17181a; --apagado:#6f6c68;
+    --rojo:#d41f26; --carbon:#383d44; --linea:#e2ded9;
+    --burbuja-bot:#ffffff; --burbuja-yo:#d41f26; --texto-yo:#ffffff;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --fondo:#121214; --panel:#1b1c1f; --tinta:#eceae7; --apagado:#97938e;
+      --rojo:#ff5257; --carbon:#c3c7cd; --linea:#2c2d31;
+      --burbuja-bot:#26272b; --burbuja-yo:#c31b22; --texto-yo:#ffffff;
+    }
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:var(--fondo); color:var(--tinta);
+    font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+  }
+
+  header{
+    background:var(--panel); border-bottom:1px solid var(--linea);
+    padding:.7rem 1rem; display:flex; flex-wrap:wrap; gap:.8rem;
+    align-items:center; position:sticky; top:0; z-index:5;
+  }
+  header h1{
+    font-size:1rem; margin:0; font-weight:700; letter-spacing:-.01em;
+    display:flex; align-items:center; gap:.5rem;
+  }
+  header h1 span{color:var(--rojo)}
+  .aviso{
+    font-size:.78rem; color:var(--apagado); margin-left:auto;
+  }
+  label{font-size:.8rem; color:var(--apagado); display:flex; gap:.4rem; align-items:center}
+  input[type=date]{
+    font:inherit; font-size:.85rem; padding:.25rem .4rem; border-radius:3px;
+    border:1px solid var(--linea); background:var(--fondo); color:var(--tinta);
+  }
+  button{font:inherit; cursor:pointer}
+  .btn{
+    background:var(--carbon); color:var(--panel); border:0; border-radius:3px;
+    padding:.35rem .7rem; font-size:.82rem; font-weight:600;
+  }
+  .btn:hover{opacity:.88}
+  .btn.fantasma{background:transparent; color:var(--apagado); border:1px solid var(--linea)}
+
+  main{
+    display:grid; gap:1rem; padding:1rem;
+    grid-template-columns:minmax(0,1fr); max-width:66rem; margin:0 auto;
+  }
+  @media (min-width:900px){ main{ grid-template-columns:minmax(0,1.4fr) minmax(0,1fr) } }
+
+  .caja{
+    background:var(--panel); border:1px solid var(--linea); border-radius:4px;
+    display:flex; flex-direction:column; overflow:hidden;
+  }
+  .caja > h2{
+    margin:0; padding:.6rem .9rem; font-size:.72rem; font-weight:700;
+    text-transform:uppercase; letter-spacing:.12em; color:var(--apagado);
+    border-bottom:1px solid var(--linea);
+  }
+
+  #hilo{
+    padding:1rem; display:flex; flex-direction:column; gap:.7rem;
+    min-height:24rem; max-height:62vh; overflow-y:auto;
+  }
+  .b{
+    max-width:82%; padding:.6rem .8rem; border-radius:10px; white-space:pre-wrap;
+    word-wrap:break-word; font-size:.94rem;
+  }
+  .b.bot{background:var(--burbuja-bot); border:1px solid var(--linea); align-self:flex-start; border-bottom-left-radius:3px}
+  .b.yo{background:var(--burbuja-yo); color:var(--texto-yo); align-self:flex-end; border-bottom-right-radius:3px}
+  .b.sistema{
+    align-self:center; background:transparent; border:1px dashed var(--linea);
+    color:var(--apagado); font-size:.78rem; max-width:100%;
+  }
+  .b b{font-weight:700}
+  .b em{font-style:italic}
+
+  .pasa{
+    align-self:flex-start; font-size:.75rem; color:var(--rojo); font-weight:700;
+    text-transform:uppercase; letter-spacing:.06em;
+  }
+
+  .medios{
+    align-self:flex-start; max-width:82%; display:flex; flex-wrap:wrap; gap:.4rem;
+    margin-top:-.3rem;
+  }
+  .medios img{
+    width:calc(33.33% - .27rem); aspect-ratio:4/3; object-fit:cover;
+    border-radius:8px; border:1px solid var(--linea); display:block;
+  }
+  .medios .video{
+    width:100%; text-align:center; padding:.45rem; border-radius:8px;
+    border:1px solid var(--linea); color:var(--rojo); text-decoration:none;
+    font-size:.85rem; font-weight:600; background:var(--burbuja-bot);
+  }
+  .medios .video:hover{background:var(--rojo); color:#fff; border-color:var(--rojo)}
+
+  #atajos{display:flex; flex-wrap:wrap; gap:.4rem; padding:0 1rem .6rem}
+  #atajos button{
+    background:transparent; border:1px solid var(--rojo); color:var(--rojo);
+    border-radius:99px; padding:.3rem .75rem; font-size:.82rem; font-weight:600;
+  }
+  #atajos button:hover{background:var(--rojo); color:#fff}
+
+  form{display:flex; gap:.5rem; padding:.7rem; border-top:1px solid var(--linea)}
+  form input[type=text]{
+    flex:1; font:inherit; padding:.5rem .7rem; border-radius:3px;
+    border:1px solid var(--linea); background:var(--fondo); color:var(--tinta);
+  }
+  form button{
+    background:var(--rojo); color:#fff; border:0; border-radius:3px;
+    padding:.5rem 1rem; font-weight:700;
+  }
+
+  #estado{padding:.9rem; display:flex; flex-direction:column; gap:.55rem; font-size:.85rem}
+  .fila{display:flex; gap:.6rem; align-items:baseline}
+  .fila .k{
+    flex:none; width:7.2rem; color:var(--apagado); font-size:.75rem;
+    text-transform:uppercase; letter-spacing:.06em; font-weight:600;
+  }
+  .fila .v{font-variant-numeric:tabular-nums; word-break:break-word}
+  .fila .v.vacio{color:var(--apagado); font-style:italic}
+  .destacado .v{color:var(--rojo); font-weight:700}
+
+  details{border-top:1px solid var(--linea); padding:.6rem .9rem}
+  details summary{
+    cursor:pointer; font-size:.75rem; text-transform:uppercase; letter-spacing:.1em;
+    color:var(--apagado); font-weight:600;
+  }
+  pre{
+    margin:.6rem 0 0; font-size:.75rem; line-height:1.45; overflow-x:auto;
+    background:var(--fondo); padding:.6rem; border-radius:3px; color:var(--apagado);
+  }
+
+  .pistas{padding:.9rem; font-size:.82rem; color:var(--apagado)}
+  .pistas b{color:var(--tinta)}
+  .pistas ul{margin:.4rem 0 0; padding-left:1.1rem}
+  .pistas li{margin:.25rem 0}
+  .pistas code{
+    background:var(--fondo); padding:.05rem .3rem; border-radius:2px;
+    font-size:.9em; border:1px solid var(--linea);
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Probar el bot <span>·</span> Eurotravel</h1>
+  <label>Hoy es
+    <input type="date" id="hoy">
+  </label>
+  <button class="btn" id="reiniciar" type="button">Empezar de cero</button>
+  <button class="btn fantasma" id="copiar" type="button">Copiar la charla</button>
+  <span class="aviso">Corre el mismo <code>bot.js</code> y el mismo <code>/api/cotizar</code> que la página.</span>
+</header>
+
+<main>
+  <section class="caja">
+    <h2>La conversación</h2>
+    <div id="hilo" aria-live="polite"></div>
+    <div id="atajos"></div>
+    <form id="forma" autocomplete="off">
+      <input type="text" id="caja" placeholder="Escríbele como le escribiría un cliente…" aria-label="Mensaje">
+      <button type="submit">Enviar</button>
+    </form>
+  </section>
+
+  <section class="caja">
+    <h2>Lo que el bot sabe</h2>
+    <div id="estado"></div>
+    <details>
+      <summary>El estado completo, en crudo</summary>
+      <pre id="crudo">null</pre>
+    </details>
+    <div class="pistas">
+      <b>Para probar lo nuevo:</b>
+      <ul>
+        <li><b>R52</b> — pon un autobús: escribe <code>somos 45</code>, destino, y de fechas
+          pon un <b>domingo</b> de ida y vuelta el mismo día.</li>
+        <li><b>La ocasión</b> — di <code>vamos a Tequila de despedida</code> y mira cómo cambia
+          la línea de cierre del precio.</li>
+        <li><b>El ancla</b> — el precio por persona solo sale si le dijiste cuántos van.</li>
+        <li><b>Las objeciones</b> — <code>está caro</code>, <code>déjame preguntarle al grupo</code>,
+          <code>otro me lo da más barato</code>.</li>
+      </ul>
+    </div>
+  </section>
+</main>
+
+<script src="unidades.js"></script>
+<!-- Las fotos de las unidades. VA ANTES que `bot.js`, porque el bot las
+     busca en `window.MEDIOS_UNIDADES` al cargarse. -->
+<script src="medios-unidades.js"></script>
+<!-- Los mismos cuatro préstamos que hace `index.html`: `bot.js` está
+     escrito para Node porque allá lo va a cargar el webhook. Se quitan
+     enseguida para no dejar `module` ni `require` sueltos. -->
+<script>
+  window.global = window;
+  window.process = window.process || { env: {} };
+  window.module = { exports: {} };
+  window.require = function () { return null; };
+</script>
+<script src="bot.js"></script>
+<script>
+  window.BOT = window.module.exports;
+  delete window.module; delete window.require; delete window.global;
+</script>
+
+<script>
+(function () {
+  'use strict';
+
+  var hilo = document.getElementById('hilo');
+  var atajos = document.getElementById('atajos');
+  var forma = document.getElementById('forma');
+  var caja = document.getElementById('caja');
+  var panelEstado = document.getElementById('estado');
+  var crudo = document.getElementById('crudo');
+  var campoHoy = document.getElementById('hoy');
+
+  var estado = null;
+  var ocupado = false;
+
+  /* ------------------------------------------------------------
+     EL TOPE DE IA POR CONVERSACION
+     ------------------------------------------------------------
+     Un cliente NO puede gastar de mas aunque se ponga a escribir
+     cosas raras toda la tarde. A la sexta vez que el guion se
+     rinde, se deja de llamar a la IA y se contesta con lo escrito.
+
+     Seis alcanzan de sobra: si en seis intentos no se entendio,
+     la IA no es el problema — ahi hace falta el vendedor, y para
+     eso esta la bandera.
+
+     Este tope vive en el navegador y por si solo es burlable
+     —basta recargar—. No importa: no es la unica capa. Atras
+     esta el freno por IP del servidor, y arriba de todo el tope
+     de gasto de la consola de Anthropic, que es el unico que de
+     verdad no se puede rodear.
+     ------------------------------------------------------------ */
+  var TOPE_IA = 6;
+  var gastadas = 0;
+
+  /* La fecha de hoy arranca en la de verdad, pero se puede mover:
+     es la única forma de probar R52 sin esperar al domingo. */
+  campoHoy.value = new Date().toISOString().slice(0, 10);
+  function hoy() { return campoHoy.value || new Date().toISOString().slice(0, 10); }
+
+  /* Lo que se teclea NUNCA entra como HTML. Mismo escapador que el
+     resto del sitio. */
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+  /* El bot escribe con los asteriscos y guiones bajos de WhatsApp.
+     Se convierten DESPUÉS de escapar, así que no hay forma de colar
+     etiquetas por ahí. */
+  function conFormato(s) {
+    return esc(s)
+      .replace(/\*([^*\n]+)\*/g, '<b>$1</b>')
+      .replace(/_([^_\n]+)_/g, '<em>$1</em>');
+  }
+
+  function burbuja(texto, quien) {
+    var d = document.createElement('div');
+    d.className = 'b ' + quien;
+    d.innerHTML = quien === 'yo' ? esc(texto) : conFormato(texto);
+    hilo.appendChild(d);
+    hilo.scrollTop = hilo.scrollHeight;
+    return d;
+  }
+  function nota(texto) { return burbuja(texto, 'sistema'); }
+
+  /* ------------------------------------------------------------
+     LAS FOTOS
+     ------------------------------------------------------------
+     Cuando el bot contesta con `medios`, además del texto vienen
+     las rutas de las fotos y la liga del video. Aquí se pintan;
+     en WhatsApp irán como adjuntos. El bot no sabe ni le importa
+     cómo se enseñan — solo dice cuáles.
+     ------------------------------------------------------------ */
+  function pintaMedios(m) {
+    if (!m) return;
+    var tira = document.createElement('div');
+    tira.className = 'medios';
+    (m.fotos || []).forEach(function (ruta) {
+      var img = document.createElement('img');
+      img.src = ruta;
+      img.alt = 'Unidad ' + (m.unidad || '');
+      img.loading = 'lazy';
+      tira.appendChild(img);
+    });
+    if (m.video) {
+      var a = document.createElement('a');
+      a.href = m.video;
+      a.target = '_blank';
+      a.rel = 'noopener';
+      a.className = 'video';
+      a.textContent = '▶ Ver el video de la unidad';
+      tira.appendChild(a);
+    }
+    hilo.appendChild(tira);
+    hilo.scrollTop = hilo.scrollHeight;
+  }
+
+  function marcaPasa() {
+    var d = document.createElement('div');
+    d.className = 'pasa';
+    /* Esto lo ves TÚ, no el cliente. Al cliente el bot ya no le anuncia
+       nada: por dentro se marca para el equipo y por fuera se lee como
+       si el mismo vendedor siguiera escribiendo. */
+    d.textContent = '⚑ marcado para el equipo · el cliente no ve esto';
+    hilo.appendChild(d);
+    hilo.scrollTop = hilo.scrollHeight;
+  }
+
+  function pintaAtajos(ops) {
+    atajos.innerHTML = '';
+    (ops || []).forEach(function (op) {
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.textContent = op;
+      b.addEventListener('click', function () { manda(op); });
+      atajos.appendChild(b);
+    });
+  }
+
+  /* ------------------------------------------------------------
+     EL PANEL DE LA DERECHA
+     ------------------------------------------------------------
+     `paso` y `ocasion` van marcados en rojo porque son los dos que
+     explican casi cualquier respuesta rara: en qué casilla se
+     quedó, y con qué discurso está contestando.
+     ------------------------------------------------------------ */
+  var CAMPOS = [
+    ['paso', 'Casilla', true],
+    ['ocasion', 'Ocasión', true],
+    ['unidad', 'Unidad', false],
+    ['gente', 'Cuántos van', false],
+    ['destino', 'Destino', false],
+    ['origen', 'Salen de', false],
+    ['salida', 'Salida', false],
+    ['regreso', 'Regreso', false],
+    ['recorridos', 'Recorridos', false],
+    ['paseo', 'Paseo', false],
+    ['lejos', 'Se van lejos', false]
+  ];
+
+  function pintaEstado() {
+    panelEstado.innerHTML = '';
+    var e = estado || {};
+    CAMPOS.forEach(function (c) {
+      var v = e[c[0]];
+      var fila = document.createElement('div');
+      fila.className = 'fila' + (c[2] ? ' destacado' : '');
+      var vacio = (v === null || v === undefined || v === '' || v === false);
+      fila.innerHTML = '<span class="k">' + esc(c[1]) + '</span>' +
+        '<span class="v' + (vacio ? ' vacio' : '') + '">' +
+        esc(vacio ? '—' : String(v)) + '</span>';
+      panelEstado.appendChild(fila);
+    });
+    crudo.textContent = JSON.stringify(estado, null, 2);
+  }
+
+  /* ------------------------------------------------------------
+     EL PRECIO
+     ------------------------------------------------------------
+     Igual que en la página: el bot NO calcula. Cuando ya juntó los
+     datos devuelve `cotiza`, se le pasa a `/api/cotizar` y de ahí
+     sale el número. Si falla, se dice y ya — inventar uno aquí
+     sería justo lo que el bot tiene prohibido.
+     ------------------------------------------------------------ */
+  function pideElPrecio(peticion, resumen) {
+    nota('llamando a /api/cotizar…');
+    fetch('/api/cotizar', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(peticion)
+    }).then(function (r) {
+      return r.ok ? r.json() : null;
+    }).then(function (precio) {
+      var r = window.BOT.textoDeCotizacion(precio, resumen);
+      burbuja(r.texto, 'bot');
+      if (r.pasa) marcaPasa();
+      pintaAtajos(r.opciones);
+      ocupado = false;
+    }).catch(function (err) {
+      burbuja(window.BOT.textoDeCotizacion(null, resumen).texto, 'bot');
+      nota('falló la llamada: ' + err.message);
+      ocupado = false;
+    });
+  }
+
+  function manda(texto) {
+    if (ocupado) return;
+    texto = String(texto || '').trim();
+    if (!texto) return;
+    ocupado = true;
+    burbuja(texto, 'yo');
+    caja.value = '';
+    pintaAtajos([]);
+
+    var r;
+    try {
+      r = window.BOT.respuestaA(texto, estado, hoy());
+    } catch (err) {
+      nota('el bot tronó: ' + err.message);
+      ocupado = false;
+      return;
+    }
+
+    /* `estado` puede venir en `undefined` cuando el bot cierra la
+       conversación; eso NO es lo mismo que no traer estado, así que
+       se respeta tal cual en vez de conservar el anterior. */
+    estado = Object.prototype.hasOwnProperty.call(r, 'estado') ? r.estado : estado;
+    pintaEstado();
+
+    /* ------------------------------------------------------------
+       AQUI, Y SOLO AQUI, ENTRA LA IA
+       ------------------------------------------------------------
+       `noEntendio` es la senal de que el guion ya se rindio. Ese es
+       el unico momento en que se gasta una llamada.
+
+       El 95 % de los mensajes ni pasa por aqui: el guion los
+       entiende gratis y al instante. Si la IA no esta configurada,
+       o truena, o el freno la detuvo, se pinta lo que el guion ya
+       tenia y la conversacion sigue.
+       ------------------------------------------------------------ */
+    if (r.noEntendio && gastadas >= TOPE_IA) {
+      nota('tope de IA de esta conversacion (' + TOPE_IA + ') · se contesta sin ella');
+      burbuja(r.texto, 'bot');
+      if (r.pasa) marcaPasa();
+      pintaAtajos(r.opciones);
+      ocupado = false;
+      return;
+    }
+
+    if (r.noEntendio) {
+      gastadas++;
+      nota('el guion no entendio · IA ' + gastadas + ' de ' + TOPE_IA + '…');
+      fetch('/api/entender', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mensaje: texto })
+      }).then(function (res) {
+        return res.ok ? res.json() : null;
+      }).then(function (d) {
+        var mejor = (d && d.hayIA) ? window.BOT.aplicaEntendido(d, hoy()) : null;
+        if (mejor) {
+          nota('la IA si entendio');
+          estado = Object.prototype.hasOwnProperty.call(mejor, 'estado')
+            ? mejor.estado : estado;
+          pintaEstado();
+          burbuja(mejor.texto, 'bot');
+          if (mejor.medios) pintaMedios(mejor.medios);
+          if (mejor.cotiza) { pideElPrecio(mejor.cotiza, mejor.resumen); return; }
+          pintaAtajos(mejor.opciones);
+        } else {
+          nota(d && d.sinClave ? 'sin ANTHROPIC_API_KEY: no hay IA'
+            : (d && d.frenado ? 'freno de IA activado' : 'la IA tampoco'));
+          burbuja(r.texto, 'bot');
+          if (r.pasa) marcaPasa();
+          pintaAtajos(r.opciones);
+        }
+        ocupado = false;
+      }).catch(function (err) {
+        nota('no se pudo llamar a la IA: ' + err.message);
+        burbuja(r.texto, 'bot');
+        pintaAtajos(r.opciones);
+        ocupado = false;
+      });
+      return;
+    }
+
+    burbuja(r.texto, 'bot');
+    if (r.medios) pintaMedios(r.medios);
+    if (r.pasa) marcaPasa();
+
+    if (r.cotiza) {
+      pideElPrecio(r.cotiza, r.resumen);
+      return;
+    }
+    pintaAtajos(r.opciones);
+    ocupado = false;
+  }
+
+  forma.addEventListener('submit', function (ev) {
+    ev.preventDefault();
+    manda(caja.value);
+  });
+
+  document.getElementById('reiniciar').addEventListener('click', function () {
+    estado = null;
+    gastadas = 0;
+    hilo.innerHTML = '';
+    pintaAtajos([]);
+    pintaEstado();
+    nota('conversación nueva · hoy es ' + hoy());
+    caja.focus();
+  });
+
+  document.getElementById('copiar').addEventListener('click', function (ev) {
+    var lineas = [];
+    hilo.querySelectorAll('.b').forEach(function (d) {
+      var quien = d.classList.contains('yo') ? 'CLIENTE' :
+        (d.classList.contains('sistema') ? '·' : 'BOT');
+      lineas.push(quien + ': ' + d.textContent);
+    });
+    lineas.push('');
+    lineas.push('estado: ' + JSON.stringify(estado));
+    lineas.push('hoy: ' + hoy());
+    var texto = lineas.join('\n');
+    /* `navigator.clipboard` no existe fuera de https; en local hay
+       que tener con qué. */
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(texto).then(function () {
+        ev.target.textContent = 'Copiada ✓';
+        setTimeout(function () { ev.target.textContent = 'Copiar la charla'; }, 1600);
+      });
+    } else {
+      window.prompt('Cópiala de aquí:', texto);
+    }
+  });
+
+  pintaEstado();
+  nota('conversación nueva · hoy es ' + hoy());
+  caja.focus();
+})();
+</script>
+</body>
+</html>

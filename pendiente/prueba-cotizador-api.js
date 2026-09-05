@@ -33,11 +33,15 @@
    ============================================================ */
 
 const crypto = require('crypto');
-const tarifa = require('./_tarifa');
-const destinos = require('./_destinos');
-const origenes = require('./_origenes');
-const rutas = require('./_rutas');
-const defensas = require('./_defensas');
+/* Los ayudantes siguen viviendo en `api/`. Este archivo se movio a
+   `pendiente/` el 2-sep-2026 —para dejarle su lugar de funcion a
+   `/api/entender`— y por eso las rutas suben un nivel. Sin esto,
+   moverlo lo dejaba sin cargar y la prueba se caia entera. */
+const tarifa = require('../api/_tarifa');
+const destinos = require('../api/_destinos');
+const origenes = require('../api/_origenes');
+const rutas = require('../api/_rutas');
+const defensas = require('../api/_defensas');
 
 /* Mide como /api/cotizar, así que se le pone el mismo tope. Es de una sola
    persona revisando, no de clientes: por minuto se aprieta más. */
@@ -327,7 +331,6 @@ module.exports = async function handler(req, res) {
       total: p.total,
       anticipo: p.anticipo,
       saldo: p.saldo,
-      porcentajeAnticipo: p.porcentajeAnticipo,
       subtotal: p.subtotal,
       iva: p.iva,
       requiereAsesor: p.requiereAsesor,

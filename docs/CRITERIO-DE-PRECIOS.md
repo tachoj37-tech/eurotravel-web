@@ -1787,3 +1787,106 @@ para Sprinter (celda Q10).
 | **Puebla con Zacatlán** | $2,000 | $5,000 |
 
 Los tres primeros son la misma forma. Zacatlán va por su cuenta.
+
+---
+
+### R51 · El anticipo sube al medio millar (2-sep-2026)
+
+Dictado, textual: *«redondea el 20% a la mitad de mil más cercana, siempre
+hacia arriba, si te da 4123 que sean 4500, si te dan 4501 que sean 5000»*.
+
+Y la orilla, preguntada aparte y contestada aparte: **si el 20% cae justo en un
+medio millar, ahí se queda.** $10,000 apartan con $2,000, no con $2,500. Es
+redondeo, no una suma fija.
+
+```
+anticipo = Math.ceil(total * 0.20 / 500) * 500
+saldo    = total - anticipo
+```
+
+| Total | 20 % | Se aparta con | Queda por abonar |
+|---|---|---|---|
+| $10,000 | $2,000 | **$2,000** | $8,000 |
+| $12,800 | $2,560 | **$3,000** | $9,800 |
+| $21,700 | $4,340 | **$4,500** | $17,200 |
+| $26,000 | $5,200 | **$5,500** | $20,500 |
+
+**El total no se mueve.** Sube el anticipo y baja el saldo en la misma
+cantidad; nadie paga de más. Y `anticipo + saldo = total` sigue exacto, que es
+lo que impide que se pierda un peso entre las dos partes.
+
+Un viaje sin precio —`requiereAsesor`— trae total cero, y `Math.ceil` de cero
+es cero. El anticipo se queda en cero, que es lo correcto: **no se aparta lo
+que todavía no tiene precio.**
+
+#### Lo que R51 se llevó por delante
+
+**El campo `porcentajeAnticipo` dejó de existir.** Ya no hay un porcentaje que
+enseñar: $3,000 de $12,800 es **23.4 %**, no 20 %.
+
+Se decía en cuatro lugares, y el peor era el tercero:
+
+| Dónde | Decía | Dice |
+|---|---|---|
+| Pantalla de pago | «Aparta con el 20%» | «Aparta con $3,000» |
+| Resumen del viaje | «Para apartar (20%)» | «Para apartar» |
+| **Recibo de Stripe** | «Anticipo 20% · ruta» | «Anticipo · ruta» |
+| Cotizador de prueba | «anticipo 20% · quedan…» | «anticipo · quedan…» |
+
+El del recibo de Stripe es el que había que cazar: es un documento de cobro
+que le queda al cliente, y habría salido con un porcentaje falso impreso.
+
+También salió de la lista blanca de `api/_publico.js`, porque un dato que ya no
+es cierto no tiene por qué llegar al navegador.
+
+#### Las pruebas que cambiaron de bando
+
+Tres, y ninguna estaba mal: **probaban una regla que dejó de existir.**
+
+| Prueba | Esperaba | Espera |
+|---|---|---|
+| `probar-tarifa` · el 20% al peso | $4,040 | **$4,500** |
+| `probar-tarifa` · anticipo del total final | $6,400 / saldo $25,600 | **$6,500 / $25,500** |
+| `probar-tarifa` · las llaves que salen | traía `porcentajeAnticipo` | ya no |
+
+La segunda vale la pena leerla completa: lo que cuida **no es el número**, sino
+que el anticipo salga del **total final** y no del traslado a secas. Eso no
+cambió con R51, y por eso la prueba se actualizó en vez de borrarse.
+
+---
+
+### R52 · Un autobús no hace dominical (2-sep-2026)
+
+Dictado: *«el bot no puede vender dominicales con bus, no se puede un bus 1 día
+en domingo»*.
+
+El **dominical** es ida y vuelta el mismo domingo (R43). Un autobús no lo
+hace — es una restricción de operación, no de precio.
+
+**Lo que ya estaba bien.** `api/_tarifa.js` solo aplica el precio dominical si
+la unidad es Sprinter:
+
+```js
+if (dominical && (claveDeUnidad(unidad) || 'sprinter') === 'sprinter') {
+```
+
+Así que un autobús **nunca** agarró tarifa dominical.
+
+**Lo que faltaba, y es lo que dice R52.** Sin esta regla, un autobús pedido
+para ida y vuelta en domingo se iba por el camino normal: se cotizaba como
+viaje de un día cualquiera y se le armaba la solicitud al vendedor —de un
+servicio que no existe—. El precio no salía mal; **se ofrecía algo que no se
+puede dar**, que es peor.
+
+El bot avisa y propone salida:
+
+> Para ese día en autobús no tenemos ida y vuelta el mismo domingo.
+> Dos opciones: lo hacemos sábado, o se quedan a dormir y regresan el lunes.
+> ¿Cuál te sirve?
+
+Y si el grupo cabe en Sprinter, una tercera:
+
+> O nos vamos en Sprinter, que sí lo hace el domingo.
+
+> **Estado: escrita, no implementada.** Vive en `docs/GUION-DEL-BOT.md` §6 y
+> entra a `bot.js` junto con el resto del guion.

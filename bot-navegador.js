@@ -60,6 +60,40 @@
     return d;
   }
 
+  /* ------------------------------------------------------------
+     LAS FOTOS DE LA UNIDAD
+     ------------------------------------------------------------
+     Cuando el cliente pide fotos, el bot no manda texto y ya:
+     manda tambien `medios`, con las rutas de las fotos y la liga
+     del video. El bot no sabe como se ensenan — solo cuales.
+
+     Salen de `medios-unidades.js`, y esas de la pagina oficial:
+     son fotos de estudio del dueno, no de banco de imagenes.
+     ------------------------------------------------------------ */
+  function pintaMedios(m) {
+    if (!m) return;
+    var tira = document.createElement('div');
+    tira.className = 'wa-medios';
+    (m.fotos || []).forEach(function (ruta) {
+      var img = document.createElement('img');
+      img.src = ruta;
+      img.alt = 'Unidad de Eurotravel';
+      img.loading = 'lazy';
+      tira.appendChild(img);
+    });
+    if (m.video) {
+      var a = document.createElement('a');
+      a.href = m.video;
+      a.target = '_blank';
+      a.rel = 'noopener';
+      a.className = 'wa-video';
+      a.textContent = 'Ver el video de la unidad';
+      tira.appendChild(a);
+    }
+    hilo.appendChild(tira);
+    hilo.scrollTop = hilo.scrollHeight;
+  }
+
   function escribiendo() {
     var d = document.createElement('div');
     d.className = 'wa-b wa-bot wa-puntos';
@@ -184,6 +218,7 @@
 
     conPausa(function () {
       burbuja(r.texto, 'bot');
+      if (r.medios) pintaMedios(r.medios);
       if (r.cotiza) {
         pideElPrecio(r.cotiza, r.resumen);
         return;                       // el precio llega en el siguiente turno
