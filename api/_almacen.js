@@ -135,6 +135,8 @@ async function guardaFicha(ficha) {
      desconocida haría fallar el UPSERT entero y se perdería la ficha de
      todos los clientes, no solo el precio pendiente de uno. */
   if (ficha.porConfirmar) fila.por_confirmar = ficha.porConfirmar;
+  if (ficha.viajeDatos) fila.viaje_datos = ficha.viajeDatos;
+  if (ficha.contratoSubido) fila.contrato_subido = ficha.contratoSubido;
   /* `merge-duplicates` es un UPSERT: si ya existe esa llave, la
      actualiza. Sin esto, el segundo mensaje de un cliente reventaría
      por llave repetida y su ficha se quedaría en el primer mensaje. */
@@ -159,6 +161,8 @@ function deLaFila(f) {
     contrato: f.contrato,
     contratoAvisado: !!f.contrato_avisado,
     porConfirmar: f.por_confirmar || null,
+    viajeDatos: f.viaje_datos || null,
+    contratoSubido: f.contrato_subido || null,
     desde: f.desde ? Date.parse(f.desde) : Date.now(),
     visto: f.visto ? Date.parse(f.visto) : Date.now()
   };

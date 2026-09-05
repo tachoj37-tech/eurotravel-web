@@ -124,6 +124,12 @@ alter table mensajes enable row level security;
 -- esto una instancia nueva no sabría de qué cliente habla.
 -- ------------------------------------------------------------
 alter table fichas add column if not exists por_confirmar jsonb;
+-- El viaje en datos (origen, destino, fechas, pasajeros, unidad) desde que
+-- se dio el precio: es lo que va al contrato con el «va» del dueño a la
+-- ficha. Y el folio + liga del contrato ya registrado, para no subirlo dos
+-- veces.
+alter table fichas add column if not exists viaje_datos jsonb;
+alter table fichas add column if not exists contrato_subido jsonb;
 
 create table if not exists tickets (
   id       text primary key,                 -- el id del mensaje, lo pone Meta

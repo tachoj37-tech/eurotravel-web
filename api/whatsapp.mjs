@@ -33,6 +33,7 @@ import contrato from './_datos-contrato.js';
 import almacen from './_almacen.js';
 import etapas from './_etapas.js';
 import tarifa from './_tarifa.js';
+import logica from './_webhook-logica.js';
 import conversacion from '../bot.js';
 
 /* ------------------------------------------------------------
@@ -327,6 +328,7 @@ async function precioDe(envio, opciones) {
       total: precio.total,
       anticipo: precio.anticipo,
       porConfirmar: null, // ya se mandó: no queda nada esperando
+      viajeDatos: r,      // en datos, para el contrato de después
 
       viaje: r.destino
         ? '📍 ' + (r.origen ? r.origen + ' → ' : '') + r.destino +
@@ -712,7 +714,129 @@ async function precioConfirmado(envio) {
   }, { confirmado: true, totalFijado: envio.totalFijado });
 }
 
+/* ------------------------------------------------------------
+   EL DUEÑO AUTORIZÓ EL CONTRATO: SE REGISTRA EN EUROSYSTEM
+   ------------------------------------------------------------
+   Por la misma puerta que usa la página (CONTRATOS-API.md), con el
+   mismo armado (`contratoDesde`). EuroSystem lo crea siempre como
+   BORRADOR, que es lo que el dueño pidió, y no duplica si la misma
+   referencia llega dos veces: la referencia es el número del cliente
+   más su fecha de salida, estable entre reintentos.
+
+   Al dueño le llega el folio y la liga del PDF, o el error con sus
+   palabras. Nunca en silencio: un contrato que no se registró y
+   nadie lo supo es un camión que no sale.
+   ------------------------------------------------------------ */
+const ESPERA_CONTRATO_MS = 8000;
+
+function armaContrato(ficha, cliente) {
+  const d = ficha.contrato || {};
+  const v = ficha.viajeDatos || {};
+  const hora = (h) => (h && /^\d{1,2}:\d{2}$/.test(h)) ? h.padStart(5, '0') : null;
+  const salida = v.salida ? v.salida + (hora(d.horaSalida) ? 'T' + hora(d.horaSalida) : '') : '';
+  const regreso = (v.regreso || v.salida)
+    ? (v.regreso || v.salida) + (hora(d.horaRegreso) ? 'T' + hora(d.horaRegreso) : '')
+    : '';
+  const m = {
+    nombre: d.nombre || '',
+    telefono: d.telefono || String(cliente || ''),
+    salida: salida,
+    regreso: regreso,
+    origen: v.origen || '',
+    destino: v.destino || '',
+    puntoSalida: d.direccionSalida || '',
+    unidad: v.unidad || '',
+    total: ficha.total || 0,
+    anticipo: ficha.anticipo || 0
+  };
+  const referencia = ('WA-' + String(cliente || '') + '-' + (v.salida || '')).slice(0, 80);
+  const cuerpo = logica.contratoDesde(m, { id: referencia });
+  cuerpo.referenciaExterna = referencia;
+  cuerpo.observaciones = 'Vendido por WhatsApp (Eurobot), autorizado por el dueño. ' +
+    'Anticipo por transferencia; confirmar que entró antes de dar por apartado.' +
+    (d.direccionDestino ? ' Llegada: ' + d.direccionDestino + '.' : '');
+  cuerpo.servicio.pasajeros = Number(v.pasajeros) > 0 ? Math.min(Number(v.pasajeros), 90) : 1;
+  cuerpo.servicio.itinerario = d.direccionDestino
+    ? 'Llegada: ' + d.direccionDestino + (d.horaRegreso ? '. Regresan a las ' + d.horaRegreso : '')
+    : undefined;
+  cuerpo.cobro.formaPago = 'TRANSFERENCIA';
+  cuerpo.cobro.condicionesPago = 'Anticipo por transferencia. Saldo por cubrir antes de la salida.';
+  return cuerpo;
+}
+
+async function subeContrato(envio) {
+  let ficha = tickets.fichaDe(envio.para);
+  if (!(ficha && ficha.contrato) && almacen.hayAlmacen()) {
+    const deLaBase = await almacen.leeFicha(envio.para).catch(function () { return null; });
+    if (deLaBase) { tickets.siembraFicha(deLaBase); ficha = tickets.fichaDe(envio.para) || deLaBase; }
+  }
+  const dueno = tickets.numeroDelDueno(process.env) || envio.numeroDeOrigen;
+  const alDueno = function (texto, escribio) {
+    return [{
+      numeroDeOrigen: envio.numeroDeOrigen, para: dueno, texto: texto,
+      esTicket: true, sobreCliente: envio.para, pasaAPersona: false, escribio: escribio
+    }];
+  };
+
+  if (!ficha || !ficha.contrato || !contrato.estaCompleto(ficha.contrato)) {
+    return alDueno('No tengo la ficha completa de ese cliente 🙈. Pídele los datos que falten o captúralo tú.', '[contrato · sin ficha]');
+  }
+  if (ficha.contratoSubido && ficha.contratoSubido.folio) {
+    return alDueno('Ese contrato ya está registrado: folio *' + ficha.contratoSubido.folio + '*.' +
+      (ficha.contratoSubido.urlPdf ? '\n' + ficha.contratoSubido.urlPdf : ''), '[contrato · ya subido]');
+  }
+  const llave = (process.env.CONTRATOS_API_KEY || '').trim();
+  if (!llave) {
+    return alDueno('No tengo la llave para registrar contratos en EuroSystem (CONTRATOS_API_KEY). Captúralo tú por ahora.', '[contrato · sin llave]');
+  }
+  if (!ficha.viajeDatos || !ficha.viajeDatos.salida) {
+    return alDueno('No tengo las fechas de ese viaje en datos (el precio se dio antes de esta versión). Captúralo tú por ahora.', '[contrato · sin viaje]');
+  }
+
+  const cuerpo = armaContrato(ficha, envio.para);
+  const corta = new AbortController();
+  const reloj = setTimeout(function () { corta.abort(); }, ESPERA_CONTRATO_MS);
+  let r, datos;
+  try {
+    r = await fetch(EUROSYSTEM.replace(/\/+$/, '') + '/api/contratos/externo', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-api-key': llave },
+      body: JSON.stringify(cuerpo),
+      signal: corta.signal
+    });
+    datos = await r.json().catch(function () { return {}; });
+  } catch (e) {
+    clearTimeout(reloj);
+    console.error('[contrato] EuroSystem no contestó: ' + e.message);
+    return alDueno('EuroSystem no contestó al registrar el contrato. Vuelve a decirme *va* en un momento, o captúralo tú.', '[contrato · sin respuesta]');
+  }
+  clearTimeout(reloj);
+
+  if (!r.ok || !datos || !datos.folio) {
+    const detalle = datos && datos.detalle && Array.isArray(datos.detalle)
+      ? datos.detalle.map(function (x) { return (x.campo ? x.campo + ': ' : '') + x.mensaje; }).join('; ')
+      : '';
+    console.error('[contrato] EuroSystem dijo ' + r.status + ': ' + ((datos && datos.error) || '') + ' ' + detalle);
+    return alDueno('❌ EuroSystem no registró el contrato: ' + ((datos && datos.error) || ('HTTP ' + r.status)) +
+      (detalle ? '\n' + detalle : '') + '\n\nCorrige y dime *va* otra vez, o captúralo tú.', '[contrato · rechazado]');
+  }
+
+  tickets.anotaEtapa(envio.para, 'contrato_listo', {
+    contratoSubido: { folio: datos.folio, urlPdf: datos.urlPdf || null, contratoId: datos.contratoId || null, cuando: Date.now() }
+  });
+  console.log('[contrato] registrado folio ' + datos.folio + (datos.repetido ? ' (ya existía)' : ''));
+  return alDueno('📄 Contrato registrado en EuroSystem como *BORRADOR*, folio *' + datos.folio + '*' +
+    (datos.repetido ? ' (ya existía)' : '') + '.' +
+    (datos.urlPdf ? '\n' + datos.urlPdf : '') +
+    '\n\nLo confirmas en el panel cuando entre el anticipo.', '[contrato · registrado]');
+}
+
 async function reparte(envio) {
+  if (envio.subeContrato) {
+    for (const p of await subeContrato(envio)) await manda(p);
+    return;
+  }
+
   if (envio.confirmaPrecio) {
     for (const p of await precioConfirmado(envio)) await manda(p);
     return;

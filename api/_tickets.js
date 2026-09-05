@@ -360,6 +360,13 @@ function anotaEtapa(cliente, etapa, extra, ahora) {
     porConfirmar: (extra && Object.prototype.hasOwnProperty.call(extra, 'porConfirmar'))
       ? (extra.porConfirmar || null)
       : ((antes && antes.porConfirmar) || null),
+    /* El viaje en datos (origen, destino, fechas, pasajeros, unidad), que
+       queda desde que se dio el precio: es lo que va al contrato cuando el
+       dueño dice «va» a la ficha. `viaje` de arriba es solo texto. */
+    viajeDatos: (extra && extra.viajeDatos) || (antes && antes.viajeDatos) || null,
+    /* Folio y liga del contrato ya registrado en EuroSystem. Con esto, un
+       segundo «va» no vuelve a subirlo. */
+    contratoSubido: (extra && extra.contratoSubido) || (antes && antes.contratoSubido) || null,
     desde: (antes && antes.desde) || (ahora || Date.now()),
     visto: ahora || Date.now()
   };

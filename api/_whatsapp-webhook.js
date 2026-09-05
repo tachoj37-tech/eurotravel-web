@@ -769,6 +769,33 @@ function procesa(crudo, firma, entorno) {
             }
           }
 
+          /* ------------------------------------------------------------
+             ¿ESTÁ DANDO EL «VA» A LA FICHA DEL CONTRATO?
+             ------------------------------------------------------------
+             Regla del dueño (5-sep-2026): «cuando confirme y autorice un
+             contrato lo puedes subir a EuroSystem; entra como BORRADOR».
+             Si la ficha de ese cliente ya está completa, no se ha subido,
+             y él contesta «va», se registra el contrato. Un número o
+             cualquier otro texto no cuentan aquí: eso es para el precio o
+             para el cliente. La subida —que tiene red— vive en
+             `whatsapp.mjs`.
+             ------------------------------------------------------------ */
+          if (fichaDelCliente && fichaDelCliente.contrato &&
+              contrato.estaCompleto(fichaDelCliente.contrato) &&
+              !fichaDelCliente.contratoSubido &&
+              confirmacion.interpreta(dirigido.texto).tipo === 'va') {
+            envios.push({
+              numeroDeOrigen: deQuien,
+              para: dirigido.cliente,
+              texto: '',
+              subeContrato: true,
+              pasaAPersona: false,
+              escribio: '[contrato · autorizado]'
+            });
+            tickets.yaLoContesto(dirigido.cliente);
+            continue;
+          }
+
           if (dirigido && dirigido.texto) {
             /* Sus palabras van TAL CUAL. No se adornan ni se corrigen:
                si el dueño escribió eso, eso es lo que quiso decir. */

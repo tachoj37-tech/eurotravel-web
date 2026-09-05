@@ -107,6 +107,18 @@ globalThis.fetch = async function (url, opciones) {
     };
   }
 
+  /* La puerta de contratos de EuroSystem (5-sep-2026): apunta lo que se
+     mandó y contesta lo que diga `eurosystemContesta`. */
+  if (u.indexOf('/api/contratos/externo') !== -1) {
+    contratosMandados.push(cuerpo);
+    const c = eurosystemContesta;
+    return {
+      ok: c.status < 300, status: c.status,
+      json: async function () { return c.cuerpo; },
+      text: async function () { return JSON.stringify(c.cuerpo); }
+    };
+  }
+
   /* El calendario de EuroSystem (5-sep-2026). `calendarioDice` en null
      finge que EuroSystem está caído; un objeto finge su respuesta. */
   if (u.indexOf('/api/disponibilidad') !== -1) {
@@ -124,6 +136,8 @@ globalThis.fetch = async function (url, opciones) {
 };
 let llamadasAlCalendario = 0;
 let ultimaConsultaAlCalendario = '';
+let contratosMandados = [];
+let eurosystemContesta = { status: 201, cuerpo: { folio: 43801, urlPdf: 'https://eurosystem/pdf/43801', contratoId: 'c1', estado: 'BORRADOR', repetido: false } };
 /* Por defecto hay lugar: las pruebas viejas de precio usan el 12 de
    septiembre —temporada alta— y sin esto todas caerían en «déjame
    revisar» en vez de probar el precio. Las pruebas del calendario lo
@@ -519,6 +533,87 @@ function idDelUltimoTicket() {
 
 process.env.CONFIRMAR_PRECIOS = '0';
 process.env.CONFIRMAR_DISPONIBILIDAD = '0';
+
+/* ============================================================
+   EL CONTRATO CON EL «VA» DEL DUEÑO A LA FICHA
+   ============================================================
+   Regla del dueño (5-sep-2026): «cuando confirme y autorice un
+   contrato lo puedes subir a EuroSystem; entra como BORRADOR».
+   ============================================================ */
+titulo('el contrato con el «va» a la ficha');
+const tickets = (await import(pathToFileURL(path.join(RAIZ, 'api', '_tickets.js')).href)).default;
+
+function siembraFichaCompleta(C) {
+  tickets.anotaEtapa(C, 'contrato_listo', {
+    total: 48000, anticipo: 10000, contratoAvisado: true,
+    contrato: {
+      nombre: 'Laura Pérez', telefono: '3312345678',
+      direccionSalida: 'Afuera del Tec, puerta 3', horaSalida: '7:00',
+      direccionDestino: 'Hotel Villa Montecarlo', horaRegreso: '18:00'
+    },
+    viajeDatos: { origen: 'Guadalajara', destino: 'Chapala', salida: '2026-11-20', regreso: '2026-11-22', pasajeros: 12, unidad: 'Sprinter' }
+  });
+  tickets.recuerdaTicket('wamid.ficha-' + C, C);
+}
+
+/* 1 · «va» a la ficha: se registra, y al dueño le llega el folio y la liga. */
+{
+  webhook.olvidaTodo(); mandados = []; contratosMandados = [];
+  const C = '5213366670020';
+  siembraFichaCompleta(C);
+  await contesta('va', 'wamid.ficha-' + C);
+  const alDueno = textos(DUENO).join('\n');
+  ok('con «va» se mandó UN contrato a EuroSystem', contratosMandados.length, 1);
+  okQue('  al dueño le llega el folio', /folio \*43801\*/.test(alDueno));
+  okQue('  y la liga del PDF', /eurosystem\/pdf\/43801/.test(alDueno));
+  okQue('  y dice BORRADOR', /BORRADOR/.test(alDueno));
+  okQue('  al cliente no le llegó nada', textos(C).length === 0);
+  const b = contratosMandados[0] || {};
+  ok('  referencia estable: número + salida', b.referenciaExterna, 'WA-' + C + '-2026-11-20');
+  ok('  total y anticipo del precio confirmado', [b.cobro && b.cobro.montoTotal, b.cobro && b.cobro.anticipo], [48000, 10000]);
+  ok('  salida con hora y zona', b.servicio && b.servicio.fechaSalida, '2026-11-20T07:00:00-06:00');
+  ok('  regreso con hora y zona', b.servicio && b.servicio.fechaRegreso, '2026-11-22T18:00:00-06:00');
+  ok('  pasajeros de verdad, no el 1 de la web', b.servicio && b.servicio.pasajeros, 12);
+  ok('  unidad como se vende', b.servicio && b.servicio.tipoUnidadDetalle, 'Sprinter');
+  ok('  por transferencia', b.cobro && b.cobro.formaPago, 'TRANSFERENCIA');
+  ok('  nombre y apellidos', [b.cliente && b.cliente.nombre, b.cliente && b.cliente.apellidos], ['Laura', 'Pérez']);
+  okQue('  no se manda el estado (lo fija EuroSystem)', !('estado' in b));
+
+  /* 2 · Un segundo «va» no lo sube dos veces. Ya subido, no hay nada
+     pendiente, así que el «va» es texto normal del dueño y se pasa literal
+     —misma regla que con el precio—. (Primero se esperaba un recordatorio
+     del folio; ése vive en `subeContrato` para el caso en que el webhook SÍ
+     decidió subir y la ficha de la base ya traía el folio: instancia
+     reciclada.) */
+  mandados = []; contratosMandados = [];
+  await contesta('va', 'wamid.ficha-' + C);
+  ok('un segundo «va» no manda otro contrato', contratosMandados.length, 0);
+  okQue('  y llega literal, como cualquier texto del dueño', /^va$/m.test(textos(C).join('\n')));
+}
+
+/* 3 · EuroSystem lo rechaza: se le dice al dueño con las palabras del error. */
+{
+  webhook.olvidaTodo(); mandados = []; contratosMandados = [];
+  eurosystemContesta = { status: 422, cuerpo: { error: 'Los datos no pasaron la validación.', detalle: [{ campo: 'servicio.fechaRegreso', mensaje: 'Tiene que ser posterior a la salida.' }] } };
+  const C = '5213366670021';
+  siembraFichaCompleta(C);
+  await contesta('va', 'wamid.ficha-' + C);
+  const alDueno = textos(DUENO).join('\n');
+  okQue('rechazo: el dueño ve el error', /no registró el contrato/.test(alDueno) && /posterior a la salida/.test(alDueno));
+  okQue('  y puede reintentar (no quedó marcado como subido)', !(tickets.fichaDe(C) || {}).contratoSubido);
+  eurosystemContesta = { status: 201, cuerpo: { folio: 43801, urlPdf: 'https://eurosystem/pdf/43801', contratoId: 'c1', estado: 'BORRADOR', repetido: false } };
+}
+
+/* 4 · Sin ficha completa, el «va» es texto normal: se pasa literal. */
+{
+  webhook.olvidaTodo(); mandados = []; contratosMandados = [];
+  const C = '5213366670022';
+  tickets.anotaEtapa(C, 'datos_del_contrato', { contrato: { nombre: 'Solo nombre' } });
+  tickets.recuerdaTicket('wamid.ficha-' + C, C);
+  await contesta('va', 'wamid.ficha-' + C);
+  ok('ficha incompleta: no se manda contrato', contratosMandados.length, 0);
+  okQue('  y el «va» llega literal al cliente', /^va$/m.test(textos(C).join('\n')));
+}
 
 /* ============================================================ */
 console.log('\n' + buenas + ' buenas, ' + malas + ' malas');
