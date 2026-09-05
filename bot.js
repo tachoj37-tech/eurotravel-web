@@ -1384,6 +1384,90 @@ function resumenDe(e) {
    opciones son las que en WhatsApp serán botones o lista, y por eso
    se respetan sus topes: 3 botones de 20 caracteres, o 10 filas de
    24. Hay una prueba que lo vigila. */
+/* ------------------------------------------------------------
+   CUANDO EL PASO NO LEE LO QUE ESCRIBIÓ — 5-sep-2026
+   ------------------------------------------------------------
+   Tres cosas que el dueño vio probando como cliente, y que son
+   una sola:
+
+   1 · «Esa fecha no la entendí» le salió varias veces seguidas.
+       Las tres salidas de «no entendí» a media cotización NO
+       marcaban `noEntendio`, así que la IA —con llave y todo—
+       nunca se enteraba. Solo se marcaba al final del guion.
+   2 · «No le pongas al cliente que no entendiste.» Confesar que
+       no se entendió no vende: suena a máquina y a que el cliente
+       hizo algo mal. Se vuelve a pedir el dato, con un ejemplo, y
+       ya.
+   3 · «Usa más variaciones.» La misma frase dos veces seguidas
+       delata al robot. Cada intento fallido usa una forma distinta.
+
+   `noEntendio: true` es lo que hace que la cáscara le pase el texto
+   a la IA junto con el estado; si la IA lo saca, sigue la venta sin
+   que el cliente vea nada de esto. Si no hay IA, se ve la re-pregunta
+   variada, que sigue siendo mejor que «no entendí».
+
+   La variante se escoge con un contador POR PASO guardado en el
+   estado, no al azar: así las pruebas son estables y el segundo
+   intento nunca repite al primero.
+   ------------------------------------------------------------ */
+const REPREGUNTA = {
+  salida: [
+    '¿Qué día salen? 📅 Escríbelo como *10 de septiembre* o *10/9*.',
+    'Dime la fecha de salida — por ejemplo *sábado 12* o *12/10*.',
+    '¿Para qué fecha lo necesitan? Con día y mes me basta.'
+  ],
+  regreso: [
+    '¿Y qué día regresan? Puede ser *el 14* o *mismo día*.',
+    '¿Cuándo vuelven? Si es ida y vuelta el mismo día, dime *mismo día*.',
+    'Dime el día de regreso — por ejemplo *domingo 13*.'
+  ],
+  destino: [
+    '¿A qué ciudad van? 📍',
+    '¿A dónde es el viaje? Con el nombre del lugar me arranco.',
+    'Dime el destino — Vallarta, Chapala, Tequila, el que sea.'
+  ],
+  vacio: [
+    '¿Me lo escribes otra vez? Con que me digas a dónde van, empiezo.',
+    'Cuéntame: ¿a dónde van y cuántos son?',
+    'Dime a dónde van y te voy armando el precio.'
+  ]
+};
+
+/* ------------------------------------------------------------
+   LO DEMÁS QUE VENÍA EN LA FRASE — 5-sep-2026
+   ------------------------------------------------------------
+   El bot pide la fecha y el cliente contesta «somos 14». No es una
+   fecha, pero SÍ es un dato del viaje, y el guion lo sabe leer.
+   Antes, los pasos de fecha y regreso se rendían y —desde hoy— le
+   pasaban eso a la IA: una llamada de pago por algo que el guion
+   entiende gratis. El paso del destino ya hacía esto; se generaliza.
+
+   Se absorbe todo lo que NO sea fecha (gente, unidad, destino,
+   origen) y se vuelve a pedir la fecha, acusando lo que sí se leyó.
+   Solo si no había NADA legible, entra la IA. Así la IA queda donde
+   la quiere el dueño: «nomás cuando no entienda algo».
+   ------------------------------------------------------------ */
+function absorbeLoDemas(e, crudo, hoy) {
+  const l = leeDeUnJalon(crudo, hoy);
+  let algo = false;
+  if (l.gente && !e.gente) { e.gente = l.gente; algo = true; }
+  if (l.unidad && !e.unidad) { e.unidad = l.unidad; algo = true; }
+  if (l.destino && !e.destino) { e.destino = limpiaDestino(l.destino); algo = true; }
+  if (l.origen && !e.origen) { e.origen = l.origen; algo = true; }
+  if (!algo) return null;
+  return l.gente ? 'Son *' + l.gente + '*, anotado 👍'
+    : l.destino ? '*' + e.destino + '*, va 📍'
+      : 'Anotado 👍';
+}
+
+function repregunta(e, paso) {
+  const lista = REPREGUNTA[paso] || REPREGUNTA.vacio;
+  e.intentos = e.intentos || {};
+  const n = e.intentos[paso] || 0;
+  e.intentos[paso] = n + 1;
+  return lista[n % lista.length];
+}
+
 function pregunta(estado) {
   const e = estado;
   switch (e.paso) {
@@ -1921,8 +2005,8 @@ function pasoDeCotizacion(t, crudo, estado, hoy) {
 
     if (dicho.length < 3) {
       return {
-        texto: 'No alcancé a leer el lugar 🙈 ¿A qué ciudad van?',
-        pasa: false, estado: e, opciones: []
+        texto: repregunta(e, 'destino'),
+        pasa: false, estado: e, opciones: [], noEntendio: true
       };
     }
     /* La ocasión se lee del texto CRUDO, antes de recortarlo: es
@@ -1977,8 +2061,10 @@ function pasoDeCotizacion(t, crudo, estado, hoy) {
   if (e.paso === 'salida') {
     const f = fechaDe(crudo, hoy);
     if (!f) {
-      return { texto: 'Esa fecha no la entendí 🙈\n\nEscríbela como *10 de septiembre* ' +
-        'o *10/9*.', pasa: false, estado: e, opciones: [] };
+      const acuse = absorbeLoDemas(e, crudo, hoy);
+      if (acuse) return siguiente(e, acuse);
+      return { texto: repregunta(e, 'salida'),
+        pasa: false, estado: e, opciones: [], noEntendio: true };
     }
     e.salida = f;
     /* Si ya había regreso y quedó antes, se vuelve a preguntar. */
@@ -2029,8 +2115,10 @@ function pasoDeCotizacion(t, crudo, estado, hoy) {
 
     const f = esElMismoDia && e.salida ? e.salida : fechaDe(crudo, hoy);
     if (!f) {
-      return { texto: 'Esa fecha no la entendí. ¿Qué día regresan?',
-        pasa: false, estado: e, opciones: [] };
+      const acuse = absorbeLoDemas(e, crudo, hoy);
+      if (acuse) return siguiente(e, acuse);
+      return { texto: repregunta(e, 'regreso'),
+        pasa: false, estado: e, opciones: [], noEntendio: true };
     }
     if (f < e.salida) {
       return {
@@ -2549,7 +2637,25 @@ function noSeAtore(r, estadoQueEntro) {
   if (e.ultimaRespuesta === r.texto) e.repeticiones = (e.repeticiones || 1) + 1;
   else { e.ultimaRespuesta = r.texto; e.repeticiones = 1; }
 
-  if (e.repeticiones < REPETIDAS_PARA_ENTREGAR || r.pasa) return r;
+  /* ------------------------------------------------------------
+     DESDE EL 5-SEP-2026 LAS RE-PREGUNTAS VARÍAN
+     ------------------------------------------------------------
+     Y con eso el contador de arriba —texto idéntico— dejó de
+     dispararse: tres intentos fallidos en la fecha son tres frases
+     distintas, y el freno creía que todo iba bien. Lo cazó la
+     prueba «y entrega a una persona» al ponerse roja.
+
+     «Atorado» no es «dice lo mismo»; es «lleva N intentos sin poder
+     leer lo que le contestan en el mismo paso». Eso lo lleva
+     `repregunta` en `e.intentos[paso]`, así que se mide ahí también.
+     Se conserva el contador de texto para las respuestas que no
+     pasan por `repregunta` —las objeciones, por ejemplo—.
+     ------------------------------------------------------------ */
+  const atoradoEnElPaso = !!(e.paso && e.intentos &&
+    e.intentos[e.paso] >= REPETIDAS_PARA_ENTREGAR);
+
+  if ((e.repeticiones < REPETIDAS_PARA_ENTREGAR && !atoradoEnElPaso) || r.pasa) return r;
+  if (e.intentos && e.paso) e.intentos[e.paso] = 0;
 
   /* Se limpia el contador para que, si la persona lo destraba y la
      conversación sigue, no vuelva a entregarse al primer tropiezo. */
@@ -2571,6 +2677,31 @@ const PIDE_FOTOS = ['foto', 'fotos', 'fotografia', 'fotografias', 'imagen', 'ima
   'video', 'videos', 'ensename', 'ensenamela', 'muestrame', 'mandame fotos',
   'como se ve', 'como es por dentro', 'como son las unidades',
   'ver la unidad', 'ver el camion', 'ver la sprinter'];
+
+/* ------------------------------------------------------------
+   EL SALUDO, EN TRES FORMAS
+   ------------------------------------------------------------
+   Los tres dicen lo mismo —quién somos, qué hacemos— con palabras
+   distintas. Se escoge por el largo del mensaje que llegó: es
+   determinista (las pruebas no bailan) y varía entre clientes.
+   Con nombre de vendedor se presenta él; sin nombre, se saluda en
+   plural y NO se inventa uno.
+   ------------------------------------------------------------ */
+function saludo(vendedor, mensaje) {
+  const n = String(mensaje || '').length % 3;
+  if (vendedor) {
+    return [
+      '¡Hola! Soy *' + vendedor + '*, de *Eurotravel* 🚐\n\nRentamos camionetas y autobuses con chofer, para grupos.',
+      '¡Qué tal! Te atiende *' + vendedor + '*, de *Eurotravel* 🚐\n\nCamionetas y autobuses con chofer para tu grupo.',
+      'Hola, soy *' + vendedor + '* 🚐 Aquí en *Eurotravel* rentamos Sprinters y autobuses con chofer.'
+    ][n];
+  }
+  return [
+    '¡Hola! Gracias por escribir a *Eurotravel* 🚐\n\nRentamos camionetas y autobuses con chofer, para grupos.',
+    '¡Qué tal! Estás con *Eurotravel* 🚐\n\nCamionetas y autobuses con chofer para tu grupo.',
+    'Hola 🚐 Aquí en *Eurotravel* rentamos Sprinters y autobuses con chofer, para grupos.'
+  ][n];
+}
 
 function respuestaBase(mensaje, estado, hoy) {
   const t = normaliza(mensaje);
@@ -2619,8 +2750,8 @@ function respuestaBase(mensaje, estado, hoy) {
 
   if (!t) {
     return {
-      texto: 'No alcancé a leer eso. ¿Me lo escribes de nuevo?',
-      pasa: false
+      texto: repregunta(estado || {}, 'vacio'),
+      pasa: false, noEntendio: true
     };
   }
 
@@ -3193,11 +3324,13 @@ function respuestaBase(mensaje, estado, hoy) {
          es una mentira que el cliente descubre el día que pregunta
          por él. Sin nombre, se saluda igual de cálido en plural.
          ------------------------------------------------------------ */
-      texto: (VENDEDOR
-        ? '¡Hola! Soy *' + VENDEDOR + '*, de *Eurotravel* 🚐'
-        : '¡Hola! Le marcaste a *Eurotravel* 🚐') +
-        '\n\nRentamos camionetas y autobuses con chofer, para grupos.\n\n' +
-        '¿A dónde van? Con eso te saco el precio.',
+      /* «Le marcaste» estaba mal: en WhatsApp nadie marca, escribe. Lo
+         cazó el dueño el 5-sep-2026. Y el saludo va en tres formas que
+         se turnan según el largo del mensaje —determinista, para que
+         las pruebas no bailen— porque dos clientes que se comparan el
+         chat no deben ver la misma frase calcada. */
+      texto: saludo(VENDEDOR, mensaje) +
+        '\n\n¿A dónde van? Con eso te saco el precio.',
       pasa: false,
       estado: { paso: 'destino' },
       opciones: []
@@ -3287,6 +3420,49 @@ function respuestaBase(mensaje, estado, hoy) {
    Devuelve null cuando lo entendido no alcanza para nada, y
    entonces quien llama se queda con la respuesta de siempre.
    ------------------------------------------------------------ */
+/* ------------------------------------------------------------
+   LA IA A MEDIA COTIZACIÓN — 5-sep-2026
+   ------------------------------------------------------------
+   `aplicaEntendido` arma una conversación NUEVA con lo que la IA
+   sacó. Sirve cuando no había nada. Pero desde hoy los pasos de
+   fecha, regreso y destino también le pasan la bola a la IA, y ahí
+   ya HAY estado: destino, gente, unidad. Si la IA solo leyó la
+   fecha y se arrancara de cero, se tiraría todo lo demás y el
+   cliente volvería a oír «¿a dónde van?». Peor que no entender.
+
+   Aquí se hace lo contrario: lo que la IA sacó se PEGA al estado
+   que iba —solo los campos que trajo, sin pisar lo que ya había— y
+   se sigue por el hueco siguiente con las frases de siempre.
+   ------------------------------------------------------------ */
+function continuaCon(estado, datos, hoy) {
+  if (!estado || !estado.paso || !datos) return null;
+  /* Fuera del tema o pidiendo persona: eso lo resuelve el camino
+     normal, no hay nada que pegar. */
+  if (datos.intencion === 'fuera' || datos.intencion === 'persona' ||
+      datos.intencion === 'fotos') {
+    return aplicaEntendido(datos, hoy);
+  }
+  const e = Object.assign({}, estado);
+  let pego = false;
+  if (datos.salida && !e.salida) { e.salida = datos.salida; pego = true; }
+  if (datos.regreso && !e.regreso) { e.regreso = datos.regreso; pego = true; }
+  if (datos.destino && !e.destino) { e.destino = limpiaDestino(datos.destino); pego = true; }
+  if (datos.origen && !e.origen) { e.origen = datos.origen; pego = true; }
+  if (datos.gente && !e.gente) { e.gente = datos.gente; pego = true; }
+  if (datos.unidad && !e.unidad) { e.unidad = datos.unidad; pego = true; }
+  if (datos.ocasion && !e.ocasion) { e.ocasion = datos.ocasion; pego = true; }
+  /* El paso en curso pedía UN dato; si la IA lo trajo aunque ya
+     hubiera uno viejo (por ejemplo un regreso que quedó antes de la
+     salida), el nuevo manda. */
+  if (e.paso === 'salida' && datos.salida) { e.salida = datos.salida; pego = true; }
+  if (e.paso === 'regreso' && datos.regreso) { e.regreso = datos.regreso; pego = true; }
+  if (e.paso === 'destino' && datos.destino) { e.destino = limpiaDestino(datos.destino); pego = true; }
+  if (!pego) return null;
+  if (e.regreso && e.salida && e.regreso < e.salida) e.regreso = null;
+  alSiguienteHueco(e);
+  return siguiente(e);
+}
+
 function aplicaEntendido(datos, hoy) {
   if (!datos) return null;
 
@@ -3432,7 +3608,7 @@ function aplicaEntendido(datos, hoy) {
 }
 
 module.exports = {
-  respuestaA, textoDeCotizacion, textoDeSolicitud, aplicaEntendido, mediosDe,
+  respuestaA, textoDeCotizacion, textoDeSolicitud, aplicaEntendido, continuaCon, mediosDe,
   /* Se exportan para poder probarlos solos: son los que leen la frase
      de un jalon, y ahi es donde se han colado los defectos de dinero. */
   leeDeUnJalon, origenDeLaFrase, destinoDeLaFrase, limpiaDestino, esAgencia,

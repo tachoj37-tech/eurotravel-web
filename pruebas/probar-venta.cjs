@@ -391,6 +391,82 @@ okQue('mientras que «Manto» a secas no se encontraría',
 ok('un lugar desconocido se guarda como lo dijo',
   limpio('vamos al rancho de mi tío'), 'El Rancho de Mi Tío');
 
+/* ============================================================
+   CUANDO EL PASO NO LEE LO QUE ESCRIBIÓ · 5-sep-2026
+   ------------------------------------------------------------
+   El dueño, probando como cliente con la IA ya configurada, vio
+   «esa fecha no la entendí» varias veces seguidas. Tres cosas que
+   eran una sola:
+
+   1 · Los pasos de fecha, regreso y destino NO marcaban
+       `noEntendio`, así que la IA —con llave y todo— nunca se
+       enteraba. Solo se marcaba al final del guion.
+   2 · Confesar «no entendí» no vende y suena a máquina.
+   3 · La misma frase dos veces seguidas delata al robot.
+
+   Y una cuarta, que salió de arreglar las tres: a media plática la
+   IA tiene que PEGARSE al estado, no arrancar de cero. Si leyó solo
+   la fecha, el destino y la gente se quedan.
+   ============================================================ */
+titulo('cuando el paso no lee, entra la IA y no se confiesa');
+
+{
+  const e = { paso: 'salida', destino: 'Chapala', gente: 12, unidad: 'sprinter' };
+  const r = bot.respuestaA('el que sigue del puente', e, HOY);
+  ok('fecha ilegible: se le pasa la bola a la IA', !!r.noEntendio, true);
+  ok('  y el paso se conserva', r.estado && r.estado.paso, 'salida');
+  okQue('  sin confesar que no entendió', !/no (la )?entend|no alcanc/i.test(r.texto));
+  okQue('  pero volviendo a pedir la fecha', /fecha|d[ií]a/i.test(r.texto));
+}
+
+{
+  const e = { paso: 'regreso', destino: 'Chapala', gente: 12, unidad: 'sprinter',
+    salida: '2026-09-12' };
+  const r1 = bot.respuestaA('cuando acabe la fiesta', e, HOY);
+  const r2 = bot.respuestaA('pues ya tarde', r1.estado, HOY);
+  ok('regreso ilegible: también a la IA', !!r1.noEntendio, true);
+  okQue('  y el segundo intento NO repite la frase del primero', r1.texto !== r2.texto);
+  okQue('  ninguna de las dos confiesa', !/no (la )?entend/i.test(r1.texto + r2.texto));
+}
+
+{
+  const e = { paso: 'destino', gente: 12, unidad: 'sprinter' };
+  const r = bot.respuestaA('ps', e, HOY);
+  ok('destino ilegible: a la IA', !!r.noEntendio, true);
+  okQue('  sin «no alcancé a leer»', !/no alcanc/i.test(r.texto));
+}
+
+/* El saludo. «Le marcaste» estaba mal: en WhatsApp nadie marca. Y va en
+   tres formas que se turnan por el largo del mensaje. */
+{
+  const vistos = {};
+  ['hola', 'buenas', 'hola buenas tardes'].forEach(function (m) {
+    const r = bot.respuestaA(m, null, HOY);
+    okQue('el saludo a «' + m + '» no dice «marcaste»', !/marcaste/i.test(r.texto));
+    okQue('  y sí dice Eurotravel', /Eurotravel/.test(r.texto));
+    vistos[r.texto.split('\n')[0]] = true;
+  });
+  okQue('y no es siempre la misma frase', Object.keys(vistos).length >= 2);
+}
+
+/* La IA a media plática se PEGA al estado. */
+{
+  const iba = { paso: 'salida', destino: 'Chapala', gente: 12, unidad: 'sprinter' };
+  const r = bot.continuaCon(iba, { salida: '2026-09-12' }, HOY);
+  okQue('con solo la fecha, sigue la conversación', !!(r && r.estado));
+  ok('  y NO tira el destino', r.estado.destino, 'Chapala');
+  ok('  ni la gente', r.estado.gente, 12);
+  ok('  y avanza al siguiente hueco', r.estado.paso === 'salida', false);
+  okQue('  preguntando lo que sigue, no «¿a dónde van?»', !/a d[oó]nde van/i.test(r.texto));
+}
+
+{
+  const iba = { paso: 'regreso', destino: 'Chapala', gente: 12, unidad: 'sprinter',
+    salida: '2026-09-12' };
+  ok('si la IA no trajo nada que pegar, devuelve null y se sigue por el otro camino',
+    bot.continuaCon(iba, { intencion: 'otro' }, HOY), null);
+}
+
 /* ============================================================ */
 titulo('«¿tienes fotos?» · el bot tenía 58 y no sabía');
 

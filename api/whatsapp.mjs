@@ -243,16 +243,30 @@ async function loQueLaIAEntendio(envio) {
   }
   if (!leido) return null;
 
-  /* `aplicaEntendido` es del guion: toma los datos que la IA sacó y
-     arma la respuesta con las frases nuestras. La IA entrega datos;
-     las palabras y los números los pone el guion. R12 y R45.
+  /* La IA entrega datos; las palabras y los numeros los pone el guion.
+     R12 y R45.
 
-     Solo recibe `(datos, hoy)` —igual que en la página—, así que el
-     estado del cliente no se le pasa: lo que devuelve trae su propio
-     estado y ése es el que queda guardado abajo. */
-  let mejor;
+     DOS CAMINOS, segun si ya habia conversacion (5-sep-2026):
+
+       · A media cotizacion —el paso de fecha, regreso o destino no
+         leyo lo que escribio— lo que la IA saco se PEGA al estado que
+         iba con `continuaCon`, sin pisar destino, gente ni unidad. Si
+         se arrancara de cero con `aplicaEntendido`, leer solo una
+         fecha tiraria todo lo demas y el cliente volveria a oir «¿a
+         donde van?». Antes de hoy la IA nunca entraba a media platica,
+         asi que este caso no existia.
+       · Sin conversacion previa, `aplicaEntendido` arma una nueva,
+         igual que en la pagina.
+
+     Si `continuaCon` no pudo pegar nada, se intenta el camino de cero:
+     a lo mejor la IA leyo una intencion (persona, fotos) y no un dato. */
+  const estadoQueIba = envio.estadoDelCliente;
+  let mejor = null;
   try {
-    mejor = conversacion.aplicaEntendido(leido, hoy);
+    if (estadoQueIba && estadoQueIba.paso) {
+      mejor = conversacion.continuaCon(estadoQueIba, leido, hoy);
+    }
+    if (!mejor) mejor = conversacion.aplicaEntendido(leido, hoy);
   } catch (e) {
     console.error('[whatsapp] aplicaEntendido tronó: ' + e.message);
     return null;

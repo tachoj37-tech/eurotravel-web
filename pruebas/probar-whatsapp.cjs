@@ -308,8 +308,13 @@ console.log('\n== NO SE DEJA LLEVAR A UN IMPOSIBLE ==');
 }
 {
   const r = conv.respuestaA('el jueves ese', { paso: 'salida' }, HOY);
+  /* CAMBIÓ EL 5-SEP-2026: ya no se busca «no la entendí» —el bot dejó
+     de confesar—. Lo que se vigila es lo mismo de siempre: que NO
+     invente la fecha (sin `cotiza`, sin `salida`), que vuelva a pedirla,
+     y —nuevo— que le pase la bola a la IA con `noEntendio`. */
   okQue('una fecha que no entiende la vuelve a pedir, no la inventa',
-    !r.cotiza && /no la entendi/i.test(conv.normaliza(r.texto)));
+    !r.cotiza && !(r.estado && r.estado.salida) && /fecha|d[ií]a/i.test(r.texto));
+  okQue('  y avisa que la IA puede intentarlo', r.noEntendio === true);
 }
 {
   const r = conv.respuestaA('9 dias',

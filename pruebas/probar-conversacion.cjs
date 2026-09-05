@@ -118,8 +118,16 @@ titulo('«el 14» dentro de una frase');
   /* Y el candado: un número suelto en medio de una frase NO es una
      fecha. Sin el «el» delante, «somos 12» sería el día 12 y el viaje
      saldría con la fecha de otro mes. */
-  okQue('pero «somos 14» NO es el día 14',
-    /no la entend/i.test(regreso('somos 14 personas').texto));
+  /* CAMBIÓ EL 5-SEP-2026: ya no se comprueba con la frase «no la
+     entendí», porque el bot ya no la dice —confesar no vende—. Lo que
+     de verdad se vigila es que el 14 NO se tome como fecha: el regreso
+     se queda vacío, y como «somos 14» sí trae gente, el guion la
+     absorbe y vuelve a pedir la fecha sin gastar IA. */
+  {
+    const r = regreso('somos 14 personas');
+    okQue('pero «somos 14» NO es el día 14', !(r.estado && r.estado.regreso));
+    okQue('  y se queda pidiendo el regreso', r.estado && r.estado.paso === 'regreso');
+  }
 }
 
 /* ============================================================ */
