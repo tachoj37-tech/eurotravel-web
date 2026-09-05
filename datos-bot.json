@@ -1,0 +1,75 @@
+{
+  "_": "Todo lo que el bot AFIRMA de la empresa sale de aqui. Si un campo dice PENDIENTE, el texto que lo use lleva {{PENDIENTE_*}} y no se aplica hasta que el dueno lo llene. Nada se inventa. Creado 5-sep-2026 al aprobarse la Fase 0.",
+
+  "NOMBRE_BOT": "PENDIENTE",
+  "VENDEDOR_HUMANO": "PENDIENTE",
+  "MINUTOS_RESPUESTA": "PENDIENTE",
+
+  "UNIDADES": [
+    { "id": "sprinter",   "tipo": "Sprinter",              "capacidad": 20, "linea": "Grupos pequeños", "rango_recomendado": "hasta 20", "cotiza_sola": true,  "equipamiento": ["Aire acondicionado", "Asientos reclinables", "Audio", "Pantalla"],                 "argumento_media_linea": "PENDIENTE" },
+    { "id": "suburban",   "tipo": "Suburban",              "capacidad": 6,  "linea": "Ejecutivo",        "rango_recomendado": "hasta 6",   "cotiza_sola": false, "equipamiento": ["Aire acondicionado", "Servicio ejecutivo", "Equipaje", "Chofer"],                  "argumento_media_linea": "PENDIENTE" },
+    { "id": "g8",         "tipo": "Marcopolo Paradiso G8", "capacidad": 51, "linea": "Premium",          "rango_recomendado": "21 a 51",   "cotiza_sola": false, "modelo": 2026, "equipamiento": ["Aire acondicionado", "Baño a bordo", "Asientos reclinables"],      "argumento_media_linea": "PENDIENTE" },
+    { "id": "irizar-i6s", "tipo": "Irizar i6S",            "capacidad": 51, "linea": "Premium",          "rango_recomendado": "21 a 51",   "cotiza_sola": false, "equipamiento": ["Aire acondicionado", "Baño a bordo", "Asientos reclinables", "2 puertas"],  "argumento_media_linea": "PENDIENTE" },
+    { "id": "irizar-i6",  "tipo": "Irizar i6",             "capacidad": 47, "linea": "Premium",          "rango_recomendado": "21 a 47",   "cotiza_sola": false, "equipamiento": ["Aire acondicionado", "Baño a bordo", "Pantallas", "Audio"],                  "argumento_media_linea": "PENDIENTE" },
+    { "id": "neobus",     "tipo": "Neobus",                "capacidad": 50, "linea": "Gran Turismo",     "rango_recomendado": "21 a 50",   "cotiza_sola": false, "equipamiento": ["Aire acondicionado", "Baño a bordo", "Pantallas", "Reclinables"],             "argumento_media_linea": "PENDIENTE" },
+    { "id": "irizar-pb",  "tipo": "Irizar PB",             "capacidad": 47, "linea": "Turismo",          "rango_recomendado": "21 a 47",   "cotiza_sola": false, "equipamiento": ["Aire acondicionado", "Baño a bordo", "Piso alto", "Bodega amplia"],           "argumento_media_linea": "PENDIENTE" },
+    { "id": "irizar",     "tipo": "Irizar Century",        "capacidad": 47, "linea": "Clásico",          "rango_recomendado": "21 a 47",   "cotiza_sola": false, "equipamiento": ["Aire acondicionado", "Baño a bordo", "Asientos reclinables", "Cajuela amplia"], "argumento_media_linea": "PENDIENTE" }
+  ],
+
+  "TEMPORADAS_ALTAS": {
+    "meses": ["marzo", "mayo", "septiembre"],
+    "anticipacion_corta_dias": 30,
+    "_": "Dictado 5-sep-2026: en estos meses, o con 30 dias o menos hasta la salida, el bot NO da por hecho que hay unidad: revisa disponibilidad en el calendario de EuroSystem (proceso autorizado, en construccion)."
+  },
+
+  "PRUEBA_SOCIAL": {
+    "anos_operando": 14,
+    "grupos_por_mes": "NO_SE_USA",
+    "rutas_frecuentes": "PENDIENTE",
+    "tipos_de_cliente": "PENDIENTE",
+    "frases_verificables": "PENDIENTE",
+    "_": "14 anos esta confirmado por el dueno. 'Grupos al mes' se descarto a proposito el 4-sep: es un numero que se despinta."
+  },
+
+  "DATOS_SEGURIDAD": {
+    "seguro_pasajeros": true,
+    "monitoreo_gps": "AFIRMADO_HOY_SIN_CONFIRMAR",
+    "permiso_vigente": "PENDIENTE",
+    "ano_de_unidades": "PENDIENTE",
+    "experiencia_choferes": "PENDIENTE",
+    "_": "El seguro de viajero si esta confirmado. 'Monitoreo GPS 24/7' lo dice hoy el texto de que incluye; hay que confirmarlo o quitarlo."
+  },
+
+  "POLITICA_CANCELACION": "PENDIENTE",
+  "POLITICA_CAMBIO_FECHA": "PENDIENTE",
+
+  "TARIFA_AGENCIA": {
+    "porcentaje": 5,
+    "mecanica": "PENDIENTE",
+    "_": "El dueno dicto 5%. Falta si es descuento sobre precio publico (agencia paga 95 y vende a 100) o comision que se paga despues. Hasta saberlo, el bot nombra el porcentaje y no lo calcula."
+  },
+
+  "FOTOS_UNIDADES": {
+    "sprinter":   { "fotos": 7,  "video": "https://www.youtube.com/watch?v=vOgRwIfsCAo" },
+    "suburban":   { "fotos": 11, "video": null },
+    "neobus":     { "fotos": 8,  "video": "https://www.youtube.com/watch?v=m7t-c0GDTKw" },
+    "irizar-i6s": { "fotos": 7,  "video": "https://www.youtube.com/watch?v=EzYe5KtLzVY" },
+    "irizar-i6":  { "fotos": 7,  "video": "https://www.youtube.com/watch?v=GfHNhM8FIkA" },
+    "irizar-pb":  { "fotos": 6,  "video": "https://www.youtube.com/watch?v=F6UTzxOxIQs" },
+    "irizar":     { "fotos": 6,  "video": "https://www.youtube.com/watch?v=4bUMR2BYDog" },
+    "g8":         { "fotos": 5,  "video": null },
+    "_": "Fotos reales del sitio del dueno, en img/unidades/. Nada generado."
+  },
+
+  "DATOS_EMPRESA": {
+    "nombre_publico": "Eurotravel",
+    "razon_social": "PENDIENTE",
+    "base": "Tlaquepaque, Jalisco",
+    "telefono": "33 2400 2285",
+    "sitio": "https://eurotravel-web.vercel.app",
+    "correo": "PENDIENTE",
+    "incluye_siempre": ["operador", "combustible", "casetas", "seguro de viajero"],
+    "anticipo": "PENDIENTE",
+    "_": "El anticipo se llama 'apartar la fecha'. Su porcentaje o monto no esta aqui: lo pone el motor de cobro."
+  }
+}

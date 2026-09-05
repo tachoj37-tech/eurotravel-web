@@ -1334,6 +1334,35 @@ const COMPARACION = {
 /* Días de servicio contando los dos extremos: salir el 10 y volver el
    12 son tres días. Se arma el Date con NÚMEROS, nunca con el texto:
    `new Date('2026-09-10')` es medianoche UTC, o sea el día anterior. */
+/* ------------------------------------------------------------
+   CUÁNDO HAY QUE MIRAR EL CALENDARIO ANTES DE PROMETER — 5-sep-2026
+   ------------------------------------------------------------
+   Dictado del dueño: «cuando soliciten viaje en septiembre, mayo,
+   [marzo] o con 1 mes de anticipación, solamente necesito que digas
+   que vas a revisar disponibilidad; la intención es que tú veas en
+   el calendario, dependiendo del tipo de unidad».
+
+   Esta función solo decide SI se mira. Mirar es red y vive en la
+   cáscara (`whatsapp.mjs`), que le pregunta a EuroSystem cuántas
+   unidades de ese tipo quedan libres entre esas fechas. Aquí no
+   hay red: por eso se prueba sola y sin mentiras.
+
+   Marzo se queda: el dueño lo confirmó el 5-sep-2026. «Un mes» es
+   30 días o menos entre hoy y la salida. Se compara en ISO, sin
+   construir fechas a mano.
+   ------------------------------------------------------------ */
+const MESES_ALTOS = [3, 5, 9];
+const DIAS_DE_ANTICIPACION_CORTA = 30;
+
+function hayQueRevisarDisponibilidad(salida, hoy) {
+  const s = String(salida || '');
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return false;
+  const mes = Number(s.slice(5, 7));
+  if (MESES_ALTOS.indexOf(mes) !== -1) return true;
+  const d = diasEntre(hoy || hoyISO(), s);
+  return typeof d === 'number' && d >= 0 && d <= DIAS_DE_ANTICIPACION_CORTA;
+}
+
 function diasEntre(desde, hasta) {
   const arma = function (s) {
     return new Date(Number(s.slice(0, 4)), Number(s.slice(5, 7)) - 1, Number(s.slice(8, 10)));
@@ -2113,7 +2142,22 @@ function pasoDeCotizacion(t, crudo, estado, hoy) {
        ------------------------------------------------------------ */
     const esElMismoDia = /\bmismo dia\b|\bese dia\b|\bel mismo\b|\bida y vuelta\b|\bvamos y (nos )?ven|\bsolo un dia\b|\bun solo dia\b/.test(t);
 
-    const f = esElMismoDia && e.salida ? e.salida : fechaDe(crudo, hoy);
+    /* EL REGRESO SE ANCLA A LA SALIDA, NO A HOY — 5-sep-2026
+       Con salida el 20 de noviembre, «regresamos el 22» se leía como el
+       22 de septiembre —el 22 más cercano a hoy— y el bot contestaba «el
+       regreso queda antes de la salida». Cualquier cliente que reserve
+       a más de un mes y conteste con el día suelto caía ahí. `fechaDe`
+       ya resuelve «el N» al N más cercano desde su base: la base
+       correcta para un regreso es la salida. Lo cazó la prueba del
+       calendario de noviembre. */
+    /* SOLO el día suelto se ancla a la salida. Una fecha completa —«5 de
+       septiembre», «5/9»— se lee tal cual desde hoy, y si queda antes de
+       la salida se rechaza abajo, como siempre. Anclarla también a la
+       salida la brincaba un año adelante y la aceptaba en silencio: lo
+       cazó la prueba «no deja regresar antes de salir». */
+    const trajoMesOCompleta = /\b\d{1,2}\s*(?:de\s*)?(?:ene|feb|mar|abr|may|jun|jul|ago|sep|set|oct|nov|dic)[a-z]*\b|\b\d{1,2}[\/-]\d{1,2}\b/.test(t);
+    const base = trajoMesOCompleta ? hoy : (e.salida || hoy);
+    const f = esElMismoDia && e.salida ? e.salida : fechaDe(crudo, base);
     if (!f) {
       const acuse = absorbeLoDemas(e, crudo, hoy);
       if (acuse) return siguiente(e, acuse);
@@ -3609,6 +3653,7 @@ function aplicaEntendido(datos, hoy) {
 
 module.exports = {
   respuestaA, textoDeCotizacion, textoDeSolicitud, aplicaEntendido, continuaCon, mediosDe,
+  hayQueRevisarDisponibilidad,
   /* Se exportan para poder probarlos solos: son los que leen la frase
      de un jalon, y ahi es donde se han colado los defectos de dinero. */
   leeDeUnJalon, origenDeLaFrase, destinoDeLaFrase, limpiaDestino, esAgencia,

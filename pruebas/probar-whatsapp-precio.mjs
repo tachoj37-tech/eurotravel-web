@@ -38,12 +38,17 @@ process.env.WHATSAPP_TOKEN = 'token-de-mentiras';
 process.env.WHATSAPP_PHONE_ID = '111';
 process.env.DUENO_WHATSAPP = '5213311112222';
 process.env.HOY_DE_PRUEBA = '2026-09-03';
+/* La llave con la que el bot le habla a EuroSystem. Sin ella el bot no
+   consulta el calendario y —cerrado a fallos— tampoco promete. */
+process.env.CONTRATOS_API_KEY = 'llave-de-mentiras';
 /* Con clave —de mentiras— para que el camino de la IA se recorra.
    Quien contesta es el `fetch` de abajo, no Anthropic. */
 process.env.ANTHROPIC_API_KEY = 'clave-de-mentiras';
 
 const atiende = (await import(pathToFileURL(path.join(RAIZ, 'api', 'whatsapp.mjs')).href)).default;
 const webhook = (await import(pathToFileURL(path.join(RAIZ, 'api', '_whatsapp-webhook.js')).href)).default;
+/* El guion, para probar sin red la regla de cuándo se mira el calendario. */
+const conversacion = (await import(pathToFileURL(path.join(RAIZ, 'bot.js')).href)).default;
 
 let buenas = 0, malas = 0;
 function ok(que, dio, esperaba) {
@@ -93,8 +98,28 @@ globalThis.fetch = async function (url, opciones) {
     };
   }
 
+  /* El calendario de EuroSystem (5-sep-2026). `calendarioDice` en null
+     finge que EuroSystem está caído; un objeto finge su respuesta. */
+  if (u.indexOf('/api/disponibilidad') !== -1) {
+    llamadasAlCalendario++;
+    ultimaConsultaAlCalendario = u;
+    if (!calendarioDice) return { ok: false, status: 500, text: async function () { return ''; } };
+    return {
+      ok: true, status: 200,
+      json: async function () { return { datos: calendarioDice }; },
+      text: async function () { return ''; }
+    };
+  }
+
   throw new Error('el bot llamó a algo que no debía: ' + u);
 };
+let llamadasAlCalendario = 0;
+let ultimaConsultaAlCalendario = '';
+/* Por defecto hay lugar: las pruebas viejas de precio usan el 12 de
+   septiembre —temporada alta— y sin esto todas caerían en «déjame
+   revisar» en vez de probar el precio. Las pruebas del calendario lo
+   vacían a propósito. */
+let calendarioDice = { libres: 3, total: 4 };
 
 const firma = function (c) {
   return 'sha256=' + crypto.createHmac('sha256', SECRETO)
@@ -262,6 +287,114 @@ await dice('sí', '5213377776666');
   okQue('  y o trae el precio o dice qué sigue',
     /\*Total: \$/.test(ultimo) || /confirm|márcame|marcame|revisar/i.test(ultimo));
 }
+
+/* ============================================================
+   EL CALENDARIO DE EUROSYSTEM ANTES DE PROMETER · 5-sep-2026
+   ------------------------------------------------------------
+   Dictado del dueño: en marzo, mayo, septiembre, o con 30 días o
+   menos de anticipación, el bot NO da por hecho que hay unidad: le
+   pregunta a EuroSystem cuántas quedan libres de ese tipo entre esas
+   fechas. Si dice cero o no contesta, el bot dice que revisa y avisa
+   a una persona. Fuera de eso, no gasta la llamada.
+
+   Lo que se vigila, en orden de qué tan caro sale si falla:
+
+   1 · Que sin lugar (o sin respuesta) NO salga precio ni «¿te la
+       aparto?». Prometer una unidad comprometida es el peor caso.
+   2 · Que el cliente NUNCA vea los números del calendario. «Quedan
+       2» es escasez que el dueño no autorizó a nombrar.
+   3 · Que fuera de temporada y con tiempo NO se llame: cada llamada
+       cuesta y no aporta.
+   4 · Que la regla pura sea la dictada: marzo/mayo/septiembre o ≤30 días.
+   ============================================================ */
+titulo('el calendario de eurosystem antes de prometer');
+
+{
+  const g = conversacion.hayQueRevisarDisponibilidad;
+  okQue('septiembre → se revisa', g('2026-09-20', '2026-09-03'));
+  okQue('marzo → se revisa', g('2027-03-10', '2026-09-03'));
+  okQue('mayo → se revisa', g('2027-05-02', '2026-09-03'));
+  okQue('noviembre a 20 días → se revisa', g('2026-11-01', '2026-10-12'));
+  okQue('noviembre a 60 días → NO se revisa', !g('2026-11-30', '2026-10-01'));
+  okQue('una fecha ilegible → NO se revisa (y no truena)', !g('mañana', '2026-09-03'));
+}
+
+/* Una sola frase no llega al precio: hay que contestar regreso, paseos y
+   confirmar, como en la prueba de arriba. Mismo diálogo, otra fecha. */
+async function cotizaChapala(C, salida, regreso) {
+  await dice('a chapala el ' + salida + ' somos 12, salimos de guadalajara', C);
+  await dice('regresamos el ' + regreso, C);
+  await dice('no vamos a pasear', C);
+  await dice('sí está bien', C);
+}
+
+/* Con lugar: el precio sale como siempre, y sí se consultó. */
+{
+  webhook.olvidaTodo(); mandados = []; llamadasAlCalendario = 0; ultimaConsultaAlCalendario = '';
+  calendarioDice = { libres: 2, total: 4 };
+  const C = '5213366670001';
+  await cotizaChapala(C, '12 de septiembre', '14');
+  const t = textos(C).join('\n');
+  ok('con lugar se consultó UNA vez', llamadasAlCalendario, 1);
+  okQue('  con tipo, salida y regreso en la consulta',
+    /tipo=SPRINTER/.test(ultimaConsultaAlCalendario) && /salida=2026-09-12/.test(ultimaConsultaAlCalendario));
+  okQue('  y el precio salió', /\*Total: \$/.test(t));
+  okQue('  sin decirle al cliente cuántas quedan', !/libres|quedan \d/i.test(t));
+}
+
+/* Sin lugar: NO hay precio, se dice que se revisa, y se avisa a una persona. */
+{
+  webhook.olvidaTodo(); mandados = []; llamadasAlCalendario = 0;
+  calendarioDice = { libres: 0, total: 4 };
+  const C = '5213366670002';
+  await cotizaChapala(C, '12 de septiembre', '14');
+  const alCliente = textos(C).join('\n');
+  const alDueno = textos(process.env.DUENO_WHATSAPP).join('\n');
+  okQue('sin lugar NO sale precio', !/\*Total: \$/.test(alCliente));
+  okQue('  ni «¿te la aparto?»', !/aparto/i.test(alCliente));
+  okQue('  se le dice que se revisa', /revisar disponibilidad/i.test(alCliente));
+  okQue('  sin números del calendario', !/\b0 de 4\b|libres/i.test(alCliente));
+  okQue('  y al dueño le llega el ticket con lo que dijo EuroSystem',
+    /Revisar disponibilidad/.test(alDueno) && /0 de 4 libres/.test(alDueno));
+}
+
+/* EuroSystem caído: se trata igual que sin lugar. Cerrado a fallos. */
+{
+  webhook.olvidaTodo(); mandados = []; llamadasAlCalendario = 0;
+  calendarioDice = null;
+  const C = '5213366670003';
+  await cotizaChapala(C, '12 de septiembre', '14');
+  const alCliente = textos(C).join('\n');
+  okQue('si EuroSystem no contesta, tampoco se promete', !/\*Total: \$/.test(alCliente));
+  okQue('  y se dice que se revisa', /revisar disponibilidad/i.test(alCliente));
+  okQue('  y el ticket dice que no contestó',
+    /no contestó/.test(textos(process.env.DUENO_WHATSAPP).join('\n')));
+}
+
+/* Fuera de temporada y con tiempo: ni se llama. */
+{
+  webhook.olvidaTodo(); mandados = []; llamadasAlCalendario = 0;
+  calendarioDice = null;   // aunque estuviera caído, no importa: no se llama
+  const C = '5213366670004';
+  await cotizaChapala(C, '20 de noviembre', '22');
+  const t = textos(C).join('\n');
+  ok('noviembre a 78 días: cero llamadas al calendario', llamadasAlCalendario, 0);
+  okQue('  y el precio sale normal', /\*Total: \$/.test(t));
+}
+
+/* Sin llave configurada no se consulta — y por eso tampoco se promete. */
+{
+  webhook.olvidaTodo(); mandados = []; llamadasAlCalendario = 0;
+  calendarioDice = { libres: 3, total: 4 };
+  const llave = process.env.CONTRATOS_API_KEY;
+  delete process.env.CONTRATOS_API_KEY;
+  const C = '5213366670005';
+  await cotizaChapala(C, '12 de septiembre', '14');
+  ok('sin llave no se llama', llamadasAlCalendario, 0);
+  okQue('  y cerrado a fallos: no se promete', !/\*Total: \$/.test(textos(C).join('\n')));
+  process.env.CONTRATOS_API_KEY = llave;
+}
+calendarioDice = { libres: 3, total: 4 };
 
 /* ============================================================ */
 console.log('\n' + buenas + ' buenas, ' + malas + ' malas');

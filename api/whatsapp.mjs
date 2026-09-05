@@ -90,7 +90,100 @@ async function transcribeLosAudios(crudo) {
    queda callado, porque el silencio despues de «ahorita te paso
    el precio» es una venta perdida sin rastro.
    ------------------------------------------------------------ */
+/* ------------------------------------------------------------
+   EL CALENDARIO DE EUROSYSTEM — 5-sep-2026
+   ------------------------------------------------------------
+   Antes de prometer una fecha en temporada alta o con 30 dias o
+   menos, se le pregunta a EuroSystem cuantas unidades de ese tipo
+   quedan libres entre esas fechas (`GET /api/disponibilidad`, misma
+   llave servidor-a-servidor que el alta de contratos).
+
+   Falla CERRADA: si el endpoint no contesta, contesta raro o dice
+   cero, el bot NO promete. Dice que revisa y se le avisa a una
+   persona. Es mejor un «dejame revisar» de mas que una unidad
+   prometida que ya esta comprometida — el dueño lo dicto asi.
+
+   Los numeros que devuelve EuroSystem se quedan aqui. Al cliente
+   jamas se le dice «quedan 2»: eso es escasez que el dueño no
+   autorizo a nombrar, y ademas cambia por minuto.
+   ------------------------------------------------------------ */
+const EUROSYSTEM = process.env.EUROSYSTEM_URL || 'https://eurosystem-smoky.vercel.app';
+const ESPERA_CALENDARIO_MS = 4000;
+
+async function disponibilidadDe(tipo, salida, regreso) {
+  const llave = (process.env.CONTRATOS_API_KEY || '').trim();
+  if (!llave || !tipo || !salida) return null;
+  const t = String(tipo).toUpperCase();
+  const u = EUROSYSTEM.replace(/\/+$/, '') + '/api/disponibilidad?tipo=' +
+    encodeURIComponent(t) + '&salida=' + encodeURIComponent(salida) +
+    '&regreso=' + encodeURIComponent(regreso || salida);
+  const corta = new AbortController();
+  const reloj = setTimeout(function () { corta.abort(); }, ESPERA_CALENDARIO_MS);
+  try {
+    const r = await fetch(u, { headers: { 'x-api-key': llave }, signal: corta.signal });
+    if (!r || !r.ok) {
+      console.error('[calendario] EuroSystem contesto ' + (r && r.status));
+      return null;
+    }
+    const c = await r.json();
+    const d = c && (c.datos || c.data || c);
+    if (!d || typeof d.libres !== 'number') return null;
+    return { libres: d.libres, total: d.total };
+  } catch (e) {
+    console.error('[calendario] no se pudo: ' + e.message);
+    return null;
+  } finally {
+    clearTimeout(reloj);
+  }
+}
+
+/* Lo que se le dice al cliente cuando no se puede confirmar la fecha.
+   Es TEXTO y por eso vive en un solo lugar: el dueño lo aprueba o lo
+   cambia con su «va». Sin escasez inventada, sin cifras. */
+const TEXTO_REVISO_DISPONIBILIDAD =
+  'Déjame revisar disponibilidad para esa fecha y te confirmo en un momento.';
+
 async function precioDe(envio) {
+  /* ---- primero el calendario, si toca ---- */
+  const res = envio.resumen || {};
+  const hoy = process.env.HOY_DE_PRUEBA || new Date().toISOString().slice(0, 10);
+  if (conversacion.hayQueRevisarDisponibilidad(res.salida, hoy)) {
+    const cal = await disponibilidadDe(
+      (envio.cotiza && envio.cotiza.unidad) || res.unidad || 'sprinter',
+      res.salida, res.regreso);
+    if (!cal || cal.libres <= 0) {
+      console.error('[calendario] sin confirmar para ' + res.salida +
+        (cal ? ' (libres=' + cal.libres + ')' : ' (sin respuesta)'));
+      tickets.anotaEtapa(envio.para, 'pidio_precio', {});
+      const mios = [{
+        numeroDeOrigen: envio.numeroDeOrigen,
+        para: envio.para,
+        texto: TEXTO_REVISO_DISPONIBILIDAD,
+        pasaAPersona: true,
+        escribio: '[calendario sin confirmar]'
+      }];
+      const dueno = tickets.numeroDelDueno(process.env);
+      if (dueno) {
+        mios.push({
+          numeroDeOrigen: envio.numeroDeOrigen,
+          para: dueno,
+          esTicket: true,
+          sobreCliente: envio.para,
+          texto: '📅 *Revisar disponibilidad*\n\n' +
+            (res.destino ? '📍 ' + res.destino + '\n' : '') +
+            '📅 ' + tickets.comoSeDice(res.salida) +
+            (res.regreso ? ' al ' + tickets.comoSeDice(res.regreso) : '') + '\n' +
+            (cal ? 'EuroSystem dice: ' + cal.libres + ' de ' + cal.total + ' libres'
+              : 'EuroSystem no contestó') + '\n\n' +
+            'Contéstame *este mensaje* y yo se lo paso.\n_cliente: ' + envio.para + '_',
+          pasaAPersona: false,
+          escribio: '[ticket calendario]'
+        });
+      }
+      return mios;
+    }
+  }
+
   let precio = null;
   try {
     const r = await nucleo.cotiza(envio.cotiza, process.env.GOOGLE_ROUTES_KEY);

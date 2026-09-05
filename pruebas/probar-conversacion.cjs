@@ -130,6 +130,38 @@ titulo('«el 14» dentro de una frase');
   }
 }
 
+/* ------------------------------------------------------------
+   EL REGRESO SE ANCLA A LA SALIDA · 5-sep-2026
+   ------------------------------------------------------------
+   Con salida el 20 de noviembre y hoy 2 de septiembre, «regresamos
+   el 22» se leía como el 22 de SEPTIEMBRE —el 22 más cercano a hoy—
+   y el bot decía «el regreso queda antes de la salida». Cualquier
+   reserva a más de un mes con el día suelto caía ahí. Lo cazó la
+   prueba del calendario de noviembre.
+   ------------------------------------------------------------ */
+{
+  const base = { paso: 'regreso', salida: '2026-11-20', unidad: 'sprinter', gente: 12,
+    destino: 'Chapala', origen: 'Guadalajara' };
+  const r22 = bot.respuestaA('regresamos el 22', Object.assign({}, base), HOY);
+  ok('con salida el 20 de noviembre, «el 22» es el 22 de NOVIEMBRE',
+    r22.estado && r22.estado.regreso, '2026-11-22');
+  okQue('  y no dice que queda antes de la salida', !/antes de la salida/i.test(r22.texto));
+
+  const r3 = bot.respuestaA('el 3', Object.assign({}, base), HOY);
+  ok('  y «el 3» brinca al mes siguiente: 3 de diciembre',
+    r3.estado && r3.estado.regreso, '2026-12-03');
+
+  /* El otro lado: una fecha COMPLETA no se ancla a la salida. «5 de
+     septiembre» con salida el 10 es un error del cliente y se le dice;
+     anclarla la brincaba al 2027 y la aceptaba en silencio. */
+  const base2 = Object.assign({}, base, { salida: '2026-09-10' });
+  const r5 = bot.respuestaA('regresamos el 5 de septiembre', Object.assign({}, base2), HOY);
+  okQue('una fecha completa anterior se rechaza, no se brinca de año',
+    /antes de la salida/i.test(r5.texto) && !(r5.estado && r5.estado.regreso));
+  const r59 = bot.respuestaA('5/9', Object.assign({}, base2), HOY);
+  okQue('  también escrita como 5/9', /antes de la salida/i.test(r59.texto));
+}
+
 /* ============================================================ */
 titulo('«el mismo día»');
 

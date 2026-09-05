@@ -283,4 +283,35 @@ Lo único de la empresa que el bot afirma hoy y que sí está confirmado: **14 a
 
 ---
 
+## 7 · Ajuste dictado por el dueño al revisar Fase 0 (5-sep-2026)
+
+> «Cuando soliciten viaje en septiembre, mayo o con 1 mes de anticipación, solamente
+> necesito que digas que vas a revisar disponibilidad. La intención es que tú veas en el
+> calendario, dependiendo del tipo de unidad.»
+
+Son dos cosas pegadas, y se tratan distinto según el mandato:
+
+**7.1 Texto (va al primer lote).** En temporada alta o con ≤30 días de anticipación, el bot
+no da por hecho que hay unidad: dice que revisa disponibilidad. Afecta al menos a T-011/T-012
+(fechas), T-081 (precio), T-086 (apartar) y a toda la bolsa T-123 (recordatorios «tu fecha
+sigue libre»), que hoy afirma disponibilidad sin ver nada.
+
+**7.2 Proceso — SUGERENCIA DE PROCESO (NO APLICADA hasta «va»).** Consultar disponibilidad
+real. La verdad vive en EuroSystem: `Unidad` (con tipo) y los contratos con fechas y unidad
+asignada. Diseño propuesto, sin tocar el esquema:
+
+- EuroSystem: `GET /api/disponibilidad?tipo=<sprinter|suburban|autobus>&salida=AAAA-MM-DD&regreso=AAAA-MM-DD`,
+  solo lectura, llave servidor-a-servidor (como `CONTRATOS_API_KEY`). Contesta cuántas
+  unidades de ese tipo quedan libres en el rango. Pasa por `auditor-seguridad` como todo endpoint.
+- Bot: antes de prometer una fecha en temporada alta o con ≤30 días, llama al endpoint.
+  Si hay → sigue normal. Si no hay o no contesta → «déjame revisar disponibilidad» y ticket
+  a la persona. Nunca inventa; falla cerrado.
+- Recordatorios T-123: solo se mandan cuando el endpoint confirmó que la fecha sigue libre.
+
+**Pendiente de decidir:** si marzo sigue siendo temporada alta (hoy el código dice
+marzo/mayo/septiembre; el dueño mencionó mayo y septiembre), y la definición exacta del
+plazo («un mes» = ≤30 días entre hoy y la salida).
+
+---
+
 **Fin de Fase 0. Espero tu respuesta antes de proponer un solo cambio.**
