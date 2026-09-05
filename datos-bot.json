@@ -2,7 +2,8 @@
   "_": "Todo lo que el bot AFIRMA de la empresa sale de aqui. Si un campo dice PENDIENTE, el texto que lo use lleva {{PENDIENTE_*}} y no se aplica hasta que el dueno lo llene. Nada se inventa. Creado 5-sep-2026 al aprobarse la Fase 0.",
 
   "NOMBRE_BOT": "Eurobot",
-  "VENDEDOR_HUMANO": "PENDIENTE",
+  "VENDEDOR_HUMANO_NOTA": "Dictado del dueño (5-sep-2026): el bot NUNCA nombra a una persona; habla con el cliente por su nombre y las entregas se dicen sin «te paso con Fulano».",
+  "VENDEDOR_HUMANO": "sin nombre",
   "MINUTOS_RESPUESTA": "PENDIENTE",
 
   "UNIDADES": [

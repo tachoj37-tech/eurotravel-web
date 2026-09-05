@@ -336,7 +336,12 @@ plazo («un mes» = ≤30 días entre hoy y la salida).
 
 | ID | Dónde | Cuándo | Texto | Estado |
 |---|---|---|---|---|
-| T-124 | `whatsapp.mjs` `TEXTO_ESPERA_PRECIO` | Cliente terminó de cotizar y la compuerta está cerrada | «Déjame confirmar disponibilidad y te paso el precio en un momento.» | **Pendiente de «va»** (propuesto; sustituye en este caso a T-122) |
+| T-124 | `whatsapp.mjs` `TEXTO_ESPERA_PRECIO` | Cliente terminó de cotizar y la compuerta está cerrada | «Déjame confirmar disponibilidad y te paso el precio en un momento.» | **Aprobado por delegación** («genéralo tú», 5-sep-2026); sustituye en este caso a T-122 |
+
+Datos cerrados el 5-sep-2026: `NOMBRE_BOT = Eurobot`; `VENDEDOR_HUMANO = sin nombre` — el
+bot **nunca nombra a una persona** («no tienes que decirle mi nombre al cliente»): habla con
+el cliente por su nombre y las entregas se dicen sin «te paso con Fulano». Afecta a T-085 y
+T-100 (irán en el primer lote).
 
 El ticket al dueño («💰 *Precio por confirmar* …») es texto hacia adentro, no lo ve el
 cliente: no entra al inventario.
