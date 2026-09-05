@@ -2563,8 +2563,51 @@ function noSeAtore(r, estadoQueEntro) {
   };
 }
 
+/* Lo que se dice queriendo VER la unidad. Vive aparte porque se usa en
+   dos lugares: a media cotización (abajo) y en el bloque de fotos del
+   final. OJO CON LAS FRASES CORTAS Y COMUNES: aquí estuvieron «como es»
+   y «como son», y mandaban fotos a quien preguntaba «¿cómo es el pago?». */
+const PIDE_FOTOS = ['foto', 'fotos', 'fotografia', 'fotografias', 'imagen', 'imagenes',
+  'video', 'videos', 'ensename', 'ensenamela', 'muestrame', 'mandame fotos',
+  'como se ve', 'como es por dentro', 'como son las unidades',
+  'ver la unidad', 'ver el camion', 'ver la sprinter'];
+
 function respuestaBase(mensaje, estado, hoy) {
   const t = normaliza(mensaje);
+
+  /* ------------------------------------------------------------
+     FOTOS A MEDIA COTIZACIÓN — 5-sep-2026
+     ------------------------------------------------------------
+     El dueño, probando como cliente: el bot esperaba el origen, él
+     escribió «quiero fotos», y el bot entendió que salía de un lugar
+     llamado Quiero Fotos. Con la fecha pasa igual: «tienes fotos del
+     autobús?» → «esa fecha no la entendí».
+
+     Es la misma familia del bug de Vallarta de hoy: el paso en curso
+     se traga cualquier texto como respuesta, CON CONFIANZA, así que
+     ni siquiera le pasa la bola a la IA (`noEntendio` queda en
+     falso). El bloque de fotos de abajo existe y funciona — pero solo
+     cuando no hay cotización en curso, que es justo cuando menos se
+     piden.
+
+     Aquí se contesta la pregunta lateral SIN perder el hilo: van las
+     fotos y, pegada, la pregunta que quedó pendiente. El estado no se
+     toca. Va ANTES del paso a propósito: si fuera después, el paso ya
+     se habría comido el texto.
+     ------------------------------------------------------------ */
+  if (estado && estado.paso && tiene(t, PIDE_FOTOS)) {
+    const m = mediosDe(estado.unidad || 'sprinter');
+    if (m) {
+      const p = pregunta(estado);
+      return {
+        texto: m.texto + '\n\n' + p.texto,
+        medios: m,
+        opciones: p.opciones,
+        pasa: false,
+        estado: estado
+      };
+    }
+  }
 
   /* Si va a media cotización, ese paso manda: lo que escriba es la
      respuesta a lo que se le acaba de preguntar, no un tema nuevo.
@@ -2694,13 +2737,9 @@ function respuestaBase(mensaje, estado, hoy) {
      decida cómo enseñarlos. En la página van como imágenes; en
      WhatsApp irán como adjuntos.
      ------------------------------------------------------------ */
-  /* OJO CON LAS FRASES CORTAS Y COMUNES · aquí estuvieron «como es» y
-     «como son», y mandaban fotos a quien preguntaba «¿cómo es el pago?».
-     Se cambiaron por frases que solo se dicen queriendo ver la unidad. */
-  if (tiene(t, ['foto', 'fotos', 'fotografia', 'fotografias', 'imagen', 'imagenes',
-    'video', 'videos', 'ensename', 'ensenamela', 'muestrame', 'mandame fotos',
-    'como se ve', 'como es por dentro', 'como son las unidades',
-    'ver la unidad', 'ver el camion', 'ver la sprinter'])) {
+  /* La lista vive arriba, en `PIDE_FOTOS`, porque también se usa a
+     media cotización. */
+  if (tiene(t, PIDE_FOTOS)) {
     const cual = (estado && estado.unidad) || 'sprinter';
     const m = mediosDe(cual);
     if (m) {

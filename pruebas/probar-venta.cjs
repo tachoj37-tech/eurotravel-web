@@ -413,6 +413,58 @@ okQue('manda 3, no las 7 — una ráfaga larga deja de mirarse',
 okQue('y trae el video', /youtube\.com\/watch/.test(conFotos.medios.video || ''));
 okQue('cierra ofreciendo el precio', /precio de tu viaje/i.test(conFotos.texto));
 
+/* ------------------------------------------------------------
+   FOTOS A MEDIA COTIZACIÓN · 5-sep-2026
+   ------------------------------------------------------------
+   El dueño, probando como cliente: el bot esperaba el origen, él
+   escribió «quiero fotos», y el bot entendió que salía de un lugar
+   llamado Quiero Fotos. Con la fecha igual: «tienes fotos del
+   autobús?» → «esa fecha no la entendí».
+
+   Lo peor no era verse tonto: el paso se tragaba el texto CON
+   CONFIANZA, así que `noEntendio` quedaba en falso y la IA nunca
+   entraba. Ni con la llave de Anthropic se arreglaba.
+
+   Lo que se vigila: que a media plática las fotos salgan, que el
+   hilo NO se pierda —mismo paso, misma pregunta pendiente—, y que
+   «¿cómo es el pago?» siga sin ser una petición de fotos.
+   ------------------------------------------------------------ */
+{
+  /* Esperando la fecha de regreso. */
+  const e = { paso: 'regreso', destino: 'Puerto Vallarta', gente: 45,
+    unidad: 'autobus', salida: '2026-10-20' };
+  const r = bot.respuestaA('quiero fotos', e, HOY);
+
+  okQue('a media cotización, «quiero fotos» manda fotos', !!r.medios);
+  okQue('  y NO lo lee como una fecha', !/fecha no la entend/i.test(r.texto));
+  ok('  el paso NO se pierde', r.estado && r.estado.paso, 'regreso');
+  okQue('  y vuelve a hacer la pregunta pendiente', /regresan/i.test(r.texto));
+  /* «autobus» es una categoría; `mediosDe` la baja a una unidad real y
+     enseña la mejor (Irizar i6S). Lo que importa es que NO enseñe la
+     Sprinter cuando ya se sabe que van 45 en autobús. */
+  okQue('  con un autobús, no la Sprinter', r.medios.unidad !== 'sprinter');
+}
+
+{
+  /* Esperando el origen: el caso exacto del dueño. */
+  const e = { paso: 'origen', destino: 'Chapala', gente: 12, unidad: 'sprinter',
+    salida: '2026-09-12', regreso: '2026-09-12' };
+  const r = bot.respuestaA('tienes fotos del autobus?', e, HOY);
+
+  okQue('esperando el origen, también manda fotos', !!r.medios);
+  ok('  y no inventa un origen llamado «Tienes Fotos»', r.estado && r.estado.origen, undefined);
+  ok('  el paso sigue en origen', r.estado && r.estado.paso, 'origen');
+}
+
+{
+  /* «¿cómo es el pago?» a media cotización NO son fotos: ese caso ya
+     mordió una vez, cuando la lista traía «como es». */
+  const e = { paso: 'regreso', destino: 'Chapala', gente: 12, unidad: 'sprinter',
+    salida: '2026-09-12' };
+  const r = bot.respuestaA('como es el pago?', e, HOY);
+  okQue('«¿cómo es el pago?» a media plática NO manda fotos', !r.medios);
+}
+
 /* LAS RUTAS TIENEN QUE EXISTIR DE VERDAD. Una foto rota en el chat es
    peor que no mandar ninguna. */
 conFotos.medios.fotos.forEach(function (ruta) {
