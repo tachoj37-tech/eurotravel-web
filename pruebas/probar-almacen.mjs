@@ -141,9 +141,21 @@ async function manda(de, msg) {
 }
 const dice = function (de, t) { return manda(de, { type: 'text', text: { body: t } }); };
 
+/* CAMBIÓ EL 5-SEP-2026: se compara por los últimos 10 dígitos, no la
+   cadena entera. El bot ahora manda a los mexicanos como 52 + 10 aunque
+   lleguen como 521 + 10 —Meta lo exige y su lista de destinatarios los
+   guarda así—, y los números de estas pruebas vienen con 521. Es la misma
+   regla que usa `_tickets.mismoNumero` en producción: lo que se vigila es
+   que le llegó a LA MISMA PERSONA, no que la cadena sea idéntica. */
+function mismo(a, b) {
+  const x = String(a || '').replace(/\D/g, '').slice(-10);
+  const y = String(b || '').replace(/\D/g, '').slice(-10);
+  return !!x && x === y;
+}
+
 function textos(para) {
   return mandados
-    .filter(function (m) { return !para || m.to === para; })
+    .filter(function (m) { return !para || mismo(m.to, para); })
     .map(function (m) { return (m.text && m.text.body) || (m.image && m.image.caption) || ''; });
 }
 
@@ -537,7 +549,7 @@ mandados = [];
      y el arreglo se vació arriba: el envío de la posición i trae el
      id `w(i+1)`. Se busca cuál fue para el dueño en vez de asumir que
      fue el último — al cliente también se le contestó. */
-  const iTicket = mandados.findIndex(function (m) { return m.to === DUENO; });
+  const iTicket = mandados.findIndex(function (m) { return mismo(m.to, DUENO); });
   okQue('al dueño le llegó su aviso', iTicket !== -1);
   const idDelTicket = 'w' + (iTicket + 1);
 
@@ -756,7 +768,7 @@ titulo('el modo espía');
   await dice(C, 'a chapala el 12 de septiembre somos 12, salimos de guadalajara');
 
   const i = mandados.findIndex(function (m) {
-    return m.to === DUENO && /👁/.test((m.text && m.text.body) || '');
+    return mismo(m.to, DUENO) && /👁/.test((m.text && m.text.body) || '');
   });
   okQue('hay un espejo que responder', i !== -1);
 
@@ -782,6 +794,56 @@ titulo('el modo espía');
     textos(DUENO).filter(function (t) { return /👁/.test(t); }), []);
 
   delete process.env.ESPIAR;
+}
+
+/* ============================================================
+   EL «1» DE MÉXICO AL MANDAR
+   ------------------------------------------------------------
+   WhatsApp reporta los celulares mexicanos como 521 + 10 dígitos,
+   pero Meta pide mandar a 52 + 10 y así los guarda en su lista de
+   destinatarios. Contestando al 521 crudo, Meta rechazaba con
+   #131030 «no está en la lista de autorizados» aunque sí estuviera.
+
+   Se cazó el 5-sep-2026 en el primer «hola» real: toda la cadena
+   funcionó y se cayó en el último metro por ese dígito.
+   ============================================================ */
+titulo('el «1» de méxico se quita al mandar');
+
+{
+  vercelRecicla();
+  mandados = [];
+  delete process.env.ESPIAR;
+
+  /* Cliente con el 521 viejo, como llega de verdad. */
+  const C = '5213366661234';
+  await dice(C, 'a chapala el 12 de septiembre somos 12, salimos de guadalajara');
+
+  const aEl = mandados.filter(function (m) { return /3366661234$/.test(m.to); });
+  okQue('al cliente sí se le contestó', aEl.length >= 1);
+  ok('  y se le mandó SIN el 1: 52 + 10 dígitos', aEl[0] && aEl[0].to, '523366661234');
+}
+
+{
+  vercelRecicla();
+  mandados = [];
+
+  /* Un número que ya viene con 52 + 10 no se toca. */
+  const C = '523366665678';
+  await dice(C, 'a chapala el 12 de septiembre somos 12, salimos de guadalajara');
+  const aEl = mandados.filter(function (m) { return /3366665678$/.test(m.to); });
+  ok('un 52 + 10 se queda igual', aEl[0] && aEl[0].to, '523366665678');
+}
+
+{
+  vercelRecicla();
+  mandados = [];
+
+  /* Y el dueño, que se escribe con 52 + 10 en DUENO_WHATSAPP, recibe
+     igual: el ticket va al número tal cual. */
+  const C = '5213366669999';
+  await dice(C, 'quiero hablar con alguien');
+  const alDueno = mandados.filter(function (m) { return mismo(m.to, DUENO); });
+  okQue('el ticket al dueño sigue llegando a su 52 + 10', alDueno.length >= 1);
 }
 
 /* ============================================================ */

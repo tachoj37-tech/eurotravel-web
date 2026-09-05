@@ -117,9 +117,19 @@ async function dice(texto, de) {
   }));
 }
 
+/* CAMBIÓ EL 5-SEP-2026: por los últimos 10 dígitos, no la cadena entera.
+   El bot manda a los mexicanos como 52 + 10 aunque lleguen como 521 + 10
+   —Meta lo exige—, y estos números de prueba vienen con 521. Misma regla
+   que `_tickets.mismoNumero`: se vigila que llegó a la misma persona. */
+function mismo(a, b) {
+  const x = String(a || '').replace(/\D/g, '').slice(-10);
+  const y = String(b || '').replace(/\D/g, '').slice(-10);
+  return !!x && x === y;
+}
+
 function textos(para) {
   return mandados
-    .filter(function (m) { return !para || m.to === para; })
+    .filter(function (m) { return !para || mismo(m.to, para); })
     .map(function (m) { return (m.text && m.text.body) || ''; });
 }
 

@@ -677,6 +677,31 @@ async function espeja(envio) {
 }
 
 /* ------------------------------------------------------------
+   EL NUMERO COMO LO QUIERE META
+   ------------------------------------------------------------
+   Mexico tiene un «1» viejo para celulares: WhatsApp reporta al
+   cliente como 521 + 10 digitos en el webhook, pero Meta pide
+   mandar a 52 + 10, y la lista de destinatarios de prueba los
+   guarda asi. Contestando al 521 crudo, Meta buscaba el numero en
+   su lista, no lo encontraba, y rechazaba con #131030 «no esta en
+   la lista de autorizados» — aunque si estuviera.
+
+   Se cazo el 5-sep-2026 en el primer «hola» de verdad: todo el
+   camino funciono —firma, proceso, respuesta— y se cayo en el
+   ultimo metro por ese digito. `_tickets.js` ya sabia que el 52 y
+   el 521 son la misma persona, pero solo para COMPARAR; aqui es
+   para MANDAR, que es donde Meta es estricto.
+
+   Va en un solo lugar, a la salida, para que ninguna otra parte
+   del bot tenga que saber de esto.
+   ------------------------------------------------------------ */
+function numeroParaMeta(n) {
+  const d = String(n == null ? '' : n).replace(/\D+/g, '');
+  if (d.length === 13 && d.indexOf('521') === 0) return '52' + d.slice(3);
+  return d;
+}
+
+/* ------------------------------------------------------------
    MANDAR LA RESPUESTA
    ------------------------------------------------------------
    Si falla, se registra y se sigue: a Meta hay que contestarle
@@ -699,7 +724,7 @@ async function manda(envio) {
       },
       body: JSON.stringify({
         messaging_product: 'whatsapp',
-        to: envio.para,
+        to: numeroParaMeta(envio.para),
         /* ------------------------------------------------------------
            REENVIAR UN MEDIO POR SU ID
            ------------------------------------------------------------
