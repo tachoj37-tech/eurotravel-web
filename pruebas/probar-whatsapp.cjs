@@ -923,6 +923,86 @@ hook.olvidaTodo();
 
 /* Se esperan las de la IA antes de contar. Sin esto el archivo
    terminaria antes de que corrieran y saldria en verde de mentiras. */
+
+/* ============================================================
+   EL CACHÉ DEL PROMPT Y EL COSTO POR LLAMADA · 5-sep-2026
+   ------------------------------------------------------------
+   Autorizado por el dueño como única excepción técnica. Lo que se
+   vigila, en orden de qué tan caro sale si falla:
+
+   1 · Que el bloque estático NO traiga la fecha ni nada del cliente.
+       Una fecha adentro rompe el caché a medianoche para todos, y se
+       paga escritura de caché (1.25×) cada día en vez de lectura (0.1×).
+   2 · Que `cache_control` vaya SOLO en el bloque estático, y que el
+       del día vaya después, fuera.
+   3 · Que el catálogo que se le da a la IA no traiga kilómetros ni
+       precios (R12: lo que no está en el contexto no se puede filtrar).
+   4 · Que la cuenta de dinero cuadre con las tarifas oficiales.
+   ============================================================ */
+console.log('\n== EL CACHE DEL PROMPT Y EL COSTO ==');
+{
+  const capturadas = [];
+  const conUso = function (respuesta, usage) {
+    return function (url, opciones) {
+      capturadas.push(JSON.parse(opciones.body));
+      return Promise.resolve({
+        ok: true, status: 200,
+        json: function () {
+          return Promise.resolve({
+            content: [{ type: 'text', text: JSON.stringify(respuesta) }],
+            usage: usage
+          });
+        }
+      });
+    };
+  };
+  const leido = { intencion: 'cotizar', destino: 'Chapala' };
+
+  pendientes.push(ia.entiende('a chapala pues', {
+    clave: 'x', hoy: HOY, cliente: '5213377778888',
+    pide: conUso(leido, { input_tokens: 60, cache_creation_input_tokens: 1380,
+      cache_read_input_tokens: 0, output_tokens: 90 })
+  }).then(function () {
+    const b = capturadas[0];
+    okQue('el system va en bloques, no en un solo texto', Array.isArray(b.system) && b.system.length === 2);
+    ok('el primer bloque lleva cache_control', b.system[0].cache_control, { type: 'ephemeral' });
+    okQue('  y el segundo NO', !b.system[1].cache_control);
+    okQue('la fecha NO va en el bloque cacheado', !/Hoy es/.test(b.system[0].text));
+    okQue('  va en el del dia, despues', new RegExp('Hoy es ' + HOY).test(b.system[1].text));
+    okQue('los ejemplos usan un año neutro (AAAA), no el de hoy',
+      /AAAA-09-04/.test(b.system[0].text) && !new RegExp(HOY.slice(0, 4) + '-09-04').test(b.system[0].text));
+    okQue('el catalogo de unidades va adentro', /UNIDADES QUE EXISTEN/.test(b.system[0].text));
+    okQue('  y los nombres de destinos tambien', /DESTINOS DE LISTA/.test(b.system[0].text));
+    const catalogo = b.system[0].text.split('UNIDADES QUE EXISTEN')[1] || '';
+    okQue('  pero SIN kilometros ni precios', !/\bkm\b|\$|precio/i.test(catalogo));
+    ok('el modelo sigue siendo Haiku 4.5', b.model, 'claude-haiku-4-5-20251001');
+  }));
+
+  /* Segunda llamada del mismo cliente: el costo se acumula por cliente. */
+  pendientes.push(ia.entiende('y el 12 de octubre', {
+    clave: 'x', hoy: HOY, cliente: '5213377778888',
+    pide: conUso(leido, { input_tokens: 40, cache_creation_input_tokens: 0,
+      cache_read_input_tokens: 1380, output_tokens: 80 })
+  }).then(function () {
+    const t = ia.costoDe('5213377778888');
+    okQue('el costo se acumula por cliente', t && t.llamadas === 2);
+    okQue('  y se ve cuanto se leyo de cache', t && t.lectura === 1380);
+  }));
+
+  /* La cuenta, con las tarifas oficiales: $1 entrada · $1.25 escritura ·
+     $0.10 lectura · $5 salida, por millon. */
+  const usd = ia.costoDeUso({ input_tokens: 60, cache_creation_input_tokens: 1380,
+    cache_read_input_tokens: 0, output_tokens: 90 });
+  ok('la primera llamada (escribe cache) cuesta lo que dice la tarifa',
+    Number(usd.toFixed(6)), Number(((60 * 1 + 1380 * 1.25 + 90 * 5) / 1e6).toFixed(6)));
+  const usd2 = ia.costoDeUso({ input_tokens: 40, cache_read_input_tokens: 1380, output_tokens: 80 });
+  okQue('la segunda (lee cache) sale mas barata', usd2 < usd);
+
+  /* Las instrucciones del contrato llegan como texto: un solo bloque, cacheado. */
+  const c = ia.bloquesDelSistema('instrucciones del contrato', HOY);
+  okQue('instrucciones ajenas en texto = un solo bloque con cache', c.length === 1 && !!c[0].cache_control);
+}
+
 Promise.all(pendientes).then(function () {
   console.log('\n' + buenas + ' buenas, ' + malas + ' malas  (' +
     pendientes.length + ' de ellas esperaron a la IA de mentiras)');

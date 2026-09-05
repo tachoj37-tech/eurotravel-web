@@ -236,7 +236,7 @@ async function loQueLaIAEntendio(envio) {
 
   let leido;
   try {
-    leido = await entendedor.entiende(envio.crudoDelCliente, { hoy: hoy });
+    leido = await entendedor.entiende(envio.crudoDelCliente, { hoy: hoy, cliente: envio.para });
   } catch (e) {
     console.error('[whatsapp] la IA no se pudo: ' + e.message);
     return null;
@@ -334,6 +334,7 @@ async function datosDelContrato(envio) {
   try {
     leido = await entendedor.entiende(envio.crudoDelCliente, {
       hoy: hoy,
+      cliente: envio.para,
       /* Instrucciones DISTINTAS a las de siempre: aquellas leen viajes
          —destino, fechas, cuantos van— y estas leen datos de contrato.
          Con un solo prompt, un «vamos a Vallarta» se leeria como la

@@ -70,7 +70,63 @@ const TOPE_ENTRADA = 500;                     // lo que el cliente escribió, ac
    Y `respuesta` viene acotada a 240 caracteres a propósito: en
    chat, tres líneas se leen y seis se saltan.
    ------------------------------------------------------------ */
+/* ------------------------------------------------------------
+   DOS BLOQUES: LO QUE NO CAMBIA Y LO QUE CAMBIA — 5-sep-2026
+   ------------------------------------------------------------
+   El prompt se parte en dos para que Anthropic pueda CACHEAR el
+   primero. La regla del caché es simple y estricta: se cachea un
+   prefijo que sea idéntico byte por byte entre llamadas. Con «Hoy
+   es 2026-09-05» adentro, el prefijo cambiaba cada día y el caché
+   moría a medianoche.
+
+     · ESTÁTICO  — quién eres, qué extraes, cómo vendes, candados,
+                   el catálogo de unidades y los nombres de los 50
+                   destinos. Idéntico siempre. Lleva `cache_control`.
+     · DEL DÍA   — la fecha de hoy y la regla del año. Va después,
+                   fuera del caché.
+
+   Los ejemplos usan un año neutro a propósito por lo mismo.
+
+   El caché de Haiku 4.5 solo se activa con 4,096 tokens o más de
+   bloque estático (documentación oficial). Hoy este bloque anda en
+   ~1,700: la estructura ya está bien puesta, y se enciende sola el
+   día que entren aquí los marcos de venta, las objeciones y los
+   datos de la empresa. No se rellena con paja para cruzar el
+   umbral — eso sería pagar escrituras de caché por texto inútil.
+
+   El catálogo va SIN kilómetros y SIN precios. La IA jamás debe
+   tener una cifra a la mano: R12, el precio lo pone el motor de
+   cobro, y lo que no está en el contexto no se puede filtrar.
+   ------------------------------------------------------------ */
 function instrucciones(hoy) {
+  return instruccionesEstaticas() + '\n\n' + instruccionesDelDia(hoy);
+}
+
+function instruccionesDelDia(hoy) {
+  return 'Hoy es ' + hoy + '. Si dice un día sin año, entiéndelo del año más ' +
+    'cercano que no haya pasado. En los ejemplos de arriba, AAAA es ese año.';
+}
+
+function catalogoParaLaIA() {
+  let unidades = '', destinos = '';
+  try {
+    const bot = require('../bot.js');
+    unidades = (bot.UNIDADES || []).map(function (u) {
+      return '· ' + u.name + ' — ' + u.cap + ' — ' + u.tag +
+        (u.amen && u.amen.length ? ' — ' + u.amen.join(', ') : '');
+    }).join('\n');
+  } catch (e) { /* sin catálogo la IA sigue; solo sabe menos */ }
+  try {
+    const d = require('./_destinos.js');
+    destinos = (d.DESTINOS || []).map(function (x) { return x.nombre; }).join(' · ');
+  } catch (e) { /* idem */ }
+  return (unidades ? '\n\nUNIDADES QUE EXISTEN (nombre — capacidad — línea — equipamiento):\n' +
+    unidades : '') +
+    (destinos ? '\n\nDESTINOS DE LISTA (para reconocerlos aunque vengan mal escritos):\n' +
+    destinos : '');
+}
+
+function instruccionesEstaticas() {
   return 'Eres el vendedor de Eurotravel, renta de autobuses y Sprinters en ' +
     'Guadalajara. El cliente escribe rápido, con faltas y abreviaturas.\n\n' +
 
@@ -83,8 +139,6 @@ function instrucciones(hoy) {
     '"ocasion":"fiesta|playa|boda|empresa|escolar|peregrinacion|escapada|ciudad",' +
     '"respuesta":string}\n\n' +
 
-    'Hoy es ' + hoy + '. Si dice un día sin año, entiéndelo del año más ' +
-    'cercano que no haya pasado.\n' +
     'NUNCA inventes un dato que el cliente no dijo: si no lo dijo, va null.\n\n' +
 
     'CÓMO VENDES (esto es lo importante):\n' +
@@ -125,17 +179,90 @@ function instrucciones(hoy) {
     'Ejemplos:\n' +
     'lla kiero uan spter 4 sep ida\n' +
     '{"intencion":"cotizar","gente":null,"unidad":"sprinter","destino":null,' +
-    '"origen":null,"salida":"' + hoy.slice(0, 4) + '-09-04","regreso":null,' +
+    '"origen":null,"salida":"AAAA-09-04","regreso":null,' +
     '"soloIda":true,"ocasion":null,"respuesta":null}\n' +
     'nos vamos a tekila el 12 somos 16 de despedida\n' +
     '{"intencion":"cotizar","gente":16,"unidad":"sprinter","destino":"Tequila",' +
-    '"origen":null,"salida":"' + hoy.slice(0, 4) + '-09-12","regreso":null,' +
+    '"origen":null,"salida":"AAAA-09-12","regreso":null,' +
     '"soloIda":false,"ocasion":"fiesta","respuesta":null}\n' +
     'y si se me poncha una llanta en el camino?\n' +
     '{"intencion":"otro","gente":null,"unidad":null,"destino":null,' +
     '"origen":null,"salida":null,"regreso":null,"soloIda":false,' +
     '"ocasion":null,"respuesta":"Va cubierto: el operador reporta y te ' +
-    'mandamos apoyo, tú no te bajas a nada. ¿Para qué fecha lo traes?"}';
+    'mandamos apoyo, tú no te bajas a nada. ¿Para qué fecha lo traes?"}' +
+    catalogoParaLaIA();
+}
+
+/* ------------------------------------------------------------
+   LOS BLOQUES DEL SISTEMA, CON EL CACHÉ PUESTO
+   ------------------------------------------------------------
+   Anthropic cachea por prefijo idéntico. El primer bloque lleva
+   `cache_control` y no cambia nunca; el segundo trae la fecha y va
+   después. Si alguien mete algo del cliente en el primero —su
+   nombre, su destino— rompe el caché para todos: por eso los
+   bloques se arman aquí y en ningún otro lado.
+
+   Las instrucciones del contrato (`_datos-contrato.js`) llegan
+   como texto y no traen fecha: van enteras como bloque estático.
+   ------------------------------------------------------------ */
+function bloquesDelSistema(instruccionesAjenas, hoy) {
+  if (Array.isArray(instruccionesAjenas)) return instruccionesAjenas;
+  if (typeof instruccionesAjenas === 'string' && instruccionesAjenas) {
+    return [{ type: 'text', text: instruccionesAjenas,
+      cache_control: { type: 'ephemeral' } }];
+  }
+  return [
+    { type: 'text', text: instruccionesEstaticas(), cache_control: { type: 'ephemeral' } },
+    { type: 'text', text: instruccionesDelDia(hoy) }
+  ];
+}
+
+/* ------------------------------------------------------------
+   CUÁNTO CUESTA CADA LLAMADA, Y CADA CONVERSACIÓN
+   ------------------------------------------------------------
+   Tarifas de Haiku 4.5 (documentación oficial, 5-sep-2026), por
+   millón de tokens: entrada $1 · escritura de caché $1.25 ·
+   lectura de caché $0.10 · salida $5.
+
+   Se apunta en el registro por llamada —para ver en Vercel si el
+   caché de verdad se lee (`cache_lectura` > 0)— y se acumula por
+   cliente con tope, para el tablero. Sin `usage` no se apunta
+   nada: mejor un hueco que una cifra inventada.
+   ------------------------------------------------------------ */
+const TARIFA = { entrada: 1.00, escritura: 1.25, lectura: 0.10, salida: 5.00 };
+const TOPE_CLIENTES_CON_COSTO = 500;
+const costoPorCliente = new Map();
+
+function costoDeUso(u) {
+  const n = function (v) { return Number(v) || 0; };
+  return (n(u.input_tokens) * TARIFA.entrada +
+    n(u.cache_creation_input_tokens) * TARIFA.escritura +
+    n(u.cache_read_input_tokens) * TARIFA.lectura +
+    n(u.output_tokens) * TARIFA.salida) / 1e6;
+}
+
+function apuntaElCosto(usage, cliente) {
+  if (!usage || typeof usage !== 'object') return null;
+  const usd = costoDeUso(usage);
+  console.log('[ia] entrada=' + (usage.input_tokens || 0) +
+    ' cache_escritura=' + (usage.cache_creation_input_tokens || 0) +
+    ' cache_lectura=' + (usage.cache_read_input_tokens || 0) +
+    ' salida=' + (usage.output_tokens || 0) +
+    ' usd=' + usd.toFixed(5));
+  if (cliente) {
+    const k = String(cliente).replace(/\D+/g, '').slice(-10);
+    const t = costoPorCliente.get(k) || { llamadas: 0, usd: 0, lectura: 0 };
+    t.llamadas += 1; t.usd += usd; t.lectura += Number(usage.cache_read_input_tokens) || 0;
+    costoPorCliente.set(k, t);
+    while (costoPorCliente.size > TOPE_CLIENTES_CON_COSTO) {
+      costoPorCliente.delete(costoPorCliente.keys().next().value);
+    }
+  }
+  return usd;
+}
+
+function costoDe(cliente) {
+  return costoPorCliente.get(String(cliente || '').replace(/\D+/g, '').slice(-10)) || null;
 }
 
 /* Deja pasar solo lo que se entiende y con la forma correcta. Lo que
@@ -286,7 +413,7 @@ async function entiende(mensaje, opciones) {
            modelo, el mismo tope y el mismo «si falla, null». Un solo
            lugar por donde se le habla al modelo.
            ------------------------------------------------------------ */
-        system: o.instrucciones || instrucciones(hoy),
+        system: bloquesDelSistema(o.instrucciones, hoy),
         messages: [{ role: 'user', content: texto }]
       })
     });
@@ -296,6 +423,7 @@ async function entiende(mensaje, opciones) {
       return null;
     }
     const cuerpo = await r.json();
+    apuntaElCosto(cuerpo && cuerpo.usage, o.cliente);
     const dijo = cuerpo && cuerpo.content && cuerpo.content[0] && cuerpo.content[0].text;
     /* `crudo` devuelve el JSON sin pasarlo por `limpia`, que solo conoce
        los campos de un viaje y tiraría los de un contrato por no
@@ -311,5 +439,8 @@ async function entiende(mensaje, opciones) {
 }
 
 module.exports = {
-  entiende, limpia, sacaJSON, instrucciones, respuestaSegura, MODELO
+  entiende, limpia, sacaJSON, instrucciones, respuestaSegura, MODELO,
+  /* Para probar la forma de la llamada y el costo sin red. */
+  instruccionesEstaticas, instruccionesDelDia, bloquesDelSistema,
+  costoDeUso, costoDe, TARIFA
 };

@@ -79,7 +79,14 @@ globalThis.fetch = async function (url, opciones) {
   }
   if (u.indexOf('api.anthropic.com') !== -1) {
     llamadasALaIA++;
-    instruccionesQueLlegaron = cuerpo.system || '';
+    /* CAMBIÓ EL 5-SEP-2026: `system` ya no es un texto sino una lista de
+       bloques —el primero con `cache_control`, para el caché del prompt—.
+       Lo que esta prueba vigila no cambió: que a esta etapa lleguen las
+       instrucciones de CONTRATO y no las de viajes. Se juntan los textos
+       de los bloques para poder buscar en ellos como antes. */
+    instruccionesQueLlegaron = Array.isArray(cuerpo.system)
+      ? cuerpo.system.map(function (b) { return b.text || ''; }).join('\n')
+      : (cuerpo.system || '');
     if (!laIADice) return { ok: false, status: 500, text: async function () { return ''; } };
     return {
       ok: true, status: 200,
