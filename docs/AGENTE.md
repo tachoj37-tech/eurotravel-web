@@ -235,8 +235,8 @@ Lo que cada una devuelve va como JSON en el `tool_result`.
    "type": "object",
    "properties": {
     "telefono": { "type": "string" },
-    "tipo": { "type": "string", "enum": ["contrato", "comprobante_abono", "foto_unidad", "video_unidad", "resumen_reenviable"] },
-    "referencia": { "type": "string", "description": "folio, reserva_id, cotizacion_id o clave de unidad, según el tipo" }
+    "tipo": { "type": "string", "enum": ["contrato", "comprobante_abono", "foto_unidad", "video_unidad", "resumen_reenviable", "datos_de_pago"] },
+    "referencia": { "type": "string", "description": "folio, reserva_id, cotizacion_id o clave de unidad, según el tipo. Para datos_de_pago: la cotizacion_id o reserva_id; salen la ficha bancaria como imagen y la CLABE sola, como hoy." }
    },
    "required": ["telefono", "tipo", "referencia"]
   }
@@ -569,7 +569,7 @@ el historial de mensajes: eso va aparte, últimos 12 mensajes.
 | Cotización abierta | cliente vuelve | Retoma con nombre + destino + fecha + pax + precio; no repregunta |
 | | sin respuesta | Toques 24 h / 3 d / 7 d; 60 d último mensaje honesto; 90 d `expirada` (vigencia del precio: 69 d) |
 | | cambio | `actualizar_cotizacion` + `cotizar(cotizacion_id)` |
-| Precio dado, quiere apartar | «va, ¿cómo aparto?» | Anticipo (20 %, a $500 arriba), datos oficiales de pago o `crear_link_pago`; recordatorios 24 h y 72 h si no llega el comprobante |
+| Precio dado, quiere apartar | «va, ¿cómo aparto?» | Anticipo (20 %, a $500 arriba) + `enviar_documento(datos_de_pago)`: la ficha bancaria como imagen y la CLABE sola; recordatorios 24 h y 72 h si no llega el comprobante |
 | Comprobante recibido | foto o «ya deposité» | `registrar_abono_reportado` → te llega a ti; el bot le dice que en cuanto se valide le confirma y le manda su contrato |
 | Anticipo autorizado | tú lo registras en EuroSystem (logística o ficha) → aviso al bot | Mensaje inmediato: monto, saldo, límite, «de aquí en adelante yo te voy avisando»; **promete el contrato y pide lo que falte** (nombre, dirección, hora) → `generar_contrato` → `enviar_documento(contrato)` con folio y PDF |
 | Abonando | salida − 30/15/5 d con saldo | Plantilla de saldo, como recomendación («para que Vallarta quede sin pendientes»), recordando que también puede liquidar al abordar; nunca como vencimiento; ofrece `crear_link_pago` |
@@ -768,7 +768,7 @@ Se preguntan una por una. Van a `datos-bot.json` (y al bloque cacheado).
 | 2 | Política de cancelación | **Dictada el 6-sep-2026:** cargo del 20 % si cancela con un mes de anticipación, 40 % con una semana, 100 % el mismo día o 24 h antes. (Supuesto: porcentaje del total del viaje.) **Con compuerta, como el precio:** el agente arma el mensaje con la política, te lo manda como ticket, y sale solo con tu «va» o con el texto que contestes. Sin tu respuesta no manda nada | Ticket al dueño + `pasar_a_humano` con `solicitud_armada` |
 | 2b | Cambio de fecha | sin política dictada: el bot la pasa contigo (5-sep) | `pasar_a_humano` |
 | 3 | Liquidación | **Dictada el 6-sep-2026:** no hay fecha límite. El primer abono (apartar) lo antes posible «porque se llena, y así aparta la fecha»; ya con contrato, el resto **lo puede ir abonando o liquidar al abordar**. Los recordatorios de saldo se anclan a la SALIDA (30, 15 y 5 días antes), como recomendación que también recuerda que puede liquidar el día del viaje; nunca como vencimiento | `recordatorios`, texto del agente |
-| 4 | Datos de pago oficiales (razón social, RFC, banco, cuenta/CLABE empresarial, si Stripe sigue) | pendiente (hoy el bot manda `CLABE` de Vercel) | `crear_link_pago`, prueba de legitimidad |
+| 4 | Datos de pago oficiales | **Ya existen (6-sep-2026):** la ficha bancaria como imagen (`img/ficha-bancaria.png`) y la CLABE sola en un segundo mensaje, desde `CLABE` en Vercel. Se queda así: `enviar_documento(tipo: 'datos_de_pago')` manda los dos mensajes; `crear_link_pago` (Stripe) queda como opción, no como camino normal | `enviar_documento`, prueba de legitimidad |
 | 5 | Teléfono de guardia | pendiente | `pasar_a_humano(guardia)`, aviso 72 h antes |
 | ~~6~~ | ~~Vendedores para el round robin~~ | sin panel: quien atiende eres tú | — |
 
