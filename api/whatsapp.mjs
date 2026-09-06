@@ -1531,7 +1531,20 @@ async function atiende(a) {
   return atiendeInterno(a, b, { rutaSecreta: true });
 }
 
+/* Una vez por instancia: si el almacén no está, la memoria del bot muere con
+   la instancia y el agente «olvida» la plática. Que se lea en el registro sin
+   adivinar. Sin secretos: solo sí o no. */
+let avisoDeAlmacenDado = false;
+function avisaEstadoDelAlmacen() {
+  if (avisoDeAlmacenDado) return;
+  avisoDeAlmacenDado = true;
+  console.log(almacen.hayAlmacen()
+    ? '[almacen] conectado: la memoria sobrevive a la instancia'
+    : '[almacen] SIN CONFIGURAR (faltan ALMACEN_URL o ALMACEN_CLAVE): la memoria vive solo en esta instancia');
+}
+
 async function atiendeInterno(a, b, opciones) {
+  avisaEstadoDelAlmacen();
   const marcaDePuerta = { RUTA_SECRETA_OK: (opciones && opciones.rutaSecreta) ? '1' : '' };
   const esWeb = a && typeof a.arrayBuffer === 'function' &&
     a.headers && typeof a.headers.get === 'function';
