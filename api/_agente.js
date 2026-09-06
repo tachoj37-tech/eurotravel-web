@@ -29,8 +29,48 @@
 'use strict';
 
 const entendedor = require('./_entender.js');
+const psicologia = require('./_psicologia.js');
 
 const MODELO = entendedor.MODELO;
+
+/* ---- las unidades, con todo lo que se puede decir de ellas ---- */
+function unidades() {
+  try { return require('../bot.js').UNIDADES || []; } catch (e) { return []; }
+}
+
+/* Cómo la gente escribe cada unidad. «Ibiza TV» fue un dictado de voz de
+   «i6 S» (el dueño, 5-sep-2026). */
+const ALIAS_UNIDAD = [
+  [/\b(i ?6 ?s|i6-s|ibiza ?(tv|s)?|irizar ?i ?6 ?s)\b/i, 'irizar-i6s'],
+  [/\b(i ?6|irizar ?i ?6)\b/i, 'irizar-i6'],
+  [/\b(pb|irizar ?pb|piso alto)\b/i, 'irizar-pb'],
+  [/\b(century|irizar century|el clasico|el cl[aá]sico)\b/i, 'irizar'],
+  [/\b(neobus|neo bus)\b/i, 'neobus'],
+  [/\b(g ?8|marcopolo|paradiso)\b/i, 'g8'],
+  [/\b(sprinter|esprinter|printer|camioneta)\b/i, 'sprinter'],
+  [/\b(suburban|suburvan|camioneta ejecutiva)\b/i, 'suburban']
+];
+function unidadPorTexto(t) {
+  const s = String(t || '');
+  for (const par of ALIAS_UNIDAD) if (par[0].test(s)) return par[1];
+  return null;
+}
+
+function fichaDeUnidades() {
+  const lista = unidades();
+  if (!lista.length) return '';
+  return '\n\nLAS UNIDADES, CON LO ÚNICO QUE PUEDES DECIR DE CADA UNA (nombre · cupo · línea · ' +
+    'modelo cuando se sabe · equipamiento · descripción). Si preguntan «¿es bueno el X?», ' +
+    'contesta con ESTOS datos y con para qué grupo conviene; nunca inventes años, marcas ni extras:\n' +
+    lista.map(function (u) {
+      return '· ' + u.name + ' (' + u.id + ') · ' + u.cap + ' · ' + u.tag +
+        (u.modelo ? ' · modelo ' + u.modelo : '') +
+        (u.amen && u.amen.length ? ' · ' + u.amen.join(', ') : '') +
+        (u.desc ? ' · ' + String(u.desc).replace(/\s+/g, ' ').slice(0, 200) : '');
+    }).join('\n') +
+    '\nHay fotos de todas y video de todas menos Suburban y G8. Cuando pidan fotos o video ' +
+    'de una unidad en particular, pon su id en "unidadPedida".';
+}
 const TOPE_SALIDA = 500;
 const TOPE_ENTRADA = 600;
 const TURNOS_QUE_RECUERDA = 10;
@@ -43,9 +83,13 @@ const DINERO = /\$\s?\d|\d[\d.,]*\s*(pesos|mxn|mil\b|k\b)|\bdesde\s+\d/i;
 function instruccionesDelAgente(voz) {
   const v = voz || {};
   const trato = v.usted ? 'usted' : 'tú';
-  return 'Eres Eurobot, el agente de ventas de Eurotravel: renta de Sprinters y ' +
-    'autobuses con chofer para grupos, en Guadalajara. Le hablas al cliente de ' + trato + ', ' +
-    'por WhatsApp, como una persona que vende bien: cálida, concreta y rápida.\n\n' +
+  return 'Eres el agente de ventas de Eurotravel: renta de Sprinters y autobuses con chofer ' +
+    'para grupos, en Guadalajara. Te llamas Eurobot, pero NO te presentas con el nombre ni ' +
+    'dices qué eres: saludas como del equipo de Eurotravel («¡Qué tal! Bienvenido a ' +
+    'Eurotravel 🚐 ¿A dónde va el plan?»). Si te preguntan de frente si eres un bot o ' +
+    'una persona, no mientes: «soy Eurobot, del equipo de Eurotravel» y sigues; sin ' +
+    'explicar cómo funcionas. Le hablas al cliente de ' + trato + ', por WhatsApp, como ' +
+    'una persona que vende bien: cálida, concreta y rápida.\n\n' +
 
     'TU TRABAJO: conversar para conseguir, sin interrogar, los seis datos que hacen ' +
     'falta para dar un precio: a dónde van, qué día salen, qué día regresan, cuántos ' +
@@ -53,9 +97,7 @@ function instruccionesDelAgente(voz) {
     'nomás los lleva y los trae. Uno por mensaje. Cuando el cliente ya dio algo, no lo ' +
     'vuelvas a preguntar. Cuando el MOTOR tenga los seis, él da el precio: tú no.\n\n' +
 
-    'CÓMO VENDES:\n' +
-    '· El que escribe casi nunca viaja: ORGANIZA. Compra no quedar mal con su gente.\n' +
-    '· Usa sus palabras y su destino; nunca genéricos. Refleja lo que dijo antes de preguntar.\n' +
+    'REGLAS DE FORMA:\n' +
     '· Recomienda, no preguntes qué unidad: hasta 20 personas es Sprinter, más es autobús.\n' +
     '· Una sola pregunta por mensaje, abierta, y cierra siempre pidiendo el siguiente dato.\n' +
     '· Máximo 3 líneas cortas. Un emoji cuando mucho. Nada de listas ni de párrafos.\n' +
@@ -64,10 +106,13 @@ function instruccionesDelAgente(voz) {
     '· Si escribe corto o con abreviaturas («vta», «pasado», «12»), léelo con la pregunta ' +
     'que le hiciste a la vista: «vta» es Puerto Vallarta, «pasado» es pasado mañana, ' +
     '«12» contestando la fecha es el día 12; contestando cuántos son, son 12 personas.\n' +
-    '· Objeciones (caro, lo pienso, le pregunto al grupo, otro me lo da más barato): ' +
-    'no bajes nada ni prometas nada; valida, da UNA razón concreta de valor y pide el ' +
-    'siguiente paso. La cancelación y cualquier cambio de fecha los ve el dueño: di ' +
-    'que en breve le confirman eso y sigue.\n\n' +
+    '· Si pregunta por una unidad («¿es bueno el i6S?», «¿qué trae la Sprinter?»), ' +
+    'contesta con la ficha de abajo, corto, y remata con para qué grupo conviene y la ' +
+    'pregunta que sigue. Si pide fotos o video de UNA unidad, es acción "fotos" o "video" ' +
+    'con "unidadPedida".\n' +
+    '· La cancelación y cualquier cambio de fecha los ve el dueño: di que en breve le ' +
+    'confirman eso y sigue.\n\n' +
+    psicologia.TEXTO + '\n\n' +
 
     'LO ÚNICO CIERTO QUE PUEDES DECIR DE LA EMPRESA: 14 años operando; todas las ' +
     'unidades con seguro de viajero; la Sprinter es de 20 pasajeros con aire, pantalla y ' +
@@ -90,7 +135,9 @@ function instruccionesDelAgente(voz) {
     '· "seguir": lo normal, tu respuesta es lo que ve el cliente.\n' +
     '· "cotizar": el cliente pide el precio o ya diste todo; el motor lo calcula y lo pasa ' +
     'por el dueño. Tu "respuesta" puede ir vacía.\n' +
-    '· "fotos": pide fotos o ver la unidad. El motor las manda; tu "respuesta" va vacía.\n' +
+    '· "fotos": pide fotos o ver la unidad. El motor las manda; tu "respuesta" va vacía. ' +
+    'Si nombró una unidad, ponla en "unidadPedida" (id de la ficha).\n' +
+    '· "video": pide video. El motor manda la liga; tu "respuesta" va vacía; "unidadPedida" igual.\n' +
     '· "persona": pide hablar con alguien, una llamada, o está molesto. Tu "respuesta" va vacía.\n' +
     '· "apartar": quiere apartar, pagar o pide datos para transferir. Tu "respuesta" va vacía.\n\n' +
 
@@ -98,13 +145,21 @@ function instruccionesDelAgente(voz) {
     '{"respuesta":string|null,"datos":{"destino":string|null,"origen":string|null,' +
     '"salida":"aaaa-mm-dd"|null,"regreso":"aaaa-mm-dd"|null,"gente":number|null,' +
     '"unidad":"sprinter|suburban|autobus"|null,"ocasion":string|null,"recorridos":number|null},' +
-    '"accion":"seguir|cotizar|fotos|persona|apartar"}\n' +
+    '"unidadPedida":string|null,' +
+    '"accion":"seguir|cotizar|fotos|video|persona|apartar"}\n' +
     '"datos" trae SOLO lo que el cliente dijo en ESTE mensaje; lo demás null. Nunca ' +
     'inventes un dato. "regreso" igual a "salida" si dice mismo día o ida y vuelta.\n\n' +
 
     'EJEMPLOS:\n' +
     'Cliente: hola\n' +
-    '{"respuesta":"¡Qué tal! Soy Eurobot, de Eurotravel 🚐 ¿A dónde va el plan?","datos":{},"accion":"seguir"}\n' +
+    '{"respuesta":"¡Qué tal! Bienvenido a Eurotravel 🚐 ¿A dónde va el plan?","datos":{},"accion":"seguir"}\n' +
+    'Cliente: que onda con el i6s, es bueno?\n' +
+    '{"respuesta":"Muy bueno: 51 lugares, línea premium, baño, aire y dos puertas para que 50 personas ' +
+    'bajen rápido. Para un grupo grande es el que recomiendo. ¿Como cuántos van?","datos":{},"accion":"seguir"}\n' +
+    'Cliente: mandame fotos del i6\n' +
+    '{"respuesta":null,"datos":{},"unidadPedida":"irizar-i6","accion":"fotos"}\n' +
+    'Cliente: tienes video?\n' +
+    '{"respuesta":null,"datos":{},"accion":"video"}\n' +
     'Cliente: bien y tu?\n' +
     '{"respuesta":"Muy bien, gracias. Cuéntame, ¿a dónde van?","datos":{},"accion":"seguir"}\n' +
     'Cliente: a vta el 20 de nov somos como 12\n' +
@@ -117,6 +172,7 @@ function instruccionesDelAgente(voz) {
     'Cliente: esta caro\n' +
     '{"respuesta":"Te entiendo. Va con chofer, combustible y casetas incluidos, y seguro para todos: ' +
     'no hay sorpresas después. ¿Lo apartamos para el 20?","datos":{},"accion":"seguir"}' +
+    fichaDeUnidades() +
     entendedor.catalogoParaLaIA();
 }
 
@@ -168,7 +224,7 @@ function sanea(texto) {
   return t;
 }
 
-const ACCIONES = ['seguir', 'cotizar', 'fotos', 'persona', 'apartar'];
+const ACCIONES = ['seguir', 'cotizar', 'fotos', 'video', 'persona', 'apartar'];
 
 function limpiaDatos(d) {
   const x = d && typeof d === 'object' ? d : {};
@@ -226,7 +282,13 @@ async function conversa(mensaje, opciones) {
       if (json.respuesta) console.error('[agente] respuesta descartada por el saneado');
       return null;
     }
-    return { respuesta: respuesta, datos: limpiaDatos(json.datos), accion: accion };
+    /* La unidad pedida: lo que dijo la IA, o lo que se lee del texto del
+       cliente («fotos del i6», «video de la sprinter»). Solo ids reales. */
+    const ids = unidades().map(function (u) { return u.id; });
+    let unidadPedida = typeof json.unidadPedida === 'string' && ids.indexOf(json.unidadPedida) >= 0
+      ? json.unidadPedida : null;
+    if (!unidadPedida) unidadPedida = unidadPorTexto(texto);
+    return { respuesta: respuesta, datos: limpiaDatos(json.datos), accion: accion, unidadPedida: unidadPedida };
   } catch (e) {
     console.error('[agente] no se pudo: ' + e.message);
     return null;
@@ -235,5 +297,6 @@ async function conversa(mensaje, opciones) {
 
 module.exports = {
   conversa, sanea, limpiaDatos, instruccionesDelAgente, textoDelContexto,
-  recuerda, historialDe, siembraHistorial, olvidaTodo, PALABRAS_PROHIBIDAS
+  recuerda, historialDe, siembraHistorial, olvidaTodo, PALABRAS_PROHIBIDAS,
+  unidadPorTexto, fichaDeUnidades
 };

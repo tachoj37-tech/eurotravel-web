@@ -171,6 +171,32 @@ titulo('las acciones salen por el motor');
 }
 
 /* ============================================================ */
+titulo('fotos y video de LA unidad que piden (5-sep-2026)');
+{
+  limpia();
+  const C = '5213366670206';
+  laIA = function (t) {
+    if (/fotos del i6\b/i.test(t)) return { respuesta: null, datos: {}, unidadPedida: 'irizar-i6', accion: 'fotos' };
+    if (/video/i.test(t)) return { respuesta: null, datos: {}, accion: 'video' };
+    if (/ibiza tv/i.test(t)) return { respuesta: 'El i6S es de los buenos: 51 lugares, premium, baño y dos puertas. ¿Como cuántos van?', datos: {}, accion: 'seguir' };
+    return { respuesta: 'Va. ¿A dónde van?', datos: {}, accion: 'seguir' };
+  };
+  await dice('que onda con el ibiza tv, es bueno?', C);
+  okQue('la pregunta por la unidad la contesta la IA con datos', /51 lugares/.test(textos(C).slice(-1)[0] || ''));
+  mandados = [];
+  await dice('mandame fotos del i6', C);
+  const fotos = mandados.filter((m) => mismo(m.to, C) && m.type === 'image').map((m) => (m.image && m.image.link) || '');
+  ok('«fotos del i6»: llegan hasta 3 fotos', fotos.length, 3);
+  okQue('  y son del i6, no del i6S', fotos.every((f) => /\/irizar-i6\//.test(f)) && !fotos.some((f) => /i6s/.test(f)));
+  /* El pie viaja DENTRO de la imagen (caption), no como texto aparte. */
+  okQue('  con pie que nombra la unidad', mandados.some((m) => mismo(m.to, C) && m.image && /Irizar i6/.test(m.image.caption || '')));
+  mandados = [];
+  await dice('tienes video de esa?', C);
+  okQue('«video»: llega la liga de YouTube', /youtube\.com\/watch/.test(textos(C).join('\n')));
+  okQue('  y no vuelve a mandar las mismas fotos', !mandados.some((m) => mismo(m.to, C) && m.type === 'image'));
+}
+
+/* ============================================================ */
 titulo('con el agente apagado, todo sigue como antes');
 {
   limpia();

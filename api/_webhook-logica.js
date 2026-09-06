@@ -45,7 +45,8 @@
 
 const firma = require('./_firma-stripe');
 
-const EUROSYSTEM = process.env.EUROSYSTEM_URL || 'https://eurosystem-smoky.vercel.app';
+// El dominio definitivo de EuroSystem (dictado del dueño, 5-sep-2026); la dirección vieja redirige.
+const EUROSYSTEM = process.env.EUROSYSTEM_URL || 'https://eurosystem.site';
 const PUERTA = '/api/contratos/externo';
 /* La puerta de reversas. TODAVIA NO EXISTE en EuroSystem: esta pedida en
    docs/superpowers/specs/2026-08-25-abonos-en-linea-design.md. Mientras no

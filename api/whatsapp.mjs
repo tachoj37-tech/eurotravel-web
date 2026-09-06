@@ -112,7 +112,10 @@ async function transcribeLosAudios(crudo) {
    jamas se le dice «quedan 2»: eso es escasez que el dueño no
    autorizo a nombrar, y ademas cambia por minuto.
    ------------------------------------------------------------ */
-const EUROSYSTEM = process.env.EUROSYSTEM_URL || 'https://eurosystem-smoky.vercel.app';
+/* El dominio definitivo de EuroSystem (dictado del dueño, 5-sep-2026). La
+   dirección vieja de Vercel redirige, pero una redirección entre dominios
+   tira cabeceras: se va directo. */
+const EUROSYSTEM = process.env.EUROSYSTEM_URL || 'https://eurosystem.site';
 const ESPERA_CALENDARIO_MS = 4000;
 
 async function disponibilidadDe(tipo, salida, regreso) {
@@ -1005,6 +1008,48 @@ async function loQueDiceElAgente(envio) {
   if (accion === 'seguir' && yaEstaTodo) accion = 'cotizar';
   if (accion === 'cotizar' && !yaEstaTodo) accion = 'seguir';   // le falta algo: que lo pida
 
+  /* Fotos y video: de la unidad que pidió («fotos del i6», «video de la
+     Sprinter») o de la que le tocaría. Sin reinyectar al guion: por
+     WhatsApp el guion solo mandaba el texto, y siempre de la Sprinter. */
+  if (accion === 'fotos' || accion === 'video') {
+    const sitio = String(process.env.SITIO_URL || '').replace(/\/+$/, '');
+    const id = dicho.unidadPedida || (nuevo.unidad === 'autobus' ? (nuevo.unidadId || 'irizar-i6s') : (nuevo.unidad || 'sprinter'));
+    const medios = conversacion.mediosDe(id);
+    const nombre = (medios && medios.unidad) ? medios.unidad : id;
+    if (!medios || !sitio) {
+      const aviso = 'De ésa te paso las fotos en un momento. Mientras, ¿como cuántos van?';
+      await manda({ numeroDeOrigen: envio.numeroDeOrigen, para: cliente, texto: aviso, pasaAPersona: false, escribio: '[agente · sin medios]' });
+      agente.recuerda(cliente, 'bot', aviso);
+      return true;
+    }
+    if (accion === 'video') {
+      const texto = medios.video
+        ? 'Aquí va el video por dentro 👇\n' + medios.video
+        : 'De ésa no tengo video, pero mira las fotos 👇';
+      await manda({ numeroDeOrigen: envio.numeroDeOrigen, para: cliente, texto: texto, pasaAPersona: false, escribio: '[agente · video]' });
+      agente.recuerda(cliente, 'bot', texto);
+      if (medios.video) return true;
+    }
+    const u = (conversacion.UNIDADES || []).find(function (x) { return x.id === nombre; });
+    const pie = 'Ésta es la *' + ((u && u.name) || nombre) + '*' + (u && u.cap ? ' — ' + u.cap : '') + ' 📸';
+    let primera = true;
+    for (const foto of medios.fotos.slice(0, 3)) {
+      await manda({ numeroDeOrigen: envio.numeroDeOrigen, para: cliente,
+        ligaDeFoto: sitio + '/' + foto, texto: primera ? pie : '', pasaAPersona: false, escribio: '[agente · foto]' });
+      primera = false;
+    }
+    if (accion === 'fotos' && medios.video) {
+      const v = 'Y el video por dentro 👇\n' + medios.video;
+      await manda({ numeroDeOrigen: envio.numeroDeOrigen, para: cliente, texto: v, pasaAPersona: false, escribio: '[agente · video]' });
+    }
+    const remate = dicho.respuesta || (conversacion.loQueFalta(nuevo)
+      ? '¿Te saco el precio? Dime ' + conversacion.loQueFalta(nuevo) + '.'
+      : '¿Te saco el precio?');
+    await manda({ numeroDeOrigen: envio.numeroDeOrigen, para: cliente, texto: remate, pasaAPersona: false, escribio: '[agente]' });
+    agente.recuerda(cliente, 'bot', pie + ' ' + remate);
+    return true;
+  }
+
   if (accion !== 'seguir') {
     if (dicho.respuesta && accion !== 'cotizar') {
       await manda({ numeroDeOrigen: envio.numeroDeOrigen, para: cliente, texto: dicho.respuesta,
@@ -1020,18 +1065,6 @@ async function loQueDiceElAgente(envio) {
     if (conPlaticaLimpia) webhook.guardaCharla(cliente, null);
     const hecho = await reinyectaAlGuion(envio, CANONICO[accion]);
     if (conPlaticaLimpia) webhook.guardaCharla(cliente, nuevo);
-    /* Las fotos de verdad: por WhatsApp el guion solo mandaba el texto
-       («Claro 📸 Ésta es la Sprinter…»). Hasta tres, por liga pública. */
-    if (accion === 'fotos') {
-      const sitio = String(process.env.SITIO_URL || '').replace(/\/+$/, '');
-      const medios = conversacion.mediosDe(nuevo.unidad || 'sprinter');
-      if (sitio && medios && medios.fotos) {
-        for (const foto of medios.fotos.slice(0, 3)) {
-          await manda({ numeroDeOrigen: envio.numeroDeOrigen, para: cliente,
-            ligaDeFoto: sitio + '/' + foto, texto: '', pasaAPersona: false, escribio: '[agente · foto]' });
-        }
-      }
-    }
     if (hecho) return true;
     /* El motor no pudo: que al menos salga lo que dijo la IA, o el guion. */
     if (dicho.respuesta) return true;
