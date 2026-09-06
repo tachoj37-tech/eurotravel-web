@@ -544,6 +544,12 @@ function esComandoDelDueno(mensaje) {
 
    La comparación es en tiempo constante, como la de la firma.
    ------------------------------------------------------------ */
+/* ¿La IA es la que habla (el agente)? Encendido salvo AGENTE_IA=0. */
+function agenteIA(env) {
+  const v = (env || process.env).AGENTE_IA;
+  return v === undefined || v === '' ? true : !/^(0|no|false|off)$/i.test(String(v).trim());
+}
+
 /* ¿La IA lee todos los mensajes? Encendido salvo SIEMPRE_IA=0. */
 function siempreIA(env) {
   const v = (env || process.env).SIEMPRE_IA;
@@ -1041,7 +1047,27 @@ function procesa(crudo, firma, entorno) {
                 const suEstado = suNombre
                   ? Object.assign(charlaDe(m.from) || {}, { nombre: suNombre })
                   : charlaDe(m.from);
-                return conversacion.respuestaA(texto, suEstado, env.HOY_DE_PRUEBA);
+                /* ------------------------------------------------------------
+                   EL AGENTE (dictado del dueño, 5-sep-2026): «no quiero
+                   hablar con un bot, quiero una IA agente vendedor». Aquí
+                   el guion contesta igual —es el RESPALDO y quien lleva
+                   el estado— pero se guarda el estado de ANTES y se marca
+                   el envío: `whatsapp.mjs` le da la palabra al agente y,
+                   si el agente contesta, lo que el guion haya decidido de
+                   este mensaje se descarta (un «bien y tú?» no es un
+                   destino). Sin red aquí, así que la decisión es allá.
+                   La única casilla que se queda con el guion es escoger
+                   autobús: ahí el guion tiene los botones y los nombres.
+                   ------------------------------------------------------------ */
+                const estadoAntes = suEstado ? Object.assign({}, suEstado) : null;
+                const conAgente = agenteIA(env) && !!texto &&
+                  !(estadoAntes && estadoAntes.paso === 'elegirBus');
+                const respuesta = conversacion.respuestaA(texto, suEstado, env.HOY_DE_PRUEBA);
+                if (conAgente && respuesta && typeof respuesta === 'object') {
+                  respuesta.agente = true;
+                  respuesta.estadoAntes = estadoAntes;
+                }
+                return respuesta;
               }
               return {
                 /* Si la IA no contesta, esto es lo que se manda: se le
@@ -1189,9 +1215,12 @@ function procesa(crudo, firma, entorno) {
           noEntendio: !!r.noEntendio || (siempreIA(env) && !!texto),
           guionEntendio: !r.noEntendio,
           estadoDelCliente: (r.noEntendio || siempreIA(env)) ? charlaDe(m.from) : null,
+          /* El agente: la IA habla; el guion es respaldo. */
+          agente: !!r.agente,
+          estadoAntes: r.estadoAntes || null,
           /* El texto ENTERO, no el recortado de `escribio`: la IA tiene
              que leer lo mismo que escribió el cliente. */
-          crudoDelCliente: (r.noEntendio || r.datosDelContrato || siempreIA(env)) ? texto : null,
+          crudoDelCliente: (r.noEntendio || r.datosDelContrato || siempreIA(env) || r.agente) ? texto : null,
           /* Y la otra puerta a la IA: los datos del contrato, donde entra
              SIEMPRE. Va con lo que ya se tenía, para que lo nuevo se
              junte con lo viejo en vez de reemplazarlo. */

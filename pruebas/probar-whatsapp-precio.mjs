@@ -57,6 +57,10 @@ process.env.CONFIRMAR_DISPONIBILIDAD = '0';
    pruebas viejas cuentan llamadas a la IA una por una, así que corren con
    el modo apagado; el modo se prueba en su propia sección al final. */
 process.env.SIEMPRE_IA = '0';
+/* Y el AGENTE (la IA es la que habla) también apagado aquí: este arnés
+   vigila el guion, la compuerta y las llamadas contadas de la IA lectora.
+   El agente tiene su propio arnés: `probar-agente.mjs`. */
+process.env.AGENTE_IA = '0';
 
 const atiende = (await import(pathToFileURL(path.join(RAIZ, 'api', 'whatsapp.mjs')).href)).default;
 const webhook = (await import(pathToFileURL(path.join(RAIZ, 'api', '_whatsapp-webhook.js')).href)).default;

@@ -35,6 +35,8 @@ import etapas from './_etapas.js';
 import tarifa from './_tarifa.js';
 import logica from './_webhook-logica.js';
 import aprendidos from './_precios-aprendidos.js';
+import agente from './_agente.js';
+import crypto from 'crypto';
 import conversacion from '../bot.js';
 
 /* ------------------------------------------------------------
@@ -911,7 +913,152 @@ function TEXTO_CONTRATO_AL_CLIENTE(folio, liga) {
     'En cuanto se vea reflejado tu anticipo te confirmo la fecha.';
 }
 
+/* ------------------------------------------------------------
+   EL AGENTE HABLA (dictado del dueño, 5-sep-2026)
+   ------------------------------------------------------------
+   El webhook ya corrió el guion (respaldo) y marcó el envío con el
+   estado de ANTES. Aquí se le da la palabra a la IA:
+
+     · Si contesta, lo del guion se descarta: el estado vuelve al de
+       antes y se le pega SOLO lo que la IA leyó (`pegaDatos`), y el
+       cliente recibe lo que la IA dijo.
+     · Si pide una ACCIÓN (fotos, persona, apartar, cotizar) o ya
+       está todo para cotizar, no se reinventa nada: se reinyecta al
+       guion un mensaje canónico —firmado por nosotros mismos— y
+       todo sale por el único camino probado: fotos, tickets, ficha
+       bancaria, precio con la compuerta del dueño.
+     · Si la IA no contesta o dice algo que no puede salir, se
+       devuelve `false` y el envío del guion sigue como siempre.
+   ------------------------------------------------------------ */
+const CANONICO = {
+  fotos: 'tienes fotos',
+  persona: 'quiero hablar con una persona',
+  apartar: 'quiero apartar',
+  cotizar: 'sí está bien'
+};
+
+async function reinyectaAlGuion(envio, textoCanonico) {
+  const waba = process.env.WHATSAPP_WABA_ID || '0';
+  const cuerpo = JSON.stringify({
+    object: 'whatsapp_business_account',
+    entry: [{ id: waba, changes: [{ value: {
+      metadata: { phone_number_id: envio.numeroDeOrigen || process.env.WHATSAPP_PHONE_ID },
+      messages: [{ id: 'wamid.agente.' + Date.now() + '.' + Math.random().toString(36).slice(2, 8),
+        from: envio.para, type: 'text', text: { body: textoCanonico } }]
+    } }] }]
+  });
+  const crudo = Buffer.from(cuerpo, 'utf8');
+  const secreto = process.env.WHATSAPP_APP_SECRET;
+  const firma = secreto
+    ? 'sha256=' + crypto.createHmac('sha256', secreto).update(crudo).digest('hex')
+    : null;
+  /* Sin el agente ni la IA lectora en esta vuelta: esto es el motor
+     ejecutando una orden, no otra conversación. */
+  const entorno = Object.assign({}, process.env, {
+    AGENTE_IA: '0', SIEMPRE_IA: '0',
+    RUTA_SECRETA_OK: secreto ? '' : '1'
+  });
+  const r = webhook.procesa(crudo, firma, entorno);
+  if (r.status !== 200) {
+    console.error('[agente] el motor no aceptó la orden «' + textoCanonico + '»: ' + r.status);
+    return false;
+  }
+  for (const e of r.envios) await reparte(e);
+  return true;
+}
+
+async function loQueDiceElAgente(envio) {
+  if (!process.env.ANTHROPIC_API_KEY) return false;
+  const hoy = process.env.HOY_DE_PRUEBA || new Date().toISOString().slice(0, 10);
+  if (!hayCupoDeIA(hoy)) return false;
+  const cliente = envio.para;
+  const texto = envio.crudoDelCliente;
+
+  /* La memoria corta: del almacén si esta instancia no la tiene. */
+  if (!agente.historialDe(cliente).length && almacen.hayAlmacen()) {
+    const filas = await almacen.mensajesDe(cliente, 10).catch(function () { return null; });
+    if (Array.isArray(filas)) {
+      agente.siembraHistorial(cliente, filas.slice().reverse().map(function (f) {
+        return { de: f.de === 'cliente' ? 'cliente' : 'bot', texto: f.texto };
+      }));
+    }
+  }
+
+  const antes = envio.estadoAntes && typeof envio.estadoAntes === 'object' ? envio.estadoAntes : {};
+  const hayViaje = !!(antes.destino || antes.salida || antes.gente || antes.origen);
+  const dicho = await agente.conversa(texto, {
+    hoy: hoy, cliente: cliente, estado: antes,
+    falta: hayViaje ? conversacion.loQueFalta(antes) : 'a dónde van',
+    historial: agente.historialDe(cliente),
+    voz: { usted: /^(1|si|sí|usted)$/i.test(String(process.env.AGENTE_DE_USTED || '')) }
+  });
+  if (!dicho) return false;
+
+  /* Lo que la IA leyó se pega al estado de ANTES; lo que el guion había
+     decidido de este mensaje se descarta. */
+  const nuevo = conversacion.pegaDatos(antes, dicho.datos);
+  webhook.guardaCharla(cliente, nuevo);
+  agente.recuerda(cliente, 'cliente', texto);
+
+  const yaEstaTodo = !conversacion.loQueFalta(nuevo);
+  let accion = dicho.accion;
+  if (accion === 'seguir' && yaEstaTodo) accion = 'cotizar';
+  if (accion === 'cotizar' && !yaEstaTodo) accion = 'seguir';   // le falta algo: que lo pida
+
+  if (accion !== 'seguir') {
+    if (dicho.respuesta && accion !== 'cotizar') {
+      await manda({ numeroDeOrigen: envio.numeroDeOrigen, para: cliente, texto: dicho.respuesta,
+        pasaAPersona: false, escribio: '[agente]' });
+      agente.recuerda(cliente, 'bot', dicho.respuesta);
+    }
+    if (accion === 'cotizar') webhook.guardaCharla(cliente, Object.assign({}, nuevo, { paso: 'confirmar' }));
+    /* «Persona» y «apartar» a media cotización el guion los toma como
+       destino (misma familia que «bien y tú?»): se le reinyectan con la
+       plática LIMPIA —ahí sí tiene sus caminos: teléfono, ficha bancaria,
+       CLABE— y después se restaura el viaje que iba. */
+    const conPlaticaLimpia = accion === 'persona' || accion === 'apartar';
+    if (conPlaticaLimpia) webhook.guardaCharla(cliente, null);
+    const hecho = await reinyectaAlGuion(envio, CANONICO[accion]);
+    if (conPlaticaLimpia) webhook.guardaCharla(cliente, nuevo);
+    /* Las fotos de verdad: por WhatsApp el guion solo mandaba el texto
+       («Claro 📸 Ésta es la Sprinter…»). Hasta tres, por liga pública. */
+    if (accion === 'fotos') {
+      const sitio = String(process.env.SITIO_URL || '').replace(/\/+$/, '');
+      const medios = conversacion.mediosDe(nuevo.unidad || 'sprinter');
+      if (sitio && medios && medios.fotos) {
+        for (const foto of medios.fotos.slice(0, 3)) {
+          await manda({ numeroDeOrigen: envio.numeroDeOrigen, para: cliente,
+            ligaDeFoto: sitio + '/' + foto, texto: '', pasaAPersona: false, escribio: '[agente · foto]' });
+        }
+      }
+    }
+    if (hecho) return true;
+    /* El motor no pudo: que al menos salga lo que dijo la IA, o el guion. */
+    if (dicho.respuesta) return true;
+    return false;
+  }
+
+  /* Escoger autobús lo pregunta el motor: él tiene los nombres y los cupos. */
+  if (nuevo.paso === 'elegirBus') {
+    const p = conversacion.pregunta(nuevo);
+    const textoBus = (dicho.respuesta ? dicho.respuesta + '\n\n' : '') + ((p && p.texto) || '');
+    await manda({ numeroDeOrigen: envio.numeroDeOrigen, para: cliente, texto: textoBus,
+      pasaAPersona: false, escribio: '[agente · elegir autobús]' });
+    agente.recuerda(cliente, 'bot', textoBus);
+    return true;
+  }
+
+  await manda({ numeroDeOrigen: envio.numeroDeOrigen, para: cliente, texto: dicho.respuesta,
+    pasaAPersona: false, escribio: '[agente]' });
+  agente.recuerda(cliente, 'bot', dicho.respuesta);
+  return true;
+}
+
 async function reparte(envio) {
+  if (envio.agente && envio.crudoDelCliente) {
+    if (await loQueDiceElAgente(envio)) return;
+  }
+
   if (envio.subeContrato) {
     for (const p of await subeContrato(envio)) await manda(p);
     return;

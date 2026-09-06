@@ -3726,8 +3726,61 @@ function aplicaEntendido(datos, hoy) {
   };
 }
 
+/* ------------------------------------------------------------
+   LO QUE EL AGENTE LEYÓ SE PEGA AL VIAJE (5-sep-2026)
+   ------------------------------------------------------------
+   El agente (`api/_agente.js`) conversa y devuelve `datos` con lo
+   que el cliente dijo en ESTE mensaje. Aquí se pega a lo que ya se
+   sabía: un hueco vacío se llena; uno lleno no se pisa, salvo un
+   destino flojo (abreviatura, pedazo de frase) que el agente
+   reconoció de verdad, o el dato del paso en curso. Devuelve el
+   estado con el `paso` recalculado por `alSiguienteHueco`, así el
+   motor sabe si ya puede cotizar.
+   ------------------------------------------------------------ */
+function pegaDatos(estado, datos) {
+  const e = Object.assign({}, estado || {});
+  const d = datos || {};
+  if (d.destino) {
+    const limpio = limpiaDestino(d.destino);
+    if (!e.destino || destinoFlojo(e.destino) || e.paso === 'destino') e.destino = limpio;
+  }
+  if (d.origen && (!e.origen || e.paso === 'origen')) e.origen = d.origen;
+  if (d.salida && (!e.salida || e.paso === 'salida')) e.salida = d.salida;
+  if (d.regreso && (!e.regreso || e.paso === 'regreso')) e.regreso = d.regreso;
+  if (d.gente && (!e.gente || e.paso === 'cuantos')) e.gente = d.gente;
+  if (d.unidad && !e.unidad) e.unidad = d.unidad;
+  if (d.ocasion && !e.ocasion) e.ocasion = d.ocasion;
+  if (typeof d.recorridos === 'number' && typeof e.recorridos !== 'number') e.recorridos = d.recorridos;
+  if (e.regreso && e.salida && e.regreso < e.salida) e.regreso = null;
+  /* Con la gente ya se sabe la unidad chica; los autobuses los escoge el
+     cliente en `elegirBus`, como siempre. */
+  if (e.gente && !e.unidad) {
+    const u = unidadPara(e.gente);
+    if (u && u.cat !== 'autobus') { e.unidad = u.cat; e.unidadNombre = u.name; }
+    else if (u) e.unidad = 'autobus';
+  }
+  return alSiguienteHueco(e);
+}
+
+/* Qué le falta al viaje, en palabras, para decírselo al agente. `null`
+   cuando ya está todo y el motor puede cotizar. */
+function loQueFalta(estado) {
+  const e = alSiguienteHueco(Object.assign({}, estado || {}));
+  return {
+    destino: 'a dónde van',
+    salida: 'qué día salen',
+    regreso: 'qué día regresan (o si es el mismo día)',
+    cuantos: 'cuántos son, aproximadamente',
+    elegirBus: 'cuál autobús prefieren (el motor le ofrece los que le caben)',
+    origen: 'de dónde salen (la ciudad)',
+    recorridos: 'si allá se van a andar moviendo con el camión o solo los llevan y los traen',
+    confirmar: null
+  }[e.paso] || null;
+}
+
 module.exports = {
   respuestaA, textoDeCotizacion, textoDeSolicitud, aplicaEntendido, continuaCon, mediosDe,
+  pegaDatos, loQueFalta,
   hayQueRevisarDisponibilidad,
   /* Se exportan para poder probarlos solos: son los que leen la frase
      de un jalon, y ahi es donde se han colado los defectos de dinero. */

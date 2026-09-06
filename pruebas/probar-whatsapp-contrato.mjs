@@ -48,6 +48,7 @@ process.env.ANTHROPIC_API_KEY = 'clave-de-mentiras';
    vigilando el modo clásico, y el modo nuevo se prueba en
    `probar-whatsapp-precio.mjs`. */
 process.env.SIEMPRE_IA = '0';
+process.env.AGENTE_IA = '0';   // el agente se prueba en `probar-agente.mjs`
 
 const atiende = (await import(pathToFileURL(path.join(RAIZ, 'api', 'whatsapp.mjs')).href)).default;
 const webhook = (await import(pathToFileURL(path.join(RAIZ, 'api', '_whatsapp-webhook.js')).href)).default;

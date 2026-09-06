@@ -469,5 +469,7 @@ module.exports = {
   entiende, limpia, sacaJSON, instrucciones, respuestaSegura, MODELO,
   /* Para probar la forma de la llamada y el costo sin red. */
   instruccionesEstaticas, instruccionesDelDia, bloquesDelSistema,
-  costoDeUso, costoDe, TARIFA
+  costoDeUso, costoDe, TARIFA,
+  /* Para el agente (`_agente.js`): el mismo catálogo y el mismo contador de costo. */
+  catalogoParaLaIA, apuntaElCosto
 };
