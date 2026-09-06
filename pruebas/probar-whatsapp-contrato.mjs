@@ -41,6 +41,13 @@ process.env.WHATSAPP_PHONE_ID = '111';
 process.env.DUENO_WHATSAPP = '5213311112222';
 process.env.HOY_DE_PRUEBA = '2026-09-03';
 process.env.ANTHROPIC_API_KEY = 'clave-de-mentiras';
+/* Este arnés cuenta las llamadas a la IA bajo el contrato CLÁSICO («la IA
+   solo cuando el guion no entiende»). Desde el 5-sep-2026 el modo por
+   omisión es SIEMPRE_IA (la IA lee todos los mensajes, dictado del dueño),
+   y con él estos conteos cambian por diseño: aquí se apaga para seguir
+   vigilando el modo clásico, y el modo nuevo se prueba en
+   `probar-whatsapp-precio.mjs`. */
+process.env.SIEMPRE_IA = '0';
 
 const atiende = (await import(pathToFileURL(path.join(RAIZ, 'api', 'whatsapp.mjs')).href)).default;
 const webhook = (await import(pathToFileURL(path.join(RAIZ, 'api', '_whatsapp-webhook.js')).href)).default;

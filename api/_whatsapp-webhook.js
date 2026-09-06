@@ -544,6 +544,12 @@ function esComandoDelDueno(mensaje) {
 
    La comparación es en tiempo constante, como la de la firma.
    ------------------------------------------------------------ */
+/* ¿La IA lee todos los mensajes? Encendido salvo SIEMPRE_IA=0. */
+function siempreIA(env) {
+  const v = (env || process.env).SIEMPRE_IA;
+  return v === undefined || v === '' ? true : !/^(0|no|false|off)$/i.test(String(v).trim());
+}
+
 function rutaSecretaValida(dada, esperada) {
   const a = String(dada || '');
   const b = String(esperada || '');
@@ -1170,11 +1176,22 @@ function procesa(crudo, firma, entorno) {
              estado de esta persona para que lo que la IA entienda se
              pegue a la conversación que ya iba y no arranque otra.
              ------------------------------------------------------------ */
-          noEntendio: !!r.noEntendio,
-          estadoDelCliente: r.noEntendio ? charlaDe(m.from) : null,
+          /* ------------------------------------------------------------
+             SIEMPRE_IA (dictado del dueño, 5-sep-2026): «se use
+             básicamente siempre la IA». La IA lee TODOS los mensajes de
+             texto del cliente, no solo los que el guion no entendió.
+             `guionEntendio` le dice a `whatsapp.mjs` qué hacer con lo
+             que la IA lea: si el guion se atoró, contestar con eso; si
+             el guion sí entendió, guardar en silencio lo que la IA leyó
+             de más y dejar la respuesta del guion. Sin la variable,
+             encendido. Se apaga con SIEMPRE_IA=0.
+             ------------------------------------------------------------ */
+          noEntendio: !!r.noEntendio || (siempreIA(env) && !!texto),
+          guionEntendio: !r.noEntendio,
+          estadoDelCliente: (r.noEntendio || siempreIA(env)) ? charlaDe(m.from) : null,
           /* El texto ENTERO, no el recortado de `escribio`: la IA tiene
              que leer lo mismo que escribió el cliente. */
-          crudoDelCliente: (r.noEntendio || r.datosDelContrato) ? texto : null,
+          crudoDelCliente: (r.noEntendio || r.datosDelContrato || siempreIA(env)) ? texto : null,
           /* Y la otra puerta a la IA: los datos del contrato, donde entra
              SIEMPRE. Va con lo que ya se tenía, para que lo nuevo se
              junte con lo viejo en vez de reemplazarlo. */

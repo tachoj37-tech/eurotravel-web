@@ -497,10 +497,36 @@ async function loQueLaIAEntendio(envio) {
   const estadoQueIba = envio.estadoDelCliente;
   let mejor = null;
   try {
-    if (estadoQueIba && estadoQueIba.paso) {
+    /* ------------------------------------------------------------
+       CON SIEMPRE_IA, EL GUION YA ENTENDIÓ Y LA IA LEYÓ DE MÁS
+       ------------------------------------------------------------
+       La IA leyó el mensaje aunque el guion no se atoró. Lo que haya
+       leído se PEGA al estado que va (solo huecos vacíos, nunca se
+       pisa nada) y no se arranca de cero jamás: `aplicaEntendido`
+       aquí tiraría una cotización buena por la mitad.
+
+         · Si con lo pegado el siguiente hueco es otro (la IA leyó
+           «salimos de Guadalajara» y eso ahorra una pregunta), se
+           contesta con la pregunta nueva en vez de la del guion.
+         · Si no cambia nada, se guarda lo pegado en silencio y la
+           respuesta del guion se queda como estaba.
+       ------------------------------------------------------------ */
+    if (envio.guionEntendio) {
+      if (!(estadoQueIba && estadoQueIba.paso)) return null;
       mejor = conversacion.continuaCon(estadoQueIba, leido, hoy);
+      if (!mejor) return null;
+      const pasoQueIba = estadoQueIba.paso;
+      const pasoNuevo = mejor.estado && mejor.estado.paso;
+      if (Object.prototype.hasOwnProperty.call(mejor, 'estado') && mejor.estado) {
+        webhook.guardaCharla(envio.para, mejor.estado);
+      }
+      if (!pasoNuevo || pasoNuevo === pasoQueIba) return null;
+    } else {
+      if (estadoQueIba && estadoQueIba.paso) {
+        mejor = conversacion.continuaCon(estadoQueIba, leido, hoy);
+      }
+      if (!mejor) mejor = conversacion.aplicaEntendido(leido, hoy);
     }
-    if (!mejor) mejor = conversacion.aplicaEntendido(leido, hoy);
   } catch (e) {
     console.error('[whatsapp] aplicaEntendido tronó: ' + e.message);
     return null;

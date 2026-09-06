@@ -53,6 +53,10 @@ process.env.ANTHROPIC_API_KEY = 'clave-de-mentiras';
    prueba encendida en su propia sección, al final. */
 process.env.CONFIRMAR_PRECIOS = '0';
 process.env.CONFIRMAR_DISPONIBILIDAD = '0';
+/* Y desde el 5-sep-2026 la IA lee todos los mensajes (SIEMPRE_IA). Las
+   pruebas viejas cuentan llamadas a la IA una por una, así que corren con
+   el modo apagado; el modo se prueba en su propia sección al final. */
+process.env.SIEMPRE_IA = '0';
 
 const atiende = (await import(pathToFileURL(path.join(RAIZ, 'api', 'whatsapp.mjs')).href)).default;
 const webhook = (await import(pathToFileURL(path.join(RAIZ, 'api', '_whatsapp-webhook.js')).href)).default;
@@ -618,6 +622,58 @@ function siembraFichaCompleta(C) {
   ok('ficha incompleta: no se manda contrato', contratosMandados.length, 0);
   okQue('  y el «va» llega literal al cliente', /^va$/m.test(textos(C).join('\n')));
 }
+
+/* ============================================================
+   SIEMPRE_IA · la IA lee todos los mensajes (dictado 5-sep-2026)
+   ============================================================ */
+titulo('la IA lee todos los mensajes');
+process.env.SIEMPRE_IA = '1';
+
+/* A · El guion entendió («a chapala el 20 de noviembre somos 12») y la IA
+   leyó de más («salimos de Guadalajara»): se guarda en silencio y después
+   NO se pregunta el origen. */
+{
+  webhook.olvidaTodo(); mandados = []; llamadasALaIA = 0;
+  laIADice = { intencion: 'cotizar', origen: 'Guadalajara' };
+  const C = '5213366670030';
+  await dice('a chapala el 20 de noviembre somos 12', C);
+  ok('la IA se llamó aunque el guion entendió', llamadasALaIA, 1);
+  await dice('regresamos el 22', C);
+  await dice('no vamos a pasear', C);
+  const todo = textos(C).join('\n');
+  okQue('nunca preguntó de dónde salen (la IA ya lo había leído)', !/de d[oó]nde salen|de qu[eé] ciudad salen/i.test(todo));
+  okQue('  y llegó al resumen con Guadalajara', /Guadalajara/.test(todo));
+}
+
+/* B · La IA caída: el guion contesta solo, como siempre. */
+{
+  webhook.olvidaTodo(); mandados = []; llamadasALaIA = 0;
+  laIADice = null;
+  const C = '5213366670031';
+  await dice('a chapala el 20 de noviembre somos 12', C);
+  okQue('con la IA caída el guion contesta', textos(C).length >= 1);
+  okQue('  y pregunta lo que sigue (el regreso)', /regres/i.test(textos(C).join('\n')));
+}
+
+/* C · El guion se atoró («somos un montón, luego te digo cuántos») y la IA
+   sí sacó el número: se contesta con eso. */
+{
+  webhook.olvidaTodo(); mandados = []; llamadasALaIA = 0;
+  const C = '5213366670032';
+  laIADice = null;
+  /* La salida y el regreso van en dos mensajes: el lector de un jalón no
+     toma «regresamos el 22» en la misma frase, y eso es otro tema. */
+  await dice('a chapala el 20 de noviembre, salimos de guadalajara', C);
+  await dice('regresamos el 22', C);
+  mandados = [];
+  laIADice = { intencion: 'cotizar', gente: 48 };
+  await dice('uy somos un monton, como cuarenta y ocho', C);
+  const t = textos(C).join('\n');
+  okQue('con 48 leídos por la IA recomienda autobús', /autob[uú]s|acomodo/i.test(t));
+  okQue('  sin «perdón, no me quedó claro»', !/no me qued[oó] claro|perd[oó]n/i.test(t));
+}
+
+process.env.SIEMPRE_IA = '0';
 
 /* ============================================================ */
 console.log('\n' + buenas + ' buenas, ' + malas + ' malas');

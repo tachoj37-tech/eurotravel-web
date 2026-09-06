@@ -1017,6 +1017,34 @@ pendientes.push((async function () {
 })());
 
 /* ============================================================ */
+titulo('«somos aprox 48» (un cliente real, 5-sep-2026)');
+/* El bot contestó «Perdón, no me quedó claro» a un número dicho con
+   «aprox», y la IA ni entró porque este paso no llevaba la marca. */
+(function () {
+  const enCuantos = { paso: 'cuantos', destino: 'Chapala', origen: 'Guadalajara',
+    salida: '2026-11-20', regreso: '2026-11-22', recorridos: 0 };
+  [['somos aprox 48', 48], ['somos como unos 40', 40], ['vamos mas o menos 30', 30],
+   ['aprox 48', 48], ['48', 48], ['unos 50 mas o menos', 50], ['seremos 25', 25]].forEach(function (par) {
+    const r = bot.respuestaA(par[0], enCuantos, HOY);
+    okQue('«' + par[0] + '» se lee como ' + par[1] + ' y avanza',
+      r.estado && r.estado.gente === par[1] && r.estado.paso !== 'cuantos');
+    okQue('  sin pedir perdón', !/no me qued[oó] claro|perd[oó]n/i.test(r.texto));
+  });
+
+  /* Cuando de verdad no hay número: se repregunta distinto, sin «perdón»,
+     y se despierta a la IA para que lea el mensaje entero. */
+  const r = bot.respuestaA('todavia no se, depende de quienes se apunten', enCuantos, HOY);
+  ok('sin número: se queda en el paso', r.estado && r.estado.paso, 'cuantos');
+  ok('  y despierta a la IA', !!r.noEntendio, true);
+  okQue('  sin «perdón, no me quedó claro»', !/no me qued[oó] claro|perd[oó]n/i.test(r.texto));
+  okQue('  y sí vuelve a preguntar cuántos', /cu[aá]nt/i.test(r.texto));
+
+  /* Una fecha en el paso de «cuántos» NO es la cantidad de gente. */
+  const f = bot.respuestaA('el 12 de octubre', enCuantos, HOY);
+  ok('una fecha no se toma como gente', f.estado && f.estado.gente, undefined);
+})();
+
+/* ============================================================ */
 Promise.all(pendientes).then(function () {
   console.log('\n' + buenas + ' buenas, ' + malas + ' malas');
   process.exit(malas ? 1 : 0);

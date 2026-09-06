@@ -413,7 +413,12 @@ function cuantaGente(t) {
      leía «20 somos» y decía que iban 20, cuando van 12 y el 20 es el día.
      Lo destapó el lector de frases de un jalón (2-sep-2026). */
   const pistas = /(\d{1,3})\s*(personas|pasajeros|pax|gente|alumnos|ninos|adultos|alumnas)/;
-  const alReves = /(somos|para|seriamos|van|vamos|iriamos|serian)\s*(?:como\s*)?(\d{1,3})/;
+  /* «somos aprox 48», «somos como unos 40», «vamos más o menos 30»: las
+     palabras de aproximación entre el verbo y el número no son un
+     número distinto, son el mismo número dicho con modestia. Un cliente
+     real escribió «somos aprox 48» (5-sep-2026) y el bot no lo leyó. */
+  const aprox = '(?:como|aprox\\w*|unos|unas|casi|cerca de|alrededor de|mas o menos|m[aá]s o menos|por ahi de|por ahí de|tipo)?\\s*(?:unos|unas)?\\s*';
+  const alReves = new RegExp('(somos|para|seriamos|van|vamos|iriamos|serian|seremos|somos como)\\s*' + aprox + '(\\d{1,3})');
   let m = t.match(pistas);
   if (m) return parseInt(m[1], 10);
   m = t.match(alReves);
@@ -425,6 +430,18 @@ function cuantaGente(t) {
    capacidad para no depender del orden del catálogo. */
 /* «somos más de 20», «como unos 40 o más», «bastantes». Dice que son
    MUCHOS, no cuántos. Devuelve el piso que mencionó, o 0 si ni eso. */
+/* En el paso de «cuántos», un número suelto en una frase corta ES la
+   respuesta: «48», «aprox 48», «unos 50 más o menos», «48 aprox». No se
+   toma si la frase trae una fecha (día/mes) — ahí el número es el día — ni
+   si es absurdo para un grupo. */
+function numeroSuelto(t) {
+  if (/\d{1,2}\s*[\/-]\s*\d{1,2}|\b\d{1,2}\s*(?:de\s*)?(?:ene|feb|mar|abr|may|jun|jul|ago|sep|set|oct|nov|dic)/.test(t)) return null;
+  const m = t.match(/\b(\d{1,3})\b/);
+  if (!m) return null;
+  const n = Number(m[1]);
+  return n >= 1 && n <= 120 ? n : null;
+}
+
 function masDeQue(t) {
   const m = t.match(/mas de (\d{1,3})|arriba de (\d{1,3})|(\d{1,3}) o mas/);
   if (m) return Number(m[1] || m[2] || m[3]);
@@ -1450,6 +1467,11 @@ const REPREGUNTA = {
     '¿Cuándo vuelven? Si es ida y vuelta el mismo día, dime *mismo día*.',
     'Dime el día de regreso — por ejemplo *domingo 13*.'
   ],
+  cuantos: [
+    '¿Como cuántos van? Un número aproximado me basta: *30*, *45*, el que sea.',
+    'Dime más o menos cuántas personas son y te digo qué unidad les conviene.',
+    '¿Cuántos son en el grupo, aproximadamente?'
+  ],
   destino: [
     '¿A qué ciudad van? 📍',
     '¿A dónde es el viaje? Con el nombre del lugar me arranco.',
@@ -1832,15 +1854,16 @@ function pasoDeCotizacion(t, crudo, estado, hoy) {
 
   /* ---- ¿cuántos son, de verdad? ---- */
   if (e.paso === 'cuantos') {
-    const n = cuantaGente(t) || (t.match(/^\s*(\d{1,3})\s*$/) ? Number(RegExp.$1) : null);
+    const n = cuantaGente(t) || numeroSuelto(t);
     if (!n) {
-      /* Se vuelve a preguntar DISTINTO. Repetir la misma frase palabra
-         por palabra es lo que más delata a un robot, y además no ayuda:
-         si no se entendió la primera vez, decirlo igual no arregla nada. */
+      /* Sin «perdón, no me quedó claro»: eso es confesarle al cliente que
+         del otro lado hay un robot (dictado del dueño). Se vuelve a
+         preguntar distinto y se marca `noEntendio` para que la IA lea el
+         mensaje entero: aquí faltaba esa marca y por eso la IA nunca
+         entró en este paso (5-sep-2026, «somos aprox 48»). */
       return {
-        texto: 'Perdón, no me quedó claro 🙈\n\nNada más el número: ¿son como *30*? ' +
-          '¿*45*? Lo que sea, aunque no sea exacto.',
-        pasa: false, estado: e, opciones: []
+        texto: repregunta(e, 'cuantos'),
+        pasa: false, estado: e, opciones: [], noEntendio: true
       };
     }
     const r = recomienda(n, e);
