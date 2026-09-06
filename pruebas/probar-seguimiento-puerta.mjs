@@ -7,9 +7,10 @@
        CRON_SECRET (503), ni con una llave que no es (404), ni por
        POST (405).
    2 · Que a quien le toca se le MARQUE antes de mandar, y se le
-       mande el texto del toque por la API de WhatsApp.
-   3 · Que fuera de la ventana de 24 h no salga texto libre: sin
-       plantilla no se manda; con plantilla sale como `template`.
+       mande por la API de WhatsApp. Con toques a 24 h / 3 d / 7 d la
+       ventana de Meta ya cerró siempre: van por plantilla.
+   3 · Que sin plantilla no salga nada (y se diga), y con plantilla
+       salga como `template`, sin texto libre.
    4 · Que al que contestó se le cierre (toques = 3) sin mandarle nada.
    5 · Que si la base no tiene las columnas nuevas, la ficha se
        guarde igual sin ellas (y no se pierda).
@@ -37,6 +38,7 @@ delete process.env.WHATSAPP_PLANTILLA_TOQUE2;
 delete process.env.WHATSAPP_PLANTILLA_TOQUE3;
 
 const H = 60 * 60 * 1000;
+const D = 24 * H;
 /* Lunes 10:00 de Guadalajara. */
 const AHORA = Date.parse('2026-09-07T16:00:00Z');
 process.env.AHORA_DE_PRUEBA = String(AHORA);
@@ -84,6 +86,7 @@ globalThis.fetch = async function (url, opciones) {
 
 const GET = (auth) => puerta(new Request(URL_CRON, { headers: auth ? { authorization: auth } : {} }));
 const POST = (auth) => puerta(new Request(URL_CRON, { method: 'POST', headers: { authorization: auth } }));
+const LLAVE = 'Bearer secreto-del-cron-de-prueba-largo';
 
 /* ============================================================ */
 console.log('\n== LA PUERTA ==');
@@ -100,82 +103,99 @@ console.log('\n== LA PUERTA ==');
   ok('llave equivocada → 404', r2.status, 404);
   ok('  y dice lo mismo que un tramo equivocado', await r2.text(), 'No encontrado');
   ok('sin cabecera → 404', (await GET(null)).status, 404);
-  ok('POST con la llave buena → 405', (await POST('Bearer secreto-del-cron-de-prueba-largo')).status, 405);
+  ok('POST con la llave buena → 405', (await POST(LLAVE)).status, 405);
   ok('nada de esto mandó mensajes', mandados.length, 0);
 }
 
 /* ============================================================ */
-console.log('\n== A QUIÉN SE LE ESCRIBE ==');
+console.log('\n== A QUIÉN SE LE ESCRIBE (con plantilla del primer toque) ==');
 {
+  process.env.WHATSAPP_PLANTILLA_TOQUE1 = 'seguimiento_24h';
   enBase = [
-    /* A · le toca el primero: precio hace 5 h, él escribió hace 6. */
-    { numero: '3311111111', cliente: '5213311111111', etapa: 'con_precio', precio_en: iso(AHORA - 5 * H), cliente_en: iso(AHORA - 6 * H), toques: 0, viaje_datos: { salida: '2026-10-10' } },
-    /* B · le toca el segundo pero la ventana ya cerró (escribió hace 31 h). */
-    { numero: '3322222222', cliente: '5213322222222', etapa: 'con_precio', precio_en: iso(AHORA - 30 * H), cliente_en: iso(AHORA - 31 * H), toques: 1 },
+    /* A · le toca el primero: precio hace 25 h, él escribió hace 26. */
+    { numero: '3311111111', cliente: '5213311111111', etapa: 'con_precio', precio_en: iso(AHORA - 25 * H), cliente_en: iso(AHORA - 26 * H), toques: 0, viaje_datos: { salida: '2026-10-10' } },
+    /* B · le toca el segundo (3 días) pero no hay plantilla para él. */
+    { numero: '3322222222', cliente: '5213322222222', etapa: 'con_precio', precio_en: iso(AHORA - 3 * D - H), cliente_en: iso(AHORA - 3 * D - 2 * H), toques: 1 },
     /* C · todavía no: precio hace 2 h. */
     { numero: '3333333333', cliente: '5213333333333', etapa: 'con_precio', precio_en: iso(AHORA - 2 * H), cliente_en: iso(AHORA - 3 * H), toques: 0 },
     /* D · ya contestó después del precio. */
-    { numero: '3344444444', cliente: '5213344444444', etapa: 'con_precio', precio_en: iso(AHORA - 5 * H), cliente_en: iso(AHORA - 1 * H), toques: 0 }
+    { numero: '3344444444', cliente: '5213344444444', etapa: 'con_precio', precio_en: iso(AHORA - 25 * H), cliente_en: iso(AHORA - 1 * H), toques: 0 }
   ];
   mandados = []; upserts = [];
-  const r = await GET('Bearer secreto-del-cron-de-prueba-largo');
+  const r = await GET(LLAVE);
   ok('la llave buena → 200', r.status, 200);
   const cuenta = await r.json();
   ok('revisó las cuatro', cuenta.revisadas, 4);
   ok('mandó UNO (A)', cuenta.mandados, 1);
   ok('uno espera (C)', cuenta.esperan, 1);
   ok('uno cerrado (D, contestó)', cuenta.cerradas, 1);
-  ok('uno sin plantilla (B, ventana cerrada)', cuenta.sinPlantilla, 1);
+  ok('uno sin plantilla (B)', cuenta.sinPlantilla, 1);
 
   ok('a A se le escribió por WhatsApp', mandados.length, 1);
   ok('  al número de A, en formato 52 + 10', mandados[0].cuerpo.to, '523311111111');
-  ok('  como texto libre', mandados[0].cuerpo.type, 'text');
-  const texto = mandados[0].cuerpo.text.body;
-  ok('  con un texto del primer toque', /cotizaci|verla|viste|duda|pareci|dejé|pudiste|llegó|alcanz|checar/i.test(texto), true);
-  ok('  sin precio ni descuento', /\$|descuento|%/.test(texto), false);
+  ok('  como plantilla (la ventana de 24 h ya cerró)', mandados[0].cuerpo.type, 'template');
+  ok('  la del primer toque', mandados[0].cuerpo.template.name, 'seguimiento_24h');
+  ok('  en español de México', mandados[0].cuerpo.template.language.code, 'es_MX');
+  ok('  y sin texto libre', mandados[0].cuerpo.text, undefined);
 
   const deA = upserts.filter((u) => u.numero === '3311111111');
   ok('A quedó marcada con toques = 1 (antes de mandar)', deA.length === 1 && deA[0].toques, 1);
-  ok('  y conserva precio_en', deA[0].precio_en, iso(AHORA - 5 * H));
+  ok('  y conserva precio_en', deA[0].precio_en, iso(AHORA - 25 * H));
   const deB = upserts.filter((u) => u.numero === '3322222222');
   ok('B quedó marcada con toques = 2 aunque no salió (no se reintenta cada 15 min)', deB.length === 1 && deB[0].toques, 2);
   const deD = upserts.filter((u) => u.numero === '3344444444');
   ok('D quedó cerrada con toques = 3', deD.length === 1 && deD[0].toques, 3);
   ok('C no se tocó', upserts.filter((u) => u.numero === '3333333333').length, 0);
   ok('a B, C y D no se les escribió', mandados.filter((m) => m.cuerpo.to !== '523311111111').length, 0);
+  delete process.env.WHATSAPP_PLANTILLA_TOQUE1;
 }
 
 /* ============================================================ */
-console.log('\n== CON PLANTILLA, FUERA DE LA VENTANA ==');
+console.log('\n== SIN PLANTILLA NO SALE NADA ==');
 {
-  process.env.WHATSAPP_PLANTILLA_TOQUE2 = 'seguimiento_24h';
   enBase = [
-    { numero: '3322222222', cliente: '5213322222222', etapa: 'con_precio', precio_en: iso(AHORA - 30 * H), cliente_en: iso(AHORA - 31 * H), toques: 1 }
+    { numero: '3311111111', cliente: '5213311111111', etapa: 'con_precio', precio_en: iso(AHORA - 25 * H), cliente_en: iso(AHORA - 26 * H), toques: 0 }
   ];
   mandados = []; upserts = [];
-  const r = await GET('Bearer secreto-del-cron-de-prueba-largo');
-  const cuenta = await r.json();
-  ok('ahora sí se mandó', cuenta.mandados, 1);
-  ok('como plantilla', mandados[0].cuerpo.type, 'template');
-  ok('  con su nombre', mandados[0].cuerpo.template.name, 'seguimiento_24h');
-  ok('  en español de México', mandados[0].cuerpo.template.language.code, 'es_MX');
-  ok('  y sin texto libre', mandados[0].cuerpo.text, undefined);
+  const cuenta = await (await GET(LLAVE)).json();
+  ok('sin WHATSAPP_PLANTILLA_TOQUE1 no se manda', [cuenta.mandados, mandados.length], [0, 0]);
+  ok('  y se cuenta como sin plantilla', cuenta.sinPlantilla, 1);
+}
+
+/* ============================================================ */
+console.log('\n== EL SEGUNDO Y EL TERCERO, CON PLANTILLA ==');
+{
+  process.env.WHATSAPP_PLANTILLA_TOQUE2 = 'seguimiento_3d';
+  process.env.WHATSAPP_PLANTILLA_TOQUE3 = 'seguimiento_7d';
+  enBase = [
+    { numero: '3322222222', cliente: '5213322222222', etapa: 'con_precio', precio_en: iso(AHORA - 3 * D - H), cliente_en: iso(AHORA - 3 * D - 2 * H), toques: 1 },
+    { numero: '3366666666', cliente: '5213366666666', etapa: 'con_precio', precio_en: iso(AHORA - 7 * D - H), cliente_en: iso(AHORA - 7 * D - 2 * H), toques: 2 }
+  ];
+  mandados = []; upserts = [];
+  const cuenta = await (await GET(LLAVE)).json();
+  ok('salieron los dos', cuenta.mandados, 2);
+  ok('el de 3 días con su plantilla', mandados.find((m) => m.cuerpo.to === '523322222222').cuerpo.template.name, 'seguimiento_3d');
+  ok('el de 7 días con la suya', mandados.find((m) => m.cuerpo.to === '523366666666').cuerpo.template.name, 'seguimiento_7d');
+  ok('y quedaron en 2 y 3', [upserts.find((u) => u.numero === '3322222222').toques, upserts.find((u) => u.numero === '3366666666').toques], [2, 3]);
   delete process.env.WHATSAPP_PLANTILLA_TOQUE2;
+  delete process.env.WHATSAPP_PLANTILLA_TOQUE3;
 }
 
 /* ============================================================ */
 console.log('\n== DE NOCHE NO ==');
 {
+  process.env.WHATSAPP_PLANTILLA_TOQUE1 = 'seguimiento_24h';
   process.env.AHORA_DE_PRUEBA = String(Date.parse('2026-09-08T04:00:00Z')); // 10 p.m.
   const NOCHE = Number(process.env.AHORA_DE_PRUEBA);
   enBase = [
-    { numero: '3311111111', cliente: '5213311111111', etapa: 'con_precio', precio_en: iso(NOCHE - 5 * H), cliente_en: iso(NOCHE - 6 * H), toques: 0 }
+    { numero: '3311111111', cliente: '5213311111111', etapa: 'con_precio', precio_en: iso(NOCHE - 25 * H), cliente_en: iso(NOCHE - 26 * H), toques: 0 }
   ];
   mandados = []; upserts = [];
-  const cuenta = await (await GET('Bearer secreto-del-cron-de-prueba-largo')).json();
+  const cuenta = await (await GET(LLAVE)).json();
   ok('a las 10 p.m. nadie recibe nada', [cuenta.mandados, mandados.length, upserts.length], [0, 0, 0]);
   ok('  y queda esperando', cuenta.esperan, 1);
   process.env.AHORA_DE_PRUEBA = String(AHORA);
+  delete process.env.WHATSAPP_PLANTILLA_TOQUE1;
 }
 
 /* ============================================================ */
@@ -184,7 +204,7 @@ console.log('\n== SIN ALMACÉN ==');
   const url = process.env.ALMACEN_URL;
   delete process.env.ALMACEN_URL;
   mandados = [];
-  const cuenta = await (await GET('Bearer secreto-del-cron-de-prueba-largo')).json();
+  const cuenta = await (await GET(LLAVE)).json();
   ok('sin almacén no revisa nada ni truena', [cuenta.revisadas, mandados.length], [0, 0]);
   process.env.ALMACEN_URL = url;
 }

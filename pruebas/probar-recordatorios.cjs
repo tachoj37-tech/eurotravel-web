@@ -140,9 +140,9 @@ okQue('hay tercero', !!r.recordatorio(3, { cliente: '52133' }));
 ok('NO hay cuarto', r.recordatorio(4, { cliente: '52133' }), null);
 ok('ni quinto', r.recordatorio(5, { cliente: '52133' }), null);
 
-/* Era [1, 24, 72]. El dueño movió el primero a las 4 el 6-sep-2026:
-   «es muy pronto». */
-ok('y los tiempos son 4, 24 y 72 horas', r.A_LAS_HORAS, [4, 24, 72]);
+/* Era [1, 24, 72], luego [4, 24, 72]. El 6-sep-2026 el dueño lo dejó en
+   24 horas, 3 días y 7 días. */
+ok('y los tiempos son 24 h, 3 d y 7 d', r.A_LAS_HORAS, [24, 72, 168]);
 
 /* ============================================================ */
 titulo('a cada quien le toca una distinta');

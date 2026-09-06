@@ -42,7 +42,7 @@
 'use strict';
 
 /* ------------------------------------------------------------
-   PRIMER TOQUE · CUATRO HORAS
+   PRIMER TOQUE · A LAS 24 HORAS
    ------------------------------------------------------------
    La mayoría no decidió irse: se distrajo. Iba manejando, le
    hablaron, se le acabó la pila. Este mensaje NO vende — nada
@@ -51,8 +51,11 @@
    Corto, sin presión, y sin repetir el precio: repetirlo lo
    vuelve una insistencia de cobro.
 
-   Era «a la hora». El dueño lo movió a cuatro el 6-sep-2026: «es
-   muy pronto». Los textos sirven igual a las cuatro.
+   Era «a la hora»; el dueño lo movió a cuatro y luego, el mismo
+   6-sep-2026, a 24 horas (los tres: 24 h, 3 d, 7 d). Los textos
+   sirven igual. Los nombres de las listas de abajo son los del
+   primer diseño (VEINTICUATRO_HORAS es hoy el toque de los 3 días,
+   SETENTA_Y_DOS el de los 7): los tiempos viven en A_LAS_HORAS.
    ------------------------------------------------------------ */
 const PRIMER_TOQUE = [
   'Oye, ¿te llegó bien la cotización? Cualquier duda me dices 🙌',
@@ -219,10 +222,9 @@ function recordatorio(toque, opciones) {
 }
 
 /* Los tiempos, en horas, contados desde que el cliente RECIBIÓ el
-   precio. La investigación decía «dentro de la hora»; el dueño lo
-   movió a cuatro el 6-sep-2026 («es muy pronto»). La última a las 72
-   porque después ya es acoso. Quien los aplica es `_seguimiento.js`. */
-const A_LAS_HORAS = [4, 24, 72];
+   precio: 24 h, 3 días, 7 días. Dictado del dueño el 6-sep-2026 (antes
+   fueron 1/24/72 y 4/24/72). Quien los aplica es `_seguimiento.js`. */
+const A_LAS_HORAS = [24, 72, 168];
 
 module.exports = {
   recordatorio, variante, revuelve, A_LAS_HORAS,

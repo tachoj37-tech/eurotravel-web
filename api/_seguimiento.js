@@ -1,10 +1,11 @@
 /* ============================================================
    EL SEGUIMIENTO · a quién le toca un toque, y cuál
    ------------------------------------------------------------
-   Dictado del dueño el 6-sep-2026: «una vez que se mandó la
-   cotización, si el cliente no contestó: a las 4 horas, a las 24 y
-   a las 72. Si el cliente contesta, ya no quiero mensajes
-   automáticos.» (El de una hora, dijo, era muy pronto.)
+   Dictado del dueño el 6-sep-2026, en dos vueltas: primero «a las 4
+   horas, a las 24 y a las 72» (el de una hora era muy pronto), y esa
+   misma tarde, ya con el mandato del agente en la mano: «déjalo en
+   24 horas, 3 días y 7 días». Vale la segunda. Y siempre: «si el
+   cliente contesta, ya no quiero mensajes automáticos».
 
    Este archivo solo DECIDE. No manda, no lee la base, no toca la
    red: recibe una ficha y la hora, y contesta qué toque toca (o por
@@ -18,13 +19,15 @@
      de Guadalajara) el toque espera a la mañana. Un «¿te llegó la
      cotización?» a las 3 a.m. no vende: molesta, y en WhatsApp se
      contesta con un bloqueo.
-   · SI SE PASARON DOS, SE MANDA UNO. Si el cron estuvo caído o la
-     noche se comió el de las 4 horas y ya son 26, se manda SOLO el
-     que toca ahora (el de las 24). Un «¿te llegó bien?» un día
-     después suena a máquina.
-   · A LAS 96 HORAS SE CIERRA. Tres toques y silencio —la
-     investigación de `_recordatorios.js`: el cuarto quema al
-     cliente—, y un tercero que llegara al quinto día también.
+   · SI SE PASARON DOS, SE MANDA UNO. Si el cron estuvo caído y ya
+     pasaron cuatro días, se manda SOLO el que toca ahora (el de los
+     3 días). Un «¿te llegó bien?» a los cuatro días suena a máquina.
+   · A LOS 8 DÍAS SE CIERRA. Tres toques y silencio —la investigación
+     de `_recordatorios.js`: el cuarto quema al cliente—, y un
+     tercero que llegara al noveno día también.
+   · LA VENTANA DE 24 HORAS hace que, con estos tiempos, los tres
+     toques casi siempre salgan como plantilla: el primero cae justo
+     al filo de las 24 h del último mensaje del cliente.
    · LA VENTANA DE 24 HORAS. Meta solo deja mandar texto libre en las
      24 horas siguientes al ÚLTIMO mensaje del cliente. Fuera de
      ella solo pasan plantillas aprobadas. Aquí se dice si la
@@ -37,10 +40,10 @@
 
 const HORA_MS = 60 * 60 * 1000;
 
-/* A cuántas horas del precio va cada toque. */
-const HORAS = [4, 24, 72];
-/* Después de esto ya no se manda nada, aunque falte un toque. */
-const TOPE_MS = 96 * HORA_MS;
+/* A cuántas horas del precio va cada toque: 24 h, 3 días, 7 días. */
+const HORAS = [24, 72, 168];
+/* Después de esto ya no se manda nada, aunque falte un toque: 8 días. */
+const TOPE_MS = 192 * HORA_MS;
 /* La ventana de Meta, con media hora de margen. */
 const VENTANA_MS = 23.5 * HORA_MS;
 
