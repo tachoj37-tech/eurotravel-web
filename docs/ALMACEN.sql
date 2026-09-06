@@ -169,3 +169,19 @@ create index if not exists precios_clave on precios (clave, cuando desc);
 
 -- Nace cerrada, como las demás.
 alter table precios enable row level security;
+
+-- ------------------------------------------------------------
+-- 6-SEP-2026 · EL SEGUIMIENTO AL QUE NO CONTESTÓ
+-- ------------------------------------------------------------
+-- Dictado del dueño: «una vez que se mandó la cotización, si el
+-- cliente no contestó: a las 4 horas, a las 24 y a las 72; si
+-- contesta, ya no». Cada 15 minutos un cron de Vercel lee las
+-- fichas con precio y toques pendientes (docs/SEGUIMIENTO.md).
+-- Sin estas columnas el bot sigue funcionando, pero avisa en el
+-- registro y NO hay seguimiento.
+-- ------------------------------------------------------------
+alter table fichas add column if not exists precio_en  timestamptz;                 -- cuándo recibió el precio
+alter table fichas add column if not exists toques     integer not null default 0;  -- cuántos toques van (0-3)
+alter table fichas add column if not exists cliente_en timestamptz;                 -- su último mensaje
+create index if not exists fichas_seguimiento on fichas (precio_en)
+  where etapa = 'con_precio' and toques < 3;

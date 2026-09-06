@@ -169,10 +169,14 @@ function pasaElFreno(numero, ahora) {
    siguiente. Guardarlo de verdad es la etapa 3 del plan, en
    EuroSystem, junto con la cartera de contactos.
 
-   Seis horas de vida: más que eso y el cliente ya no se acuerda
-   ni él de lo que estaba pidiendo.
+   Eran seis horas de vida, porque el guion retomaba «a media
+   pregunta» y eso confundía. Desde el 6-sep-2026 son siete días: el
+   dueño pidió que «si le mando mensaje un día después para mi
+   cotización se acuerde», y con el agente retomar una plática de
+   ayer ya no confunde: la lee y sigue. (La misma cifra vive en
+   `_almacen.js`, que es donde de verdad sobrevive.)
    ------------------------------------------------------------ */
-const VIDA_CHARLA_MS = 6 * 60 * 60 * 1000;
+const VIDA_CHARLA_MS = 7 * 24 * 60 * 60 * 1000;
 const TOPE_CHARLAS = 500;
 const charlas = new Map();
 
@@ -1108,6 +1112,9 @@ function procesa(crudo, firma, entorno) {
            ------------------------------------------------------------ */
         const s = r.solicitud || r.resumen || null;
         tickets.anotaEtapa(m.from, etapas.deLaRespuesta(r, m), {
+          /* Para el seguimiento: escribió AHORA. Si es después del
+             precio, ya no se le manda ningún toque. */
+          clienteEn: ahora,
           agencia: !!((s && s.agencia) ||
             (r.estado && r.estado.agencia) ||
             (charlaDe(m.from) || {}).agencia),

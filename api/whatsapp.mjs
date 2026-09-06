@@ -36,6 +36,8 @@ import tarifa from './_tarifa.js';
 import logica from './_webhook-logica.js';
 import aprendidos from './_precios-aprendidos.js';
 import agente from './_agente.js';
+import seguimiento from './_seguimiento.js';
+import recordatorios from './_recordatorios.js';
 import crypto from 'crypto';
 import conversacion from '../bot.js';
 
@@ -378,6 +380,12 @@ async function precioDe(envio, opciones) {
       anticipo: precio.anticipo,
       porConfirmar: null, // ya se mandó: no queda nada esperando
       viajeDatos: r,      // en datos, para el contrato de después
+      /* Arranca el seguimiento (6-sep-2026): desde AHORA cuentan las 4,
+         24 y 72 horas de `_seguimiento.js`, y un precio nuevo reinicia
+         los toques. Aquí y no antes: este es el momento en que el
+         cliente RECIBE el precio, después del «va» del dueño. */
+      precioEn: Date.now(),
+      toques: 0,
 
       viaje: r.destino
         ? '📍 ' + (r.origen ? r.origen + ' → ' : '') + r.destino +
@@ -1487,6 +1495,18 @@ async function manda(envio) {
                 caption: envio.texto
               }
             }
+          /* Una PLANTILLA aprobada por Meta, para escribirle a quien
+             lleva más de 24 h sin contestar: fuera de esa ventana Meta
+             rechaza el texto libre (código 131047). Sin variables: el
+             texto completo vive en la plantilla (docs/SEGUIMIENTO.md). */
+          : envio.plantilla
+          ? {
+              type: 'template',
+              template: {
+                name: envio.plantilla.nombre,
+                language: { code: envio.plantilla.idioma || 'es_MX' }
+              }
+            }
           /* Una foto NUESTRA, por su direccion publica. Meta la baja
              sola: no hay que subirla ni guardar su id. Asi es como se
              le enseña al cliente la unidad que le tocaria, junto con
@@ -1579,12 +1599,133 @@ function llaveDeLaUrl(a, esWeb) {
   return q.llave === undefined ? null : String(q.llave);
 }
 
+/* ------------------------------------------------------------
+   EL SEGUIMIENTO · cada 15 minutos, a quien no contestó
+   ------------------------------------------------------------
+   Vercel llama GET /api/whatsapp/seguimiento (el cron de vercel.json)
+   con `Authorization: Bearer <CRON_SECRET>`, que Vercel mismo pone
+   cuando esa variable existe. Sin la variable no corre nada (503, y
+   se ve en el registro); con una llave que no es, 404 como cualquier
+   tramo equivocado. Se compara sin cortocircuito, como todo secreto.
+
+   La decisión de a quién y cuál está en `_seguimiento.js`; los
+   textos en `_recordatorios.js`. Aquí solo se lee la base, se marca
+   y se manda.
+
+   Se marca ANTES de mandar: si se marcara después y el envío tronara
+   a medias, el cliente recibiría el mismo toque cada 15 minutos.
+   Perder un toque es barato; repetirlo, no.
+   ------------------------------------------------------------ */
+async function mandaSeguimientos(ahora) {
+  const t = ahora || Date.now();
+  const cuenta = { revisadas: 0, mandados: 0, cerradas: 0, esperan: 0, sinPlantilla: 0 };
+  if (!almacen.hayAlmacen()) {
+    console.error('[seguimiento] sin almacén: no hay fichas que seguir');
+    return cuenta;
+  }
+  const fichas = await almacen.fichasDeSeguimiento().catch(function () { return null; });
+  if (!fichas) return cuenta;
+
+  for (const f of fichas) {
+    cuenta.revisadas++;
+    const d = seguimiento.decide(f, t);
+    if (d.cerrar) {
+      await almacen.guardaFicha(Object.assign({}, f, { toques: seguimiento.HORAS.length }))
+        .catch(function () {});
+      cuenta.cerradas++;
+      continue;
+    }
+    if (!d.toque) { cuenta.esperan++; continue; }
+
+    const marcada = await almacen.guardaFicha(Object.assign({}, f, { toques: d.toque }))
+      .catch(function () { return false; });
+    if (!marcada) continue;   // sin marca no se manda: sería repetirlo cada 15 minutos
+
+    const envio = envioDelToque(f, d);
+    if (!envio) { cuenta.sinPlantilla++; continue; }
+    if (await manda(envio)) {
+      cuenta.mandados++;
+      almacen.anotaMensaje(f.cliente, 'bot', envio.texto, 'texto').catch(function () {});
+    }
+  }
+  console.log('[seguimiento] ' + JSON.stringify(cuenta));
+  return cuenta;
+}
+
+/* Texto libre si la ventana de 24 h de Meta sigue abierta; si no, la
+   plantilla aprobada cuyo nombre está en WHATSAPP_PLANTILLA_TOQUE1/2/3.
+   Sin plantilla y con la ventana cerrada no se manda nada, y se dice. */
+function envioDelToque(f, d) {
+  const base = { numeroDeOrigen: process.env.WHATSAPP_PHONE_ID, para: f.cliente };
+  if (d.ventanaAbierta) {
+    const v = f.viajeDatos || {};
+    const texto = recordatorios.recordatorio(d.toque, {
+      cliente: f.cliente,
+      /* Con el instante del precio: si el mismo cliente cotiza otro
+         viaje el mes que entra, le toca otra variante. */
+      vuelta: Math.floor((f.precioEn || 0) / 1000),
+      fecha: v.salida ? tickets.comoSeDice(v.salida) : null,
+      /* Nadie comprobó el calendario aquí: va el juego que NO afirma
+         que la fecha está libre. */
+      fechaLibre: false
+    });
+    return texto ? Object.assign(base, { texto: texto }) : null;
+  }
+  const nombre = process.env['WHATSAPP_PLANTILLA_TOQUE' + d.toque];
+  if (!nombre) {
+    console.error('[seguimiento] toque ' + d.toque + ' a …' + almacen.llave(f.cliente).slice(-4) +
+      ': la ventana de 24 h de Meta ya cerró y no hay WHATSAPP_PLANTILLA_TOQUE' + d.toque +
+      ': no se manda');
+    return null;
+  }
+  return Object.assign(base, {
+    plantilla: { nombre: nombre, idioma: process.env.WHATSAPP_PLANTILLA_IDIOMA || 'es_MX' },
+    texto: '[plantilla ' + nombre + ']'
+  });
+}
+
+function llaveDelCronValida(cabecera, secreto) {
+  if (!secreto || String(secreto).length < 16) return false;
+  const a = Buffer.from(String(cabecera || ''));
+  const b = Buffer.from('Bearer ' + String(secreto));
+  return a.length === b.length && crypto.timingSafeEqual(a, b);
+}
+
+async function atiendeSeguimiento(a, b, esWeb) {
+  const cabecera = esWeb
+    ? a.headers.get('authorization')
+    : (a.headers && (a.headers.authorization || a.headers.Authorization));
+  const contesta = function (status, cuerpo, texto) {
+    if (!esWeb) {
+      if (texto) b.status(status).send(texto); else b.status(status).json(cuerpo);
+      return;
+    }
+    return texto
+      ? new Response(texto, { status: status, headers: TIPO_TEXTO })
+      : new Response(JSON.stringify(cuerpo), { status: status, headers: TIPO_JSON });
+  };
+  const secreto = process.env.CRON_SECRET;
+  if (!secreto || String(secreto).length < 16) {
+    console.error('[seguimiento] falta CRON_SECRET en Vercel (16+ caracteres): el cron no corre');
+    return contesta(503, { error: 'Sin configurar' });
+  }
+  if (!llaveDelCronValida(cabecera, secreto)) return contesta(404, null, NO_HAY);
+  if (a.method !== 'GET') return contesta(405, { error: 'Método no permitido' });
+  avisaEstadoDelAlmacen();
+  /* `AHORA_DE_PRUEBA` es el mismo reloj de mentiras que usa el webhook
+     en las pruebas: el seguimiento depende de la hora del día. */
+  return contesta(200, await mandaSeguimientos(Number(process.env.AHORA_DE_PRUEBA) || undefined));
+}
+
 async function atiende(a) {
   const b = arguments[1];
   const esWeb = a && typeof a.arrayBuffer === 'function' &&
     a.headers && typeof a.headers.get === 'function';
   const llave = llaveDeLaUrl(a, esWeb);
   if (llave === null) return atiendeInterno(a, b, {});
+  /* La puerta del cron va ANTES del tramo secreto: «seguimiento» no es
+     un tramo, es un nombre fijo, y su llave es otra (CRON_SECRET). */
+  if (llave === 'seguimiento') return atiendeSeguimiento(a, b, esWeb);
   if (!webhook.rutaSecretaValida(llave, process.env.WHATSAPP_RUTA_SECRETA)) {
     if (!esWeb) { b.status(404).send(NO_HAY); return; }
     return new Response(NO_HAY, { status: 404, headers: TIPO_TEXTO });

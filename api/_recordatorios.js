@@ -42,7 +42,7 @@
 'use strict';
 
 /* ------------------------------------------------------------
-   PRIMER TOQUE · UNA HORA
+   PRIMER TOQUE · CUATRO HORAS
    ------------------------------------------------------------
    La mayoría no decidió irse: se distrajo. Iba manejando, le
    hablaron, se le acabó la pila. Este mensaje NO vende — nada
@@ -50,8 +50,11 @@
 
    Corto, sin presión, y sin repetir el precio: repetirlo lo
    vuelve una insistencia de cobro.
+
+   Era «a la hora». El dueño lo movió a cuatro el 6-sep-2026: «es
+   muy pronto». Los textos sirven igual a las cuatro.
    ------------------------------------------------------------ */
-const UNA_HORA = [
+const PRIMER_TOQUE = [
   'Oye, ¿te llegó bien la cotización? Cualquier duda me dices 🙌',
   '¿Alcanzaste a verla? Si tienes alguna pregunta aquí ando.',
   'Nomás para checar que sí te haya llegado 🙂 ¿Alguna duda?',
@@ -200,7 +203,7 @@ function recordatorio(toque, opciones) {
   const cliente = o.cliente || '';
   const vuelta = o.vuelta || 0;
 
-  if (toque === 1) return variante(UNA_HORA, cliente, vuelta);
+  if (toque === 1) return variante(PRIMER_TOQUE, cliente, vuelta);
   if (toque === 2) return variante(VEINTICUATRO_HORAS, cliente, vuelta);
 
   if (toque === 3) {
@@ -215,13 +218,14 @@ function recordatorio(toque, opciones) {
   return null;
 }
 
-/* Los tiempos, en horas. Salieron de la investigación, no de un
-   gusto: la primera dentro de la hora porque la intención todavía
-   está alta; la última a las 72 porque después ya es acoso. */
-const A_LAS_HORAS = [1, 24, 72];
+/* Los tiempos, en horas, contados desde que el cliente RECIBIÓ el
+   precio. La investigación decía «dentro de la hora»; el dueño lo
+   movió a cuatro el 6-sep-2026 («es muy pronto»). La última a las 72
+   porque después ya es acoso. Quien los aplica es `_seguimiento.js`. */
+const A_LAS_HORAS = [4, 24, 72];
 
 module.exports = {
   recordatorio, variante, revuelve, A_LAS_HORAS,
-  UNA_HORA, VEINTICUATRO_HORAS,
+  PRIMER_TOQUE, VEINTICUATRO_HORAS,
   SETENTA_Y_DOS_SIN_CALENDARIO, SETENTA_Y_DOS_CON_CALENDARIO
 };

@@ -367,6 +367,16 @@ function anotaEtapa(cliente, etapa, extra, ahora) {
     /* Folio y liga del contrato ya registrado en EuroSystem. Con esto, un
        segundo «va» no vuelve a subirlo. */
     contratoSubido: (extra && extra.contratoSubido) || (antes && antes.contratoSubido) || null,
+    /* El seguimiento (6-sep-2026): cuándo RECIBIÓ el precio, cuántos
+       toques van (0-3) y cuándo escribió él por última vez. Un precio
+       nuevo trae `precioEn` y `toques: 0` juntos, y reinicia la cuenta.
+       `clienteEn` lo pone el webhook con cada mensaje suyo; con él
+       `_seguimiento.js` sabe si contestó después del precio (y entonces
+       ya no se le escribe) y si la ventana de 24 h de Meta sigue abierta. */
+    precioEn: (extra && extra.precioEn) || (antes && antes.precioEn) || null,
+    toques: (extra && typeof extra.toques === 'number') ? extra.toques
+      : ((antes && antes.toques) || 0),
+    clienteEn: (extra && extra.clienteEn) || (antes && antes.clienteEn) || null,
     desde: (antes && antes.desde) || (ahora || Date.now()),
     visto: ahora || Date.now()
   };
@@ -397,8 +407,18 @@ function siembraFicha(ficha) {
   if (!ficha || !ficha.cliente) return;
   const k = llave(ficha.cliente);
   /* Lo que ya está en memoria gana: es de este mismo instante y la
-     base puede venir de hace un minuto. */
-  if (cartera.has(k)) return;
+     base puede venir de hace un minuto. Con UNA excepción: los toques
+     del seguimiento los escribe el cron desde otra instancia, así que
+     ahí la base sabe más. Sin esto, un «va» del dueño escribiría de
+     vuelta la ficha vieja con `toques: 0` y el cliente recibiría el
+     mismo toque dos veces. */
+  if (cartera.has(k)) {
+    const enMemoria = cartera.get(k);
+    if ((Number(ficha.toques) || 0) > (Number(enMemoria.toques) || 0)) {
+      enMemoria.toques = Number(ficha.toques);
+    }
+    return;
+  }
   cartera.set(k, ficha);
 }
 

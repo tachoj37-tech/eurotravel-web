@@ -95,10 +95,16 @@ function hayAlmacen() { return !!config(); }
    tablero es malo; dejar de contestarle a un cliente que ya
    pagó es peor.
    ------------------------------------------------------------ */
+/* El último error que contestó la base, para que quien llamó pueda
+   distinguir «no hay columna» de «no hay red» sin que `pide` deje de
+   ser una sola puerta. */
+let ultimoError = null;
+
 async function pide(camino, opciones) {
   const c = config();
   if (!c) return null;
   const o = opciones || {};
+  ultimoError = null;
   try {
     const r = await fetch(c.url + '/rest/v1/' + camino, {
       method: o.metodo || 'GET',
@@ -111,6 +117,7 @@ async function pide(camino, opciones) {
     });
     if (!r.ok) {
       const detalle = await r.text().catch(function () { return ''; });
+      ultimoError = { status: r.status, detalle: detalle };
       console.error('[almacen] ' + r.status + ' en ' + camino + ': ' + detalle.slice(0, 300));
       return null;
     }
@@ -155,17 +162,44 @@ async function guardaFicha(ficha) {
   if (ficha.porConfirmar) fila.por_confirmar = ficha.porConfirmar;
   if (ficha.viajeDatos) fila.viaje_datos = ficha.viajeDatos;
   if (ficha.contratoSubido) fila.contrato_subido = ficha.contratoSubido;
-  /* `merge-duplicates` es un UPSERT: si ya existe esa llave, la
-     actualiza. Sin esto, el segundo mensaje de un cliente reventaría
-     por llave repetida y su ficha se quedaría en el primer mensaje. */
-  const r = await pide('fichas?on_conflict=numero', {
+  /* El seguimiento (6-sep-2026): cuándo recibió el precio, cuántos
+     toques van y cuándo escribió él por última vez. Van solo cuando hay
+     algo, por la misma razón de arriba. */
+  const conSeguimiento = columnasDeSeguimiento && !!(ficha.precioEn || ficha.clienteEn);
+  if (conSeguimiento) {
+    if (ficha.precioEn) {
+      fila.precio_en = new Date(ficha.precioEn).toISOString();
+      fila.toques = Number(ficha.toques) || 0;
+    }
+    if (ficha.clienteEn) fila.cliente_en = new Date(ficha.clienteEn).toISOString();
+  }
+  const upsert = {
     metodo: 'POST',
     cabeceras: { 'Prefer': 'resolution=merge-duplicates,return=minimal' },
     cuerpo: fila,
     sinRespuesta: true
-  });
-  return !!r;
+  };
+  /* `merge-duplicates` es un UPSERT: si ya existe esa llave, la
+     actualiza. Sin esto, el segundo mensaje de un cliente reventaría
+     por llave repetida y su ficha se quedaría en el primer mensaje. */
+  if (await pide('fichas?on_conflict=numero', upsert)) return true;
+
+  /* Si la base todavía no tiene las columnas del seguimiento (el bloque
+     del 6-sep-2026 de docs/ALMACEN.sql corre a mano), PostgREST contesta
+     PGRST204 «Could not find the column». Se avisa una vez y se vuelve a
+     guardar SIN ellas: perder el seguimiento es barato; perder la ficha
+     de todos los clientes, no. */
+  if (conSeguimiento && ultimoError && /PGRST204/.test(ultimoError.detalle || '')) {
+    columnasDeSeguimiento = false;
+    console.error('[almacen] la tabla fichas no tiene las columnas del seguimiento ' +
+      '(precio_en, toques, cliente_en): corre el bloque del 6-sep-2026 de docs/ALMACEN.sql. ' +
+      'Mientras, se guarda sin ellas y NO hay seguimiento.');
+    delete fila.precio_en; delete fila.toques; delete fila.cliente_en;
+    return !!(await pide('fichas?on_conflict=numero', upsert));
+  }
+  return false;
 }
+let columnasDeSeguimiento = true;
 
 function deLaFila(f) {
   if (!f) return null;
@@ -181,6 +215,9 @@ function deLaFila(f) {
     porConfirmar: f.por_confirmar || null,
     viajeDatos: f.viaje_datos || null,
     contratoSubido: f.contrato_subido || null,
+    precioEn: f.precio_en ? Date.parse(f.precio_en) : null,
+    toques: Number(f.toques) || 0,
+    clienteEn: f.cliente_en ? Date.parse(f.cliente_en) : null,
     desde: f.desde ? Date.parse(f.desde) : Date.now(),
     visto: f.visto ? Date.parse(f.visto) : Date.now()
   };
@@ -202,12 +239,23 @@ async function fichasDelTablero(cuantas) {
   return filas.map(deLaFila);
 }
 
+/* Para el cron del seguimiento: las que tienen precio, siguen en
+   «con precio» y les faltan toques. Filtrado en la base, no aquí; si
+   las columnas no existen, la base contesta 400 y se ve en el registro. */
+async function fichasDeSeguimiento() {
+  const filas = await pide('fichas?select=*&etapa=eq.con_precio&precio_en=not.is.null' +
+    '&toques=lt.3&order=precio_en.asc&limit=200');
+  if (!filas) return null;
+  return filas.map(deLaFila);
+}
+
 /* ============================================================
    LAS CHARLAS · lo que el bot lleva entendido de cada quien
    ------------------------------------------------------------
-   Es el estado de la máquina de conversación. Vive poco —seis
-   horas— porque una conversación de ayer ya no es la misma:
-   retomarla a media pregunta confundiría más de lo que ayuda.
+   Es el estado de la máquina de conversación. Vivía seis horas
+   —retomar «a media pregunta» confundía—. Desde el 6-sep-2026 vive
+   siete días: el dueño pidió que el bot se acuerde «un día después»,
+   y con el agente leyendo la plática, retomarla ya no confunde.
    ============================================================ */
 
 async function guardaCharla(numero, estado) {
@@ -229,7 +277,7 @@ async function guardaCharla(numero, estado) {
   }));
 }
 
-const VIDA_CHARLA_MS = 6 * 60 * 60 * 1000;
+const VIDA_CHARLA_MS = 7 * 24 * 60 * 60 * 1000;
 
 async function leeCharla(numero) {
   const k = llave(numero);
@@ -349,7 +397,7 @@ async function preciosParecidos(clave, cuantos) {
 
 module.exports = {
   hayAlmacen, llave,
-  guardaFicha, leeFicha, fichasDelTablero,
+  guardaFicha, leeFicha, fichasDelTablero, fichasDeSeguimiento,
   guardaCharla, leeCharla,
   anotaMensaje, mensajesDe, tiraLoViejo,
   guardaTicket, leeTicket,

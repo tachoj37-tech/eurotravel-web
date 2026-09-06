@@ -6,6 +6,12 @@
       "destination": "/api/whatsapp?llave=:llave"
     }
   ],
+  "crons": [
+    {
+      "path": "/api/whatsapp/seguimiento",
+      "schedule": "*/15 * * * *"
+    }
+  ],
   "headers": [
     {
       "source": "/(.*)",

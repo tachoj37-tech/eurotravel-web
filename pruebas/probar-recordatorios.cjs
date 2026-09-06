@@ -29,7 +29,7 @@ function ok(que, dio, esperaba) {
 function okQue(que, condicion) { ok(que, !!condicion, true); }
 function titulo(t) { console.log('\n== ' + t.toUpperCase() + ' =='); }
 
-const TODOS = r.UNA_HORA
+const TODOS = r.PRIMER_TOQUE
   .concat(r.VEINTICUATRO_HORAS)
   .concat(r.SETENTA_Y_DOS_SIN_CALENDARIO)
   .concat(r.SETENTA_Y_DOS_CON_CALENDARIO);
@@ -37,7 +37,7 @@ const TODOS = r.UNA_HORA
 /* ============================================================ */
 titulo('hay diez de cada uno, y ninguno repetido');
 
-ok('diez para la primera hora', r.UNA_HORA.length, 10);
+ok('diez para el primer toque', r.PRIMER_TOQUE.length, 10);
 ok('diez para las 24', r.VEINTICUATRO_HORAS.length, 10);
 ok('diez para las 72, sin calendario', r.SETENTA_Y_DOS_SIN_CALENDARIO.length, 10);
 ok('diez para las 72, con calendario', r.SETENTA_Y_DOS_CON_CALENDARIO.length, 10);
@@ -140,7 +140,9 @@ okQue('hay tercero', !!r.recordatorio(3, { cliente: '52133' }));
 ok('NO hay cuarto', r.recordatorio(4, { cliente: '52133' }), null);
 ok('ni quinto', r.recordatorio(5, { cliente: '52133' }), null);
 
-ok('y los tiempos son 1, 24 y 72 horas', r.A_LAS_HORAS, [1, 24, 72]);
+/* Era [1, 24, 72]. El dueño movió el primero a las 4 el 6-sep-2026:
+   «es muy pronto». */
+ok('y los tiempos son 4, 24 y 72 horas', r.A_LAS_HORAS, [4, 24, 72]);
 
 /* ============================================================ */
 titulo('a cada quien le toca una distinta');
