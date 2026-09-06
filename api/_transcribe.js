@@ -162,30 +162,55 @@ async function transcribe(idMedia, opciones) {
   if (!idMedia || !pide || !tokenMeta || !claveGroq) return null;
 
   try {
-    /* 1 · Meta dice dónde está el archivo y CUÁNTO PESA. Este paso es
-       el que decide si se transcribe: preguntar el tamaño es gratis,
-       bajar el audio no. */
-    const ficha = await conTope(pide(
-      'https://graph.facebook.com/' + VERSION_META + '/' + encodeURIComponent(idMedia),
-      { headers: { Authorization: 'Bearer ' + tokenMeta } }
-    ));
-    if (!ficha || !ficha.ok) return null;
+    /* ------------------------------------------------------------
+       DE DÓNDE SE BAJA EL AUDIO
+       ------------------------------------------------------------
+       Meta directo: dos pasos —la ficha dice dónde está y cuánto
+       pesa, y luego se baja—. Por Dualhook (5-sep-2026) hay un solo
+       paso: `GET <base>/<id>/content` devuelve los bytes; el tamaño
+       se mira en `content-length` antes de leer el cuerpo, y otra
+       vez sobre lo que llegó.
+       ------------------------------------------------------------ */
+    const base = String(o.base || process.env.WHATSAPP_API_BASE || '').replace(/\/+$/, '');
+    const porDualhook = /dualhook\.com/i.test(base);
+    let archivo;
+    let datos = {};
 
-    const datos = await ficha.json();
-    if (!datos || !datos.url) return null;
+    if (porDualhook) {
+      archivo = await conTope(pide(base + '/' + encodeURIComponent(idMedia) + '/content', {
+        headers: { Authorization: 'Bearer ' + tokenMeta }
+      }));
+      if (!archivo || !archivo.ok) return null;
+      const largo = Number(archivo.headers && typeof archivo.headers.get === 'function'
+        ? archivo.headers.get('content-length') : 0) || 0;
+      if (largo > TOPE_BYTES) return { muyLargo: true, bytes: largo };
+      datos = { mime_type: (archivo.headers && typeof archivo.headers.get === 'function' && archivo.headers.get('content-type')) || 'audio/ogg' };
+    } else {
+      /* 1 · Meta dice dónde está el archivo y CUÁNTO PESA. Este paso es
+         el que decide si se transcribe: preguntar el tamaño es gratis,
+         bajar el audio no. */
+      const ficha = await conTope(pide(
+        'https://graph.facebook.com/' + VERSION_META + '/' + encodeURIComponent(idMedia),
+        { headers: { Authorization: 'Bearer ' + tokenMeta } }
+      ));
+      if (!ficha || !ficha.ok) return null;
 
-    const bytes = Number(datos.file_size) || 0;
-    if (bytes > TOPE_BYTES) {
-      /* Ni se baja. El audio largo es el caro y es justo el que el
-         dueño quiere que oiga una persona. */
-      return { muyLargo: true, bytes: bytes };
+      datos = await ficha.json();
+      if (!datos || !datos.url) return null;
+
+      const bytes = Number(datos.file_size) || 0;
+      if (bytes > TOPE_BYTES) {
+        /* Ni se baja. El audio largo es el caro y es justo el que el
+           dueño quiere que oiga una persona. */
+        return { muyLargo: true, bytes: bytes };
+      }
+
+      /* 2 · El archivo, con el mismo token. */
+      archivo = await conTope(pide(datos.url, {
+        headers: { Authorization: 'Bearer ' + tokenMeta }
+      }));
+      if (!archivo || !archivo.ok) return null;
     }
-
-    /* 2 · El archivo, con el mismo token. */
-    const archivo = await conTope(pide(datos.url, {
-      headers: { Authorization: 'Bearer ' + tokenMeta }
-    }));
-    if (!archivo || !archivo.ok) return null;
 
     const crudo = await archivo.arrayBuffer();
     /* Segunda revisión del tamaño, ahora sobre lo que de verdad llegó:

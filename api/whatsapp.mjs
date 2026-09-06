@@ -1062,7 +1062,11 @@ const TIPO_TEXTO = { 'content-type': 'text/plain; charset=utf-8' };
 
 /* La versión va fija: si Meta saca una nueva y cambiara sola, el bot se
    rompería un martes sin que nadie tocara nada. */
-const GRAFO = 'https://graph.facebook.com/v21.0';
+/* A dónde se manda. Meta directo por omisión; con Dualhook (5-sep-2026)
+   se pone WHATSAPP_API_BASE=https://api.dualhook.com/v25.0 y el token es
+   su llave `dh_live_…`. El resto del cuerpo es idéntico: su API es
+   compatible con la de Meta. */
+const GRAFO = String(process.env.WHATSAPP_API_BASE || 'https://graph.facebook.com/v21.0').replace(/\/+$/, '');
 
 /* ------------------------------------------------------------
    EL MODO ESPIA
@@ -1276,8 +1280,45 @@ async function manda(envio) {
   }
 }
 
+/* ------------------------------------------------------------
+   LAS DOS PUERTAS, EN UNA SOLA FUNCIÓN
+   ------------------------------------------------------------
+   `/api/whatsapp` es la de siempre: Meta firma con NUESTRO secreto.
+   `/api/whatsapp/<tramo secreto>` es la de Dualhook (5-sep-2026): la
+   firma viene con el secreto de ellos, que no comparten, así que la
+   puerta es el tramo secreto de la URL y el webhook comprueba que el
+   aviso sea de nuestro WABA y nuestro número.
+
+   Las dos viven en ESTE archivo: Vercel reescribe `/api/whatsapp/X`
+   a `/api/whatsapp?llave=X` (vercel.json). Una función aparte habría
+   sido la número 13 y el plan permite 12 —lo cazó `probar-despliegue`—.
+   Con `llave` presente y equivocada: 404 a secas, sin pista. Con
+   `llave` buena, `RUTA_SECRETA_OK` en el entorno le dice a `procesa`
+   por cuál puerta entró.
+   ------------------------------------------------------------ */
+const NO_HAY = 'No encontrado';
+
+function llaveDeLaUrl(a, esWeb) {
+  if (esWeb) return new URL(a.url).searchParams.get('llave');
+  const q = (a && a.query) || {};
+  return q.llave === undefined ? null : String(q.llave);
+}
+
 async function atiende(a) {
   const b = arguments[1];
+  const esWeb = a && typeof a.arrayBuffer === 'function' &&
+    a.headers && typeof a.headers.get === 'function';
+  const llave = llaveDeLaUrl(a, esWeb);
+  if (llave === null) return atiendeInterno(a, b, {});
+  if (!webhook.rutaSecretaValida(llave, process.env.WHATSAPP_RUTA_SECRETA)) {
+    if (!esWeb) { b.status(404).send(NO_HAY); return; }
+    return new Response(NO_HAY, { status: 404, headers: TIPO_TEXTO });
+  }
+  return atiendeInterno(a, b, { rutaSecreta: true });
+}
+
+async function atiendeInterno(a, b, opciones) {
+  const marcaDePuerta = { RUTA_SECRETA_OK: (opciones && opciones.rutaSecreta) ? '1' : '' };
   const esWeb = a && typeof a.arrayBuffer === 'function' &&
     a.headers && typeof a.headers.get === 'function';
 
@@ -1314,7 +1355,7 @@ async function atiende(a) {
        borraba `WHATSAPP_APP_SECRET` y contestaba 503 a todo. Lo cazo
        `probar-whatsapp-cascara`. Por eso va el entorno completo. */
     const r = webhook.procesa(crudo, a.headers.get('x-hub-signature-256'),
-      Object.assign({}, process.env, { audios }));
+      Object.assign({}, process.env, { audios }, marcaDePuerta));
     for (const envio of r.envios) await reparte(envio);
     await guardaLoQueQuedo(numeros);
     return new Response(JSON.stringify(r.cuerpo), { status: r.status, headers: TIPO_JSON });
@@ -1351,7 +1392,7 @@ async function atiende(a) {
   ]);
   /* Mismo cuidado que arriba: el entorno completo, no solo los audios. */
   const r = webhook.procesa(crudo, req.headers['x-hub-signature-256'],
-    Object.assign({}, process.env, { audios }));
+    Object.assign({}, process.env, { audios }, marcaDePuerta));
   /* `reparte`, NO `manda`. Aqui decia `manda` y con eso este camino se
      quedaba sin el precio, sin la IA de respaldo y sin los datos del
      contrato: las tres cosas se resuelven en `reparte`. Vercel usa hoy

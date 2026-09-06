@@ -1,5 +1,11 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
+  "rewrites": [
+    {
+      "source": "/api/whatsapp/:llave",
+      "destination": "/api/whatsapp?llave=:llave"
+    }
+  ],
   "headers": [
     {
       "source": "/(.*)",

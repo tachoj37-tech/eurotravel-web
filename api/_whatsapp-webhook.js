@@ -531,23 +531,78 @@ function esComandoDelDueno(mensaje) {
    aunque no hayamos sabido qué hacer con el aviso. Si se le
    contesta error, reintenta, y si insiste, apaga el webhook.
    ------------------------------------------------------------ */
+/* ------------------------------------------------------------
+   EL TRAMO SECRETO DE LA URL (modo Dualhook, 5-sep-2026)
+   ------------------------------------------------------------
+   Con Dualhook los mensajes llegan directo de Meta, pero firmados
+   con el secreto de la app de Dualhook, que no comparten: nuestra
+   firma HMAC no puede coincidir. Su recomendación —y la de Meta
+   para este caso— es que la URL del webhook lleve un tramo
+   secreto de alta entropía (`/api/whatsapp/<48 hex>`) y que cada
+   aviso se compruebe contra el WABA y el número propios. Quien no
+   sepa la URL no puede ni tocar la puerta (404, sin pista).
+
+   La comparación es en tiempo constante, como la de la firma.
+   ------------------------------------------------------------ */
+function rutaSecretaValida(dada, esperada) {
+  const a = String(dada || '');
+  const b = String(esperada || '');
+  if (!a || !b || b.length < 32) return false;
+  return igualesEnTiempoConstante(a, b);
+}
+
+/* En modo Dualhook, ¿este aviso es de NUESTRA cuenta? Todo `entry.id`
+   tiene que ser nuestro WABA y todo `metadata.phone_number_id` nuestro
+   número. Un aviso de otra cuenta no se procesa y se contesta 403. */
+function avisoEsNuestro(aviso, env) {
+  if (!aviso || aviso.object !== 'whatsapp_business_account') return false;
+  const entradas = Array.isArray(aviso.entry) ? aviso.entry : [];
+  if (!entradas.length) return false;
+  for (const e of entradas) {
+    if (!e || String(e.id || '') !== String(env.WHATSAPP_WABA_ID || '')) return false;
+    for (const c of (e.changes || [])) {
+      const meta = ((c && c.value) || {}).metadata || {};
+      if (String(meta.phone_number_id || '') !== String(env.WHATSAPP_PHONE_ID || '')) return false;
+    }
+  }
+  return true;
+}
+
 function procesa(crudo, firma, entorno) {
   const env = entorno || process.env;
+  const porRutaSecreta = env.RUTA_SECRETA_OK === '1';
 
-  if (!env.WHATSAPP_APP_SECRET) {
-    return { status: 503, cuerpo: { error: 'sin secreto' }, envios: [] };
-  }
-  if (!firmaValida(crudo, firma, env.WHATSAPP_APP_SECRET)) {
-    return { status: 401, cuerpo: { error: 'firma invalida' }, envios: [] };
+  if (porRutaSecreta) {
+    /* Modo Dualhook: sin firma posible; la puerta ya comprobó el tramo
+       secreto. Aquí se exige saber quiénes somos: sin WABA o número
+       configurados, cerrado a fallos. */
+    if (!env.WHATSAPP_WABA_ID || !env.WHATSAPP_PHONE_ID) {
+      return { status: 503, cuerpo: { error: 'sin WABA o numero configurados' }, envios: [] };
+    }
+  } else {
+    if (!env.WHATSAPP_APP_SECRET) {
+      return { status: 503, cuerpo: { error: 'sin secreto' }, envios: [] };
+    }
+    if (!firmaValida(crudo, firma, env.WHATSAPP_APP_SECRET)) {
+      return { status: 401, cuerpo: { error: 'firma invalida' }, envios: [] };
+    }
   }
 
   let aviso;
   try {
     aviso = JSON.parse(Buffer.isBuffer(crudo) ? crudo.toString('utf8') : String(crudo));
   } catch (e) {
+    if (porRutaSecreta) {
+      /* Sin firma, un cuerpo ilegible no se puede atribuir a nadie: no se acepta. */
+      return { status: 400, cuerpo: { error: 'cuerpo ilegible' }, envios: [] };
+    }
     /* Firma buena pero cuerpo ilegible: es cosa nuestra, no de un
        atacante. Se acepta para que Meta no reintente en balde. */
     return { status: 200, cuerpo: { ok: true, aviso: 'cuerpo ilegible' }, envios: [] };
+  }
+
+  if (porRutaSecreta && !avisoEsNuestro(aviso, env)) {
+    return { status: 403, cuerpo: { error: 'aviso de otra cuenta' }, envios: [] };
   }
 
   const envios = [];
@@ -1354,6 +1409,8 @@ module.exports = {
   procesa,
   idsDeAudio,
   firmaValida,
+  rutaSecretaValida,
+  avisoEsNuestro,
   igualesEnTiempoConstante,
   olvidaTodo,
   /* Para que `whatsapp.mjs` pueda dejar guardado lo que la IA entendió.
