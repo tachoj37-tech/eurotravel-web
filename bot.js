@@ -3744,7 +3744,7 @@ function pegaDatos(estado, datos) {
     const limpio = limpiaDestino(d.destino);
     if (!e.destino || destinoFlojo(e.destino) || e.paso === 'destino') e.destino = limpio;
   }
-  if (d.origen && (!e.origen || e.paso === 'origen')) {
+  if (d.origen && (!e.origen || e.paso === 'origen' || e.origenSupuesto)) {
     /* «Guadalajara norte», «zapopan», «gdl centro»: para cotizar es la
        ciudad; la zona y la colonia van al contrato, no aquí. */
     const o = normaliza(d.origen);
@@ -3759,7 +3759,22 @@ function pegaDatos(estado, datos) {
      que sí: se guarda con su nombre, que es lo que imprime el contrato. */
   if (d.autobus) {
     const bus = UNIDADES.find(function (u) { return u.id === d.autobus && u.cat === 'autobus'; });
-    if (bus) { e.unidad = 'autobus'; e.unidadNombre = bus.name; e.unidadId = bus.id; }
+    /* Criterio (dictado del dueño, 6-sep-2026): un autobús donde no caben
+       no se acepta ni aunque el cliente lo pida. Se deja `noCabe` para que
+       el agente se lo diga con nombre y número y ofrezca los que sí. */
+    if (bus && e.gente && Number(bus.max) < Number(e.gente)) {
+      e.noCabe = { nombre: bus.name, asientos: Number(bus.max), gente: Number(e.gente) };
+    } else if (bus) {
+      delete e.noCabe;
+      e.unidad = 'autobus'; e.unidadNombre = bus.name; e.unidadId = bus.id;
+    }
+  }
+  /* Origen por omisión (dictado del dueño, 6-sep-2026): todos salen de la
+     zona metropolitana de Guadalajara; no se pregunta. Solo se cambia si el
+     cliente dice otra ciudad (`origenSupuesto` marca que fue supuesto). */
+  if (d.origen && e.origenSupuesto) { delete e.origenSupuesto; }
+  if (!e.origen && e.destino && e.salida && e.regreso && (e.gente || e.unidad)) {
+    e.origen = 'Guadalajara'; e.origenSupuesto = true;
   }
   if (d.ocasion && !e.ocasion) e.ocasion = d.ocasion;
   if (typeof d.recorridos === 'number' && typeof e.recorridos !== 'number') e.recorridos = d.recorridos;
@@ -3795,7 +3810,12 @@ function loQueFalta(estado) {
   const e = alSiguienteHueco(Object.assign({}, estado || {}));
   if (e.paso === 'elegirBus') {
     const lista = listaCortaDeAutobuses(e.gente);
-    return 'cuál autobús. PRIMERO enséñale las opciones que le caben, tal cual esta lista, un ' +
+    const aviso = e.noCabe
+      ? 'OJO: el cliente pidió el ' + e.noCabe.nombre + ' y NO le cabe (' + e.noCabe.asientos +
+        ' asientos para ' + e.noCabe.gente + ' personas). Díselo con esos números, sin regaño, y ' +
+        'ofrécele los de la lista. '
+      : '';
+    return aviso + 'cuál autobús. PRIMERO enséñale las opciones que le caben, tal cual esta lista, un ' +
       'renglón por unidad y sin agregar baño, puertas ni aire:\n' + lista.join('\n') +
       '\nY cierra con «¿cuál te late? Si quieres te recomiendo uno». SOLO si pide ' +
       'recomendación, recomienda uno de esa lista con una razón. Cuando elija (o diga «el que ' +
