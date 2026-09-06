@@ -3774,16 +3774,39 @@ function pegaDatos(estado, datos) {
   return alSiguienteHueco(e);
 }
 
+/* Los autobuses que le caben al grupo, en tres datos por renglón: nombre,
+   línea y asientos. Nada más —dictado del dueño (6-sep-2026): «no le digas
+   de baño, puerta ni nada; solo qué calidad es y cuántos asientos»—. Los
+   detalles salen solo si el cliente pregunta por una unidad. */
+function listaCortaDeAutobuses(gente) {
+  const n = Number(gente) || 0;
+  return UNIDADES
+    .filter(function (u) { return u.cat === 'autobus' && Number(u.max) >= n; })
+    .sort(function (a, b) { return Number(b.max) - Number(a.max); })
+    .map(function (u) {
+      const linea = String(u.tag || '').replace(/^Autob[uú]s\s*·\s*/i, '').trim();
+      return u.name + ' — ' + linea + ' — ' + u.max + ' asientos';
+    });
+}
+
 /* Qué le falta al viaje, en palabras, para decírselo al agente. `null`
    cuando ya está todo y el motor puede cotizar. */
 function loQueFalta(estado) {
   const e = alSiguienteHueco(Object.assign({}, estado || {}));
+  if (e.paso === 'elegirBus') {
+    const lista = listaCortaDeAutobuses(e.gente);
+    return 'cuál autobús. PRIMERO enséñale las opciones que le caben, tal cual esta lista, un ' +
+      'renglón por unidad y sin agregar baño, puertas ni aire:\n' + lista.join('\n') +
+      '\nY cierra con «¿cuál te late? Si quieres te recomiendo uno». SOLO si pide ' +
+      'recomendación, recomienda uno de esa lista con una razón. Cuando elija (o diga «el que ' +
+      'tú digas» y tú recomiendes uno), ponlo en datos.autobus';
+  }
   return {
     destino: 'a dónde van',
     salida: 'qué día salen',
     regreso: 'qué día regresan (o si es el mismo día)',
     cuantos: 'cuántos son, aproximadamente',
-    elegirBus: 'cuál autobús: RECOMIENDA TÚ uno de los que le caben con una razón concreta y pide el sí (para 48–51: Irizar i6S por las dos puertas, o Marcopolo G8 por ser el más nuevo; para 47 o menos también caben Irizar i6, Irizar PB y Century; Neobus lleva 50). Si dice «el que tú digas» o «sí», ponlo en datos.autobus',
+    elegirBus: 'cuál autobús (ver lista)',
     origen: 'de qué CIUDAD salen (Guadalajara o cuál). Solo la ciudad: NUNCA preguntes zona, norte/sur, colonia ni dirección; eso no cambia el precio y se pide hasta el contrato',
     recorridos: 'si allá se van a andar moviendo con el camión o solo los llevan y los traen',
     confirmar: null
@@ -3792,7 +3815,7 @@ function loQueFalta(estado) {
 
 module.exports = {
   respuestaA, textoDeCotizacion, textoDeSolicitud, aplicaEntendido, continuaCon, mediosDe,
-  pegaDatos, loQueFalta,
+  pegaDatos, loQueFalta, listaCortaDeAutobuses,
   hayQueRevisarDisponibilidad,
   /* Se exportan para poder probarlos solos: son los que leen la frase
      de un jalon, y ahi es donde se han colado los defectos de dinero. */
