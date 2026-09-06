@@ -572,7 +572,8 @@ el historial de mensajes: eso va aparte, últimos 12 mensajes.
 | Precio dado, quiere apartar | «va, ¿cómo aparto?» | Anticipo (20 %, a $500 arriba), datos oficiales de pago o `crear_link_pago`; recordatorios 24 h y 72 h si no llega el comprobante |
 | Comprobante recibido | foto o «ya deposité» | `registrar_abono_reportado` → te llega a ti; el bot le dice que en cuanto se valide le confirma y le manda su contrato |
 | Anticipo autorizado | tú lo registras en EuroSystem (logística o ficha) → aviso al bot | Mensaje inmediato: monto, saldo, límite, «de aquí en adelante yo te voy avisando»; **promete el contrato y pide lo que falte** (nombre, dirección, hora) → `generar_contrato` → `enviar_documento(contrato)` con folio y PDF |
-| Abonando | salida − 30/15/5 d con saldo | Plantilla de saldo, como recomendación («para que Vallarta quede sin pendientes»), nunca como vencimiento: no hay fecha límite; ofrece `crear_link_pago` |
+| Abonando | salida − 30/15/5 d con saldo | Plantilla de saldo, como recomendación («para que Vallarta quede sin pendientes»), recordando que también puede liquidar al abordar; nunca como vencimiento; ofrece `crear_link_pago` |
+| Cancelación pedida | «quiero cancelar» | El agente arma el mensaje con la política y te lo manda como ticket; sale solo con tu «va» o tu texto. Al cliente: «en breve te confirmo» |
 | | comprobante del cliente | `registrar_abono_reportado`; «en cuanto se valide te confirmo el saldo» |
 | Liquidada / próxima | salida − 15 d | Confirma dirección y hora; pide lista si aplica → `guardar_en_ficha` |
 | | salida − 72 h | Unidad asignada (foto), operador, teléfono de guardia; pide confirmación |
@@ -714,13 +715,17 @@ PSICOLOGÍA DEL ACOMPAÑAMIENTO (después de la venta)
 - Post-viaje: gratitud específica a SU viaje. Aniversario: nombra la
   ocasión anterior ("el año pasado fueron a Cantaritos el 20 de mayo,
   ¿repetimos?").
-- Una cancelación: explica la política tal cual está en DATOS DE LA
-  EMPRESA (20 % con un mes, 40 % con una semana, 100 % el mismo día o
-  24 h antes), sin suavizarla ni endurecerla, arma la solicitud y pásala
-  al dueño. Un cambio de fecha no lo decides tú: pásalo.
-- Sobre cuándo liquidar: no hay fecha límite. Di que se recomienda lo
-  antes posible porque las fechas se llenan, y que apartar es lo que
-  asegura la suya. Nunca inventes un vencimiento.
+- Una cancelación NUNCA la contestas tú solo: arma el mensaje con la
+  política tal cual está en DATOS DE LA EMPRESA (20 % con un mes, 40 %
+  con una semana, 100 % el mismo día o 24 h antes), sin suavizarla ni
+  endurecerla, y mándalo al dueño con pasar_a_humano(motivo: cancelación,
+  solicitud_armada: el mensaje). Al cliente solo le dices que en breve le
+  confirmas. El mensaje sale cuando el dueño diga «va». Un cambio de
+  fecha, igual: pásalo.
+- Sobre cuándo pagar: no hay fecha límite. El anticipo (apartar) lo antes
+  posible porque las fechas se llenan y apartar es lo que asegura la
+  suya. Ya con su contrato, el resto lo puede ir abonando o liquidarlo el
+  día del viaje. Nunca inventes un vencimiento.
 
 PRUEBA DE LEGITIMIDAD ANTES QUE URGENCIA
 Antes de hablar de dinero, ofrece sin que te lo pidan lo que aparece en
@@ -760,9 +765,9 @@ Se preguntan una por una. Van a `datos-bot.json` (y al bloque cacheado).
 | # | Dato | Estado | Dónde se usa |
 |---|---|---|---|
 | 1 | Días de vigencia de una cotización | **69** (6-sep-2026) | `cotizaciones.vigencia_hasta`, texto del precio; se recuerda 90 |
-| 2 | Política de cancelación | **Dictada el 6-sep-2026:** cargo del 20 % si cancela con un mes de anticipación, 40 % con una semana, 100 % el mismo día o 24 h antes. (Supuesto: porcentaje del total del viaje.) El bot la explica y te pasa la solicitud; la cancelación en sí la haces tú | Respuesta del agente + `pasar_a_humano` con `solicitud_armada` |
+| 2 | Política de cancelación | **Dictada el 6-sep-2026:** cargo del 20 % si cancela con un mes de anticipación, 40 % con una semana, 100 % el mismo día o 24 h antes. (Supuesto: porcentaje del total del viaje.) **Con compuerta, como el precio:** el agente arma el mensaje con la política, te lo manda como ticket, y sale solo con tu «va» o con el texto que contestes. Sin tu respuesta no manda nada | Ticket al dueño + `pasar_a_humano` con `solicitud_armada` |
 | 2b | Cambio de fecha | sin política dictada: el bot la pasa contigo (5-sep) | `pasar_a_humano` |
-| 3 | Fecha límite de liquidación | **Dictada el 6-sep-2026:** no hay fecha límite como tal; se recomienda lo antes posible «porque se llena, y así usted aparta la fecha». Los recordatorios de saldo se anclan a la SALIDA (30, 15 y 5 días antes), en tono de recomendación, nunca de vencimiento | `recordatorios`, texto del agente |
+| 3 | Liquidación | **Dictada el 6-sep-2026:** no hay fecha límite. El primer abono (apartar) lo antes posible «porque se llena, y así aparta la fecha»; ya con contrato, el resto **lo puede ir abonando o liquidar al abordar**. Los recordatorios de saldo se anclan a la SALIDA (30, 15 y 5 días antes), como recomendación que también recuerda que puede liquidar el día del viaje; nunca como vencimiento | `recordatorios`, texto del agente |
 | 4 | Datos de pago oficiales (razón social, RFC, banco, cuenta/CLABE empresarial, si Stripe sigue) | pendiente (hoy el bot manda `CLABE` de Vercel) | `crear_link_pago`, prueba de legitimidad |
 | 5 | Teléfono de guardia | pendiente | `pasar_a_humano(guardia)`, aviso 72 h antes |
 | ~~6~~ | ~~Vendedores para el round robin~~ | sin panel: quien atiende eres tú | — |

@@ -14,13 +14,15 @@
       { "si_cancela": "el mismo día o 24 horas antes", "cargo_porcentaje": 100 }
     ],
     "base_del_porcentaje": "SUPUESTO: sobre el total del viaje (el dueño no lo precisó)",
-    "quien_la_ejecuta": "el dueño: el bot la explica tal cual y le pasa la solicitud armada",
-    "_": "Dictado del dueño (6-sep-2026): «20% 1 mes antes, 40% 1 semana antes, 100% mismo día o 24 horas antes». Antes (5-sep) el bot no explicaba nada y solo pasaba al cliente; eso sigue valiendo para el cambio de fecha."
+    "compuerta": "El bot NUNCA manda nada de cancelación por su cuenta: arma el mensaje con la política, se lo manda al dueño como ticket, y sale solo con su «va» (o con el texto que él conteste). Igual que el precio.",
+    "_": "Dictado del dueño (6-sep-2026): «20% 1 mes antes, 40% 1 semana antes, 100% mismo día o 24 horas antes» y «pídeme autorización para mandar un mensaje, yo te digo cuando sí y cuando no». Para el cambio de fecha sigue el 5-sep: pasar al dueño."
   },
   "POLITICA_LIQUIDACION": {
     "fecha_limite": null,
-    "que_dice_el_bot": "No hay fecha límite como tal para depositar, pero le recomendamos que sea lo antes posible porque se llena, y así usted aparta su fecha.",
-    "recordatorios_de_saldo": "anclados a la salida: 30, 15 y 5 días antes, como recomendación, nunca como vencimiento",
+    "primer_abono": "apartar la fecha (el anticipo): lo antes posible, porque se llena",
+    "el_resto": "una vez que apartó y tiene contrato, puede liquidar al abordar o ir abonando antes",
+    "que_dice_el_bot": "No hay fecha límite como tal para depositar, pero te recomiendo que sea lo antes posible porque se llena, y así apartas tu fecha. Ya con tu contrato, el resto lo puedes ir abonando o liquidarlo el día del viaje.",
+    "recordatorios_de_saldo": "anclados a la salida: 30, 15 y 5 días antes, como recomendación y recordando que también puede liquidar al abordar; nunca como vencimiento",
     "_": "Dictado del dueño (6-sep-2026). Nunca inventar un vencimiento."
   },
   "TICKETS_A": "número personal del dueño, distinto del número del bot (DUENO_WHATSAPP en Vercel cuando entre Dualhook)",
