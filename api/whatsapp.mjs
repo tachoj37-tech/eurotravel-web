@@ -1071,16 +1071,6 @@ async function loQueDiceElAgente(envio) {
     return false;
   }
 
-  /* Escoger autobús lo pregunta el motor: él tiene los nombres y los cupos. */
-  if (nuevo.paso === 'elegirBus') {
-    const p = conversacion.pregunta(nuevo);
-    const textoBus = (dicho.respuesta ? dicho.respuesta + '\n\n' : '') + ((p && p.texto) || '');
-    await manda({ numeroDeOrigen: envio.numeroDeOrigen, para: cliente, texto: textoBus,
-      pasaAPersona: false, escribio: '[agente · elegir autobús]' });
-    agente.recuerda(cliente, 'bot', textoBus);
-    return true;
-  }
-
   await manda({ numeroDeOrigen: envio.numeroDeOrigen, para: cliente, texto: dicho.respuesta,
     pasaAPersona: false, escribio: '[agente]' });
   agente.recuerda(cliente, 'bot', dicho.respuesta);

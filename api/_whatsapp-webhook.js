@@ -1060,8 +1060,10 @@ function procesa(crudo, firma, entorno) {
                    autobús: ahí el guion tiene los botones y los nombres.
                    ------------------------------------------------------------ */
                 const estadoAntes = suEstado ? Object.assign({}, suEstado) : null;
-                const conAgente = agenteIA(env) && !!texto &&
-                  !(estadoAntes && estadoAntes.paso === 'elegirBus');
+                /* Escoger autobús también es del agente (6-sep-2026): el
+                   guion preguntaba «¿cuál te late?» y repetía la lista; el
+                   agente RECOMIENDA uno con una razón, como manda la casa. */
+                const conAgente = agenteIA(env) && !!texto;
                 const respuesta = conversacion.respuestaA(texto, suEstado, env.HOY_DE_PRUEBA);
                 if (conAgente && respuesta && typeof respuesta === 'object') {
                   respuesta.agente = true;

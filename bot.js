@@ -3749,6 +3749,12 @@ function pegaDatos(estado, datos) {
   if (d.regreso && (!e.regreso || e.paso === 'regreso')) e.regreso = d.regreso;
   if (d.gente && (!e.gente || e.paso === 'cuantos')) e.gente = d.gente;
   if (d.unidad && !e.unidad) e.unidad = d.unidad;
+  /* El autobús concreto, cuando el agente lo recomendó y el cliente dijo
+     que sí: se guarda con su nombre, que es lo que imprime el contrato. */
+  if (d.autobus) {
+    const bus = UNIDADES.find(function (u) { return u.id === d.autobus && u.cat === 'autobus'; });
+    if (bus) { e.unidad = 'autobus'; e.unidadNombre = bus.name; e.unidadId = bus.id; }
+  }
   if (d.ocasion && !e.ocasion) e.ocasion = d.ocasion;
   if (typeof d.recorridos === 'number' && typeof e.recorridos !== 'number') e.recorridos = d.recorridos;
   if (e.regreso && e.salida && e.regreso < e.salida) e.regreso = null;
@@ -3771,7 +3777,7 @@ function loQueFalta(estado) {
     salida: 'qué día salen',
     regreso: 'qué día regresan (o si es el mismo día)',
     cuantos: 'cuántos son, aproximadamente',
-    elegirBus: 'cuál autobús prefieren (el motor le ofrece los que le caben)',
+    elegirBus: 'cuál autobús: RECOMIENDA TÚ uno de los que le caben con una razón concreta y pide el sí (para 48–51: Irizar i6S por las dos puertas, o Marcopolo G8 por ser el más nuevo; para 47 o menos también caben Irizar i6, Irizar PB y Century; Neobus lleva 50). Si dice «el que tú digas» o «sí», ponlo en datos.autobus',
     origen: 'de dónde salen (la ciudad)',
     recorridos: 'si allá se van a andar moviendo con el camión o solo los llevan y los traen',
     confirmar: null

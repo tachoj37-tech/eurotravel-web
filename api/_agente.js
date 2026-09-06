@@ -144,7 +144,8 @@ function instruccionesDelAgente(voz) {
     'FORMATO: devuelve SOLO este JSON, sin explicar nada:\n' +
     '{"respuesta":string|null,"datos":{"destino":string|null,"origen":string|null,' +
     '"salida":"aaaa-mm-dd"|null,"regreso":"aaaa-mm-dd"|null,"gente":number|null,' +
-    '"unidad":"sprinter|suburban|autobus"|null,"ocasion":string|null,"recorridos":number|null},' +
+    '"unidad":"sprinter|suburban|autobus"|null,"ocasion":string|null,"recorridos":number|null,' +
+    '"autobus":string|null},' +
     '"unidadPedida":string|null,' +
     '"accion":"seguir|cotizar|fotos|video|persona|apartar"}\n' +
     '"datos" trae SOLO lo que el cliente dijo en ESTE mensaje; lo demás null. Nunca ' +
@@ -165,6 +166,11 @@ function instruccionesDelAgente(voz) {
     'Cliente: a vta el 20 de nov somos como 12\n' +
     '{"respuesta":"Vallarta con 12, va perfecto para una Sprinter. ¿Qué día regresan?",' +
     '"datos":{"destino":"Puerto Vallarta","salida":"AAAA-11-20","gente":12},"accion":"seguir"}\n' +
+    'Cliente (son 48 y toca escoger autobús): cual nos recomiendas\n' +
+    '{"respuesta":"Para 48, el Irizar i6S: 51 lugares, baño, y dos puertas para que bajen rápido. ' +
+    '¿Va con ése?","datos":{},"accion":"seguir"}\n' +
+    'Cliente: va, ese\n' +
+    '{"respuesta":"Listo, i6S. ¿De dónde salen?","datos":{"autobus":"irizar-i6s"},"accion":"seguir"}\n' +
     'Cliente: cuanto sale?\n' +
     '{"respuesta":null,"datos":{},"accion":"cotizar"}\n' +
     'Cliente: tienen fotos de la sprinter\n' +
@@ -232,11 +238,14 @@ function limpiaDatos(d) {
   const fecha = function (v) { return (typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v)) ? v : null; };
   const numero = function (v, max) { const n = Number(v); return Number.isFinite(n) && n > 0 && n <= max ? Math.round(n) : null; };
   const unidad = ['sprinter', 'suburban', 'autobus'].indexOf(String(x.unidad || '').toLowerCase()) >= 0 ? String(x.unidad).toLowerCase() : null;
+  const ids = unidades().map(function (u) { return u.id; });
+  const autobus = (typeof x.autobus === 'string' && ids.indexOf(x.autobus) >= 0) ? x.autobus : unidadPorTexto(x.autobus || '');
   return {
     destino: texto(x.destino), origen: texto(x.origen),
     salida: fecha(x.salida), regreso: fecha(x.regreso),
     gente: numero(x.gente, 120), unidad: unidad, ocasion: texto(x.ocasion, 30),
-    recorridos: (x.recorridos === 0 || x.recorridos === '0') ? 0 : numero(x.recorridos, 30)
+    recorridos: (x.recorridos === 0 || x.recorridos === '0') ? 0 : numero(x.recorridos, 30),
+    autobus: autobus
   };
 }
 
