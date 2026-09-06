@@ -59,11 +59,29 @@
    existe. */
 const VIDA_DIAS = 45;
 
+/* La dirección se queda SOLO con el dominio. El dueño pegó una vez una
+   llave en vez de la dirección, y otra vez la dirección con `/rest/v1` de
+   más (6-sep-2026): cada lectura tronaba con «Invalid path». Aquí se
+   normaliza: `https://xxxx.supabase.co`, y lo que sobre se descarta. Si
+   lo que hay no es una dirección https, se avisa una vez y no hay almacén. */
+let avisoDeDireccion = false;
 function config() {
   const url = process.env.ALMACEN_URL;
   const clave = process.env.ALMACEN_CLAVE;
   if (!url || !clave) return null;
-  return { url: String(url).replace(/\/+$/, ''), clave: clave };
+  let origen;
+  try {
+    const u = new URL(String(url).trim());
+    if (u.protocol !== 'https:') throw new Error('sin https');
+    origen = u.origin;
+  } catch (e) {
+    if (!avisoDeDireccion) {
+      avisoDeDireccion = true;
+      console.error('[almacen] ALMACEN_URL no es una dirección https válida (¿se pegó una llave?): sin almacén');
+    }
+    return null;
+  }
+  return { url: origen, clave: String(clave).trim() };
 }
 
 function hayAlmacen() { return !!config(); }
