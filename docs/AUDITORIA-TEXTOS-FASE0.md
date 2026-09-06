@@ -345,3 +345,11 @@ T-100 (irán en el primer lote).
 
 El ticket al dueño («💰 *Precio por confirmar* …») es texto hacia adentro, no lo ve el
 cliente: no entra al inventario.
+
+| ID | Dónde | Cuándo | Texto | Estado |
+|---|---|---|---|---|
+| T-125 | `whatsapp.mjs` `TEXTO_CONTRATO_AL_CLIENTE` | El dueño dio «va» a la ficha y EuroSystem registró el contrato | «Listo, ya quedó tu contrato con el folio *{folio}* 🎉 / Aquí lo puedes ver y guardar: {liga} / En cuanto se vea reflejado tu anticipo te confirmo la fecha.» | **Aprobado por delegación** (dictado 5-sep-2026: «la liga del PDF a mí, al cliente y al sistema») |
+
+Datos cerrados el 5-sep-2026 (segunda tanda): `MINUTOS_RESPUESTA = sin número` — el bot
+dice «en breve se le contesta», nunca una cifra (T-080, T-085, T-102, primer lote); los
+tickets van al **número personal** del dueño cuando el bot pase a su número de negocio.

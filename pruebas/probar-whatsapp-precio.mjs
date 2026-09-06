@@ -567,7 +567,11 @@ function siembraFichaCompleta(C) {
   okQue('  al dueño le llega el folio', /folio \*43801\*/.test(alDueno));
   okQue('  y la liga del PDF', /eurosystem\/pdf\/43801/.test(alDueno));
   okQue('  y dice BORRADOR', /BORRADOR/.test(alDueno));
-  okQue('  al cliente no le llegó nada', textos(C).length === 0);
+  /* Cambió el 5-sep-2026: «la liga del PDF a mí, al cliente y al sistema».
+     Antes se afirmaba que al cliente no le llegaba nada. */
+  const alCliente = textos(C).join('\n');
+  okQue('  al cliente le llega su folio y la liga', /folio \*43801\*/.test(alCliente) && /eurosystem\/pdf\/43801/.test(alCliente));
+  okQue('  sin palabras prohibidas', !/sistema|proceso|formulario|ticket/i.test(alCliente));
   const b = contratosMandados[0] || {};
   ok('  referencia estable: número + salida', b.referenciaExterna, 'WA-' + C + '-2026-11-20');
   ok('  total y anticipo del precio confirmado', [b.cobro && b.cobro.montoTotal, b.cobro && b.cobro.anticipo], [48000, 10000]);

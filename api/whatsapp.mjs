@@ -841,10 +841,30 @@ async function subeContrato(envio) {
     contratoSubido: { folio: datos.folio, urlPdf: datos.urlPdf || null, contratoId: datos.contratoId || null, cuando: Date.now() }
   });
   console.log('[contrato] registrado folio ' + datos.folio + (datos.repetido ? ' (ya existía)' : ''));
-  return alDueno('📄 Contrato registrado en EuroSystem como *BORRADOR*, folio *' + datos.folio + '*' +
+  const salida = alDueno('📄 Contrato registrado en EuroSystem como *BORRADOR*, folio *' + datos.folio + '*' +
     (datos.repetido ? ' (ya existía)' : '') + '.' +
     (datos.urlPdf ? '\n' + datos.urlPdf : '') +
     '\n\nLo confirmas en el panel cuando entre el anticipo.', '[contrato · registrado]');
+  /* Y al cliente también, dictado del dueño (5-sep-2026): «la liga del PDF
+     a mí, al cliente y al sistema». Solo la primera vez: si ya existía, el
+     cliente ya la tiene. */
+  if (datos.urlPdf && !datos.repetido) {
+    salida.push({
+      numeroDeOrigen: envio.numeroDeOrigen,
+      para: envio.para,
+      texto: TEXTO_CONTRATO_AL_CLIENTE(datos.folio, datos.urlPdf),
+      pasaAPersona: false,
+      escribio: '[contrato · liga al cliente]'
+    });
+  }
+  return salida;
+}
+
+/* T-125 · Lo que recibe el cliente cuando su contrato ya quedó registrado. */
+function TEXTO_CONTRATO_AL_CLIENTE(folio, liga) {
+  return 'Listo, ya quedó tu contrato con el folio *' + folio + '* 🎉\n' +
+    'Aquí lo puedes ver y guardar:\n' + liga + '\n\n' +
+    'En cuanto se vea reflejado tu anticipo te confirmo la fecha.';
 }
 
 async function reparte(envio) {

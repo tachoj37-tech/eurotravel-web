@@ -4,7 +4,10 @@
   "NOMBRE_BOT": "Eurobot",
   "VENDEDOR_HUMANO_NOTA": "Dictado del dueño (5-sep-2026): el bot NUNCA nombra a una persona; habla con el cliente por su nombre y las entregas se dicen sin «te paso con Fulano».",
   "VENDEDOR_HUMANO": "sin nombre",
-  "MINUTOS_RESPUESTA": "PENDIENTE",
+  "MINUTOS_RESPUESTA": "sin número",
+  "MINUTOS_RESPUESTA_NOTA": "Dictado del dueño (5-sep-2026): no se promete tiempo; el bot dice «en breve se le contesta». Afecta T-080, T-085 y T-102 (primer lote).",
+  "LIGA_PDF_CONTRATO": "al cliente, al dueño y queda en EuroSystem (dictado 5-sep-2026)",
+  "TICKETS_A": "número personal del dueño, distinto del número del bot (DUENO_WHATSAPP en Vercel cuando entre Dualhook)",
 
   "UNIDADES": [
     { "id": "sprinter",   "tipo": "Sprinter",              "capacidad": 20, "linea": "Grupos pequeños", "rango_recomendado": "hasta 20", "cotiza_sola": true,  "equipamiento": ["Aire acondicionado", "Asientos reclinables", "Audio", "Pantalla"],                 "argumento_media_linea": "PENDIENTE" },
