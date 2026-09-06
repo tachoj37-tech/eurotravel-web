@@ -7,6 +7,8 @@
   "MINUTOS_RESPUESTA": "sin número",
   "MINUTOS_RESPUESTA_NOTA": "Dictado del dueño (5-sep-2026): no se promete tiempo; el bot dice «en breve se le contesta». Afecta T-080, T-085 y T-102 (primer lote).",
   "LIGA_PDF_CONTRATO": "al cliente, al dueño y queda en EuroSystem (dictado 5-sep-2026)",
+  "POLITICA_CANCELACION": "pasar al dueño",
+  "POLITICA_CANCELACION_NOTA": "Dictado del dueño (5-sep-2026): «simplemente pásame el cliente a mí, ya yo le contesto desde el WhatsApp». El bot no explica ninguna regla: avisa que le contestan en breve y manda ticket. Afecta T-096 y T-098 (primer lote).",
   "TICKETS_A": "número personal del dueño, distinto del número del bot (DUENO_WHATSAPP en Vercel cuando entre Dualhook)",
 
   "UNIDADES": [
