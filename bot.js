@@ -3744,7 +3744,13 @@ function pegaDatos(estado, datos) {
     const limpio = limpiaDestino(d.destino);
     if (!e.destino || destinoFlojo(e.destino) || e.paso === 'destino') e.destino = limpio;
   }
-  if (d.origen && (!e.origen || e.paso === 'origen')) e.origen = d.origen;
+  if (d.origen && (!e.origen || e.paso === 'origen')) {
+    /* «Guadalajara norte», «zapopan», «gdl centro»: para cotizar es la
+       ciudad; la zona y la colonia van al contrato, no aquí. */
+    const o = normaliza(d.origen);
+    e.origen = /guadalajara|gdl|zapopan|tlaquepaque|tonala|tlajomulco|zona metropolitana/.test(o)
+      ? 'Guadalajara' : d.origen;
+  }
   if (d.salida && (!e.salida || e.paso === 'salida')) e.salida = d.salida;
   if (d.regreso && (!e.regreso || e.paso === 'regreso')) e.regreso = d.regreso;
   if (d.gente && (!e.gente || e.paso === 'cuantos')) e.gente = d.gente;
@@ -3778,7 +3784,7 @@ function loQueFalta(estado) {
     regreso: 'qué día regresan (o si es el mismo día)',
     cuantos: 'cuántos son, aproximadamente',
     elegirBus: 'cuál autobús: RECOMIENDA TÚ uno de los que le caben con una razón concreta y pide el sí (para 48–51: Irizar i6S por las dos puertas, o Marcopolo G8 por ser el más nuevo; para 47 o menos también caben Irizar i6, Irizar PB y Century; Neobus lleva 50). Si dice «el que tú digas» o «sí», ponlo en datos.autobus',
-    origen: 'de dónde salen (la ciudad)',
+    origen: 'de qué CIUDAD salen (Guadalajara o cuál). Solo la ciudad: NUNCA preguntes zona, norte/sur, colonia ni dirección; eso no cambia el precio y se pide hasta el contrato',
     recorridos: 'si allá se van a andar moviendo con el camión o solo los llevan y los traen',
     confirmar: null
   }[e.paso] || null;

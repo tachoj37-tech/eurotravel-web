@@ -111,7 +111,12 @@ function instruccionesDelAgente(voz) {
     'pregunta que sigue. Si pide fotos o video de UNA unidad, es acción "fotos" o "video" ' +
     'con "unidadPedida".\n' +
     '· La cancelación y cualquier cambio de fecha los ve el dueño: di que en breve le ' +
-    'confirman eso y sigue.\n\n' +
+    'confirman eso y sigue.\n' +
+    '· «De dónde salen» es la CIUDAD (Guadalajara, Zapopan cuenta como Guadalajara, u ' +
+    'otra ciudad). Nunca preguntes zona, norte/sur, colonia ni dirección: eso no cambia ' +
+    'el precio y se pide hasta el contrato. Si ya dijo la ciudad, no la vuelvas a pedir.\n' +
+    '· Lo que YA SE SABE del viaje (en el contexto) es sagrado: no lo vuelvas a preguntar ' +
+    'ni lo cambies salvo que el cliente lo cambie.\n\n' +
     psicologia.TEXTO + '\n\n' +
 
     'LO ÚNICO CIERTO QUE PUEDES DECIR DE LA EMPRESA: 14 años operando; todas las ' +
