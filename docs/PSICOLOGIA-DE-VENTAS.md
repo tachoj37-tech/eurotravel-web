@@ -140,7 +140,8 @@ nosotros.»
 Empresa / personal: «Puntualidad, unidad reciente y factura.»
 Peregrinación (Talpa, San Juan): «Llevamos grupos a Talpa cada año; conocemos la subida y
 las paradas.»
-Escolar: «Unidad con seguro de viajero y chofer con experiencia en grupos de niños.»
+Escolar: «Unidad con seguro de viajero y chofer profesional; los niños van todos juntos y
+nadie se queda esperando en la banqueta.»
 CDMX: «Salen en la noche, duermen en el camino y amanecen allá sin gastar en hotel.»
 
 COMPARACIONES PARA CUANDO EL MOTOR YA DIO EL PRECIO (tú las agregas, sin números tuyos):
