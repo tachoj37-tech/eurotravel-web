@@ -178,7 +178,11 @@ function encendido(nombre) {
   return v === undefined || v === '' ? true : !/^(0|no|false|off)$/i.test(String(v).trim());
 }
 const TEXTO_ESPERA_PRECIO =
-  'Déjame confirmar disponibilidad y te paso el precio en un momento.';
+  'Va, déjame confirmarlo y te paso el precio en un momento.';
+/* T-126 · con fecha cercana o en temporada alta se dice de frente que se
+   checa la disponibilidad (dictado del dueño, 6-sep-2026). */
+const TEXTO_ESPERA_CON_CALENDARIO =
+  'Va. Como es fecha cercana, checo disponibilidad y te paso el precio en un momento.';
 
 /* Con un total fijado por el dueño, el anticipo se recalcula con la misma
    regla del motor (20 % al múltiplo de $500 hacia arriba). Los demás
@@ -229,13 +233,19 @@ async function precioDe(envio, opciones) {
 
   /* ---- la compuerta: todo pasa por el dueño ---- */
   if (!confirmado && encendido('CONFIRMAR_PRECIOS')) {
+    /* La Sprinter se calcula; autobús y Suburban no tienen cotizador
+       automático (el precio lo pone el dueño): el ticket va sin número y
+       le pide el precio. Dictado del dueño (6-sep-2026): por WhatsApp NADIE
+       se manda a otro número; todo pasa por su ticket. */
     let precio = null;
-    try {
-      const r = await nucleo.cotiza(envio.cotiza, process.env.GOOGLE_ROUTES_KEY);
-      if (r.ok) precio = r.precio;
-      else console.error('[whatsapp] no se pudo cotizar: ' + r.error);
-    } catch (e) {
-      console.error('[whatsapp] cotizador tronado: ' + e.message);
+    if (envio.cotiza) {
+      try {
+        const r = await nucleo.cotiza(envio.cotiza, process.env.GOOGLE_ROUTES_KEY);
+        if (r.ok) precio = r.precio;
+        else console.error('[whatsapp] no se pudo cotizar: ' + r.error);
+      } catch (e) {
+        console.error('[whatsapp] cotizador tronado: ' + e.message);
+      }
     }
     const unidad = (envio.cotiza && envio.cotiza.unidad) || res.unidad || 'sprinter';
     const revisa = encendido('CONFIRMAR_DISPONIBILIDAD') ||
@@ -255,10 +265,13 @@ async function precioDe(envio, opciones) {
         desde: Date.now()
       }
     });
+    /* Fecha cercana o temporada alta: se le dice al cliente que se checa
+       disponibilidad, sin prometer nada (dictado del dueño, 6-sep-2026). */
+    const cerca = conversacion.hayQueRevisarDisponibilidad(res.salida, hoy);
     const mios = [{
       numeroDeOrigen: envio.numeroDeOrigen,
       para: envio.para,
-      texto: TEXTO_ESPERA_PRECIO,
+      texto: cerca ? TEXTO_ESPERA_CON_CALENDARIO : TEXTO_ESPERA_PRECIO,
       pasaAPersona: true,
       escribio: '[precio por confirmar]'
     }];
@@ -316,16 +329,32 @@ async function precioDe(envio, opciones) {
   }
 
   let precio = null;
-  try {
-    const r = await nucleo.cotiza(envio.cotiza, process.env.GOOGLE_ROUTES_KEY);
-    if (r.ok) precio = r.precio;
-    else console.error('[whatsapp] no se pudo cotizar: ' + r.error);
-  } catch (e) {
-    console.error('[whatsapp] cotizador tronado: ' + e.message);
+  if (envio.cotiza) {
+    try {
+      const r = await nucleo.cotiza(envio.cotiza, process.env.GOOGLE_ROUTES_KEY);
+      if (r.ok) precio = r.precio;
+      else console.error('[whatsapp] no se pudo cotizar: ' + r.error);
+    } catch (e) {
+      console.error('[whatsapp] cotizador tronado: ' + e.message);
+    }
   }
   /* El dueño contestó con un número: ése es el precio, calcule lo que
      calcule el motor. Regla de la casa: los precios los pone él. */
   if (totalFijado !== null) precio = conTotalFijado(precio, totalFijado);
+
+  /* Autobús o Suburban con «va» a secas: no hay número que mandar. Se le
+     pide al dueño, y al cliente no le llega nada a medias. */
+  if (confirmado && !precio) {
+    const dueno = tickets.numeroDelDueno(process.env);
+    return [{
+      numeroDeOrigen: envio.numeroDeOrigen,
+      para: dueno || envio.numeroDeOrigen,
+      esTicket: true, sobreCliente: envio.para,
+      texto: 'Para este viaje el precio lo pones tú: contéstame *este mensaje* con el número (por ejemplo *52,000*) y se lo mando.\n_cliente: ' + envio.para + '_',
+      pasaAPersona: false,
+      escribio: '[precio · falta el número]'
+    }];
+  }
 
   /* Y lo que confirmó se aprende, para proponérselo la próxima vez que
      alguien pida el mismo viaje. Sin esperar: a Meta hay que contestarle
@@ -758,7 +787,7 @@ async function precioConfirmado(envio) {
   }
   const pc = ficha && ficha.porConfirmar;
   const dueno = tickets.numeroDelDueno(process.env);
-  if (!pc || !pc.cotiza) {
+  if (!pc || !(pc.cotiza || pc.resumen)) {
     return [{
       numeroDeOrigen: envio.numeroDeOrigen,
       para: dueno || envio.numeroDeOrigen,
@@ -1056,7 +1085,39 @@ async function loQueDiceElAgente(envio) {
         pasaAPersona: false, escribio: '[agente]' });
       agente.recuerda(cliente, 'bot', dicho.respuesta);
     }
-    if (accion === 'cotizar') webhook.guardaCharla(cliente, Object.assign({}, nuevo, { paso: 'confirmar' }));
+    /* ------------------------------------------------------------
+       COTIZAR: DIRECTO A LA COMPUERTA DEL DUEÑO
+       ------------------------------------------------------------
+       Sprinter: el motor calcula y el ticket trae el número. Autobús y
+       Suburban: no hay cotizador automático; el ticket va sin número y
+       el dueño lo pone. En los dos casos el cliente recibe la espera y
+       NUNCA se le manda a otro número (el «Mándale esto por WhatsApp
+       al 33…» era el camino de la página, no de WhatsApp; dictado del
+       dueño, 6-sep-2026).
+       ------------------------------------------------------------ */
+    if (accion === 'cotizar') {
+      const confirmar = Object.assign({}, nuevo, { paso: 'confirmar' });
+      let r = null;
+      try { r = conversacion.respuestaA('sí está bien', confirmar, hoy); } catch (e) { r = null; }
+      const resumen = (r && (r.resumen || r.solicitud)) || {
+        destino: nuevo.destino, origen: nuevo.origen, salida: nuevo.salida, regreso: nuevo.regreso,
+        gente: nuevo.gente, unidad: nuevo.unidadNombre || nuevo.unidad
+      };
+      /* El nombre de la unidad («Neobus»), no la categoría («autobus»): es lo
+         que lee el dueño en el ticket y la llave del precio aprendido. */
+      if (nuevo.unidadNombre) resumen.unidad = nuevo.unidadNombre;
+      else if (!resumen.unidad) resumen.unidad = nuevo.unidad;
+      if (!resumen.gente && nuevo.gente) resumen.gente = nuevo.gente;
+      if (r && Object.prototype.hasOwnProperty.call(r, 'estado')) webhook.guardaCharla(cliente, r.estado || confirmar);
+      const salidas = await precioDe({
+        numeroDeOrigen: envio.numeroDeOrigen, para: cliente,
+        cotiza: (r && r.cotiza) || null, resumen: resumen
+      });
+      for (const s of salidas) await manda(s);
+      const alCliente = salidas.find(function (s) { return s.para === cliente; });
+      if (alCliente) agente.recuerda(cliente, 'bot', alCliente.texto);
+      return true;
+    }
     /* «Persona» y «apartar» a media cotización el guion los toma como
        destino (misma familia que «bien y tú?»): se le reinyectan con la
        plática LIMPIA —ahí sí tiene sus caminos: teléfono, ficha bancaria,

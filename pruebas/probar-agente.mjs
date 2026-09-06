@@ -124,6 +124,46 @@ titulo('la plática de un cliente real, ahora con el agente');
 }
 
 /* ============================================================ */
+titulo('autobús: por la compuerta del dueño, nunca a otro número (6-sep-2026)');
+{
+  limpia();
+  const C = '5213366670207';
+  laIA = function (t) {
+    if (/vallarta/i.test(t)) return { respuesta: 'Vallarta, va. ¿Qué día salen?', datos: { destino: 'Puerto Vallarta' }, accion: 'seguir' };
+    if (/9 de septiembre/i.test(t)) return { respuesta: 'Listo. ¿Y regresan?', datos: { salida: '2026-09-09' }, accion: 'seguir' };
+    if (/el 14/i.test(t)) return { respuesta: 'Del 9 al 14. ¿Como cuántos van?', datos: { regreso: '2026-09-14' }, accion: 'seguir' };
+    if (/somos 48/i.test(t)) return { respuesta: 'Para 48 les caben estos:\nMarcopolo Paradiso G8 — Premium — 51 asientos\nIrizar i6S — Premium — 51 asientos\nNeobus — Gran Turismo — 50 asientos\n¿Cuál te late?', datos: { gente: 48 }, accion: 'seguir' };
+    if (/neobus/i.test(t)) return { respuesta: 'Neobus, va. ¿Salen de la zona metropolitana de Guadalajara?', datos: { autobus: 'neobus' }, accion: 'seguir' };
+    if (/^s[ií]$/i.test(t)) return { respuesta: 'Perfecto. Allá, ¿se mueven con el camión o solo los llevamos y traemos?', datos: { origen: 'Guadalajara' }, accion: 'seguir' };
+    if (/solo nos llevan/i.test(t)) return { respuesta: null, datos: { recorridos: 0 }, accion: 'cotizar' };
+    return null;
+  };
+  await dice('a vallarta', C);
+  await dice('el 9 de septiembre', C);
+  await dice('el 14', C);
+  await dice('somos 48', C);
+  await dice('el neobus', C);
+  await dice('sí', C);
+  const antes = textos(C).length;
+  await dice('solo nos llevan y traen', C);
+  const alCliente = textos(C).slice(antes).join('\n');
+  const alDueno = textos(DUENO).join('\n');
+  okQue('el cliente recibe la espera con disponibilidad (fecha cercana)', /checo disponibilidad/.test(alCliente));
+  okQue('  y NUNCA «mándale esto por WhatsApp al…»', !/M[aá]ndale esto|33 2400/.test(alCliente));
+  okQue('  al dueño le llega el ticket sin número y pidiéndolo', /Precio por confirmar/.test(alDueno) && /escr[ií]beme el precio/i.test(alDueno));
+  okQue('  con Neobus, 48 pax y Vallarta', /Neobus/.test(alDueno) && /48 pax/.test(alDueno) && /Vallarta/.test(alDueno));
+  /* El dueño contesta con el precio, citando el ticket. */
+  let idx = -1; mandados.forEach(function (m, i) { if (mismo(m.to, DUENO)) idx = i; });
+  const ticket = 'wamid.s' + (idx + 1);
+  mandados = [];
+  const cuerpo = JSON.stringify({ entry: [{ changes: [{ value: { metadata: { phone_number_id: '111' },
+    messages: [{ id: 'wamid.d1', from: DUENO, type: 'text', text: { body: '52,000' }, context: { id: ticket } }] } }] }] });
+  await atiende(new Request('https://x/api/whatsapp', { method: 'POST', body: cuerpo, headers: { 'x-hub-signature-256': firma(cuerpo) } }));
+  okQue('con «52,000» del dueño, el cliente recibe ese precio', /\*Total: \$52,000\*/.test(textos(C).join('\n')));
+  okQue('  con el anticipo del 20 % redondeado a $500 arriba ($10,500)', /\$10,500/.test(textos(C).join('\n')));
+}
+
+/* ============================================================ */
 titulo('lo que la IA no puede decir, no sale');
 {
   limpia();

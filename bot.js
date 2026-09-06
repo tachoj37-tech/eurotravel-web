@@ -3769,13 +3769,7 @@ function pegaDatos(estado, datos) {
       e.unidad = 'autobus'; e.unidadNombre = bus.name; e.unidadId = bus.id;
     }
   }
-  /* Origen por omisión (dictado del dueño, 6-sep-2026): todos salen de la
-     zona metropolitana de Guadalajara; no se pregunta. Solo se cambia si el
-     cliente dice otra ciudad (`origenSupuesto` marca que fue supuesto). */
   if (d.origen && e.origenSupuesto) { delete e.origenSupuesto; }
-  if (!e.origen && e.destino && e.salida && e.regreso && (e.gente || e.unidad)) {
-    e.origen = 'Guadalajara'; e.origenSupuesto = true;
-  }
   if (d.ocasion && !e.ocasion) e.ocasion = d.ocasion;
   if (typeof d.recorridos === 'number' && typeof e.recorridos !== 'number') e.recorridos = d.recorridos;
   if (e.regreso && e.salida && e.regreso < e.salida) e.regreso = null;
@@ -3827,7 +3821,7 @@ function loQueFalta(estado) {
     regreso: 'qué día regresan (o si es el mismo día)',
     cuantos: 'cuántos son, aproximadamente',
     elegirBus: 'cuál autobús (ver lista)',
-    origen: 'de qué CIUDAD salen (Guadalajara o cuál). Solo la ciudad: NUNCA preguntes zona, norte/sur, colonia ni dirección; eso no cambia el precio y se pide hasta el contrato',
+    origen: 'si salen de la zona metropolitana de Guadalajara. Pregunta EXACTAMENTE eso, para que solo diga «sí» (lo más común): «¿Salen de la zona metropolitana de Guadalajara?». Con «sí», datos.origen = "Guadalajara". Solo si dice que no, pregunta de qué ciudad. NUNCA zona, norte/sur, colonia ni dirección',
     recorridos: 'si allá se van a andar moviendo con el camión o solo los llevan y los traen',
     confirmar: null
   }[e.paso] || null;

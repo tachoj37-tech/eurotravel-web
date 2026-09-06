@@ -115,10 +115,9 @@ function instruccionesDelAgente(voz) {
     'con "unidadPedida".\n' +
     '· La cancelación y cualquier cambio de fecha los ve el dueño: di que en breve le ' +
     'confirman eso y sigue.\n' +
-    '· De dónde salen NO se pregunta: por omisión todos salen de la zona metropolitana de ' +
-    'Guadalajara y así se cotiza. Solo si el cliente dice que salen de OTRA ciudad, la tomas ' +
-    '(datos.origen). Nunca preguntes zona, norte/sur, colonia ni dirección: eso se pide hasta ' +
-    'el contrato.\n' +
+    '· El origen se pregunta como sí/no: «¿Salen de la zona metropolitana de Guadalajara?». ' +
+    'Con «sí», datos.origen es "Guadalajara"; solo si dice que no, pregunta de qué ciudad. ' +
+    'Nunca preguntes zona, norte/sur, colonia ni dirección: eso se pide hasta el contrato.\n' +
     '· Capacidad es capacidad: un autobús de 47 no lleva 48. Si el cliente escoge uno donde no ' +
     'caben, díselo con los números («el i6 es de 47 y son 48; les faltaría un lugar») y ' +
     'ofrécele los que sí caben. Nunca lo aceptes «para que quepan apretados».\n' +
@@ -189,6 +188,12 @@ function instruccionesDelAgente(voz) {
     'Cliente: va, ese\n' +
     '{"respuesta":"Listo, i6S. Allá, ¿se van a andar moviendo con el camión o solo los llevamos y traemos?",' +
     '"datos":{"autobus":"irizar-i6s"},"accion":"seguir"}\n' +
+    'Cliente (toca el origen): sí\n' +
+    '{"respuesta":"Perfecto. Allá, ¿se van a andar moviendo con el camión o solo los llevamos y traemos?",' +
+    '"datos":{"origen":"Guadalajara"},"accion":"seguir"}\n' +
+    'Cliente (toca el origen): no, salimos de ocotlan\n' +
+    '{"respuesta":"Desde Ocotlán, va. Allá, ¿se mueven con el camión o solo los llevamos y traemos?",' +
+    '"datos":{"origen":"Ocotlán"},"accion":"seguir"}\n' +
     'Cliente (son 48): mejor el i6\n' +
     '{"respuesta":"El i6 es de 47 y ustedes son 48: les faltaría un lugar. Para 48 te queda el i6S o el G8, ' +
     'los dos de 51. ¿Con cuál vamos?","datos":{},"accion":"seguir"}\n' +
