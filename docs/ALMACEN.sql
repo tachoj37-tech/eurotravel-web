@@ -140,3 +140,32 @@ create index if not exists tickets_creado on tickets (creado desc);
 
 -- Nace cerrada, como las demás.
 alter table tickets enable row level security;
+
+-- ------------------------------------------------------------
+-- 5-SEP-2026 · LOS PRECIOS QUE EL DUEÑO YA DIO
+-- ------------------------------------------------------------
+-- Dictado del dueño: «yo te pongo el precio y te aprendes el
+-- viaje; si alguien va a hacer el mismo viaje me vas a recomendar
+-- ese precio». Cada «va» o número suyo deja un renglón; el ticket
+-- del siguiente cliente con el mismo viaje (origen, destino,
+-- unidad, días) le enseña lo que dio antes y le sugiere el último.
+-- ------------------------------------------------------------
+create table if not exists precios (
+  id        bigserial primary key,
+  clave     text not null,                  -- origen|destino|unidad|dias, normalizado
+  origen    text,
+  destino   text,
+  unidad    text,
+  dias      integer,
+  pasajeros integer,
+  total     integer not null,
+  anticipo  integer,
+  fijado    boolean not null default false, -- true = lo escribió él; false = dijo «va» al calculado
+  cliente   text,                           -- últimos 10 dígitos, para el rastro
+  salida    text,                           -- AAAA-MM-DD del viaje
+  cuando    timestamptz not null default now()
+);
+create index if not exists precios_clave on precios (clave, cuando desc);
+
+-- Nace cerrada, como las demás.
+alter table precios enable row level security;

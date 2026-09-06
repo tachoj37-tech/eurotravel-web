@@ -302,11 +302,39 @@ async function leeTicket(id) {
   return (filas && filas[0] && filas[0].cliente) || null;
 }
 
+/* ------------------------------------------------------------
+   LOS PRECIOS QUE EL DUEÑO YA DIO
+   ------------------------------------------------------------
+   Un renglón por cada «va» o número suyo (`_precios-aprendidos.js`
+   arma el renglón). Se leen los últimos del mismo viaje para el
+   ticket del siguiente cliente. Si la tabla no existe, se falla en
+   silencio: el ticket sale sin historial, que es lo que había.
+   ------------------------------------------------------------ */
+async function guardaPrecio(renglon) {
+  if (!renglon || !renglon.clave || !(renglon.total > 0)) return false;
+  const r = await pide('precios', {
+    metodo: 'POST',
+    cabeceras: { 'Prefer': 'return=minimal' },
+    cuerpo: renglon,
+    sinRespuesta: true
+  }).catch(function () { return null; });
+  return !!r;
+}
+
+async function preciosParecidos(clave, cuantos) {
+  if (!clave) return [];
+  const filas = await pide('precios?clave=eq.' + encodeURIComponent(clave) +
+    '&select=total,anticipo,pasajeros,salida,fijado,cuando&order=cuando.desc&limit=' +
+    (cuantos || 3)).catch(function () { return null; });
+  return Array.isArray(filas) ? filas : [];
+}
+
 module.exports = {
   hayAlmacen, llave,
   guardaFicha, leeFicha, fichasDelTablero,
   guardaCharla, leeCharla,
   anotaMensaje, mensajesDe, tiraLoViejo,
   guardaTicket, leeTicket,
+  guardaPrecio, preciosParecidos,
   VIDA_DIAS, VIDA_CHARLA_MS
 };

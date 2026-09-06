@@ -34,6 +34,7 @@ import almacen from './_almacen.js';
 import etapas from './_etapas.js';
 import tarifa from './_tarifa.js';
 import logica from './_webhook-logica.js';
+import aprendidos from './_precios-aprendidos.js';
 import conversacion from '../bot.js';
 
 /* ------------------------------------------------------------
@@ -189,14 +190,15 @@ function conTotalFijado(precio, total) {
   });
 }
 
-function ticketDePrecio(res, precio, cal, cliente) {
+function ticketDePrecio(res, precio, cal, cliente, unidad, historial) {
   const lineas = ['💰 *Precio por confirmar*', ''];
+  const pax = res.gente || res.pasajeros;
   if (res.destino) lineas.push('📍 ' + (res.origen ? res.origen + ' → ' : '') + res.destino);
   if (res.salida) {
     lineas.push('📅 ' + tickets.comoSeDice(res.salida) +
       (res.regreso ? ' al ' + tickets.comoSeDice(res.regreso) : ''));
   }
-  if (res.unidad) lineas.push('🚌 ' + res.unidad + (res.pasajeros ? ' · ' + res.pasajeros + ' pax' : ''));
+  if (unidad || res.unidad) lineas.push('🚌 ' + (unidad || res.unidad) + (pax ? ' · ' + pax + ' pax' : ''));
   lineas.push('');
   if (precio && typeof precio.total === 'number') {
     lineas.push('Calculado: *$' + precio.total.toLocaleString('es-MX') + '*' +
@@ -204,6 +206,8 @@ function ticketDePrecio(res, precio, cal, cliente) {
   } else {
     lineas.push('No pude calcularlo: escríbeme el precio.');
   }
+  /* Lo que él mismo dio antes para este viaje, y lo que se le sugiere. */
+  aprendidos.lineasDeHistorial(historial).forEach(function (l) { lineas.push(l); });
   if (cal) lineas.push('Calendario: ' + cal.libres + ' de ' + cal.total + ' libres');
   else if (cal === null) lineas.push('Calendario: EuroSystem no contestó');
   lineas.push('');
@@ -228,11 +232,13 @@ async function precioDe(envio, opciones) {
     } catch (e) {
       console.error('[whatsapp] cotizador tronado: ' + e.message);
     }
+    const unidad = (envio.cotiza && envio.cotiza.unidad) || res.unidad || 'sprinter';
     const revisa = encendido('CONFIRMAR_DISPONIBILIDAD') ||
       conversacion.hayQueRevisarDisponibilidad(res.salida, hoy);
-    const cal = (revisa && res.salida)
-      ? await disponibilidadDe((envio.cotiza && envio.cotiza.unidad) || res.unidad || 'sprinter', res.salida, res.regreso)
-      : undefined;
+    const [cal, historial] = await Promise.all([
+      (revisa && res.salida) ? disponibilidadDe(unidad, res.salida, res.regreso) : Promise.resolve(undefined),
+      almacen.hayAlmacen() ? almacen.preciosParecidos(aprendidos.claveDe(res, unidad)) : Promise.resolve([])
+    ]);
 
     tickets.anotaEtapa(envio.para, 'pidio_precio', {
       porConfirmar: {
@@ -258,7 +264,7 @@ async function precioDe(envio, opciones) {
         para: dueno,
         esTicket: true,
         sobreCliente: envio.para,
-        texto: ticketDePrecio(res, precio, cal, envio.para),
+        texto: ticketDePrecio(res, precio, cal, envio.para, unidad, historial),
         pasaAPersona: false,
         escribio: '[ticket precio]'
       });
@@ -315,6 +321,15 @@ async function precioDe(envio, opciones) {
   /* El dueño contestó con un número: ése es el precio, calcule lo que
      calcule el motor. Regla de la casa: los precios los pone él. */
   if (totalFijado !== null) precio = conTotalFijado(precio, totalFijado);
+
+  /* Y lo que confirmó se aprende, para proponérselo la próxima vez que
+     alguien pida el mismo viaje. Sin esperar: a Meta hay que contestarle
+     rápido, y si el almacén no está, no pasa nada. */
+  if (confirmado && precio && precio.total > 0 && almacen.hayAlmacen()) {
+    almacen.guardaPrecio(aprendidos.renglonDe(res,
+      (envio.cotiza && envio.cotiza.unidad) || res.unidad || '', precio,
+      { fijado: totalFijado !== null, cliente: envio.para })).catch(function () {});
+  }
 
   const salida = conversacion.textoDeCotizacion(precio, envio.resumen);
 
@@ -755,7 +770,8 @@ function armaContrato(ficha, cliente) {
   cuerpo.observaciones = 'Vendido por WhatsApp (Eurobot), autorizado por el dueño. ' +
     'Anticipo por transferencia; confirmar que entró antes de dar por apartado.' +
     (d.direccionDestino ? ' Llegada: ' + d.direccionDestino + '.' : '');
-  cuerpo.servicio.pasajeros = Number(v.pasajeros) > 0 ? Math.min(Number(v.pasajeros), 90) : 1;
+  const pax = Number(v.pasajeros || v.gente) || 0;
+  cuerpo.servicio.pasajeros = pax > 0 ? Math.min(pax, 90) : 1;
   cuerpo.servicio.itinerario = d.direccionDestino
     ? 'Llegada: ' + d.direccionDestino + (d.horaRegreso ? '. Regresan a las ' + d.horaRegreso : '')
     : undefined;
