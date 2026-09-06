@@ -7,8 +7,22 @@
   "MINUTOS_RESPUESTA": "sin número",
   "MINUTOS_RESPUESTA_NOTA": "Dictado del dueño (5-sep-2026): no se promete tiempo; el bot dice «en breve se le contesta». Afecta T-080, T-085 y T-102 (primer lote).",
   "LIGA_PDF_CONTRATO": "al cliente, al dueño y queda en EuroSystem (dictado 5-sep-2026)",
-  "POLITICA_CANCELACION": "pasar al dueño",
-  "POLITICA_CANCELACION_NOTA": "Dictado del dueño (5-sep-2026): «simplemente pásame el cliente a mí, ya yo le contesto desde el WhatsApp». El bot no explica ninguna regla: avisa que le contestan en breve y manda ticket. Afecta T-096 y T-098 (primer lote).",
+  "POLITICA_CANCELACION": {
+    "cargos": [
+      { "si_cancela": "con un mes de anticipación o más", "cargo_porcentaje": 20 },
+      { "si_cancela": "con una semana de anticipación", "cargo_porcentaje": 40 },
+      { "si_cancela": "el mismo día o 24 horas antes", "cargo_porcentaje": 100 }
+    ],
+    "base_del_porcentaje": "SUPUESTO: sobre el total del viaje (el dueño no lo precisó)",
+    "quien_la_ejecuta": "el dueño: el bot la explica tal cual y le pasa la solicitud armada",
+    "_": "Dictado del dueño (6-sep-2026): «20% 1 mes antes, 40% 1 semana antes, 100% mismo día o 24 horas antes». Antes (5-sep) el bot no explicaba nada y solo pasaba al cliente; eso sigue valiendo para el cambio de fecha."
+  },
+  "POLITICA_LIQUIDACION": {
+    "fecha_limite": null,
+    "que_dice_el_bot": "No hay fecha límite como tal para depositar, pero le recomendamos que sea lo antes posible porque se llena, y así usted aparta su fecha.",
+    "recordatorios_de_saldo": "anclados a la salida: 30, 15 y 5 días antes, como recomendación, nunca como vencimiento",
+    "_": "Dictado del dueño (6-sep-2026). Nunca inventar un vencimiento."
+  },
   "TICKETS_A": "número personal del dueño, distinto del número del bot (DUENO_WHATSAPP en Vercel cuando entre Dualhook)",
 
   "UNIDADES": [
@@ -46,8 +60,7 @@
     "_": "El seguro de viajero si esta confirmado. 'Monitoreo GPS 24/7' lo dice hoy el texto de que incluye; hay que confirmarlo o quitarlo."
   },
 
-  "POLITICA_CANCELACION": "PENDIENTE",
-  "POLITICA_CAMBIO_FECHA": "PENDIENTE",
+  "POLITICA_CAMBIO_FECHA": "pasar al dueño (dictado 5-sep-2026; sin regla dictada al 6-sep)",
 
   "TARIFA_AGENCIA": {
     "porcentaje": 5,
