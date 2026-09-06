@@ -468,9 +468,27 @@ async function loQueLaIAEntendio(envio) {
     return null;
   }
 
+  /* La IA lee con la plática a la vista: qué pregunta está contestando el
+     cliente y qué se sabe ya del viaje. Sin esto, «pasado» y «vta» eran
+     ruido; con esto son «pasado mañana» y «Puerto Vallarta». */
+  const estadoParaContexto = envio.estadoDelCliente || null;
+  let contexto = null;
+  if (estadoParaContexto && estadoParaContexto.paso) {
+    let preguntaTexto = '';
+    try { preguntaTexto = (conversacion.pregunta(estadoParaContexto) || {}).texto || ''; } catch (e) { /* sin pregunta */ }
+    contexto = {
+      pregunta: preguntaTexto.replace(/\s+/g, ' ').trim(),
+      sabido: {
+        destino: estadoParaContexto.destino, origen: estadoParaContexto.origen,
+        salida: estadoParaContexto.salida, regreso: estadoParaContexto.regreso,
+        gente: estadoParaContexto.gente, unidad: estadoParaContexto.unidadNombre || estadoParaContexto.unidad
+      }
+    };
+  }
+
   let leido;
   try {
-    leido = await entendedor.entiende(envio.crudoDelCliente, { hoy: hoy, cliente: envio.para });
+    leido = await entendedor.entiende(envio.crudoDelCliente, { hoy: hoy, cliente: envio.para, contexto: contexto });
   } catch (e) {
     console.error('[whatsapp] la IA no se pudo: ' + e.message);
     return null;

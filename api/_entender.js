@@ -205,7 +205,34 @@ function instruccionesEstaticas() {
    Las instrucciones del contrato (`_datos-contrato.js`) llegan
    como texto y no traen fecha: van enteras como bloque estático.
    ------------------------------------------------------------ */
-function bloquesDelSistema(instruccionesAjenas, hoy) {
+/* ------------------------------------------------------------
+   EL CONTEXTO DE LA PLÁTICA (5-sep-2026)
+   ------------------------------------------------------------
+   Un cliente real contestó «a vta» a «¿a dónde van?» y «pasado» a
+   «¿qué día salen?». Sin contexto, la IA leyó «pasado» como fuera de
+   tema y el bot dijo «de eso sí no sé». Con la pregunta a la vista,
+   cualquier persona —y Haiku— lee «vta» como Puerto Vallarta y
+   «pasado» como pasado mañana.
+
+   Va en el bloque DINÁMICO (cambia en cada mensaje; el estático
+   sigue cacheable). Nunca datos del cliente: solo lo que el bot ya
+   sabe del viaje y qué pregunta está contestando.
+   ------------------------------------------------------------ */
+function textoDeContexto(c) {
+  if (!c || (!c.pregunta && !c.sabido)) return '';
+  const sabido = c.sabido || {};
+  const partes = ['destino', 'origen', 'salida', 'regreso', 'gente', 'unidad']
+    .filter(function (k) { return sabido[k]; })
+    .map(function (k) { return k + '=' + String(sabido[k]).slice(0, 60); });
+  return '\n\nCONTEXTO DE LA PLÁTICA: ' +
+    (c.pregunta ? 'el cliente está contestando a la pregunta «' + String(c.pregunta).slice(0, 160) + '». ' : '') +
+    (partes.length ? 'Ya se sabe: ' + partes.join(', ') + '. ' : '') +
+    'Una palabra suelta o una abreviatura es la RESPUESTA a esa pregunta, no algo fuera de tema: ' +
+    '«vta» o «pv» es Puerto Vallarta, «gdl» es Guadalajara, «pasado» es pasado mañana, ' +
+    '«el 12» es el día 12 más cercano. Solo marca intencion "fuera" si de verdad habla de otra cosa.';
+}
+
+function bloquesDelSistema(instruccionesAjenas, hoy, contexto) {
   if (Array.isArray(instruccionesAjenas)) return instruccionesAjenas;
   if (typeof instruccionesAjenas === 'string' && instruccionesAjenas) {
     return [{ type: 'text', text: instruccionesAjenas,
@@ -213,7 +240,7 @@ function bloquesDelSistema(instruccionesAjenas, hoy) {
   }
   return [
     { type: 'text', text: instruccionesEstaticas(), cache_control: { type: 'ephemeral' } },
-    { type: 'text', text: instruccionesDelDia(hoy) }
+    { type: 'text', text: instruccionesDelDia(hoy) + textoDeContexto(contexto) }
   ];
 }
 
@@ -413,7 +440,7 @@ async function entiende(mensaje, opciones) {
            modelo, el mismo tope y el mismo «si falla, null». Un solo
            lugar por donde se le habla al modelo.
            ------------------------------------------------------------ */
-        system: bloquesDelSistema(o.instrucciones, hoy),
+        system: bloquesDelSistema(o.instrucciones, hoy, o.contexto),
         messages: [{ role: 'user', content: texto }]
       })
     });

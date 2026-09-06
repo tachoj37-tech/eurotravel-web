@@ -85,6 +85,7 @@ function titulo(t) { console.log('\n== ' + t.toUpperCase() + ' =='); }
    ------------------------------------------------------------ */
 let mandados = [];
 let llamadasALaIA = 0;
+let cuerposALaIA = [];
 let laIADice = null;
 
 globalThis.fetch = async function (url, opciones) {
@@ -102,6 +103,7 @@ globalThis.fetch = async function (url, opciones) {
 
   if (u.indexOf('api.anthropic.com') !== -1) {
     llamadasALaIA++;
+    cuerposALaIA.push(cuerpo);
     if (!laIADice) return { ok: false, status: 500, text: async function () { return ''; } };
     return {
       ok: true, status: 200,
@@ -671,6 +673,29 @@ process.env.SIEMPRE_IA = '1';
   const t = textos(C).join('\n');
   okQue('con 48 leídos por la IA recomienda autobús', /autob[uú]s|acomodo/i.test(t));
   okQue('  sin «perdón, no me quedó claro»', !/no me qued[oó] claro|perd[oó]n/i.test(t));
+}
+
+/* D · La IA recibe el CONTEXTO (qué pregunta contesta el cliente y qué se
+   sabe), y corrige un destino flojo que el guion tomó literal. */
+{
+  webhook.olvidaTodo(); mandados = []; llamadasALaIA = 0; cuerposALaIA = [];
+  laIADice = { intencion: 'cotizar', destino: 'Sayulita' };
+  const C = '5213366670033';
+  await dice('a la playa esa de nayarit', C);
+  const ultimo = cuerposALaIA[cuerposALaIA.length - 1] || {};
+  const sistema = JSON.stringify(ultimo.system || '');
+  okQue('la IA recibió el contexto de la plática', /CONTEXTO DE LA PL/.test(sistema));
+  laIADice = null;
+  await dice('el 20 de noviembre', C);
+  await dice('regresamos el 22', C);
+  await dice('somos 12', C);
+  await dice('salimos de guadalajara', C);
+  await dice('no vamos a pasear', C);
+  /* El primer acuse del guion («La playa esa de nayarit, va») ya había
+     salido cuando la IA corrigió; lo que importa es lo que sigue. */
+  const despues = textos(C).slice(1).join('\n');
+  okQue('el destino quedó corregido a Sayulita en el resumen', /Sayulita/.test(despues));
+  okQue('  y después del acuse ya no aparece «la playa esa de nayarit»', !/playa esa de nayarit/i.test(despues));
 }
 
 process.env.SIEMPRE_IA = '0';

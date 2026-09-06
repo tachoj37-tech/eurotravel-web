@@ -295,8 +295,11 @@ function fechaDe(texto, hoy) {
   const base = hoy || hoyISO();
 
   if (/\bhoy\b/.test(t)) return base;
-  if (/\bmanana\b/.test(t)) return masDias(base, 1);
   if (/\bpasado manana\b/.test(t)) return masDias(base, 2);
+  /* «pasado» a secas, contestando «¿qué día salen?», es pasado mañana. Un
+     cliente real lo escribió así (5-sep-2026) y el bot no lo leyó. */
+  if (/^\s*(?:el\s+)?pasado\s*$/.test(t)) return masDias(base, 2);
+  if (/\bmanana\b/.test(t)) return masDias(base, 1);
 
   const anioHoy = Number(base.slice(0, 4));
 
@@ -852,8 +855,43 @@ function limpiaDestino(texto) {
   }
 
   d = d.replace(COLAS_DE_OCASION, '').replace(/[\s,;.]+$/, '').trim();
+
+  /* Las abreviaturas de siempre. Un cliente real escribió «a vta» y el bot
+     le contestó «Vta, va» (5-sep-2026). Se comparan sin acentos ni
+     mayúsculas y solo la palabra completa: «pv» sí, «pvc» no. */
+  if (esAliasDeDestino(d)) return ALIAS_DESTINO[claveDeAlias(d)];
+
   return conMayuscula(d.length >= 3 ? d : original);
 }
+
+function claveDeAlias(texto) {
+  return normaliza(texto || '').replace(/^(?:a|al|para|hacia|de|desde)\s+/, '').replace(/[.\s]+/g, ' ').trim();
+}
+function esAliasDeDestino(texto) {
+  return Object.prototype.hasOwnProperty.call(ALIAS_DESTINO, claveDeAlias(texto));
+}
+
+/* Un destino «flojo» es el que el guion guardó sin reconocerlo: muy corto
+   (una abreviatura) o un pedazo de frase. Solo esos se dejan corregir por
+   la IA; un destino de verdad no se pisa. */
+function destinoFlojo(d) {
+  const n = normaliza(d || '');
+  if (!n) return true;
+  if (n.length <= 4) return true;
+  if (/\b(la|el|esa|ese|eso|donde|por|que|playa|lugar|pueblo)\b/.test(n) && n.split(/\s+/).length >= 3) return true;
+  return false;
+}
+
+const ALIAS_DESTINO = {
+  'vta': 'Puerto Vallarta', 'pv': 'Puerto Vallarta', 'pto vallarta': 'Puerto Vallarta',
+  'pto vta': 'Puerto Vallarta', 'puerto vta': 'Puerto Vallarta', 'vallarta': 'Puerto Vallarta',
+  'gdl': 'Guadalajara', 'guadalajara jal': 'Guadalajara',
+  'cdmx': 'Ciudad de México', 'df': 'Ciudad de México', 'mexico df': 'Ciudad de México',
+  'mty': 'Monterrey', 'qro': 'Querétaro', 'slp': 'San Luis Potosí',
+  'ags': 'Aguascalientes', 'agus': 'Aguascalientes', 'zac': 'Zacatecas',
+  'mzt': 'Mazatlán', 'sma': 'San Miguel de Allende', 'sn miguel': 'San Miguel de Allende',
+  'pto penasco': 'Puerto Peñasco', 'sn juan de los lagos': 'San Juan de los Lagos'
+};
 
 /* ------------------------------------------------------------
    EL DESTINO SE ESCRIBE CON MAYÚSCULA
@@ -2055,7 +2093,7 @@ function pasoDeCotizacion(t, crudo, estado, hoy) {
       };
     }
 
-    if (dicho.length < 3) {
+    if (dicho.length < 3 && !esAliasDeDestino(dicho)) {
       return {
         texto: repregunta(e, 'destino'),
         pasa: false, estado: e, opciones: [], noEntendio: true
@@ -2096,13 +2134,14 @@ function pasoDeCotizacion(t, crudo, estado, hoy) {
       e.paso = 'origenLibre';
       return siguiente(e);
     }
-    if (dicho.length < 3) {
+    if (dicho.length < 3 && !esAliasDeDestino(dicho)) {
       return {
         texto: '¿De qué ciudad salen?', pasa: false, estado: e,
         opciones: e.paso === 'origen' ? pregunta(e).opciones : []
       };
     }
-    e.origen = dicho.slice(0, 120);
+    /* «gdl», «cdmx»: las mismas abreviaturas que en el destino. */
+    e.origen = esAliasDeDestino(dicho) ? ALIAS_DESTINO[claveDeAlias(dicho)] : dicho.slice(0, 120);
     /* Antes decía `e.salida ? 'confirmar' : 'salida'` y se saltaba el
        regreso. Ver la nota de `alSiguienteHueco`. */
     alSiguienteHueco(e);
@@ -3503,17 +3542,30 @@ function respuestaBase(mensaje, estado, hoy) {
    ------------------------------------------------------------ */
 function continuaCon(estado, datos, hoy) {
   if (!estado || !estado.paso || !datos) return null;
-  /* Fuera del tema o pidiendo persona: eso lo resuelve el camino
-     normal, no hay nada que pegar. */
-  if (datos.intencion === 'fuera' || datos.intencion === 'persona' ||
-      datos.intencion === 'fotos') {
+  const trajoDatos = !!(datos.salida || datos.regreso || datos.destino || datos.origen ||
+    datos.gente || datos.unidad);
+  /* Pidiendo persona o fotos: eso lo resuelve el camino normal. «Fuera de
+     tema» A MEDIA COTIZACIÓN, sin ningún dato, NO corta la plática: casi
+     siempre es una palabra suelta que la IA no supo leer («pasado»,
+     «mmm»), y contestar «de eso sí no sé» a alguien que está a media
+     cotización es tirarla (5-sep-2026). Se deja la repregunta del guion. */
+  if (datos.intencion === 'persona' || datos.intencion === 'fotos') {
     return aplicaEntendido(datos, hoy);
   }
+  if (datos.intencion === 'fuera' && !trajoDatos) return null;
   const e = Object.assign({}, estado);
   let pego = false;
   if (datos.salida && !e.salida) { e.salida = datos.salida; pego = true; }
   if (datos.regreso && !e.regreso) { e.regreso = datos.regreso; pego = true; }
   if (datos.destino && !e.destino) { e.destino = limpiaDestino(datos.destino); pego = true; }
+  /* El guion tomó un destino que no parece destino —una abreviatura, un
+     pedazo de frase— y la IA reconoció uno de verdad: gana la IA. Un
+     cliente real escribió «a vta»; el guion guardó «Vta» y la IA leyó
+     Puerto Vallarta, pero como el hueco «ya estaba lleno» no se corregía. */
+  if (datos.destino && e.destino && destinoFlojo(e.destino) &&
+      normaliza(limpiaDestino(datos.destino)) !== normaliza(e.destino)) {
+    e.destino = limpiaDestino(datos.destino); pego = true;
+  }
   if (datos.origen && !e.origen) { e.origen = datos.origen; pego = true; }
   if (datos.gente && !e.gente) { e.gente = datos.gente; pego = true; }
   if (datos.unidad && !e.unidad) { e.unidad = datos.unidad; pego = true; }

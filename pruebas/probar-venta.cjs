@@ -1045,6 +1045,36 @@ titulo('«somos aprox 48» (un cliente real, 5-sep-2026)');
 })();
 
 /* ============================================================ */
+titulo('«a vta» y «pasado» (un cliente real, 5-sep-2026)');
+(function () {
+  /* Abreviaturas: el bot contestaba «Vta, va». */
+  [['a vta', 'Puerto Vallarta'], ['vta', 'Puerto Vallarta'], ['pv', 'Puerto Vallarta'],
+   ['a gdl', 'Guadalajara'], ['cdmx', 'Ciudad de México'], ['a chapala', 'Chapala']].forEach(function (par) {
+    const r = bot.respuestaA(par[0], { paso: 'destino' }, HOY);
+    ok('«' + par[0] + '» se guarda como ' + par[1], r.estado && r.estado.destino, par[1]);
+  });
+  ok('«pvc» no es Puerto Vallarta', bot.limpiaDestino('pvc'), 'Pvc');
+
+  /* «pasado» contestando la fecha de salida es pasado mañana. HOY es miércoles 2. */
+  const enSalida = { paso: 'salida', destino: 'Puerto Vallarta' };
+  ok('«pasado» es pasado mañana', bot.respuestaA('pasado', enSalida, HOY).estado.salida, '2026-09-04');
+  ok('«pasado mañana» también', bot.respuestaA('pasado mañana', enSalida, HOY).estado.salida, '2026-09-04');
+  ok('«mañana» sigue siendo mañana', bot.respuestaA('mañana', enSalida, HOY).estado.salida, '2026-09-03');
+
+  /* La IA corrige un destino flojo que el guion tomó literal; uno bueno no se pisa. */
+  const c = bot.continuaCon({ paso: 'salida', destino: 'Vta' }, { intencion: 'cotizar', destino: 'Puerto Vallarta' }, HOY);
+  ok('la IA corrige «Vta» → Puerto Vallarta', c && c.estado && c.estado.destino, 'Puerto Vallarta');
+  const c2 = bot.continuaCon({ paso: 'salida', destino: 'Chapala' }, { intencion: 'cotizar', destino: 'Tequila' }, HOY);
+  ok('un destino de verdad no se pisa', c2 === null || (c2.estado && c2.estado.destino === 'Chapala'), true);
+
+  /* «Fuera de tema» sin datos a media cotización no corta la plática. */
+  ok('«fuera» sin datos a media cotización → nada (se queda la repregunta)',
+    bot.continuaCon({ paso: 'salida', destino: 'Chapala' }, { intencion: 'fuera' }, HOY), null);
+  const conDato = bot.continuaCon({ paso: 'salida', destino: 'Chapala' }, { intencion: 'fuera', salida: '2026-09-10' }, HOY);
+  ok('  pero si trae un dato, el dato se pega', conDato && conDato.estado && conDato.estado.salida, '2026-09-10');
+})();
+
+/* ============================================================ */
 Promise.all(pendientes).then(function () {
   console.log('\n' + buenas + ' buenas, ' + malas + ' malas');
   process.exit(malas ? 1 : 0);
