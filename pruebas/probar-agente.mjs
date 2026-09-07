@@ -128,6 +128,11 @@ titulo('la plática de un cliente real, ahora con el agente');
   const alCliente = textos(C).slice(antesDelPrecio).join('\n');
   const alDueno = textos(DUENO).join('\n');
   okQue('con todo junto, el motor cotiza: el cliente recibe la espera (compuerta)', /en breve te paso tu cotizaci/i.test(alCliente));
+  /* «No me pidió unidad, el cliente no sabe en qué lo llevan» (7-sep-2026). */
+  okQue('  y la espera le dice en qué lo llevan (Sprinter para 12)', /Ser[ií]an en Sprinter para 12/.test(alCliente));
+  const instrucciones = JSON.stringify(sistemasVistos[sistemasVistos.length - 1] || []);
+  okQue('  la IA sabe que para Tequila/Chapala pregunta «¿Es ida y vuelta el mismo día?»', /Es ida y vuelta el mismo d[ií]a/.test(instrucciones));
+  okQue('  y que nombra la unidad en el mismo mensaje en que le dicen cuántos', /EN EL MISMO MENSAJE/.test(instrucciones));
   okQue('  y al dueño le llega el ticket de precio', /Precio por confirmar/.test(alDueno));
   okQue('  con Puerto Vallarta, 12 pax y las fechas', /Vallarta/.test(alDueno) && /12 pax/.test(alDueno));
   okQue('  el cliente nunca vio un precio ni un «no entendí»', !/\$\s?\d|no entend|no me qued/i.test(textos(C).join('\n')));
@@ -298,6 +303,21 @@ titulo('una plática vieja atorada en «confirmar» no vuelve a pedir el precio'
   await dice('ok', C);
   ok('«ok» con la plática vieja: contesta la IA, sin espera', textos(C).slice(-1)[0], 'Va, en cuanto lo tenga te aviso 🙌');
   ok('  y sin ticket al dueño', textos(DUENO).filter((t) => /Precio por confirmar/.test(t)).length, 0);
+}
+
+/* ============================================================ */
+titulo('destinos de un día: se pregunta «¿es ida y vuelta el mismo día?»');
+{
+  const bot = (await import(pathToFileURL(path.join(RAIZ, 'bot.js')).href)).default;
+  /* `loQueFalta` recalcula el paso con lo que se sabe: con destino y salida,
+     lo que sigue es el regreso. */
+  ['Tequila', 'Chapala', 'una boda en Tlajomulco', 'Tapalpa'].forEach(function (d) {
+    okQue('para ' + d + ' la pregunta es la del mismo día', /ida y vuelta el mismo d[ií]a/.test(bot.loQueFalta({ destino: d, salida: '2026-09-08' }) || ''));
+  });
+  ['Puerto Vallarta', 'Cancún', 'Ciudad de México'].forEach(function (d) {
+    okQue('para ' + d + ' se pregunta qué día regresan', /^qué día regresan/.test(bot.loQueFalta({ destino: d, salida: '2026-09-08' }) || ''));
+  });
+  okQue('al preguntar cuántos, se le recuerda a la IA que nombre la unidad', /Sprinter/.test(bot.loQueFalta({ destino: 'Tequila', salida: '2026-09-08', regreso: '2026-09-08' }) || ''));
 }
 
 /* ============================================================ */

@@ -198,6 +198,16 @@ function encendido(nombre) {
 const TEXTO_ESPERA_PRECIO =
   'Va. En breve te paso tu cotización y la disponibilidad de tu viaje 🙌';
 const TEXTO_ESPERA_CON_CALENDARIO = TEXTO_ESPERA_PRECIO;
+/* «sprinter» → «Sprinter»; un nombre de camión («Neobus», «Irizar i6S») se
+   queda como está; «autobus» a secas no se nombra (todavía no escogió). */
+function nombreBonitoDeUnidad(u) {
+  const t = String(u || '').trim();
+  if (!t) return null;
+  if (/^sprinter$/i.test(t)) return 'Sprinter';
+  if (/^suburban$/i.test(t)) return 'Suburban';
+  if (/^autob[uú]s$/i.test(t)) return null;
+  return t;
+}
 
 /* Con un total fijado por el dueño, el anticipo se recalcula con la misma
    regla del motor (20 % al múltiplo de $500 hacia arriba). Los demás
@@ -281,12 +291,19 @@ async function precioDe(envio, opciones) {
       }
     });
     /* Fecha cercana o temporada alta: se le dice al cliente que se checa
-       disponibilidad, sin prometer nada (dictado del dueño, 6-sep-2026). */
+       disponibilidad, sin prometer nada (dictado del dueño, 6-sep-2026).
+       Y se le dice EN QUÉ lo llevan: «no me pidió unidad, el cliente no
+       sabe en qué lo llevan» (dictado del dueño, 7-sep-2026). */
     const cerca = conversacion.hayQueRevisarDisponibilidad(res.salida, hoy);
+    const nombreUnidad = nombreBonitoDeUnidad(res.unidadNombre || res.unidad || unidad);
+    const conUnidad = nombreUnidad
+      ? 'Va. Serían en ' + nombreUnidad + (res.gente ? ' para ' + res.gente : '') +
+        '. En breve te paso tu cotización y la disponibilidad de tu viaje 🙌'
+      : null;
     const mios = [{
       numeroDeOrigen: envio.numeroDeOrigen,
       para: envio.para,
-      texto: cerca ? TEXTO_ESPERA_CON_CALENDARIO : TEXTO_ESPERA_PRECIO,
+      texto: conUnidad || (cerca ? TEXTO_ESPERA_CON_CALENDARIO : TEXTO_ESPERA_PRECIO),
       pasaAPersona: true,
       escribio: '[precio por confirmar]'
     }];

@@ -3800,6 +3800,15 @@ function listaCortaDeAutobuses(gente) {
 
 /* Qué le falta al viaje, en palabras, para decírselo al agente. `null`
    cuando ya está todo y el motor puede cotizar. */
+/* Los destinos a los que casi siempre se va y se vuelve el mismo día:
+   alrededores de Guadalajara, pueblos mágicos cercanos, bodas y eventos
+   locales (dictado del dueño, 7-sep-2026). Sirve para PREGUNTAR mejor;
+   el precio lo pone el Excel como siempre. */
+const DESTINO_DE_UN_DIA = /tequila|chapala|ajijic|jocotepec|tapalpa|mazamitla|tlaquepaque|tonal[aá]|zapopan|tlajomulco|amatit[aá]n|magdalena|cocula|\btala\b|ameca|etzatl[aá]n|guachimont|san juan de los lagos|lagos de moreno|boda|evento|salón|salon|hacienda|quinta|jardín|jardin/i;
+function esDestinoDeUnDia(destino) {
+  return DESTINO_DE_UN_DIA.test(normaliza(String(destino || '')));
+}
+
 function loQueFalta(estado) {
   const e = alSiguienteHueco(Object.assign({}, estado || {}));
   if (e.paso === 'elegirBus') {
@@ -3818,8 +3827,13 @@ function loQueFalta(estado) {
   return {
     destino: 'a dónde van',
     salida: 'qué día salen',
-    regreso: 'qué día regresan (o si es el mismo día)',
-    cuantos: 'cuántos son, aproximadamente',
+    /* Para un destino de un día (Tequila, Chapala, una boda local) lo más
+       común es ida y vuelta el mismo día: se pregunta ESO, no «qué día
+       regresan» (dictado del dueño, 7-sep-2026). */
+    regreso: esDestinoDeUnDia(e.destino)
+      ? 'si es ida y vuelta el mismo día (lo más común para ' + e.destino + '); pregunta EXACTAMENTE «¿Es ida y vuelta el mismo día?» y, si dice que sí, regreso = salida'
+      : 'qué día regresan (o si es el mismo día)',
+    cuantos: 'cuántos son, aproximadamente (y dile en qué unidad van: hasta 20, Sprinter)',
     elegirBus: 'cuál autobús (ver lista)',
     origen: 'si salen de la zona metropolitana de Guadalajara. Pregunta EXACTAMENTE eso, para que solo diga «sí» (lo más común): «¿Salen de la zona metropolitana de Guadalajara?». Con «sí», datos.origen = "Guadalajara". Solo si dice que no, pregunta de qué ciudad. NUNCA zona, norte/sur, colonia ni dirección',
     recorridos: 'si allá se van a andar moviendo con el camión o solo los llevan y los traen',
