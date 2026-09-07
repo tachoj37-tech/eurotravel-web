@@ -151,6 +151,8 @@ function conTope(promesa, ms) {
    gastar una llamada de verdad ni tener claves. Es la misma maña
    de `_entender.js`.
    ------------------------------------------------------------ */
+let avisoDeClaveDado = false;
+
 async function transcribe(idMedia, opciones) {
   const o = opciones || {};
   const pide = o.pide || (typeof fetch === 'function' ? fetch : null);
@@ -158,7 +160,14 @@ async function transcribe(idMedia, opciones) {
   const claveGroq = o.claveGroq || process.env.GROQ_API_KEY;
 
   /* Sin claves NO se cae: simplemente no hay transcripción y el
-     webhook contesta como siempre. Es una mejora, no un requisito. */
+     webhook contesta como siempre. Es una mejora, no un requisito.
+     Pero se dice UNA vez en el registro: sin `GROQ_API_KEY` cada nota
+     de voz termina en «¿me lo pones en un mensaje?», y eso en México
+     es perder al cliente en el primer intento (7-sep-2026). */
+  if (idMedia && tokenMeta && !claveGroq && !avisoDeClaveDado) {
+    avisoDeClaveDado = true;
+    console.error('[audio] falta GROQ_API_KEY en Vercel: las notas de voz NO se transcriben y el bot pide que le escriban');
+  }
   if (!idMedia || !pide || !tokenMeta || !claveGroq) return null;
 
   try {
