@@ -69,8 +69,11 @@ globalThis.fetch = async function (url, opciones) {
   }
   if (u.indexOf('supabase.co/rest/v1/fichas?on_conflict=numero') !== -1) {
     const fila = JSON.parse(o.body);
-    if (sinColumnas && ('precio_en' in fila || 'cliente_en' in fila || 'toques' in fila)) {
-      return { ok: false, status: 400, text: async () => JSON.stringify({ code: 'PGRST204', message: "Could not find the 'precio_en' column of 'fichas' in the schema cache" }) };
+    /* Como PostgREST: nombra la PRIMERA columna que no existe; el bot la
+       quita y vuelve a intentar, hasta que pasen todas. */
+    const faltante = ['precio_en', 'toques', 'cliente_en', 'viajes'].find((c) => sinColumnas && c in fila);
+    if (faltante) {
+      return { ok: false, status: 400, text: async () => JSON.stringify({ code: 'PGRST204', message: "Could not find the '" + faltante + "' column of 'fichas' in the schema cache" }) };
     }
     upserts.push(fila);
     return { ok: true, status: 201, text: async () => '', json: async () => null };

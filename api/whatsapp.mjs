@@ -297,6 +297,17 @@ async function precioDe(envio, opciones) {
         para: dueno,
         esTicket: true,
         sobreCliente: envio.para,
+        /* El viaje de ESTE ticket viaja con él: así el «va» a este
+           mensaje confirma este viaje aunque el cliente cotice otro
+           después (7-sep-2026). Misma forma que `porConfirmar`. */
+        carga: {
+          cotiza: envio.cotiza || null,
+          resumen: res,
+          total: precio && typeof precio.total === 'number' ? precio.total : null,
+          anticipo: precio && typeof precio.anticipo === 'number' ? precio.anticipo : null,
+          calendario: cal === undefined ? null : cal,
+          desde: Date.now()
+        },
         texto: ticketDePrecio(res, precio, cal, envio.para, unidad, historial),
         pasaAPersona: false,
         escribio: '[ticket precio]'
@@ -806,7 +817,9 @@ async function precioConfirmado(envio) {
     const deLaBase = await almacen.leeFicha(envio.para).catch(function () { return null; });
     if (deLaBase) { tickets.siembraFicha(deLaBase); ficha = tickets.fichaDe(envio.para) || deLaBase; }
   }
-  const pc = ficha && ficha.porConfirmar;
+  /* Primero lo que trae el ticket citado (su propio viaje); si es un
+     ticket viejo sin carga, lo que la ficha tenga pendiente. */
+  const pc = envio.cargaDelTicket || (ficha && ficha.porConfirmar);
   const dueno = tickets.numeroDelDueno(process.env);
   if (!pc || !(pc.cotiza || pc.resumen)) {
     return [{
@@ -1029,13 +1042,20 @@ function viajeConPrecio(ficha) {
     ['con_precio', 'va_a_apartar', 'mando_comprobante', 'datos_del_contrato', 'contrato_listo']
       .indexOf(ficha.etapa) >= 0;
   const r = pedido || (dado ? ficha.viajeDatos : null);
-  if (!r) return null;
-  const partes = [];
-  if (r.destino) partes.push((r.origen ? r.origen + ' → ' : '') + r.destino);
-  if (r.salida) partes.push(r.salida + (r.regreso ? ' al ' + r.regreso : ''));
-  if (r.gente) partes.push(r.gente + ' personas');
-  if (r.unidad) partes.push(String(r.unidad));
-  return { estado: pedido ? 'pedido' : 'dado', resumen: partes.join(' · ') };
+  const enLinea = function (v) {
+    const partes = [];
+    if (v.destino) partes.push((v.origen ? v.origen + ' → ' : '') + v.destino);
+    if (v.salida) partes.push(v.salida + (v.regreso ? ' al ' + v.regreso : ''));
+    if (v.gente) partes.push(v.gente + ' personas');
+    if (v.unidad) partes.push(String(v.unidad));
+    return partes.join(' · ');
+  };
+  /* Los anteriores, sin cifras: la IA no repite montos. */
+  const anteriores = (ficha.viajes || []).map(function (v) {
+    return enLinea(v) + (v.estado ? ' (' + v.estado + ')' : '');
+  });
+  if (!r) return anteriores.length ? { estado: null, resumen: null, anteriores: anteriores } : null;
+  return { estado: pedido ? 'pedido' : 'dado', resumen: enLinea(r), anteriores: anteriores };
 }
 
 async function loQueDiceElAgente(envio) {
@@ -1208,6 +1228,12 @@ async function reparte(envio) {
 
   if (envio.confirmaPrecio) {
     for (const p of await precioConfirmado(envio)) await manda(p);
+    /* El ticket ya dio su precio: se marca consumido también en el
+       almacén, para que un segundo «va» desde otra instancia tampoco lo
+       vuelva a mandar. */
+    if (envio.ticketConsumido && almacen.hayAlmacen()) {
+      almacen.guardaTicket(envio.ticketConsumido, envio.para, { consumido: true }).catch(function () {});
+    }
     return;
   }
 
@@ -1288,10 +1314,10 @@ async function cargaLoQueSeSabe(crudo) {
           if (!m || !tickets.mismoNumero(m.from, dueno)) continue;
           const citado = m.context && m.context.id;
           if (!citado || tickets.tickets.get(citado)) continue;
-          const cliente = await almacen.leeTicket(citado).catch(function () { return null; });
-          if (cliente) {
-            tickets.recuerdaTicket(citado, cliente);
-            if (numeros.indexOf(cliente) < 0) numeros.push(cliente);
+          const t = await almacen.leeTicket(citado).catch(function () { return null; });
+          if (t && t.cliente) {
+            tickets.recuerdaTicket(citado, t.cliente, t.carga || null);
+            if (numeros.indexOf(t.cliente) < 0) numeros.push(t.cliente);
           }
         }
       }
@@ -1590,10 +1616,10 @@ async function manda(envio) {
         const cuerpo = await r.json();
         const id = cuerpo && cuerpo.messages && cuerpo.messages[0] && cuerpo.messages[0].id;
         if (id) {
-          tickets.recuerdaTicket(id, envio.sobreCliente);
+          tickets.recuerdaTicket(id, envio.sobreCliente, envio.carga || null);
           /* Y al almacén, para cuando esta instancia ya no exista. Sin
              esperar: a Meta hay que contestarle rápido. */
-          if (almacen.hayAlmacen()) almacen.guardaTicket(id, envio.sobreCliente).catch(function () {});
+          if (almacen.hayAlmacen()) almacen.guardaTicket(id, envio.sobreCliente, envio.carga || null).catch(function () {});
         }
       } catch (e) { /* sin id: queda el camino del numero escrito */ }
     }

@@ -86,7 +86,9 @@ async function dice(texto, de) {
     metadata: { phone_number_id: '111' },
     messages: [{ id: 'wamid.p' + contador, from: de, type: 'text', text: { body: texto } }]
   } }] }] });
-  await atiende(new Request('https://x/api/whatsapp', { method: 'POST', body: cuerpo, headers: { 'x-hub-signature-256': firma(cuerpo) } }));
+  const r = await atiende(new Request('https://x/api/whatsapp', { method: 'POST', body: cuerpo, headers: { 'x-hub-signature-256': firma(cuerpo) } }));
+  /* Un 500 aquí es una excepción dentro del bot: se dice, no se esconde. */
+  if (!r || r.status !== 200) console.log('     ¡el webhook contestó ' + (r && r.status) + ' a «' + texto + '»: ' + (r ? await r.text() : '') + '!');
 }
 function mismo(a, b) { return String(a || '').replace(/\D/g, '').slice(-10) === String(b || '').replace(/\D/g, '').slice(-10); }
 function textos(para) { return mandados.filter((m) => mismo(m.to, para)).map((m) => (m.text && m.text.body) || ''); }
@@ -196,6 +198,9 @@ titulo('después de la espera no se vuelve a pedir el precio (7-sep-2026)');
     if (/solo nos llevan/i.test(t)) return { respuesta: null, datos: { recorridos: 0 }, accion: 'cotizar' };
     if (/^ok$/i.test(t)) return { respuesta: 'Va, en cuanto lo tenga te aviso 🙌', datos: {}, accion: 'seguir' };
     if (/^el 20$/i.test(t)) return { respuesta: 'El 20, va. ¿Y regresan?', datos: { salida: '2026-09-20' }, accion: 'seguir' };
+    if (/^el 22$/i.test(t)) return { respuesta: 'Del 20 al 22. ¿Como cuántos van?', datos: { regreso: '2026-09-22' }, accion: 'seguir' };
+    if (/somos 8/i.test(t)) return { respuesta: '8 van cómodos en Sprinter. ¿Salen de la zona metropolitana de Guadalajara?', datos: { gente: 8 }, accion: 'seguir' };
+    if (/^gracias$/i.test(t)) return { respuesta: 'A ti 🙌', datos: {}, accion: 'seguir' };
     return null;
   };
   await dice('a vallarta', C);
@@ -227,6 +232,51 @@ titulo('después de la espera no se vuelve a pedir el precio (7-sep-2026)');
   if (!/YA SE SABE DEL VIAJE: destino=Mazamitla\./.test(s2)) console.log('     contexto: ' + (s2.match(/YA SE SABE[^\\]*/) || [''])[0]);
   okQue('  y el de Vallarta sigue ahí como precio ya pedido', /PRECIO YA PEDIDO: [^"]*Vallarta/.test(s2));
   ok('  y sigue sin ticket nuevo (todavía faltan datos)', tickets(), 1);
+
+  /* ---- la segunda cotización completa: dos tickets en el aire ---- */
+  /* El freno es de 12 mensajes por minuto por remitente; este cliente ya
+     lleva más. Se adelanta el reloj un par de minutos, como haría el
+     tiempo real. */
+  process.env.AHORA_DE_PRUEBA = String(Date.now() + 2 * 60000);
+  await dice('el 22', C);
+  await dice('somos 8', C);
+  await dice('sí', C);
+  await dice('solo nos llevan y traen', C);
+  ok('la segunda cotización manda su propio ticket', tickets(), 2);
+  ok('  y la espera salió dos veces (una por viaje)', esperas(), 2);
+  const idsDeTickets = [];
+  mandados.forEach(function (m, i) { if (mismo(m.to, DUENO) && /Precio por confirmar/.test((m.text && m.text.body) || '')) idsDeTickets.push('wamid.s' + (i + 1)); });
+  const contexto3 = JSON.stringify(sistemasVistos[sistemasVistos.length - 1] || []);
+  okQue('  al pedir el segundo precio, el de Vallarta NO se olvidó (queda como viaje anterior)', /VIAJES ANTERIORES[^"]*Vallarta/.test(contexto3) || /PRECIO YA PEDIDO[^"]*Vallarta/.test(contexto3));
+
+  /* El dueño contesta PRIMERO el ticket viejo (Vallarta) y luego el nuevo. */
+  const contesta = async function (ticket, texto) {
+    const cuerpo = JSON.stringify({ entry: [{ changes: [{ value: { metadata: { phone_number_id: '111' },
+      messages: [{ id: 'wamid.d-' + ticket, from: DUENO, type: 'text', text: { body: texto }, context: { id: ticket } }] } }] }] });
+    await atiende(new Request('https://x/api/whatsapp', { method: 'POST', body: cuerpo, headers: { 'x-hub-signature-256': firma(cuerpo) } }));
+  };
+  const antesDeConfirmar = textos(C).length;
+  await contesta(idsDeTickets[0], '52,000');
+  const trasElPrimero = textos(C).slice(antesDeConfirmar).join('\n');
+  okQue('«52,000» al ticket de Vallarta: el cliente recibe ESE precio', /\*Total: \$52,000\*/.test(trasElPrimero));
+  okQue('  y es el viaje de Vallarta, no el de Mazamitla', /Vallarta/.test(trasElPrimero) && !/Mazamitla/.test(trasElPrimero));
+  const antesDelSegundo = textos(C).length;
+  await contesta(idsDeTickets[1], '30,000');
+  const trasElSegundo = textos(C).slice(antesDelSegundo).join('\n');
+  okQue('«30,000» al ticket de Mazamitla: el cliente recibe ESE precio', /\*Total: \$30,000\*/.test(trasElSegundo));
+  okQue('  y es el viaje de Mazamitla', /Mazamitla/.test(trasElSegundo) && !/Vallarta/.test(trasElSegundo));
+
+  /* Un segundo «va» al ticket de Vallarta, ya consumido: no manda nada
+     (y menos el precio de Mazamitla). */
+  const antesDelRepetido = textos(C).length;
+  await contesta(idsDeTickets[0], 'va');
+  ok('un segundo «va» al ticket ya contestado no vuelve a mandar precio', textos(C).slice(antesDelRepetido).filter((t) => /Total: \$/.test(t)).length, 0);
+
+  await dice('gracias', C);
+  const contexto4 = JSON.stringify(sistemasVistos[sistemasVistos.length - 1] || []);
+  okQue('después de los dos precios, la IA ve los dos viajes (Mazamitla dado, Vallarta anterior)',
+    /PRECIO YA DADO[^"]*Mazamitla/.test(contexto4) && /VIAJES ANTERIORES[^"]*Vallarta/.test(contexto4));
+  delete process.env.AHORA_DE_PRUEBA;
 }
 
 /* ============================================================ */

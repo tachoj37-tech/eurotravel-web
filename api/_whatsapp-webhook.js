@@ -687,7 +687,9 @@ function procesa(crudo, firma, entorno) {
       for (let k = 0; k < valor.messages.length; k++) {
         const m = valor.messages[k] || {};
         if (yaContestado(m.id)) continue;
-        if (!pasaElFreno(m.from || 'desconocido')) continue;
+        /* Con el reloj de la petición (`AHORA_DE_PRUEBA` en pruebas): así una
+           prueba larga de un solo cliente puede «esperar un minuto». */
+        if (!pasaElFreno(m.from || 'desconocido', ahora)) continue;
 
         /* ------------------------------------------------------------
            ¿ESTO LO ESCRIBIÓ EL DUEÑO?
@@ -823,14 +825,28 @@ function procesa(crudo, firma, entorno) {
              misma voz, que es de lo que se trata.
              ------------------------------------------------------------ */
           const fichaDelCliente = dirigido && tickets.fichaDe(dirigido.cliente);
-          if (fichaDelCliente && fichaDelCliente.porConfirmar) {
+          /* El ticket citado trae su propio viaje (`carga`) desde el
+             7-sep-2026: con dos cotizaciones en el aire, el «va» a cada
+             ticket confirma el suyo, aunque la ficha ya tenga otro
+             pendiente. Un ticket ya consumido (su precio ya se mandó) no
+             confirma nada: el segundo «va» llega literal. Un ticket viejo
+             sin carga, o el número escrito a mano, usan la ficha. */
+          const citado = m.context && m.context.id;
+          const cargaCitada = (dirigido && dirigido.via === 'cita') ? dirigido.carga : null;
+          let pendiente = null;
+          if (cargaCitada) pendiente = cargaCitada.consumido ? null : cargaCitada;
+          else if (fichaDelCliente && fichaDelCliente.porConfirmar) pendiente = fichaDelCliente.porConfirmar;
+          if (pendiente) {
             const dicho = confirmacion.interpreta(dirigido.texto);
             if (dicho.tipo !== 'texto') {
+              if (cargaCitada) tickets.consumeTicket(citado);
               envios.push({
                 numeroDeOrigen: deQuien,
                 para: dirigido.cliente,
                 texto: '',
                 confirmaPrecio: true,
+                cargaDelTicket: pendiente,
+                ticketConsumido: cargaCitada ? citado : null,
                 totalFijado: dicho.tipo === 'precio' ? dicho.total : null,
                 pasaAPersona: false,
                 escribio: '[precio · ' + (dicho.tipo === 'va' ? 'confirmado' : 'fijado en ' + dicho.total) + ']'

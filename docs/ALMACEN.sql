@@ -185,3 +185,14 @@ alter table fichas add column if not exists toques     integer not null default 
 alter table fichas add column if not exists cliente_en timestamptz;                 -- su último mensaje
 create index if not exists fichas_seguimiento on fichas (precio_en)
   where etapa = 'con_precio' and toques < 3;
+
+-- ------------------------------------------------------------
+-- 7-SEP-2026 · NO OLVIDAR LA COTIZACIÓN PASADA
+-- ------------------------------------------------------------
+-- Pedido del dueño: «al iniciar otra cotización que no olvide la
+-- pasada». La ficha archiva los viajes que ya pasaron por precio
+-- (hasta 5), y cada ticket guarda SU viaje: con dos cotizaciones
+-- en el aire, el «va» a cada ticket confirma el suyo.
+-- ------------------------------------------------------------
+alter table fichas  add column if not exists viajes jsonb not null default '[]'::jsonb;
+alter table tickets add column if not exists carga  jsonb;

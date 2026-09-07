@@ -165,14 +165,14 @@ async function guardaFicha(ficha) {
   /* El seguimiento (6-sep-2026): cuándo recibió el precio, cuántos
      toques van y cuándo escribió él por última vez. Van solo cuando hay
      algo, por la misma razón de arriba. */
-  const conSeguimiento = columnasDeSeguimiento && !!(ficha.precioEn || ficha.clienteEn);
-  if (conSeguimiento) {
-    if (ficha.precioEn) {
-      fila.precio_en = new Date(ficha.precioEn).toISOString();
-      fila.toques = Number(ficha.toques) || 0;
-    }
-    if (ficha.clienteEn) fila.cliente_en = new Date(ficha.clienteEn).toISOString();
+  if (ficha.precioEn && !columnaFaltante.precio_en) {
+    fila.precio_en = new Date(ficha.precioEn).toISOString();
+    fila.toques = Number(ficha.toques) || 0;
   }
+  if (ficha.clienteEn && !columnaFaltante.cliente_en) fila.cliente_en = new Date(ficha.clienteEn).toISOString();
+  /* Los viajes anteriores con precio (7-sep-2026): para que al cotizar
+     otro no se olvide el pasado. */
+  if (Array.isArray(ficha.viajes) && ficha.viajes.length && !columnaFaltante.viajes) fila.viajes = ficha.viajes;
   const upsert = {
     metodo: 'POST',
     cabeceras: { 'Prefer': 'resolution=merge-duplicates,return=minimal' },
@@ -182,24 +182,33 @@ async function guardaFicha(ficha) {
   /* `merge-duplicates` es un UPSERT: si ya existe esa llave, la
      actualiza. Sin esto, el segundo mensaje de un cliente reventaría
      por llave repetida y su ficha se quedaría en el primer mensaje. */
-  if (await pide('fichas?on_conflict=numero', upsert)) return true;
+  return guardaSinColumnasQueFalten('fichas?on_conflict=numero', upsert, fila, 'fichas');
+}
 
-  /* Si la base todavía no tiene las columnas del seguimiento (el bloque
-     del 6-sep-2026 de docs/ALMACEN.sql corre a mano), PostgREST contesta
-     PGRST204 «Could not find the column». Se avisa una vez y se vuelve a
-     guardar SIN ellas: perder el seguimiento es barato; perder la ficha
-     de todos los clientes, no. */
-  if (conSeguimiento && ultimoError && /PGRST204/.test(ultimoError.detalle || '')) {
-    columnasDeSeguimiento = false;
-    console.error('[almacen] la tabla fichas no tiene las columnas del seguimiento ' +
-      '(precio_en, toques, cliente_en): corre el bloque del 6-sep-2026 de docs/ALMACEN.sql. ' +
-      'Mientras, se guarda sin ellas y NO hay seguimiento.');
-    delete fila.precio_en; delete fila.toques; delete fila.cliente_en;
-    return !!(await pide('fichas?on_conflict=numero', upsert));
+/* ------------------------------------------------------------
+   SI LA BASE TODAVÍA NO TIENE UNA COLUMNA NUEVA
+   ------------------------------------------------------------
+   Los bloques nuevos de docs/ALMACEN.sql corren a mano, y entre el
+   despliegue y que el dueño los corra pasan horas o días. PostgREST
+   contesta PGRST204 «Could not find the 'x' column»: se lee QUÉ columna
+   falta, se quita de la fila, se avisa una vez y se vuelve a guardar.
+   Perder una columna nueva es barato; perder la ficha de todos, no.
+   ------------------------------------------------------------ */
+const columnaFaltante = {};
+async function guardaSinColumnasQueFalten(camino, upsert, fila, tabla) {
+  for (let intento = 0; intento < 5; intento++) {
+    if (await pide(camino, upsert)) return true;
+    const m = ultimoError && /PGRST204/.test(ultimoError.detalle || '') &&
+      String(ultimoError.detalle).match(/'([a-z_]+)' column/);
+    if (!m || !(m[1] in fila)) return false;
+    columnaFaltante[m[1]] = true;
+    console.error('[almacen] la tabla ' + tabla + ' no tiene la columna «' + m[1] + '»: corre el ' +
+      'bloque más reciente de docs/ALMACEN.sql. Mientras, se guarda sin ella.');
+    delete fila[m[1]];
+    if (m[1] === 'precio_en') delete fila.toques;
   }
   return false;
 }
-let columnasDeSeguimiento = true;
 
 function deLaFila(f) {
   if (!f) return null;
@@ -218,6 +227,7 @@ function deLaFila(f) {
     precioEn: f.precio_en ? Date.parse(f.precio_en) : null,
     toques: Number(f.toques) || 0,
     clienteEn: f.cliente_en ? Date.parse(f.cliente_en) : null,
+    viajes: Array.isArray(f.viajes) ? f.viajes : [],
     desde: f.desde ? Date.parse(f.desde) : Date.now(),
     visto: f.visto ? Date.parse(f.visto) : Date.now()
   };
@@ -350,22 +360,30 @@ async function tiraLoViejo() {
    Si la tabla aún no existe, se falla en silencio: la memoria
    sigue funcionando dentro de la instancia, que es lo que había.
    ------------------------------------------------------------ */
-async function guardaTicket(id, cliente) {
+/* Desde el 7-sep-2026 el ticket guarda también SU viaje (`carga`, la misma
+   forma que `porConfirmar`): con dos cotizaciones en el aire, el «va» a
+   cada ticket confirma el suyo. Si la columna aún no existe, se guarda
+   sin ella (`guardaSinColumnasQueFalten`). */
+async function guardaTicket(id, cliente, carga) {
   if (!id || !cliente) return false;
-  const r = await pide('tickets?on_conflict=id', {
+  const fila = { id: String(id), cliente: String(cliente) };
+  if (carga && !columnaFaltante.carga) fila.carga = carga;
+  const upsert = {
     metodo: 'POST',
     cabeceras: { 'Prefer': 'resolution=merge-duplicates,return=minimal' },
-    cuerpo: { id: String(id), cliente: String(cliente) },
+    cuerpo: fila,
     sinRespuesta: true
-  }).catch(function () { return null; });
-  return !!r;
+  };
+  return guardaSinColumnasQueFalten('tickets?on_conflict=id', upsert, fila, 'tickets');
 }
 
+/* Devuelve { cliente, carga } o null. */
 async function leeTicket(id) {
   if (!id) return null;
   const filas = await pide('tickets?id=eq.' + encodeURIComponent(String(id)) +
-    '&select=cliente&limit=1').catch(function () { return null; });
-  return (filas && filas[0] && filas[0].cliente) || null;
+    '&select=*&limit=1').catch(function () { return null; });
+  const f = filas && filas[0];
+  return (f && f.cliente) ? { cliente: f.cliente, carga: f.carga || null } : null;
 }
 
 /* ------------------------------------------------------------

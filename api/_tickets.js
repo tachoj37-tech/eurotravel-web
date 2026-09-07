@@ -151,7 +151,14 @@ function clienteDeLaRespuesta(mensaje, recordados) {
   const citado = m.context && m.context.id;
   if (citado && recordados && recordados.get) {
     const quien = recordados.get(citado);
-    if (quien) return { cliente: quien, texto: textoDe(m), via: 'cita' };
+    /* Desde el 7-sep-2026 el ticket recuerda también SU viaje (`carga`):
+       si el cliente cotizó dos, el «va» a cada ticket confirma el suyo. Un
+       ticket viejo guardado como texto sigue valiendo. */
+    const cliente = typeof quien === 'string' ? quien : (quien && quien.cliente);
+    if (cliente) {
+      return { cliente: cliente, texto: textoDe(m), via: 'cita',
+        carga: (quien && typeof quien === 'object' && quien.carga) || null };
+    }
   }
 
   /* 2 · Empezó su mensaje con el número del cliente. Funciona sin
@@ -181,9 +188,15 @@ function textoDe(m) {
 const TOPE_TICKETS = 300;
 const tickets = new Map();
 
-function recuerdaTicket(idMensaje, cliente) {
+/* Un ticket cuyo precio ya se mandó queda «consumido»: un segundo «va» al
+   mismo ticket no vuelve a mandar el precio ni toma el de otro viaje. */
+function consumeTicket(idMensaje) {
+  const t = tickets.get(idMensaje);
+  if (t && typeof t === 'object') t.carga = { consumido: true };
+}
+function recuerdaTicket(idMensaje, cliente, carga) {
   if (!idMensaje || !cliente) return;
-  tickets.set(idMensaje, cliente);
+  tickets.set(idMensaje, { cliente: cliente, carga: carga || null });
   while (tickets.size > TOPE_TICKETS) {
     tickets.delete(tickets.keys().next().value);
   }
@@ -329,11 +342,49 @@ function llave(cliente) { return soloDigitos(cliente).slice(-10); }
 
 /* Apunta en qué va este cliente. La etapa SOLO AVANZA: quien ya
    mandó comprobante no vuelve a «apenas escribió» por saludar. */
+/* Los viajes que ya pasaron por precio, del más nuevo al más viejo, para
+   que al cotizar otro no se olvide el anterior (pedido del dueño,
+   7-sep-2026). Se archiva el que sale cuando entra uno distinto. */
+const TOPE_VIAJES = 5;
+function archivaViaje(lista, viaje, total, estado) {
+  if (!viaje || !viaje.destino) return lista;
+  const clave = String(viaje.destino) + '|' + String(viaje.salida || '');
+  const sinEse = (lista || []).filter(function (v) {
+    return String(v.destino) + '|' + String(v.salida || '') !== clave;
+  });
+  sinEse.unshift({
+    destino: viaje.destino, origen: viaje.origen || null,
+    salida: viaje.salida || null, regreso: viaje.regreso || null,
+    gente: viaje.gente || null, unidad: viaje.unidadNombre || viaje.unidad || null,
+    total: typeof total === 'number' ? total : null,
+    estado: estado
+  });
+  return sinEse.slice(0, TOPE_VIAJES);
+}
+function mismoViaje(a, b) {
+  if (!a || !b) return false;
+  return String(a.destino || '') === String(b.destino || '') &&
+    String(a.salida || '') === String(b.salida || '');
+}
+
 function anotaEtapa(cliente, etapa, extra, ahora) {
   if (!cliente) return null;
   const k = llave(cliente);
   const antes = cartera.get(k);
+  /* Si entra un precio por confirmar de OTRO viaje, el que estaba
+     esperando se archiva; si entra un viaje con precio dado distinto del
+     anterior, el anterior también. */
+  let viajes = (antes && antes.viajes) || [];
+  const nuevoPendiente = extra && extra.porConfirmar && extra.porConfirmar.resumen;
+  const viejoPendiente = antes && antes.porConfirmar && antes.porConfirmar.resumen;
+  if (nuevoPendiente && viejoPendiente && !mismoViaje(nuevoPendiente, viejoPendiente)) {
+    viajes = archivaViaje(viajes, viejoPendiente, antes.porConfirmar.total, 'precio pedido');
+  }
+  if (extra && extra.viajeDatos && antes && antes.viajeDatos && !mismoViaje(extra.viajeDatos, antes.viajeDatos)) {
+    viajes = archivaViaje(viajes, antes.viajeDatos, antes.total, 'precio dado');
+  }
   const ficha = {
+    viajes: viajes,
     cliente: cliente,
     etapa: etapas.avanza(antes && antes.etapa, etapa),
     viaje: (extra && extra.viaje) || (antes && antes.viaje) || null,
@@ -447,7 +498,7 @@ function olvidaTodo() {
 module.exports = {
   numeroDelDueno, esDelDueno, mismoNumero, soloDigitos,
   armaTicket, clienteDeLaRespuesta, comoSeDice,
-  recuerdaTicket, tickets,
+  recuerdaTicket, consumeTicket, tickets,
   callaLaIA, iaCallada, olvidaTodo,
   anotaPendiente, yaLoContesto, recordatoriosPendientes,
   anotaEtapa, fichaDe, carteraOrdenada, siembraFicha, fichaViva,

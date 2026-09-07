@@ -219,13 +219,17 @@ function textoDelContexto(c) {
      «en breve te paso tu cotización» un «ok» hacía que la IA volviera a
      preguntar a dónde van (7-sep-2026). */
   const v = c && c.viaje && c.viaje.resumen ? c.viaje : null;
-  const viaje = !v ? ''
+  const anteriores = (c && c.viaje && Array.isArray(c.viaje.anteriores) && c.viaje.anteriores.length)
+    ? 'VIAJES ANTERIORES DE ESTE CLIENTE (ya con precio, no los repreguntes; si pregunta por uno, ' +
+      'dile que sigue en pie): ' + c.viaje.anteriores.join(' | ') + '.\n'
+    : '';
+  const viaje = anteriores + (!v ? ''
     : v.estado === 'pedido'
       ? 'PRECIO YA PEDIDO: ' + v.resumen + '. Está esperando que se le confirme; si pregunta por él, ' +
         'dile que en breve se lo pasas. NO vuelvas a preguntar nada de ese viaje. Si quiere OTRO viaje ' +
         'o cambiar algo, toma los datos nuevos como un viaje nuevo y pregunta lo que falte.\n'
       : 'PRECIO YA DADO: ' + v.resumen + '. No repitas cifras ni preguntes datos de ese viaje; sigue con ' +
-        'apartar o resuelve dudas. Si quiere OTRO viaje, tómalo como nuevo.\n';
+        'apartar o resuelve dudas. Si quiere OTRO viaje, tómalo como nuevo.\n');
   const turnos = ((c && c.historial) || []).slice(-TURNOS_QUE_RECUERDA)
     .map(function (t) { return (t.de === 'cliente' ? 'Cliente: ' : 'Tú: ') + String(t.texto || '').replace(/\s+/g, ' ').slice(0, 220); });
   return 'Hoy es ' + (c && c.hoy) + '. Si dice un día sin año, es el más cercano que no haya pasado.\n' +
