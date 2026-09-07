@@ -215,10 +215,23 @@ function textoDelContexto(c) {
     .filter(function (k) { return e[k] !== undefined && e[k] !== null && e[k] !== ''; })
     .map(function (k) { return k + '=' + String(k === 'unidad' ? (e.unidadNombre || e[k]) : e[k]).slice(0, 60); });
   const falta = c && c.falta ? c.falta : null;
+  /* El viaje que ya está en precio (pedido o dado). Sin esto, después de
+     «en breve te paso tu cotización» un «ok» hacía que la IA volviera a
+     preguntar a dónde van (7-sep-2026). */
+  const v = c && c.viaje && c.viaje.resumen ? c.viaje : null;
+  const viaje = !v ? ''
+    : v.estado === 'pedido'
+      ? 'PRECIO YA PEDIDO: ' + v.resumen + '. Está esperando que se le confirme; si pregunta por él, ' +
+        'dile que en breve se lo pasas. NO vuelvas a preguntar nada de ese viaje. Si quiere OTRO viaje ' +
+        'o cambiar algo, toma los datos nuevos como un viaje nuevo y pregunta lo que falte.\n'
+      : 'PRECIO YA DADO: ' + v.resumen + '. No repitas cifras ni preguntes datos de ese viaje; sigue con ' +
+        'apartar o resuelve dudas. Si quiere OTRO viaje, tómalo como nuevo.\n';
   const turnos = ((c && c.historial) || []).slice(-TURNOS_QUE_RECUERDA)
     .map(function (t) { return (t.de === 'cliente' ? 'Cliente: ' : 'Tú: ') + String(t.texto || '').replace(/\s+/g, ' ').slice(0, 220); });
   return 'Hoy es ' + (c && c.hoy) + '. Si dice un día sin año, es el más cercano que no haya pasado.\n' +
-    (sabido.length ? 'YA SE SABE DEL VIAJE: ' + sabido.join(', ') + '. No lo vuelvas a preguntar.\n' : 'Todavía no se sabe nada del viaje.\n') +
+    (sabido.length ? 'YA SE SABE DEL VIAJE: ' + sabido.join(', ') + '. No lo vuelvas a preguntar.\n'
+      : (viaje ? '' : 'Todavía no se sabe nada del viaje.\n')) +
+    viaje +
     (falta ? 'LO QUE SIGUE POR SABER: ' + falta + '.\n' : '') +
     (turnos.length ? 'ÚLTIMOS MENSAJES:\n' + turnos.join('\n') : '');
 }
@@ -294,7 +307,7 @@ async function conversa(mensaje, opciones) {
 
   const bloques = [
     { type: 'text', text: instruccionesDelAgente(o.voz), cache_control: { type: 'ephemeral' } },
-    { type: 'text', text: textoDelContexto({ hoy: hoy, estado: o.estado, falta: o.falta, historial: o.historial }) }
+    { type: 'text', text: textoDelContexto({ hoy: hoy, estado: o.estado, falta: o.falta, historial: o.historial, viaje: o.viaje }) }
   ];
 
   try {

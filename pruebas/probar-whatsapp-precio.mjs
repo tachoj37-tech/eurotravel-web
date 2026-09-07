@@ -477,7 +477,9 @@ function idDelUltimoTicket() {
   const alCliente = textos(C).join('\n');
   const alDueno = textos(DUENO).join('\n');
   okQue('el cliente NO ve precio', !/\*Total: \$/.test(alCliente));
-  okQue('  y recibe la espera', /te paso el precio en un momento/.test(alCliente));
+  /* Texto dictado el 7-sep-2026: «en breve te paso tu cotización y la
+     disponibilidad de tu viaje». */
+  okQue('  y recibe la espera', /en breve te paso tu cotizaci[oó]n y la disponibilidad/i.test(alCliente));
   okQue('  el dueño recibe el ticket de precio', /Precio por confirmar/.test(alDueno));
   okQue('  con el precio calculado', /Calculado: \*\$[\d,]+\*/.test(alDueno));
   ok('  y el calendario se consultó aunque no sea temporada', llamadasAlCalendario, 1);

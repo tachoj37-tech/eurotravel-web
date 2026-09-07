@@ -47,6 +47,7 @@ function titulo(t) { console.log('\n== ' + t.toUpperCase() + ' =='); }
 let mandados = [];
 let llamadasALaIA = 0;
 let sistemasVistos = [];
+let calendarioPedido = [];
 let laIA = function () { return null; };   // (textoDelCliente) -> objeto JSON o null (=500)
 
 globalThis.fetch = async function (url, opciones) {
@@ -64,6 +65,14 @@ globalThis.fetch = async function (url, opciones) {
     return { ok: true, status: 200, json: async () => ({ content: [{ text: JSON.stringify(dijo) }], usage: { input_tokens: 1200, output_tokens: 60 } }) };
   }
   if (u.indexOf('/api/disponibilidad') !== -1) {
+    calendarioPedido.push(u);
+    /* Como EuroSystem: solo las tres categorías; un nombre de unidad
+       («NEOBUS», «IRIZAR I6S») es un 422 (visto en producción el
+       7-sep-2026). */
+    const tipo = new URL(u).searchParams.get('tipo');
+    if (['AUTOBUS', 'SPRINTER', 'SUBURBAN'].indexOf(tipo) < 0) {
+      return { ok: false, status: 422, json: async () => ({}), text: async () => 'tipo inválido' };
+    }
     return { ok: true, status: 200, json: async () => ({ datos: { libres: 2, total: 4 } }), text: async () => '' };
   }
   throw new Error('el bot llamó a algo que no debía: ' + u);
@@ -116,7 +125,7 @@ titulo('la plática de un cliente real, ahora con el agente');
   await dice('solo nos llevan y traen', C);
   const alCliente = textos(C).slice(antesDelPrecio).join('\n');
   const alDueno = textos(DUENO).join('\n');
-  okQue('con todo junto, el motor cotiza: el cliente recibe la espera (compuerta)', /te paso el precio en un momento/.test(alCliente));
+  okQue('con todo junto, el motor cotiza: el cliente recibe la espera (compuerta)', /en breve te paso tu cotizaci/i.test(alCliente));
   okQue('  y al dueño le llega el ticket de precio', /Precio por confirmar/.test(alDueno));
   okQue('  con Puerto Vallarta, 12 pax y las fechas', /Vallarta/.test(alDueno) && /12 pax/.test(alDueno));
   okQue('  el cliente nunca vio un precio ni un «no entendí»', !/\$\s?\d|no entend|no me qued/i.test(textos(C).join('\n')));
@@ -148,8 +157,12 @@ titulo('autobús: por la compuerta del dueño, nunca a otro número (6-sep-2026)
   await dice('solo nos llevan y traen', C);
   const alCliente = textos(C).slice(antes).join('\n');
   const alDueno = textos(DUENO).join('\n');
-  okQue('el cliente recibe la espera con disponibilidad (fecha cercana)', /checo disponibilidad/.test(alCliente));
+  okQue('el cliente recibe la espera: «en breve te paso tu cotización y la disponibilidad»', /en breve te paso tu cotizaci[oó]n y la disponibilidad/i.test(alCliente));
   okQue('  y NUNCA «mándale esto por WhatsApp al…»', !/M[aá]ndale esto|33 2400/.test(alCliente));
+  /* El calendario se pregunta por CATEGORÍA (AUTOBUS), no por el nombre
+     del camión: con «NEOBUS» EuroSystem contestaba 422 y el ticket iba sin
+     calendario. */
+  okQue('  el calendario se consultó como AUTOBUS, no como «NEOBUS»', /tipo=AUTOBUS/.test(calendarioPedido.slice(-1)[0] || ''));
   okQue('  al dueño le llega el ticket sin número y pidiéndolo', /Precio por confirmar/.test(alDueno) && /escr[ií]beme el precio/i.test(alDueno));
   okQue('  con Neobus, 48 pax y Vallarta', /Neobus/.test(alDueno) && /48 pax/.test(alDueno) && /Vallarta/.test(alDueno));
   /* El dueño contesta con el precio, citando el ticket. */
@@ -161,6 +174,59 @@ titulo('autobús: por la compuerta del dueño, nunca a otro número (6-sep-2026)
   await atiende(new Request('https://x/api/whatsapp', { method: 'POST', body: cuerpo, headers: { 'x-hub-signature-256': firma(cuerpo) } }));
   okQue('con «52,000» del dueño, el cliente recibe ese precio', /\*Total: \$52,000\*/.test(textos(C).join('\n')));
   okQue('  con el anticipo del 20 % redondeado a $500 arriba ($10,500)', /\$10,500/.test(textos(C).join('\n')));
+}
+
+/* ============================================================ */
+titulo('después de la espera no se vuelve a pedir el precio (7-sep-2026)');
+{
+  /* Visto en producción: después de «checo disponibilidad y te paso el
+     precio», el bot contestaba LO MISMO a «ok», y al día siguiente a
+     «quiero cotizar un viaje a vallarta» y a «sería otro viaje diferente».
+     La plática se guardaba con todos los datos y el agente volvía a
+     «cotizar» con cada mensaje. */
+  limpia();
+  const C = '5213366670208';
+  laIA = function (t) {
+    if (/otro viaje/i.test(t)) return { respuesta: 'Mazamitla, va. ¿Qué día salen?', datos: { destino: 'Mazamitla' }, accion: 'seguir' };
+    if (/vallarta/i.test(t)) return { respuesta: 'Vallarta, va. ¿Qué día salen?', datos: { destino: 'Puerto Vallarta' }, accion: 'seguir' };
+    if (/9 de septiembre/i.test(t)) return { respuesta: 'Listo. ¿Y regresan?', datos: { salida: '2026-09-09' }, accion: 'seguir' };
+    if (/el 14/i.test(t)) return { respuesta: 'Del 9 al 14. ¿Como cuántos van?', datos: { regreso: '2026-09-14' }, accion: 'seguir' };
+    if (/somos 12/i.test(t)) return { respuesta: '12 caben perfecto en una Sprinter. ¿Salen de la zona metropolitana de Guadalajara?', datos: { gente: 12 }, accion: 'seguir' };
+    if (/^s[ií]$/i.test(t)) return { respuesta: 'Perfecto. Allá, ¿se mueven con la camioneta o solo los llevamos y traemos?', datos: { origen: 'Guadalajara' }, accion: 'seguir' };
+    if (/solo nos llevan/i.test(t)) return { respuesta: null, datos: { recorridos: 0 }, accion: 'cotizar' };
+    if (/^ok$/i.test(t)) return { respuesta: 'Va, en cuanto lo tenga te aviso 🙌', datos: {}, accion: 'seguir' };
+    if (/^el 20$/i.test(t)) return { respuesta: 'El 20, va. ¿Y regresan?', datos: { salida: '2026-09-20' }, accion: 'seguir' };
+    return null;
+  };
+  await dice('a vallarta', C);
+  await dice('el 9 de septiembre', C);
+  await dice('el 14', C);
+  await dice('somos 12', C);
+  await dice('sí', C);
+  await dice('solo nos llevan y traen', C);
+  const esperas = () => textos(C).filter((t) => /en breve te paso tu cotizaci/i.test(t)).length;
+  ok('la espera salió una vez', esperas(), 1);
+  const tickets = () => textos(DUENO).filter((t) => /Precio por confirmar/.test(t)).length;
+  ok('  y un ticket al dueño', tickets(), 1);
+
+  await dice('ok', C);
+  ok('«ok» después de la espera: NO se repite la espera', esperas(), 1);
+  ok('  ni llega otro ticket', tickets(), 1);
+  ok('  contesta la IA', textos(C).slice(-1)[0], 'Va, en cuanto lo tenga te aviso 🙌');
+  const s1 = JSON.stringify(sistemasVistos[sistemasVistos.length - 1] || []);
+  okQue('  y la IA supo que el precio ya estaba pedido', s1.includes('PRECIO YA PEDIDO'));
+
+  await dice('quiero cotizar otro viaje a mazamitla', C);
+  ok('«otro viaje»: NO se repite la espera', esperas(), 1);
+  ok('  la IA pregunta lo que sigue del viaje nuevo', textos(C).slice(-1)[0], 'Mazamitla, va. ¿Qué día salen?');
+  await dice('el 20', C);
+  const s2 = JSON.stringify(sistemasVistos[sistemasVistos.length - 1] || []);
+  /* Lo SABIDO del viaje nuevo es solo Mazamitla; el de Vallarta aparece
+     aparte, como «precio ya pedido», para que la IA no lo confunda. */
+  okQue('  el viaje nuevo empezó de cero: lo sabido es solo Mazamitla', /YA SE SABE DEL VIAJE: destino=Mazamitla\./.test(s2));
+  if (!/YA SE SABE DEL VIAJE: destino=Mazamitla\./.test(s2)) console.log('     contexto: ' + (s2.match(/YA SE SABE[^\\]*/) || [''])[0]);
+  okQue('  y el de Vallarta sigue ahí como precio ya pedido', /PRECIO YA PEDIDO: [^"]*Vallarta/.test(s2));
+  ok('  y sigue sin ticket nuevo (todavía faltan datos)', tickets(), 1);
 }
 
 /* ============================================================ */

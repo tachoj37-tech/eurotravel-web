@@ -120,13 +120,25 @@ async function transcribeLosAudios(crudo) {
 const EUROSYSTEM = process.env.EUROSYSTEM_URL || 'https://eurosystem.site';
 const ESPERA_CALENDARIO_MS = 4000;
 
+/* EuroSystem cuenta por CATEGORÍA (SPRINTER, SUBURBAN, AUTOBUS). Aquí
+   llega a veces la categoría y a veces el nombre del camión que el
+   cliente escogió («Neobus», «Irizar i6S»): con el nombre EuroSystem
+   contestaba 422 y el ticket iba sin calendario (visto en producción el
+   7-sep-2026). */
+function categoriaDeUnidad(tipo) {
+  const t = String(tipo || '').toLowerCase();
+  if (/sprinter/.test(t)) return 'SPRINTER';
+  if (/suburban/.test(t)) return 'SUBURBAN';
+  return 'AUTOBUS';
+}
+
 async function disponibilidadDe(tipo, salida, regreso) {
   /* Llave APARTE de la de contratos, solo de lectura (dictado del dueño,
      5-sep-2026: «la que tenga más seguridad»). Sin ella no se llama, y por
      eso tampoco se promete. */
   const llave = (process.env.DISPONIBILIDAD_API_KEY || '').trim();
   if (!llave || !tipo || !salida) return null;
-  const t = String(tipo).toUpperCase();
+  const t = categoriaDeUnidad(tipo);
   const u = EUROSYSTEM.replace(/\/+$/, '') + '/api/disponibilidad?tipo=' +
     encodeURIComponent(t) + '&salida=' + encodeURIComponent(salida) +
     '&regreso=' + encodeURIComponent(regreso || salida);
@@ -179,12 +191,13 @@ function encendido(nombre) {
   const v = process.env[nombre];
   return v === undefined || v === '' ? true : !/^(0|no|false|off)$/i.test(String(v).trim());
 }
+/* Dictado del dueño (7-sep-2026): «que el mensaje diga que en breve se le
+   va a pasar su cotización y la disponibilidad de su viaje». Un solo texto
+   para las dos situaciones: con fecha cercana o sin ella, lo que el
+   cliente recibe después es lo mismo (el precio ya confirmado). */
 const TEXTO_ESPERA_PRECIO =
-  'Va, déjame confirmarlo y te paso el precio en un momento.';
-/* T-126 · con fecha cercana o en temporada alta se dice de frente que se
-   checa la disponibilidad (dictado del dueño, 6-sep-2026). */
-const TEXTO_ESPERA_CON_CALENDARIO =
-  'Va. Como es fecha cercana, checo disponibilidad y te paso el precio en un momento.';
+  'Va. En breve te paso tu cotización y la disponibilidad de tu viaje 🙌';
+const TEXTO_ESPERA_CON_CALENDARIO = TEXTO_ESPERA_PRECIO;
 
 /* Con un total fijado por el dueño, el anticipo se recalcula con la misma
    regla del motor (20 % al múltiplo de $500 hacia arriba). Los demás
@@ -1007,6 +1020,24 @@ async function reinyectaAlGuion(envio, textoCanonico) {
   return true;
 }
 
+/* Qué viaje de la ficha ya está en precio: pedido (espera el «va» del
+   dueño) o dado. En una línea, sin cifras: la IA no debe repetir montos. */
+function viajeConPrecio(ficha) {
+  if (!ficha) return null;
+  const pedido = ficha.porConfirmar && ficha.porConfirmar.resumen;
+  const dado = !pedido && ficha.viajeDatos &&
+    ['con_precio', 'va_a_apartar', 'mando_comprobante', 'datos_del_contrato', 'contrato_listo']
+      .indexOf(ficha.etapa) >= 0;
+  const r = pedido || (dado ? ficha.viajeDatos : null);
+  if (!r) return null;
+  const partes = [];
+  if (r.destino) partes.push((r.origen ? r.origen + ' → ' : '') + r.destino);
+  if (r.salida) partes.push(r.salida + (r.regreso ? ' al ' + r.regreso : ''));
+  if (r.gente) partes.push(r.gente + ' personas');
+  if (r.unidad) partes.push(String(r.unidad));
+  return { estado: pedido ? 'pedido' : 'dado', resumen: partes.join(' · ') };
+}
+
 async function loQueDiceElAgente(envio) {
   if (!process.env.ANTHROPIC_API_KEY) return false;
   const hoy = process.env.HOY_DE_PRUEBA || new Date().toISOString().slice(0, 10);
@@ -1026,9 +1057,15 @@ async function loQueDiceElAgente(envio) {
 
   const antes = envio.estadoAntes && typeof envio.estadoAntes === 'object' ? envio.estadoAntes : {};
   const hayViaje = !!(antes.destino || antes.salida || antes.gente || antes.origen);
+  /* El viaje que ya tiene precio pedido o dado vive en la ficha, no en la
+     plática (que se cierra al pedirlo). Se le cuenta a la IA para que no
+     vuelva a preguntar «¿a dónde van?» después de «ok», y para que si el
+     cliente quiere OTRO viaje, lo tome de cero. */
+  const viajeDeLaFicha = viajeConPrecio(tickets.fichaDe(cliente));
   const dicho = await agente.conversa(texto, {
     hoy: hoy, cliente: cliente, estado: antes,
-    falta: hayViaje ? conversacion.loQueFalta(antes) : 'a dónde van',
+    viaje: viajeDeLaFicha,
+    falta: hayViaje ? conversacion.loQueFalta(antes) : (viajeDeLaFicha ? null : 'a dónde van'),
     historial: agente.historialDe(cliente),
     voz: { usted: /^(1|si|sí|usted)$/i.test(String(process.env.AGENTE_DE_USTED || '')) }
   });
@@ -1116,7 +1153,15 @@ async function loQueDiceElAgente(envio) {
       if (nuevo.unidadNombre) resumen.unidad = nuevo.unidadNombre;
       else if (!resumen.unidad) resumen.unidad = nuevo.unidad;
       if (!resumen.gente && nuevo.gente) resumen.gente = nuevo.gente;
-      if (r && Object.prototype.hasOwnProperty.call(r, 'estado')) webhook.guardaCharla(cliente, r.estado || confirmar);
+      /* La plática se CIERRA al pedir el precio, igual que en el camino
+         del guion (que devuelve `estado: null`). Aquí se guardaba
+         `confirmar` con todos los datos, y con eso cada mensaje siguiente
+         —«ok», y al día siguiente «quiero cotizar otro viaje»— volvía a
+         verse como «ya está todo → cotizar»: otra espera y otro ticket,
+         sin fin (visto en producción el 7-sep-2026). El viaje no se
+         pierde: queda en la ficha (`porConfirmar`, `viajeDatos`) y de ahí
+         se le cuenta a la IA como contexto. */
+      webhook.guardaCharla(cliente, (r && r.estado) ? r.estado : null);
       const salidas = await precioDe({
         numeroDeOrigen: envio.numeroDeOrigen, para: cliente,
         cotiza: (r && r.cotiza) || null, resumen: resumen

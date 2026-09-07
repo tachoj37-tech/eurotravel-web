@@ -336,7 +336,7 @@ plazo («un mes» = ≤30 días entre hoy y la salida).
 
 | ID | Dónde | Cuándo | Texto | Estado |
 |---|---|---|---|---|
-| T-124 | `whatsapp.mjs` `TEXTO_ESPERA_PRECIO` | Cliente terminó de cotizar y la compuerta está cerrada | «Déjame confirmar disponibilidad y te paso el precio en un momento.» | **Aprobado por delegación** («genéralo tú», 5-sep-2026); sustituye en este caso a T-122 |
+| T-124 | `whatsapp.mjs` `TEXTO_ESPERA_PRECIO` | Cliente terminó de cotizar y la compuerta está cerrada | «Va. En breve te paso tu cotización y la disponibilidad de tu viaje 🙌» | **Dictado por el dueño** (7-sep-2026: «que diga que en breve se le va a pasar su cotización y disponibilidad de su viaje»); antes «Déjame confirmar disponibilidad y te paso el precio en un momento» (delegado, 5-sep); el mismo texto sirve con fecha cercana (T-126) |
 
 Datos cerrados el 5-sep-2026: `NOMBRE_BOT = Eurobot`; `VENDEDOR_HUMANO = sin nombre` — el
 bot **nunca nombra a una persona** («no tienes que decirle mi nombre al cliente»): habla con
