@@ -143,7 +143,12 @@ sin escoger) para la fase 3.
 | C11, C12 | La clave del precio aprendido incluye si es agencia, y se guarda y se busca con la misma unidad. |
 | C14 | Un número en un texto libre del dueño a un cliente con precio dado: se le pregunta «¿ese es el nuevo total?» antes de tocar la ficha. |
 
-### Fase 3 · Que entienda y corrija como persona (conversación)
+### Fase 3 · Que entienda y corrija como persona (conversación) — **HECHA el 7-sep-2026**
+
+Resueltos A1, A3, A5, A8, A10, A12, A13, A15 y C15. Pruebas en
+`pruebas/probar-fase3.mjs` (35 casos); suite completa 3084/0. Regla nueva
+que salió de aquí: **siempre se pregunta cuántos son**, aunque el cliente
+nombre la unidad (seis conversaciones de prueba del guion se ajustaron).
 
 | Arregla | Cómo |
 |---|---|
