@@ -413,7 +413,8 @@ function armaTablero(fichas) {
     const viaje = f.viaje ? ' · ' + String(f.viaje).split('\n')[0].replace(/^📍 /, '') : '';
     const dinero = typeof f.total === 'number'
       ? ' · $' + f.total.toLocaleString('es-MX') : '';
-    lineas.push('· ' + f.cliente + viaje + dinero);
+    /* ✋ = ese chat lo tiene el dueño (relevo). */
+    lineas.push((f.enManosDe === 'dueno' ? '✋ ' : '· ') + f.cliente + viaje + dinero);
   });
 
   if (fichas.length > TOPE_TABLERO) {
@@ -540,9 +541,23 @@ const PIDE_TABLERO =
 const PIDE_VER =
   /^\s*(?:ver|conversaci[oó]n|historial|chat|plática|platica)\s*(\+?[\d\s()-]{10,20})?\s*[?¿!]*\s*$/i;
 
+/* ------------------------------------------------------------
+   EL RELEVO (dictado del dueño, 7-sep-2026)
+   ------------------------------------------------------------
+   «Poder activar la IA en un chat o manejarlo yo.» Citando cualquier
+   mensaje del cliente (un ticket, un reenvío) o escribiendo su número:
+     · «yo» / «tomo» / «lo tomo» / «me lo quedo»  → el chat es suyo: el
+       bot se calla y le REENVÍA lo que el cliente escriba; él contesta
+       citando el reenvío, como cualquier ticket.
+     · «bot» / «ia» / «suelta» / «libera»         → el chat vuelve a la IA.
+   Queda en la ficha (`enManosDe`) y en el almacén.
+   ------------------------------------------------------------ */
+const PIDE_TOMO = /^\s*(yo|tomo|lo tomo|me lo quedo|lo atiendo yo)\s*[.!]*\s*$/i;
+const PIDE_SUELTA = /^\s*(bot|ia|suelta|su[eé]ltalo|libera|lib[eé]ralo|retoma)\s*[.!]*\s*$/i;
+
 function esComandoDelDueno(mensaje) {
   const t = String((mensaje && mensaje.text && mensaje.text.body) || '');
-  return PIDE_TABLERO.test(t) || PIDE_VER.test(t);
+  return PIDE_TABLERO.test(t) || PIDE_VER.test(t) || PIDE_TOMO.test(t) || PIDE_SUELTA.test(t);
 }
 
 /* ------------------------------------------------------------
@@ -891,6 +906,35 @@ function procesa(crudo, firma, entorno) {
 
           const dirigido = tickets.clienteDeLaRespuesta(m, tickets.tickets);
 
+          /* ---- el relevo: «yo» / «bot» ---- */
+          const textoDelDueno = (dirigido && dirigido.texto) || String((m.text && m.text.body) || '');
+          const orden = PIDE_TOMO.test(textoDelDueno) ? 'tomo' : (PIDE_SUELTA.test(textoDelDueno) ? 'suelta' : null);
+          if (orden) {
+            const aQuien = dirigido && dirigido.cliente;
+            if (!aQuien) {
+              envios.push({
+                numeroDeOrigen: deQuien, para: m.from,
+                texto: '¿De quién? Responde un mensaje de ese cliente con «' + (orden === 'tomo' ? 'yo' : 'bot') +
+                  '», o escríbeme su número y luego la palabra: «33 1234 5678 ' + (orden === 'tomo' ? 'yo' : 'bot') + '».',
+                pasaAPersona: false, escribio: '[relevo · sin cliente]'
+              });
+              continue;
+            }
+            const f = tickets.fichaDe(aQuien);
+            tickets.anotaEtapa(aQuien, f ? f.etapa : 'escribio', { enManosDe: orden === 'tomo' ? 'dueno' : null }, ahora);
+            if (orden === 'tomo') tickets.callaLaIA(aQuien, ahora); else tickets.liberaLaIA(aQuien);
+            envios.push({
+              numeroDeOrigen: deQuien, para: m.from,
+              esTicket: true, sobreCliente: aQuien,
+              texto: orden === 'tomo'
+                ? '✋ Tomaste el chat de *' + aQuien + '*. El bot no le contesta: te reenvío lo que escriba y tú ' +
+                  'le respondes citando el reenvío. Para devolvérselo a la IA, responde cualquier mensaje suyo con «bot».'
+                : '🤖 El bot retoma el chat de *' + aQuien + '*.',
+              pasaAPersona: false, escribio: '[relevo · ' + orden + ']'
+            });
+            continue;
+          }
+
           /* ------------------------------------------------------------
              ¿ESTÁ CONTESTANDO UN PRECIO POR CONFIRMAR?
              ------------------------------------------------------------
@@ -1050,6 +1094,35 @@ function procesa(crudo, firma, entorno) {
                 'empieza tu mensaje con el número del cliente.',
               pasaAPersona: false,
               escribio: '[del dueño · sin destinatario]'
+            });
+          }
+          continue;
+        }
+
+        /* ------------------------------------------------------------
+           EL CHAT ES DEL DUEÑO (relevo, 7-sep-2026)
+           ------------------------------------------------------------
+           Si tomó este chat con «yo», el bot no contesta: le reenvía al
+           dueño lo que el cliente escribió (texto, foto, PDF o audio) como
+           ticket, para que conteste citándolo. Sigue así hasta que diga
+           «bot». La ficha sí anota que el cliente escribió (para el
+           seguimiento y el tablero).
+           ------------------------------------------------------------ */
+        const fichaDeAhora = tickets.fichaDe(m.from);
+        if (fichaDeAhora && fichaDeAhora.enManosDe === 'dueno') {
+          tickets.anotaEtapa(m.from, fichaDeAhora.etapa, { clienteEn: ahora }, ahora);
+          const dueno = tickets.numeroDelDueno(env);
+          if (dueno) {
+            const medio = (m.image || m.document || m.audio || m.video) || null;
+            const dijo = m.type === 'text' ? String((m.text && m.text.body) || '') : '';
+            envios.push({
+              numeroDeOrigen: deQuien, para: dueno,
+              esTicket: true, sobreCliente: m.from,
+              texto: '✋ *' + m.from + '* (en tus manos)' + (dijo ? ':\n«' + dijo.slice(0, 900) + '»' : ' te mandó ' + (m.type === 'audio' ? 'un audio' : m.type === 'image' ? 'una foto' : 'un archivo')) +
+                '\n\nContéstame *este mensaje* y le llega tal cual. Responde «bot» para que la IA retome.',
+              reenviaMedio: medio && medio.id ? medio.id : null,
+              tipoMedio: medio && medio.id ? m.type : null,
+              pasaAPersona: false, escribio: '[relevo · reenvío]'
             });
           }
           continue;

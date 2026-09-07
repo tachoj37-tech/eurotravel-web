@@ -226,6 +226,13 @@ function callaLaIA(cliente, ahora) {
   }
 }
 
+/* El dueño devuelve el chat a la IA («bot»): se le quita el silencio de
+   dos horas, si lo había. */
+function liberaLaIA(cliente) {
+  if (!cliente) return;
+  callados.delete(soloDigitos(cliente).slice(-10));
+}
+
 function iaCallada(cliente, ahora) {
   const k = soloDigitos(cliente).slice(-10);
   const desde = callados.get(k);
@@ -424,6 +431,12 @@ function anotaEtapa(cliente, etapa, extra, ahora) {
        `clienteEn` lo pone el webhook con cada mensaje suyo; con él
        `_seguimiento.js` sabe si contestó después del precio (y entonces
        ya no se le escribe) y si la ventana de 24 h de Meta sigue abierta. */
+    /* El relevo (7-sep-2026): 'dueno' cuando el dueño tomó el chat con
+       «yo»; se quita con «bot». Nulo explícito lo borra; si no viene, se
+       conserva. Vive en el almacén para sobrevivir a la instancia. */
+    enManosDe: (extra && Object.prototype.hasOwnProperty.call(extra, 'enManosDe'))
+      ? (extra.enManosDe || null)
+      : ((antes && antes.enManosDe) || null),
     precioEn: (extra && extra.precioEn) || (antes && antes.precioEn) || null,
     toques: (extra && typeof extra.toques === 'number') ? extra.toques
       : ((antes && antes.toques) || 0),
@@ -507,7 +520,7 @@ module.exports = {
   numeroDelDueno, esDelDueno, mismoNumero, soloDigitos,
   armaTicket, clienteDeLaRespuesta, comoSeDice,
   recuerdaTicket, consumeTicket, tickets,
-  callaLaIA, iaCallada, olvidaTodo,
+  callaLaIA, liberaLaIA, iaCallada, olvidaTodo,
   anotaPendiente, yaLoContesto, recordatoriosPendientes,
   anotaEtapa, fichaDe, carteraOrdenada, siembraFicha, fichaViva,
   CALLADO_MS, TOPE_TICKETS, RECUERDA_A_LAS_MS, TOPE_CARTERA

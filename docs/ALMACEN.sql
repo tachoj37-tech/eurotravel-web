@@ -196,3 +196,12 @@ create index if not exists fichas_seguimiento on fichas (precio_en)
 -- ------------------------------------------------------------
 alter table fichas  add column if not exists viajes jsonb not null default '[]'::jsonb;
 alter table tickets add column if not exists carga  jsonb;
+
+-- ------------------------------------------------------------
+-- 7-SEP-2026 · EL RELEVO
+-- ------------------------------------------------------------
+-- El dueño toma un chat («yo» citando un mensaje del cliente) y el
+-- bot se calla y le reenvía lo que el cliente escriba; con «bot» se
+-- lo devuelve a la IA. Vive aquí para sobrevivir a la instancia.
+-- ------------------------------------------------------------
+alter table fichas add column if not exists en_manos_de text;   -- 'dueno' o nulo

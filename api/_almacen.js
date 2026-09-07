@@ -167,6 +167,9 @@ async function guardaFicha(ficha) {
      una columna ausente conserva lo viejo, y un precio pendiente que ya se
      mandó revivía en la siguiente instancia (auditoría 7-sep-2026, B3/C5). */
   if (!columnaFaltante.por_confirmar) fila.por_confirmar = ficha.porConfirmar || null;
+  /* El relevo: en manos de quién está el chat (nulo = del bot). Va siempre,
+     para que «bot» sí borre el «yo» en la base. */
+  if (!columnaFaltante.en_manos_de) fila.en_manos_de = ficha.enManosDe || null;
   if (ficha.viajeDatos) fila.viaje_datos = ficha.viajeDatos;
   if (ficha.contratoSubido) fila.contrato_subido = ficha.contratoSubido;
   /* El seguimiento (6-sep-2026): cuándo recibió el precio, cuántos
@@ -251,6 +254,7 @@ function deLaFila(f) {
     toques: Number(f.toques) || 0,
     clienteEn: f.cliente_en ? Date.parse(f.cliente_en) : null,
     viajes: Array.isArray(f.viajes) ? f.viajes : [],
+    enManosDe: f.en_manos_de || null,
     desde: f.desde ? Date.parse(f.desde) : Date.now(),
     visto: f.visto ? Date.parse(f.visto) : Date.now()
   };
