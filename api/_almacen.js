@@ -201,16 +201,32 @@ async function guardaFicha(ficha) {
    falta, se quita de la fila, se avisa una vez y se vuelve a guardar.
    Perder una columna nueva es barato; perder la ficha de todos, no.
    ------------------------------------------------------------ */
-const columnaFaltante = {};
+/* La marca caduca a los 10 minutos y va por tabla (auditoría 7-sep-2026,
+   B12): así, cuando el dueño corre el SQL, la instancia vuelve a mandar
+   la columna sin esperar a reciclarse, y `fichas` no contagia a
+   `tickets`. Se consulta con `faltaLaColumna(tabla, columna)`. */
+const MARCA_DE_COLUMNA_MS = 10 * 60 * 1000;
+const columnasQueFaltan = new Map();
+function faltaLaColumna(tabla, columna) {
+  const desde = columnasQueFaltan.get(tabla + '.' + columna);
+  if (!desde) return false;
+  if (Date.now() - desde > MARCA_DE_COLUMNA_MS) { columnasQueFaltan.delete(tabla + '.' + columna); return false; }
+  return true;
+}
+/* Compatibilidad con el resto del archivo: `columnaFaltante.x` era el mapa
+   viejo (solo fichas); queda como vista sobre el nuevo. */
+const columnaFaltante = new Proxy({}, {
+  get: function (_, columna) { return faltaLaColumna('fichas', String(columna)); }
+});
 async function guardaSinColumnasQueFalten(camino, upsert, fila, tabla) {
   for (let intento = 0; intento < 5; intento++) {
     if (await pide(camino, upsert)) return true;
     const m = ultimoError && /PGRST204/.test(ultimoError.detalle || '') &&
       String(ultimoError.detalle).match(/'([a-z_]+)' column/);
     if (!m || !(m[1] in fila)) return false;
-    columnaFaltante[m[1]] = true;
+    columnasQueFaltan.set(tabla + '.' + m[1], Date.now());
     console.error('[almacen] la tabla ' + tabla + ' no tiene la columna «' + m[1] + '»: corre el ' +
-      'bloque más reciente de docs/ALMACEN.sql. Mientras, se guarda sin ella.');
+      'bloque más reciente de docs/ALMACEN.sql. Mientras, se guarda sin ella (se reintenta en 10 min).');
     delete fila[m[1]];
     if (m[1] === 'precio_en') delete fila.toques;
   }
@@ -266,6 +282,22 @@ async function fichasDeSeguimiento() {
   return filas.map(deLaFila);
 }
 
+/* La marca del toque, CONDICIONAL y de una sola columna (auditoría
+   7-sep-2026, B9/C13): solo cambia si `toques` sigue valiendo lo que se
+   leyó, así dos corridas del cron a la vez no mandan el mismo toque dos
+   veces; y no toca `cliente_en` ni `etapa`, que pueden haber cambiado
+   entre la lectura y la marca. Devuelve true si ESTA corrida ganó. */
+async function marcaToque(numero, de, a) {
+  const k = llave(numero);
+  if (!k) return false;
+  const filas = await pide('fichas?numero=eq.' + k + '&toques=eq.' + Number(de || 0), {
+    metodo: 'PATCH',
+    cabeceras: { 'Prefer': 'return=representation' },
+    cuerpo: { toques: Number(a) }
+  });
+  return Array.isArray(filas) && filas.length === 1;
+}
+
 /* ============================================================
    LAS CHARLAS · lo que el bot lleva entendido de cada quien
    ------------------------------------------------------------
@@ -296,11 +328,16 @@ async function guardaCharla(numero, estado) {
 
 const VIDA_CHARLA_MS = 7 * 24 * 60 * 60 * 1000;
 
+/* Devuelve el estado, `null` si no hay charla, y `undefined` si la
+   LECTURA falló (red, base caída): quien guarda después tiene que
+   distinguirlo, porque «no hay» se guarda como borrado y «no pude leer»
+   no debe borrar nada (auditoría 7-sep-2026, B10). */
 async function leeCharla(numero) {
   const k = llave(numero);
   if (!k) return null;
   const filas = await pide('charlas?numero=eq.' + k + '&select=*&limit=1');
-  const f = filas && filas[0];
+  if (!filas) return undefined;
+  const f = filas[0];
   if (!f) return null;
   /* Se vence al LEER y no con un cron: una charla vieja que nadie
      vuelve a leer no le hace daño a nadie, y un cron es una pieza más
@@ -374,7 +411,7 @@ async function tiraLoViejo() {
 async function guardaTicket(id, cliente, carga) {
   if (!id || !cliente) return false;
   const fila = { id: String(id), cliente: String(cliente) };
-  if (carga && !columnaFaltante.carga) fila.carga = carga;
+  if (carga && !faltaLaColumna('tickets', 'carga')) fila.carga = carga;
   const upsert = {
     metodo: 'POST',
     cabeceras: { 'Prefer': 'resolution=merge-duplicates,return=minimal' },
@@ -422,7 +459,7 @@ async function preciosParecidos(clave, cuantos) {
 
 module.exports = {
   hayAlmacen, llave,
-  guardaFicha, leeFicha, fichasDelTablero, fichasDeSeguimiento,
+  guardaFicha, leeFicha, fichasDelTablero, fichasDeSeguimiento, marcaToque,
   guardaCharla, leeCharla,
   anotaMensaje, mensajesDe, tiraLoViejo,
   guardaTicket, leeTicket,

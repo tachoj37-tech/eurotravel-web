@@ -1482,10 +1482,13 @@ async function cargaLoQueSeSabe(crudo) {
   await Promise.all(numeros.map(async function (n) {
     const [ficha, charla] = await Promise.all([
       almacen.leeFicha(n).catch(function () { return null; }),
-      almacen.leeCharla(n).catch(function () { return null; })
+      almacen.leeCharla(n).catch(function () { return undefined; })
     ]);
     if (ficha) tickets.siembraFicha(ficha);
     if (charla) webhook.siembraCharla(n, charla);
+    /* `undefined` = la lectura falló. Se recuerda para que al guardar no
+       se borre una charla que sí existe (auditoría 7-sep-2026, B10). */
+    charlasQueNoSePudieronLeer[tickets.llave ? tickets.llave(n) : almacen.llave(n)] = (charla === undefined);
   }));
 
   /* ------------------------------------------------------------
@@ -1562,6 +1565,9 @@ async function apunta(aviso) {
    detenga la respuesta a Meta: a Meta hay que contestarle rapido
    o reintenta, y si reintenta acaba apagando el webhook.
    ------------------------------------------------------------ */
+/* Qué números no pudieron leer su charla en esta vuelta (llave → true). */
+const charlasQueNoSePudieronLeer = {};
+
 async function guardaLoQueQuedo(numeros, soloFicha) {
   if (!almacen.hayAlmacen()) return;
   const conCharla = numeros || [];
@@ -1570,7 +1576,14 @@ async function guardaLoQueQuedo(numeros, soloFicha) {
   await Promise.all(conCharla.map(async function (n) {
     const ficha = tickets.fichaViva(n);
     if (ficha) await almacen.guardaFicha(ficha).catch(function () {});
-    await almacen.guardaCharla(n, webhook.charlaDe(n)).catch(function () {});
+    const charla = webhook.charlaDe(n);
+    const k = almacen.llave(n);
+    const noSePudoLeer = !!charlasQueNoSePudieronLeer[k];
+    delete charlasQueNoSePudieronLeer[k];
+    /* Un fallo de LECTURA no produce un BORRADO: si no hay charla en
+       memoria y tampoco se pudo leer, no se guarda nada (B10). */
+    if (!charla && noSePudoLeer) return;
+    await almacen.guardaCharla(n, charla).catch(function () {});
   }).concat(sinCharla.map(async function (n) {
     const ficha = tickets.fichaViva(n);
     if (ficha) await almacen.guardaFicha(ficha).catch(function () {});
@@ -1880,20 +1893,27 @@ async function mandaSeguimientos(ahora) {
   for (const f of fichas) {
     cuenta.revisadas++;
     const d = seguimiento.decide(f, t);
+    const hechos = Number(f.toques) || 0;
     if (d.cerrar) {
-      await almacen.guardaFicha(Object.assign({}, f, { toques: seguimiento.HORAS.length }))
-        .catch(function () {});
+      await almacen.marcaToque(f.cliente, hechos, seguimiento.HORAS.length).catch(function () {});
       cuenta.cerradas++;
       continue;
     }
     if (!d.toque) { cuenta.esperan++; continue; }
 
-    const marcada = await almacen.guardaFicha(Object.assign({}, f, { toques: d.toque }))
-      .catch(function () { return false; });
-    if (!marcada) continue;   // sin marca no se manda: sería repetirlo cada 15 minutos
-
-    const envio = envioDelToque(f, d);
+    /* Primero se arma el envío: sin plantilla no hay qué mandar, y
+       entonces NO se marca (auditoría 7-sep-2026, B4/C10): antes los tres
+       toques se consumían en silencio y, cuando el dueño configuraba las
+       plantillas, esos clientes ya estaban «completos». Se avisa una vez
+       por cliente y toque, no cada 15 minutos. */
+    const envio = envioDelToque(f, d, cuenta);
     if (!envio) { cuenta.sinPlantilla++; continue; }
+
+    /* La marca es condicional (B9/C13): solo gana la corrida que vio
+       `toques` en el valor leído. Sin marca no se manda. */
+    const marcada = await almacen.marcaToque(f.cliente, hechos, d.toque).catch(function () { return false; });
+    if (!marcada) { cuenta.enOtraCorrida = (cuenta.enOtraCorrida || 0) + 1; continue; }
+
     if (await manda(envio)) {
       cuenta.mandados++;
       almacen.anotaMensaje(f.cliente, 'bot', envio.texto, 'texto').catch(function () {});
@@ -1906,6 +1926,7 @@ async function mandaSeguimientos(ahora) {
 /* Texto libre si la ventana de 24 h de Meta sigue abierta; si no, la
    plantilla aprobada cuyo nombre está en WHATSAPP_PLANTILLA_TOQUE1/2/3.
    Sin plantilla y con la ventana cerrada no se manda nada, y se dice. */
+const avisadosSinPlantilla = new Set();
 function envioDelToque(f, d) {
   const base = { numeroDeOrigen: process.env.WHATSAPP_PHONE_ID, para: f.cliente };
   if (d.ventanaAbierta) {
@@ -1924,9 +1945,14 @@ function envioDelToque(f, d) {
   }
   const nombre = process.env['WHATSAPP_PLANTILLA_TOQUE' + d.toque];
   if (!nombre) {
-    console.error('[seguimiento] toque ' + d.toque + ' a …' + almacen.llave(f.cliente).slice(-4) +
-      ': la ventana de 24 h de Meta ya cerró y no hay WHATSAPP_PLANTILLA_TOQUE' + d.toque +
-      ': no se manda');
+    const marca = almacen.llave(f.cliente) + '|' + d.toque;
+    if (!avisadosSinPlantilla.has(marca)) {
+      avisadosSinPlantilla.add(marca);
+      while (avisadosSinPlantilla.size > 2000) avisadosSinPlantilla.delete(avisadosSinPlantilla.values().next().value);
+      console.error('[seguimiento] toque ' + d.toque + ' a …' + almacen.llave(f.cliente).slice(-4) +
+        ': la ventana de 24 h de Meta ya cerró y no hay WHATSAPP_PLANTILLA_TOQUE' + d.toque +
+        ': no se manda (se reintenta cuando exista la plantilla)');
+    }
     return null;
   }
   return Object.assign(base, {
@@ -1969,8 +1995,19 @@ async function atiendeSeguimiento(a, b, esWeb) {
   /* El mismo reloj de mentiras que usa el webhook en las pruebas, y que
      en producción se ignora. */
   const reloj = webhook.relojDe(process.env);
+  /* La purga de 45 días (`tiraLoViejo`) no la llamaba nadie (auditoría
+     7-sep-2026, B8): va aquí, en la corrida de las 4 de la mañana de
+     Guadalajara, una vez por día por instancia. Es idempotente: si dos
+     instancias la corren, no pasa nada. */
+  const dia = new Date(reloj).toISOString().slice(0, 10);
+  if (seguimiento.horaEnGuadalajara(reloj) === 4 && ultimaPurga !== dia && almacen.hayAlmacen()) {
+    ultimaPurga = dia;
+    almacen.tiraLoViejo().then(function () { console.log('[almacen] purga de ' + almacen.VIDA_DIAS + ' días hecha'); })
+      .catch(function (e) { console.error('[almacen] la purga falló: ' + (e && e.message)); });
+  }
   return contesta(200, await mandaSeguimientos(reloj));
 }
+let ultimaPurga = '';
 
 async function atiende(a) {
   const b = arguments[1];

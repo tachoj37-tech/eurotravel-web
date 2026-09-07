@@ -56,6 +56,8 @@ function ok(que, dio, esperaba) {
 /* ---- la base y WhatsApp de mentiras ---- */
 let mandados = [];
 let upserts = [];
+let marcas = [];
+let otraCorridaGano = false;   // simula un cron paralelo que marcó primero
 let enBase = [];
 let sinColumnas = false;   // simula una base sin el bloque del 6-sep-2026
 const iso = (ms) => new Date(ms).toISOString();
@@ -66,6 +68,16 @@ globalThis.fetch = async function (url, opciones) {
   if (u.indexOf('api.dualhook.com') !== -1) {
     mandados.push({ url: u, cuerpo: JSON.parse(o.body) });
     return { ok: true, status: 200, json: async () => ({ messages: [{ id: 'wamid.s' + mandados.length }] }), text: async () => '{}' };
+  }
+  /* La marca del toque (fase 4): PATCH condicional a una sola columna. Se
+     contesta con la fila si «ganó» (toques seguía en el valor leído). */
+  if (o.method === 'PATCH' && u.indexOf('supabase.co/rest/v1/fichas?numero=eq.') !== -1) {
+    const numero = (u.match(/numero=eq\.(\d+)/) || [])[1];
+    const de = Number((u.match(/toques=eq\.(\d+)/) || [])[1]);
+    const fila = enBase.find((f) => f.numero === numero);
+    const gana = fila && Number(fila.toques || 0) === de && !otraCorridaGano;
+    if (gana) { fila.toques = JSON.parse(o.body).toques; marcas.push({ numero, de, a: fila.toques }); }
+    return { ok: true, status: 200, json: async () => (gana ? [fila] : []), text: async () => '' };
   }
   if (u.indexOf('supabase.co/rest/v1/fichas?on_conflict=numero') !== -1) {
     const fila = JSON.parse(o.body);
@@ -127,7 +139,7 @@ console.log('\n== A QUIÉN SE LE ESCRIBE (con plantilla del primer toque) ==');
     /* D · ya contestó después del precio. */
     { numero: '3344444444', cliente: '5213344444444', etapa: 'con_precio', precio_en: iso(AHORA - 25 * H), cliente_en: iso(AHORA - 1 * H), toques: 0 }
   ];
-  mandados = []; upserts = [];
+  mandados = []; upserts = []; marcas = [];
   const r = await GET(LLAVE);
   ok('la llave buena → 200', r.status, 200);
   const cuenta = await r.json();
@@ -144,15 +156,23 @@ console.log('\n== A QUIÉN SE LE ESCRIBE (con plantilla del primer toque) ==');
   ok('  en español de México', mandados[0].cuerpo.template.language.code, 'es_MX');
   ok('  y sin texto libre', mandados[0].cuerpo.text, undefined);
 
-  const deA = upserts.filter((u) => u.numero === '3311111111');
-  ok('A quedó marcada con toques = 1 (antes de mandar)', deA.length === 1 && deA[0].toques, 1);
-  ok('  y conserva precio_en', deA[0].precio_en, iso(AHORA - 25 * H));
-  const deB = upserts.filter((u) => u.numero === '3322222222');
-  ok('B quedó marcada con toques = 2 aunque no salió (no se reintenta cada 15 min)', deB.length === 1 && deB[0].toques, 2);
-  const deD = upserts.filter((u) => u.numero === '3344444444');
-  ok('D quedó cerrada con toques = 3', deD.length === 1 && deD[0].toques, 3);
-  ok('C no se tocó', upserts.filter((u) => u.numero === '3333333333').length, 0);
+  /* Fase 4 (7-sep-2026): la marca es un PATCH condicional de UNA columna;
+     no se pisa la ficha entera. */
+  const deA = marcas.filter((m) => m.numero === '3311111111');
+  ok('A quedó marcada con toques = 1 (antes de mandar), de 0 a 1', deA.length === 1 && [deA[0].de, deA[0].a], [0, 1]);
+  ok('  y la marca no reescribió la ficha entera', upserts.filter((u) => u.numero === '3311111111').length, 0);
+  ok('B NO se marcó: sin plantilla no hay qué mandar y se reintenta cuando exista', marcas.filter((m) => m.numero === '3322222222').length, 0);
+  const deD = marcas.filter((m) => m.numero === '3344444444');
+  ok('D quedó cerrada con toques = 3', deD.length === 1 && deD[0].a, 3);
+  ok('C no se tocó', marcas.filter((m) => m.numero === '3333333333').length, 0);
   ok('a B, C y D no se les escribió', mandados.filter((m) => m.cuerpo.to !== '523311111111').length, 0);
+
+  /* Dos corridas del cron a la vez: la segunda ve que otra ya marcó y NO manda. */
+  enBase[0].toques = 0; mandados = []; marcas = []; otraCorridaGano = true;
+  const cuenta2 = await (await GET(LLAVE)).json();
+  ok('si otra corrida marcó primero, esta no manda nada', [cuenta2.mandados, mandados.length], [0, 0]);
+  ok('  y lo cuenta como «en otra corrida»', cuenta2.enOtraCorrida >= 1, true);
+  otraCorridaGano = false;
   delete process.env.WHATSAPP_PLANTILLA_TOQUE1;
 }
 
@@ -177,12 +197,12 @@ console.log('\n== EL SEGUNDO Y EL TERCERO, CON PLANTILLA ==');
     { numero: '3322222222', cliente: '5213322222222', etapa: 'con_precio', precio_en: iso(AHORA - 3 * D - H), cliente_en: iso(AHORA - 3 * D - 2 * H), toques: 1 },
     { numero: '3366666666', cliente: '5213366666666', etapa: 'con_precio', precio_en: iso(AHORA - 7 * D - H), cliente_en: iso(AHORA - 7 * D - 2 * H), toques: 2 }
   ];
-  mandados = []; upserts = [];
+  mandados = []; upserts = []; marcas = [];
   const cuenta = await (await GET(LLAVE)).json();
   ok('salieron los dos', cuenta.mandados, 2);
   ok('el de 3 días con su plantilla', mandados.find((m) => m.cuerpo.to === '523322222222').cuerpo.template.name, 'seguimiento_3d');
   ok('el de 7 días con la suya', mandados.find((m) => m.cuerpo.to === '523366666666').cuerpo.template.name, 'seguimiento_7d');
-  ok('y quedaron en 2 y 3', [upserts.find((u) => u.numero === '3322222222').toques, upserts.find((u) => u.numero === '3366666666').toques], [2, 3]);
+  ok('y quedaron en 2 y 3', [marcas.find((m) => m.numero === '3322222222').a, marcas.find((m) => m.numero === '3366666666').a], [2, 3]);
   delete process.env.WHATSAPP_PLANTILLA_TOQUE2;
   delete process.env.WHATSAPP_PLANTILLA_TOQUE3;
 }
@@ -196,9 +216,9 @@ console.log('\n== DE NOCHE NO ==');
   enBase = [
     { numero: '3311111111', cliente: '5213311111111', etapa: 'con_precio', precio_en: iso(NOCHE - 25 * H), cliente_en: iso(NOCHE - 26 * H), toques: 0 }
   ];
-  mandados = []; upserts = [];
+  mandados = []; upserts = []; marcas = [];
   const cuenta = await (await GET(LLAVE)).json();
-  ok('a las 10 p.m. nadie recibe nada', [cuenta.mandados, mandados.length, upserts.length], [0, 0, 0]);
+  ok('a las 10 p.m. nadie recibe nada', [cuenta.mandados, mandados.length, marcas.length], [0, 0, 0]);
   ok('  y queda esperando', cuenta.esperan, 1);
   process.env.AHORA_DE_PRUEBA = String(AHORA);
   delete process.env.WHATSAPP_PLANTILLA_TOQUE1;

@@ -465,6 +465,14 @@ function siembraFicha(ficha) {
      mismo toque dos veces. */
   if (cartera.has(k)) {
     const enMemoria = cartera.get(k);
+    /* Si la base es MÁS NUEVA que la memoria (otra instancia avanzó al
+       cliente), gana la base entera: una instancia con la ficha de hace
+       dos horas pisaba en la base lo que otra acababa de escribir y la
+       etapa retrocedía (auditoría 7-sep-2026, B5). */
+    if ((Number(ficha.visto) || 0) > (Number(enMemoria.visto) || 0)) {
+      cartera.set(k, ficha);
+      return;
+    }
     if ((Number(ficha.toques) || 0) > (Number(enMemoria.toques) || 0)) {
       enMemoria.toques = Number(ficha.toques);
     }

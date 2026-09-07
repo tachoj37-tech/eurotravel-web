@@ -161,7 +161,12 @@ nombre la unidad (seis conversaciones de prueba del guion se ajustaron).
 | A13 | Una foto o nota de voz del dueño citando un ticket se reenvía al cliente. |
 | A15 | El alias de Suburban va antes que el de Sprinter. |
 
-### Fase 4 · Que la memoria y el cron sean confiables
+### Fase 4 · Que la memoria y el cron sean confiables — **HECHA el 7-sep-2026**
+
+Resueltos B4/C10, B9/C13, B5, B10, B8, B12 y B14. Pruebas en
+`pruebas/probar-fase4.mjs` (13 casos) y `probar-seguimiento-puerta.mjs`
+(39). Queda B15 (escapar valores en `pide`) como deuda menor: hoy todo
+pasa por `llave()`, que solo deja dígitos.
 
 | Arregla | Cómo |
 |---|---|

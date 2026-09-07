@@ -595,14 +595,18 @@ function avisoEsNuestro(aviso, env) {
   if (!aviso || aviso.object !== 'whatsapp_business_account') return false;
   const entradas = Array.isArray(aviso.entry) ? aviso.entry : [];
   if (!entradas.length) return false;
+  /* Al menos UN cambio con nuestro número: un `entry` sin `changes` pasaba
+     solo con el WABA (auditoría 7-sep-2026, B14). */
+  let conNuestroNumero = 0;
   for (const e of entradas) {
     if (!e || String(e.id || '') !== String(env.WHATSAPP_WABA_ID || '')) return false;
     for (const c of (e.changes || [])) {
       const meta = ((c && c.value) || {}).metadata || {};
       if (String(meta.phone_number_id || '') !== String(env.WHATSAPP_PHONE_ID || '')) return false;
+      conNuestroNumero++;
     }
   }
-  return true;
+  return conNuestroNumero > 0;
 }
 
 /* ------------------------------------------------------------
