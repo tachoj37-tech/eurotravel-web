@@ -118,7 +118,13 @@ Resueltos B1, A14, B7, A4, A9, B13 y B11. Pruebas en
 | A9 | Reacciones, stickers y contactos se ignoran (sin respuesta ni aviso); una ubicación se lee como origen. |
 | B13, B11 | El cron sin secreto contesta 404 (el detalle al registro); `AHORA_DE_PRUEBA` solo fuera de producción. |
 
-### Fase 2 · Que el dinero y la compuerta sean exactos
+### Fase 2 · Que el dinero y la compuerta sean exactos — **HECHA el 7-sep-2026**
+
+Resueltos B2/C1, C2, A2/C4, B3/C5, A6, A7, C3, C6, C7, C8, C9, A11, C11,
+C12 y C14 (este último como comando «total N» citando un ticket, sin
+mensaje al cliente). Pruebas en `pruebas/probar-fase2.mjs` (49 casos);
+suite completa 3049/0. Queda C15 (el múltiplo repetido y el «Irizar i6S»
+sin escoger) para la fase 3.
 
 | Arregla | Cómo |
 |---|---|
