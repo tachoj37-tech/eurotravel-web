@@ -104,7 +104,10 @@ IA quiera meter en un dato del contrato.
 Cada fase termina con la suite completa en verde y en producción. Se
 piden por «va».
 
-### Fase 1 · Que no se caiga ni se le meta nadie (seguridad y robustez)
+### Fase 1 · Que no se caiga ni se le meta nadie (seguridad y robustez) — **HECHA el 7-sep-2026**
+
+Resueltos B1, A14, B7, A4, A9, B13 y B11. Pruebas en
+`pruebas/probar-fase1.mjs` (25 casos); suite completa 2998/0.
 
 | Arregla | Cómo |
 |---|---|
