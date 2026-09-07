@@ -91,7 +91,8 @@
 
   "DATOS_EMPRESA": {
     "nombre_publico": "Eurotravel",
-    "razon_social": "PENDIENTE",
+    "razon_social": "PREGUNTAR AL DUEÑO",
+    "rfc_y_datos_fiscales": "Dictado del dueño (7-sep-2026): «cuando pidan RFC o razón social, pregúntame a mí». El bot no los dice: le pasa la pregunta al dueño como ticket (acción «dueno») y su respuesta le llega al cliente tal cual.",
     "base": "Tlaquepaque, Jalisco",
     "telefono": "33 2400 2285",
     "sitio": "https://eurotravel-web.vercel.app",

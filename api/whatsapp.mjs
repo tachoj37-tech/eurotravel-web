@@ -1252,6 +1252,32 @@ async function loQueDiceElAgente(envio) {
       if (alCliente) agente.recuerda(cliente, 'bot', alCliente.texto);
       return true;
     }
+    /* ------------------------------------------------------------
+       «PREGÚNTAME A MÍ»: RFC, razón social, datos fiscales, documentos
+       ------------------------------------------------------------
+       Dictado del dueño (7-sep-2026): «cuando pidan RFC o razón social,
+       pregúntame a mí». El bot no los sabe y no los inventa: el cliente
+       recibe «en breve te paso ese dato» y al dueño le llega la pregunta
+       tal cual como ticket; lo que él conteste citándolo le llega al
+       cliente literal (el camino de siempre de una respuesta suya).
+       ------------------------------------------------------------ */
+    if (accion === 'dueno') {
+      const alCliente = dicho.respuesta || 'Va, en breve te paso ese dato 🙌';
+      await manda({ numeroDeOrigen: envio.numeroDeOrigen, para: cliente, texto: alCliente,
+        pasaAPersona: false, escribio: '[agente · dato del dueño]' });
+      agente.recuerda(cliente, 'bot', alCliente);
+      const dueno = tickets.numeroDelDueno(process.env);
+      if (dueno) {
+        await manda({
+          numeroDeOrigen: envio.numeroDeOrigen, para: dueno,
+          esTicket: true, sobreCliente: cliente, pasaAPersona: false,
+          texto: '🙋 *Un cliente pregunta*\n\n«' + String(texto).slice(0, 400) + '»\n\n' +
+            'Contéstame *este mensaje* y le llega tal cual.\n_cliente: ' + cliente + '_',
+          escribio: '[ticket · pregunta al dueño]'
+        });
+      }
+      return true;
+    }
     /* «Persona» y «apartar» a media cotización el guion los toma como
        destino (misma familia que «bien y tú?»): se le reinyectan con la
        plática LIMPIA —ahí sí tiene sus caminos: teléfono, ficha bancaria,

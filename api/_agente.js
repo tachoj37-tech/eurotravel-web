@@ -160,6 +160,8 @@ function instruccionesDelAgente(voz) {
     '· Inventar disponibilidad, urgencia o descuentos. Solo en marzo, mayo y septiembre ' +
     'puedes decir que conviene apartar pronto.\n' +
     '· Decir que lo pasas con alguien más o nombrar a una persona.\n' +
+    '· Dar RFC, razón social, dirección fiscal o cualquier dato legal de la empresa: eso ' +
+    'es acción "dueno", siempre.\n' +
     '· Hablar de lo que no sea el viaje: si se sale del tema, regresa con una frase amable.\n\n' +
 
     'ACCIONES (el motor las ejecuta, tú solo las pides):\n' +
@@ -169,6 +171,11 @@ function instruccionesDelAgente(voz) {
     '· "fotos": pide fotos o ver la unidad. El motor las manda; tu "respuesta" va vacía. ' +
     'Si nombró una unidad, ponla en "unidadPedida" (id de la ficha).\n' +
     '· "video": pide video. El motor manda la liga; tu "respuesta" va vacía; "unidadPedida" igual.\n' +
+    '· "dueno": pide RFC, razón social, datos fiscales, factura, dirección de la oficina, ' +
+    'constancia, permiso, póliza o cualquier dato de la empresa que NO esté en «lo único ' +
+    'cierto». Nunca lo inventes ni digas que no lo tienes: el motor le pasa la pregunta al ' +
+    'dueño y su respuesta le llega al cliente. Tu "respuesta" puede ir vacía (el motor dice ' +
+    '«en breve te paso ese dato»). Dictado del dueño, 7-sep-2026.\n' +
     '· "persona": pide hablar con alguien, una llamada, o está molesto. Tu "respuesta" va vacía.\n' +
     '· "apartar": quiere apartar, pagar o pide datos para transferir. Tu "respuesta" va vacía.\n\n' +
 
@@ -178,7 +185,7 @@ function instruccionesDelAgente(voz) {
     '"unidad":"sprinter|suburban|autobus"|null,"ocasion":string|null,"recorridos":number|null,' +
     '"autobus":string|null},' +
     '"unidadPedida":string|null,' +
-    '"accion":"seguir|cotizar|fotos|video|persona|apartar"}\n' +
+    '"accion":"seguir|cotizar|fotos|video|persona|apartar|dueno"}\n' +
     '"datos" trae SOLO lo que el cliente dijo en ESTE mensaje; lo demás null. Nunca ' +
     'inventes un dato. "regreso" igual a "salida" si dice mismo día o ida y vuelta.\n\n' +
 
@@ -192,6 +199,8 @@ function instruccionesDelAgente(voz) {
     '{"respuesta":null,"datos":{},"unidadPedida":"irizar-i6","accion":"fotos"}\n' +
     'Cliente: tienes video?\n' +
     '{"respuesta":null,"datos":{},"accion":"video"}\n' +
+    'Cliente: me pasas tu rfc y razón social para la factura\n' +
+    '{"respuesta":null,"datos":{},"accion":"dueno"}\n' +
     'Cliente: bien y tu?\n' +
     '{"respuesta":"Muy bien, gracias. Cuéntame, ¿a dónde van?","datos":{},"accion":"seguir"}\n' +
     'Cliente: a vta el 20 de nov somos como 12\n' +
@@ -293,7 +302,7 @@ function sanea(texto) {
   return t;
 }
 
-const ACCIONES = ['seguir', 'cotizar', 'fotos', 'video', 'persona', 'apartar'];
+const ACCIONES = ['seguir', 'cotizar', 'fotos', 'video', 'persona', 'apartar', 'dueno'];
 
 function limpiaDatos(d) {
   const x = d && typeof d === 'object' ? d : {};

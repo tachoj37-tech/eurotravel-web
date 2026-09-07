@@ -310,6 +310,29 @@ titulo('una plática vieja atorada en «confirmar» no vuelve a pedir el precio'
 }
 
 /* ============================================================ */
+titulo('RFC y razón social: «pregúntame a mí» (7-sep-2026)');
+{
+  limpia();
+  const C = '5213366670210';
+  laIA = function (t) {
+    if (/rfc/i.test(t)) return { respuesta: null, datos: {}, accion: 'dueno' };
+    return null;
+  };
+  await dice('me pasas tu rfc y razón social para la factura?', C);
+  ok('el cliente recibe «en breve te paso ese dato»', textos(C).slice(-1)[0], 'Va, en breve te paso ese dato 🙌');
+  const alDueno = textos(DUENO).join('\n');
+  okQue('al dueño le llega la pregunta tal cual, como ticket', /Un cliente pregunta/.test(alDueno) && /rfc y razón social/i.test(alDueno));
+  okQue('  el bot no inventó ningún RFC', !/[A-Z]{3,4}\d{6}[A-Z0-9]{3}/.test(textos(C).join('\n')));
+  /* El dueño contesta citando el ticket: le llega literal al cliente. */
+  let idx = -1; mandados.forEach(function (m, i) { if (mismo(m.to, DUENO)) idx = i; });
+  const ticket = 'wamid.s' + (idx + 1);
+  const cuerpo = JSON.stringify({ entry: [{ changes: [{ value: { metadata: { phone_number_id: '111' },
+    messages: [{ id: 'wamid.rfc1', from: DUENO, type: 'text', text: { body: 'Eurotravel SA de CV, RFC EUR010101ABC' }, context: { id: ticket } }] } }] }] });
+  await atiende(new Request('https://x/api/whatsapp', { method: 'POST', body: cuerpo, headers: { 'x-hub-signature-256': firma(cuerpo) } }));
+  ok('lo que el dueño contesta le llega al cliente tal cual', textos(C).slice(-1)[0], 'Eurotravel SA de CV, RFC EUR010101ABC');
+}
+
+/* ============================================================ */
 titulo('destinos de un día: se pregunta «¿es ida y vuelta el mismo día?»');
 {
   const bot = (await import(pathToFileURL(path.join(RAIZ, 'bot.js')).href)).default;
