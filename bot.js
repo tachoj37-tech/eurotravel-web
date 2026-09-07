@@ -2605,7 +2605,12 @@ function textoDeCotizacion(precio, resumen) {
         ? '📅 ' + fechaEnPalabras(r.salida) +
           (r.regreso ? ' al ' + fechaEnPalabras(r.regreso) : '') + '\n'
         : '') +
-      '🗓️ ' + precio.dias + (precio.dias === 1 ? ' día' : ' días') + ' de servicio\n' +
+      /* Solo si se saben los días: un precio fijado por el dueño en un
+         viaje sin cotizador llegaba como «undefined días de servicio»
+         (auditoría 7-sep-2026, C3). */
+      (typeof precio.dias === 'number' && precio.dias > 0
+        ? '🗓️ ' + precio.dias + (precio.dias === 1 ? ' día' : ' días') + ' de servicio\n'
+        : '') +
       (r.recorridos ? '🚐 ' + r.recorridos + (r.recorridos === 1 ? ' día' : ' días') +
         ' de recorrido (' + String(r.horas).toLowerCase() +
         (r.lejos ? ', lejos' : '') + ')\n' : '') +

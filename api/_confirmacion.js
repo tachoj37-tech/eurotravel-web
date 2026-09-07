@@ -16,8 +16,13 @@
 
 const VA = /^(?:va|vá|ok|okey|okay|s[ií]|dale|adelante|m[aá]ndalo|mandaselo|m[aá]ndaselo|listo|sale|👍|✅)[.!]*$/i;
 
-/* «48000», «48,000», «48.000», «$48,000», «48 mil», «48k», «48,000 pesos». */
-const PRECIO = /^\$?\s*(\d{1,3}(?:[.,]\d{3})+|\d+(?:[.,]\d+)?)\s*(mil|k)?\s*(?:pesos|mxn|\$)?[.!]*$/i;
+/* «48000», «48,000», «48.000», «48 000», «$48,000.00», «va 48000»,
+   «48 mil», «48k», «48,000 pesos». El espacio como separador de miles y
+   los centavos entraron el 7-sep-2026 (auditoría C7): antes llegaban
+   literales al cliente. */
+const PRECIO = /^(?:va[,.]?\s+)?\$?\s*(\d{1,3}(?:[.,\s]\d{3})+(?:[.,]\d{2})?|\d+(?:[.,]\d+)?)\s*(mil|k)?\s*(?:pesos|mxn|\$)?[.!]*$/i;
+/* Un año a secas («2026») no es un precio de viaje. */
+const PARECE_ANO = /^20(?:2[0-9]|3[0-5])$/;
 
 /* Debajo de esto no es un precio de viaje: es un número suelto en una
    frase corta («2», «10»), y eso se le pasa al cliente literal. */
@@ -31,8 +36,10 @@ function interpreta(texto) {
   const m = t.match(PRECIO);
   if (m) {
     let n = m[1];
-    /* «48,000» y «48.000» son miles; «48.5» con «mil» son 48,500. */
-    if (/^\d{1,3}(?:[.,]\d{3})+$/.test(n)) n = n.replace(/[.,]/g, '');
+    if (PARECE_ANO.test(n) && !m[2]) return { tipo: 'texto' };
+    /* «48,000», «48.000» y «48 000» son miles (con o sin centavos);
+       «48.5» con «mil» son 48,500. */
+    if (/^\d{1,3}(?:[.,\s]\d{3})+(?:[.,]\d{2})?$/.test(n)) n = n.replace(/(?:[.,]\d{2})$/, '').replace(/[.,\s]/g, '');
     else n = n.replace(',', '.');
     let total = Number(n);
     if (m[2]) total = total * 1000;

@@ -32,6 +32,27 @@ const tickets = require('./_tickets.js');
 const etapas = require('./_etapas.js');
 const contrato = require('./_datos-contrato.js');
 const confirmacion = require('./_confirmacion.js');
+const tarifa = require('./_tarifa.js');
+
+/* ------------------------------------------------------------
+   POR WHATSAPP NADIE SE MANDA A OTRO NÚMERO
+   ------------------------------------------------------------
+   El guion de bot.js también vive en la página, y ahí «márcame al
+   33 2400 2285» tiene sentido. Aquí el cliente YA está en WhatsApp:
+   mandarlo a otro número es perderlo (dictado del dueño, 6-sep-2026;
+   auditoría 7-sep, A6 y C6). Si el guion contestó eso, se cambia por
+   una espera honesta y se le avisa al dueño (`pasa`).
+   ------------------------------------------------------------ */
+const OTRO_NUMERO = /33\s?2400\s?2285|m[aá]ndale esto por whatsapp|m[aá]rcame o escr[ií]beme al/i;
+function sinMandarAOtroNumero(r) {
+  if (!r || !OTRO_NUMERO.test(String(r.texto || ''))) return r;
+  r.texto = r.solicitud
+    ? 'Va. En breve te paso tu cotización y la disponibilidad de tu viaje 🙌'
+    : 'Va, en breve te contestan por aquí mismo 🙌';
+  r.pasa = true;
+  r.opciones = [];
+  return r;
+}
 
 /* ------------------------------------------------------------
    COMPARAR SIN FILTRAR EL TIEMPO
@@ -873,7 +894,37 @@ function procesa(crudo, firma, entorno) {
           const cargaCitada = (dirigido && dirigido.via === 'cita') ? dirigido.carga : null;
           let pendiente = null;
           if (cargaCitada) pendiente = cargaCitada.consumido ? null : cargaCitada;
-          else if (fichaDelCliente && fichaDelCliente.porConfirmar) pendiente = fichaDelCliente.porConfirmar;
+          /* SOLO el ticket del precio confirma precio (auditoría 7-sep-2026,
+             C2). Antes, un «15000» contestando el ticket del comprobante
+             —para anotar el depósito— le mandaba al cliente una cotización
+             nueva de $15,000. Por número escrito a mano sí vale la ficha:
+             ahí el dueño está nombrando al cliente a propósito. */
+          else if (dirigido && dirigido.via === 'numero' &&
+                   fichaDelCliente && fichaDelCliente.porConfirmar) pendiente = fichaDelCliente.porConfirmar;
+
+          /* ------------------------------------------------------------
+             «TOTAL 48000»: EL DUEÑO CAMBIA EL TOTAL DE UN VIAJE YA COTIZADO
+             ------------------------------------------------------------
+             Si renegoció por texto libre («te lo dejo en 48,000»), la ficha
+             seguía con el total viejo y el BORRADOR salía mal (C14). Con
+             «total N» citando cualquier ticket del cliente, la ficha se
+             actualiza —total y anticipo— sin mandarle nada al cliente.
+             ------------------------------------------------------------ */
+          const cambioDeTotal = dirigido && dirigido.texto.match(/^total\s+\$?\s*([\d.,\s]+)\s*(mil|k)?\s*$/i);
+          if (cambioDeTotal && fichaDelCliente && typeof fichaDelCliente.total === 'number') {
+            const leido = confirmacion.interpreta(cambioDeTotal[1] + (cambioDeTotal[2] ? ' ' + cambioDeTotal[2] : ''));
+            if (leido.tipo === 'precio') {
+              const anticipo = Math.min(leido.total, Math.ceil(leido.total * tarifa.ANTICIPO / 500) * 500);
+              tickets.anotaEtapa(dirigido.cliente, fichaDelCliente.etapa, { total: leido.total, anticipo: anticipo }, ahora);
+              envios.push({
+                numeroDeOrigen: deQuien, para: m.from,
+                texto: '✅ Total de ' + dirigido.cliente + ' actualizado a *$' + leido.total.toLocaleString('en-US') +
+                  '* (anticipo *$' + anticipo.toLocaleString('en-US') + '*). Al cliente no le mandé nada.',
+                pasaAPersona: false, escribio: '[total actualizado]'
+              });
+              continue;
+            }
+          }
           if (pendiente) {
             const dicho = confirmacion.interpreta(dirigido.texto);
             if (dicho.tipo !== 'texto') {
@@ -921,6 +972,20 @@ function procesa(crudo, firma, entorno) {
             continue;
           }
 
+          /* Un «va» o un número a un ticket que NO es el del precio (el
+             «ver», el del comprobante, la pregunta de RFC, uno ya
+             contestado): no se manda nada al cliente y se le dice al
+             dueño cuál ticket es (C2). */
+          if (dirigido && dirigido.via === 'cita' && !pendiente &&
+              confirmacion.interpreta(dirigido.texto).tipo !== 'texto') {
+            envios.push({
+              numeroDeOrigen: deQuien, para: m.from,
+              texto: 'Ese no es el ticket del precio 🙈 Contesta el que dice *💰 Precio por confirmar* ' +
+                '(el más reciente de ese cliente), o escríbeme «' + dirigido.cliente + ' 52,000» con su número y el precio.',
+              pasaAPersona: false, escribio: '[precio · ticket equivocado]'
+            });
+            continue;
+          }
           if (dirigido && dirigido.texto) {
             /* Sus palabras van TAL CUAL. No se adornan ni se corrigen:
                si el dueño escribió eso, eso es lo que quiso decir. */
@@ -1218,6 +1283,7 @@ function procesa(crudo, firma, entorno) {
            copiaría ese texto también y el cliente pegaría basura en el
            campo de la CLABE. Ese mensaje se queda pelón a propósito.
            ------------------------------------------------------------ */
+        sinMandarAOtroNumero(r);
         const cuenta = String(env.DATOS_BANCARIOS || '').trim();
         const clabe = String(env.CLABE || '').replace(/\D+/g, '');
         const sitio = String(env.SITIO_URL || '').replace(/\/+$/, '');
@@ -1406,6 +1472,18 @@ function procesa(crudo, firma, entorno) {
               movimientos: s.recorridos, paseo: s.paseo,
               agencia: s.agencia
             }),
+            /* Este ticket también pasa por la compuerta (C6): con su
+               viaje a cuestas, el número que conteste el dueño le llega
+               al cliente como cotización completa —con anticipo y
+               viaje—, no como «52,000» pelón, y se aprende. */
+            carga: {
+              cotiza: null,
+              resumen: {
+                origen: s.origen, destino: s.destino, salida: s.salida, regreso: s.regreso,
+                gente: s.gente, unidad: s.unidad, recorridos: s.recorridos, paseo: s.paseo, agencia: !!s.agencia
+              },
+              total: null, anticipo: null, calendario: null, desde: ahora
+            },
             pasaAPersona: false,
             escribio: '[ticket]'
           });
@@ -1519,6 +1597,7 @@ module.exports = {
   procesa,
   revisaLaPuerta,
   relojDe,
+  sinMandarAOtroNumero,
   idsDeAudio,
   firmaValida,
   rutaSecretaValida,

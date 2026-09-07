@@ -78,7 +78,22 @@ const TOPE_CLIENTES = 300;
 
 /* ---- lo que el cliente NUNCA debe leer ---- */
 const PALABRAS_PROHIBIDAS = /\b(formulario|ticket|captura|proceso|cotizador|sistema|kil[oó]metro\w*|km\b|tarifa\w*|base de datos|opci[oó]n no v[aá]lida|error|bot\b|robot|inteligencia artificial|\bIA\b|chatbot|no (te )?entend[ií]|no me qued[oó] claro|perd[oó]n)\b/i;
-const DINERO = /\$\s?\d|\d[\d.,]*\s*(pesos|mxn|mil\b|k\b)|\bdesde\s+\d/i;
+/* Cualquier cifra que pueda ser dinero se tira (auditoría 7-sep-2026, A2/C4):
+   con «$» o «pesos»; con separador de miles («18,500»); de cuatro o más
+   dígitos («18500», un teléfono) salvo un año 2024-2035 a secas; «desde»
+   con tres o más dígitos; y los numerales en letras («veinte mil», «mil
+   pesos»). «mil gracias», «somos 12», «hasta 20 pasajeros» y «van desde 2
+   días» pasan. */
+const DINERO = new RegExp([
+  '\\$\\s?\\d',
+  '\\d[\\d.,\\s]*\\s*(?:pesos|mxn|k\\b)',
+  '\\d[\\d.,\\s]*\\s*mil\\b',
+  '\\d{1,3}(?:[.,]\\d{3})+',
+  '\\b(?!20(?:2[4-9]|3[0-5])\\b)\\d{4,}\\b',
+  '\\bdesde\\s+\\$?\\s*\\d{3,}',
+  '\\b(?:dos|tres|cuatro|cinco|seis|siete|ocho|nueve|diez|once|doce|quince|veinte|treinta|cuarenta|cincuenta|sesenta|setenta|ochenta|noventa|cien|ciento|doscientos|trescientos|cuatrocientos|quinientos|seiscientos|setecientos|ochocientos|novecientos)\\s+mil\\b',
+  '\\bmil\\s+(?:pesos|quinientos|\\d)'
+].join('|'), 'i');
 
 function instruccionesDelAgente(voz) {
   const v = voz || {};

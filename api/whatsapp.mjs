@@ -238,14 +238,27 @@ function nombreBonitoDeUnidad(u) {
   return t;
 }
 
+/* Días de servicio contando salida y regreso (ida y vuelta el mismo día = 1). */
+function diasDeViaje(salida, regreso) {
+  const a = Date.parse(String(salida || '') + 'T12:00:00Z');
+  const b = Date.parse(String(regreso || salida || '') + 'T12:00:00Z');
+  if (!Number.isFinite(a) || !Number.isFinite(b)) return null;
+  return Math.max(1, Math.round((b - a) / 86400000) + 1);
+}
+
 /* Con un total fijado por el dueño, el anticipo se recalcula con la misma
    regla del motor (20 % al múltiplo de $500 hacia arriba). Los demás
    campos del precio —desglose, noches— se quedan como los calculó el
    bot: el cliente solo ve el total y el anticipo. */
-function conTotalFijado(precio, total) {
+function conTotalFijado(precio, total, resumen) {
   const base = precio || {};
   const anticipo = Math.ceil(total * tarifa.ANTICIPO / 500) * 500;
+  /* Sin cotizador (autobús, Suburban) el precio no trae días: se sacan
+     de las fechas para que el texto no diga «undefined días» (C3). */
+  const r = resumen || {};
+  const dias = typeof base.dias === 'number' ? base.dias : diasDeViaje(r.salida, r.regreso);
   return Object.assign({}, base, {
+    dias: dias,
     total: total,
     anticipo: Math.min(anticipo, total),
     saldo: total - Math.min(anticipo, total),
@@ -353,6 +366,12 @@ async function precioDe(envio, opciones) {
       });
     }
     const dueno = tickets.numeroDelDueno(process.env);
+    if (!dueno) {
+      /* Compuerta cerrada y nadie a quién preguntarle: el cliente se
+         quedaría esperando para siempre (A11). Ruidoso en el registro. */
+      console.error('[precio] CONFIRMAR_PRECIOS está encendido pero DUENO_WHATSAPP está vacío: ' +
+        'el cliente ' + envio.para + ' recibió la espera y NADIE recibió el ticket.');
+    }
     if (dueno) {
       mios.push({
         numeroDeOrigen: envio.numeroDeOrigen,
@@ -428,7 +447,11 @@ async function precioDe(envio, opciones) {
   }
   /* El dueño contestó con un número: ése es el precio, calcule lo que
      calcule el motor. Regla de la casa: los precios los pone él. */
-  if (totalFijado !== null) precio = conTotalFijado(precio, totalFijado);
+  if (totalFijado !== null) precio = conTotalFijado(precio, totalFijado, res);
+  /* La unidad con la que se busca y se guarda el precio aprendido es LA
+     MISMA (C12): antes se buscaba con «sprinter» por omisión y se guardaba
+     con «sin unidad», y lo aprendido no volvía a encontrarse. */
+  const unidadDelViaje = (envio.cotiza && envio.cotiza.unidad) || res.unidadNombre || res.unidad || 'sprinter';
 
   /* Autobús o Suburban con «va» a secas: no hay número que mandar. Se le
      pide al dueño, y al cliente no le llega nada a medias. */
@@ -444,22 +467,24 @@ async function precioDe(envio, opciones) {
     }];
   }
 
-  /* Y lo que confirmó se aprende, para proponérselo la próxima vez que
-     alguien pida el mismo viaje. Sin esperar: a Meta hay que contestarle
-     rápido, y si el almacén no está, no pasa nada. */
-  if (confirmado && precio && precio.total > 0 && almacen.hayAlmacen()) {
-    almacen.guardaPrecio(aprendidos.renglonDe(res,
-      (envio.cotiza && envio.cotiza.unidad) || res.unidad || '', precio,
-      { fijado: totalFijado !== null, cliente: envio.para })).catch(function () {});
-  }
-
   const salida = conversacion.textoDeCotizacion(precio, envio.resumen);
 
   /* El total y el anticipo se saben AQUI y en ningun otro lado: el
      webhook es sincrono y no cotiza. Se apuntan en la ficha para que,
      cuando llegue el comprobante, el aviso pueda decir de que viaje
-     era y cuanto tenia que traer — sin que nadie vaya a buscarlo. */
-  if (precio && typeof precio.total === 'number') {
+     era y cuanto tenia que traer — sin que nadie vaya a buscarlo.
+
+     Y se apuntan DESPUÉS de que WhatsApp acepte el mensaje (`alMandar`,
+     auditoría 7-sep-2026, C9): si Meta lo rechaza, la ficha no puede
+     decir «ya tiene precio» ni el seguimiento preguntarle «¿te llegó?» a
+     quien nunca lo recibió. Lo mismo el precio aprendido, que se guarda
+     sin esperar (a Meta hay que contestarle rápido). */
+  const marcaQueYaTienePrecio = function () {
+    if (confirmado && precio && precio.total > 0 && almacen.hayAlmacen()) {
+      almacen.guardaPrecio(aprendidos.renglonDe(res, unidadDelViaje, precio,
+        { fijado: totalFijado !== null, cliente: envio.para })).catch(function () {});
+    }
+    if (!(precio && typeof precio.total === 'number')) return;
     const r = envio.resumen || {};
     tickets.anotaEtapa(envio.para, 'con_precio', {
       total: precio.total,
@@ -479,13 +504,14 @@ async function precioDe(envio, opciones) {
             (r.regreso ? ' al ' + tickets.comoSeDice(r.regreso) : '') : '')
         : null
     });
-  }
+  };
 
   const mios = [{
     numeroDeOrigen: envio.numeroDeOrigen,
     para: envio.para,
     texto: salida.texto,
     pasaAPersona: !!salida.pasa,
+    alMandar: marcaQueYaTienePrecio,
     escribio: '[precio]'
   }];
 
@@ -938,7 +964,10 @@ function armaContrato(ficha, cliente) {
     total: ficha.total || 0,
     anticipo: ficha.anticipo || 0
   };
-  const referencia = ('WA-' + String(cliente || '') + '-' + (v.salida || '')).slice(0, 80);
+  /* Los últimos 10 dígitos, como `_tickets.llave`: por cita el cliente
+     llega como 52133…, por número escrito como 33…; con dos referencias
+     distintas EuroSystem no deduplica y sale un contrato gemelo (C8). */
+  const referencia = ('WA-' + String(cliente || '').replace(/\D+/g, '').slice(-10) + '-' + (v.salida || '')).slice(0, 80);
   const cuerpo = logica.contratoDesde(m, { id: referencia });
   cuerpo.referenciaExterna = referencia;
   cuerpo.observaciones = 'Vendido por WhatsApp (Eurobot), autorizado por el dueño. ' +
@@ -1168,6 +1197,22 @@ async function loQueDiceElAgente(envio) {
   let accion = dicho.accion;
   if (accion === 'seguir' && yaEstaTodo) accion = 'cotizar';
   if (accion === 'cotizar' && !yaEstaTodo) accion = 'seguir';   // le falta algo: que lo pida
+  /* «Quiero apartar» sin precio dado (A7): antes se reinyectaba al guion
+     con la plática limpia y salía la CLABE sin viaje ni monto. Sin precio
+     no hay qué apartar: se le dice, y si ya dio todo, se pide el precio. */
+  if (accion === 'apartar') {
+    const f = tickets.fichaDe(cliente);
+    const conPrecio = !!(f && typeof f.total === 'number' && f.total > 0 &&
+      ['con_precio', 'va_a_apartar', 'mando_comprobante', 'datos_del_contrato', 'contrato_listo'].indexOf(f.etapa) >= 0);
+    if (!conPrecio) {
+      if (yaEstaTodo) { accion = 'cotizar'; }
+      else {
+        accion = 'seguir';
+        dicho.respuesta = dicho.respuesta ||
+          'Va, con gusto 🙌 Primero te confirmo el precio y en cuanto lo tengas te paso cómo apartar.';
+      }
+    }
+  }
 
   /* Fotos y video: de la unidad que pidió («fotos del i6», «video de la
      Sprinter») o de la que le tocaría. Sin reinyectar al guion: por
@@ -1267,8 +1312,14 @@ async function loQueDiceElAgente(envio) {
        tal cual como ticket; lo que él conteste citándolo le llega al
        cliente literal (el camino de siempre de una respuesta suya).
        ------------------------------------------------------------ */
-    if (accion === 'dueno') {
-      const alCliente = dicho.respuesta || 'Va, en breve te paso ese dato 🙌';
+    if (accion === 'dueno' || accion === 'persona') {
+      /* «Persona» ya no se reinyecta al guion: ahí contestaba «márcame al
+         33 2400 2285» (A6). Igual que un dato del dueño: el cliente se queda
+         aquí y al dueño le llega lo que pidió. */
+      const esPersona = accion === 'persona';
+      const alCliente = dicho.respuesta || (esPersona
+        ? 'Va, en breve te contestan por aquí mismo 🙌'
+        : 'Va, en breve te paso ese dato 🙌');
       await manda({ numeroDeOrigen: envio.numeroDeOrigen, para: cliente, texto: alCliente,
         pasaAPersona: false, escribio: '[agente · dato del dueño]' });
       agente.recuerda(cliente, 'bot', alCliente);
@@ -1277,7 +1328,8 @@ async function loQueDiceElAgente(envio) {
         await manda({
           numeroDeOrigen: envio.numeroDeOrigen, para: dueno,
           esTicket: true, sobreCliente: cliente, pasaAPersona: false,
-          texto: '🙋 *Un cliente pregunta*\n\n«' + String(texto).slice(0, 400) + '»\n\n' +
+          texto: (esPersona ? '🙋 *Quiere hablar contigo*' : '🙋 *Un cliente pregunta*') +
+            '\n\n«' + String(texto).slice(0, 400) + '»\n\n' +
             'Contéstame *este mensaje* y le llega tal cual.\n_cliente: ' + cliente + '_',
           escribio: '[ticket · pregunta al dueño]'
         });
@@ -1495,13 +1547,19 @@ async function apunta(aviso) {
    detenga la respuesta a Meta: a Meta hay que contestarle rapido
    o reintenta, y si reintenta acaba apagando el webhook.
    ------------------------------------------------------------ */
-async function guardaLoQueQuedo(numeros) {
-  if (!almacen.hayAlmacen() || !numeros.length) return;
-  await Promise.all(numeros.map(async function (n) {
+async function guardaLoQueQuedo(numeros, soloFicha) {
+  if (!almacen.hayAlmacen()) return;
+  const conCharla = numeros || [];
+  const sinCharla = soloFicha || [];
+  if (!conCharla.length && !sinCharla.length) return;
+  await Promise.all(conCharla.map(async function (n) {
     const ficha = tickets.fichaViva(n);
     if (ficha) await almacen.guardaFicha(ficha).catch(function () {});
     await almacen.guardaCharla(n, webhook.charlaDe(n)).catch(function () {});
-  }));
+  }).concat(sinCharla.map(async function (n) {
+    const ficha = tickets.fichaViva(n);
+    if (ficha) await almacen.guardaFicha(ficha).catch(function () {});
+  })));
 }
 
 const TIPO_JSON = { 'content-type': 'application/json; charset=utf-8' };
@@ -1699,6 +1757,11 @@ async function manda(envio) {
       const detalle = await r.text().catch(function () { return ''; });
       console.error('[whatsapp] Meta contesto ' + r.status + ': ' + detalle.slice(0, 500));
       return false;
+    }
+    /* Lo que solo debe pasar si WhatsApp aceptó el mensaje (la etapa
+       «ya tiene precio», el precio aprendido). Auditoría 7-sep-2026, C9. */
+    if (typeof envio.alMandar === 'function') {
+      try { envio.alMandar(); } catch (e) { console.error('[whatsapp] alMandar tronó: ' + e.message); }
     }
     /* Meta devuelve el id del mensaje que acaba de mandar. Para un
        TICKET ese id es la unica forma de saber, cuando el dueno lo
@@ -2018,8 +2081,22 @@ async function atiendeElAviso(crudo, firma, marcaDePuerta) {
         (envio && envio.escribio ? envio.escribio : 'sin marca') + '): ' + (e && e.message));
     }
   }
+  /* Los clientes TOCADOS en esta vuelta también se guardan, no solo los
+     que escribieron (B2/C1): el «va» del dueño llega en un aviso que solo
+     trae su número, y lo que `precioDe` anotó en la ficha del cliente se
+     moría con la instancia. De esos solo se guarda la ficha, no la
+     charla: su charla no se cargó y guardarla vacía la borraría. */
+  const dueno = tickets.numeroDelDueno(process.env);
+  const tocados = [];
+  for (const envio of r.envios) {
+    [envio && envio.para, envio && envio.sobreCliente].forEach(function (n) {
+      if (!n || (dueno && tickets.mismoNumero(n, dueno))) return;
+      if (numeros.some(function (x) { return tickets.mismoNumero(x, n); })) return;
+      if (!tocados.some(function (x) { return tickets.mismoNumero(x, n); })) tocados.push(n);
+    });
+  }
   if (r.status === 200) {
-    try { await guardaLoQueQuedo(numeros); } catch (e) {
+    try { await guardaLoQueQuedo(numeros, tocados); } catch (e) {
       console.error('[whatsapp] no se pudo guardar lo que quedó: ' + (e && e.message));
     }
   }

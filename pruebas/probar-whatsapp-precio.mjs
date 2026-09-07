@@ -504,7 +504,11 @@ function idDelUltimoTicket() {
   mandados = [];
   await contesta('va', ticket);
   okQue('un segundo «va» no manda el precio otra vez', !/\*Total: \$/.test(textos(C).join('\n')));
-  okQue('  y llega literal, como cualquier texto del dueño', /^va$/m.test(textos(C).join('\n')));
+  /* Desde la fase 2 de la auditoría (7-sep-2026): un «va» a un ticket ya
+     contestado no le llega al cliente como texto suelto; al dueño se le
+     dice cuál ticket es el del precio. */
+  okQue('  y NO le llega un «va» suelto al cliente', !/^va$/m.test(textos(C).join('\n')));
+  okQue('  al dueño se le dice que ese ticket ya no es el del precio', /no es el ticket del precio/i.test(textos(DUENO).join('\n')));
 }
 
 /* 4 · Un número: ese es el precio, con el anticipo recalculado (20 % a $500). */
@@ -585,7 +589,9 @@ function siembraFichaCompleta(C) {
   okQue('  al cliente le llega su folio y la liga', /folio \*43801\*/.test(alCliente) && /eurosystem\/pdf\/43801/.test(alCliente));
   okQue('  sin palabras prohibidas', !/sistema|proceso|formulario|ticket/i.test(alCliente));
   const b = contratosMandados[0] || {};
-  ok('  referencia estable: número + salida', b.referenciaExterna, 'WA-' + C + '-2026-11-20');
+  /* Los últimos 10 dígitos (fase 2, C8): por cita o por número escrito, la
+     misma referencia, y EuroSystem no crea un contrato gemelo. */
+  ok('  referencia estable: últimos 10 dígitos + salida', b.referenciaExterna, 'WA-' + C.slice(-10) + '-2026-11-20');
   ok('  total y anticipo del precio confirmado', [b.cobro && b.cobro.montoTotal, b.cobro && b.cobro.anticipo], [48000, 10000]);
   ok('  salida con hora y zona', b.servicio && b.servicio.fechaSalida, '2026-11-20T07:00:00-06:00');
   ok('  regreso con hora y zona', b.servicio && b.servicio.fechaRegreso, '2026-11-22T18:00:00-06:00');
@@ -604,7 +610,9 @@ function siembraFichaCompleta(C) {
   mandados = []; contratosMandados = [];
   await contesta('va', 'wamid.ficha-' + C);
   ok('un segundo «va» no manda otro contrato', contratosMandados.length, 0);
-  okQue('  y llega literal, como cualquier texto del dueño', /^va$/m.test(textos(C).join('\n')));
+  /* Fase 2 (7-sep-2026): un «va» a un ticket que ya no confirma nada no
+     le llega al cliente suelto; el dueño recibe el aviso. */
+  okQue('  y NO le llega un «va» suelto al cliente', !/^va$/m.test(textos(C).join('\n')));
 }
 
 /* 3 · EuroSystem lo rechaza: se le dice al dueño con las palabras del error. */
@@ -628,7 +636,10 @@ function siembraFichaCompleta(C) {
   tickets.recuerdaTicket('wamid.ficha-' + C, C);
   await contesta('va', 'wamid.ficha-' + C);
   ok('ficha incompleta: no se manda contrato', contratosMandados.length, 0);
-  okQue('  y el «va» llega literal al cliente', /^va$/m.test(textos(C).join('\n')));
+  /* Fase 2 (7-sep-2026): el «va» a un ticket que no es de precio ni
+     autoriza un contrato no se le pasa al cliente como texto suelto. */
+  okQue('  y el «va» NO le llega suelto al cliente', !/^va$/m.test(textos(C).join('\n')));
+  okQue('  al dueño se le dice que ese no es el ticket del precio', /no es el ticket del precio/i.test(textos(DUENO).join('\n')));
 }
 
 /* ============================================================

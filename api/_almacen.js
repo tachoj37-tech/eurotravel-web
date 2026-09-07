@@ -163,7 +163,10 @@ async function guardaFicha(ficha) {
      tiene la columna (el SQL del 5-sep-2026 corre a mano), una llave
      desconocida haría fallar el UPSERT entero y se perdería la ficha de
      todos los clientes, no solo el precio pendiente de uno. */
-  if (ficha.porConfirmar) fila.por_confirmar = ficha.porConfirmar;
+  /* `por_confirmar` va SIEMPRE, también en nulo: con `merge-duplicates`
+     una columna ausente conserva lo viejo, y un precio pendiente que ya se
+     mandó revivía en la siguiente instancia (auditoría 7-sep-2026, B3/C5). */
+  if (!columnaFaltante.por_confirmar) fila.por_confirmar = ficha.porConfirmar || null;
   if (ficha.viajeDatos) fila.viaje_datos = ficha.viajeDatos;
   if (ficha.contratoSubido) fila.contrato_subido = ficha.contratoSubido;
   /* El seguimiento (6-sep-2026): cuándo recibió el precio, cuántos

@@ -221,8 +221,10 @@ hook.olvidaTodo(); tk.olvidaTodo();
   /* Y al cliente NO se le dice que se mandó ningún ticket: por dentro
      se avisa al equipo, por fuera se lee como si el mismo vendedor
      siguiera escribiendo. */
+  /* «te paso con Fulano» sigue prohibido; «en breve te paso tu cotización»
+     es el texto que dictó el dueño el 7-sep-2026 y sí vale. */
   okQue('al cliente no se le anuncia nada',
-    !/ticket|vendedor|te paso/i.test(alCliente[0].texto));
+    !/ticket|vendedor|te paso con|33\s?2400/i.test(alCliente[0].texto));
 }
 
 /* ============================================================ */

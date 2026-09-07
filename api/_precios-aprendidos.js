@@ -39,7 +39,11 @@ function diasEntre(a, b) {
 function claveDe(resumen, unidad) {
   const r = resumen || {};
   const u = limpia(unidad || r.unidad || '');
-  return [limpia(r.origen), limpia(r.destino), u || 'sin unidad', String(diasEntre(r.salida, r.regreso))].join('|');
+  const clave = [limpia(r.origen), limpia(r.destino), u || 'sin unidad', String(diasEntre(r.salida, r.regreso))].join('|');
+  /* Un precio neto de agencia (5 % abajo) no se le sugiere a un
+     particular ni al revés (auditoría 7-sep-2026, C11). El particular
+     conserva la clave de siempre. */
+  return r.agencia ? clave + '|agencia' : clave;
 }
 
 /* Lo que se guarda cuando el dueño confirma. */
