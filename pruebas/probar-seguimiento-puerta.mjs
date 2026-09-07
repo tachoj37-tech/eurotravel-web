@@ -131,7 +131,7 @@ console.log('\n== A QUIÉN SE LE ESCRIBE (con plantilla del primer toque) ==');
   process.env.WHATSAPP_PLANTILLA_TOQUE1 = 'seguimiento_24h';
   enBase = [
     /* A · le toca el primero: precio hace 25 h, él escribió hace 26. */
-    { numero: '3311111111', cliente: '5213311111111', etapa: 'con_precio', precio_en: iso(AHORA - 25 * H), cliente_en: iso(AHORA - 26 * H), toques: 0, viaje_datos: { salida: '2026-10-10' } },
+    { numero: '3311111111', cliente: '5213311111111', etapa: 'con_precio', precio_en: iso(AHORA - 25 * H), cliente_en: iso(AHORA - 26 * H), toques: 0, viaje_datos: { salida: '2026-10-10', destino: 'Puerto Vallarta' } },
     /* B · le toca el segundo (3 días) pero no hay plantilla para él. */
     { numero: '3322222222', cliente: '5213322222222', etapa: 'con_precio', precio_en: iso(AHORA - 3 * D - H), cliente_en: iso(AHORA - 3 * D - 2 * H), toques: 1 },
     /* C · todavía no: precio hace 2 h. */
@@ -155,6 +155,9 @@ console.log('\n== A QUIÉN SE LE ESCRIBE (con plantilla del primer toque) ==');
   ok('  la del primer toque', mandados[0].cuerpo.template.name, 'seguimiento_24h');
   ok('  en español de México', mandados[0].cuerpo.template.language.code, 'es_MX');
   ok('  y sin texto libre', mandados[0].cuerpo.text, undefined);
+  /* La variable {{1}}: «tu viaje a Puerto Vallarta» (investigación del 7-sep-2026). */
+  const params = (((mandados[0].cuerpo.template.components || [])[0] || {}).parameters || []).map((p) => p.text);
+  ok('  con el destino como variable', params, ['tu viaje a Puerto Vallarta']);
 
   /* Fase 4 (7-sep-2026): la marca es un PATCH condicional de UNA columna;
      no se pisa la ficha entera. */
@@ -201,6 +204,8 @@ console.log('\n== EL SEGUNDO Y EL TERCERO, CON PLANTILLA ==');
   const cuenta = await (await GET(LLAVE)).json();
   ok('salieron los dos', cuenta.mandados, 2);
   ok('el de 3 días con su plantilla', mandados.find((m) => m.cuerpo.to === '523322222222').cuerpo.template.name, 'seguimiento_3d');
+  const sinDestino = (((mandados.find((m) => m.cuerpo.to === '523322222222').cuerpo.template.components || [])[0] || {}).parameters || []).map((p) => p.text);
+  ok('  sin destino conocido, la variable dice «tu viaje»', sinDestino, ['tu viaje']);
   ok('el de 7 días con la suya', mandados.find((m) => m.cuerpo.to === '523366666666').cuerpo.template.name, 'seguimiento_7d');
   ok('y quedaron en 2 y 3', [marcas.find((m) => m.numero === '3322222222').a, marcas.find((m) => m.numero === '3366666666').a], [2, 3]);
   delete process.env.WHATSAPP_PLANTILLA_TOQUE2;

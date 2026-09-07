@@ -753,6 +753,24 @@ function procesa(crudo, firma, entorno) {
         const loEscribeElDueno = tickets.esDelDueno(m.from, env);
         if (!loEscribeElDueno && !pasaElFreno(m.from || 'desconocido', ahora)) continue;
         if (yaContestado(m.id)) continue;
+        /* «Stop» (la salida que piden las plantillas de Meta): se le
+           contesta que no se le vuelve a escribir por nuestra cuenta, y ya.
+           Sin IA, sin ticket al dueño. El seguimiento se cierra solo,
+           porque con esto el cliente «contestó después del precio». */
+        if (!loEscribeElDueno && m.type === 'text' &&
+            /^\s*(stop|alto|basta|no m[aá]s mensajes|no me escribas( m[aá]s)?|ya no me escribas)\s*[.!]*\s*$/i
+              .test(String((m.text && m.text.body) || ''))) {
+          tickets.anotaEtapa(m.from, tickets.fichaDe(m.from) ? tickets.fichaDe(m.from).etapa : 'escribio',
+            { clienteEn: ahora }, ahora);
+          envios.push({
+            numeroDeOrigen: (((valor || {}).metadata || {}).phone_number_id) || env.WHATSAPP_PHONE_ID,
+            para: m.from,
+            texto: 'Listo, no te vuelvo a escribir por mi cuenta 🙌 Si algún día necesitas algo, aquí ando.',
+            pasaAPersona: false,
+            escribio: '[stop]'
+          });
+          continue;
+        }
 
         /* ------------------------------------------------------------
            ¿ESTO LO ESCRIBIÓ EL DUEÑO?

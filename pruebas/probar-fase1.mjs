@@ -144,6 +144,14 @@ titulo('reacciones y stickers no se contestan');
   limpia();
   await manda(avisoDe([{ id: 'wamid.stick1', from: C, type: 'sticker', sticker: { id: 'abc' } }]));
   ok('un sticker: nada al cliente ni al dueño', mandados.length, 0);
+
+  /* «stop»: la salida que piden las plantillas de Meta (7-sep-2026). */
+  limpia();
+  await manda(avisoDe([texto(C, 'STOP')]));
+  ok('«stop»: se le contesta que no se le vuelve a escribir', textos(C).length, 1);
+  okQue('  con ese texto', /no te vuelvo a escribir/i.test(textos(C)[0]));
+  ok('  sin ticket al dueño', textos(DUENO).length, 0);
+  ok('  y sin llamar a la IA', llamadas.filter((l) => /api\.anthropic\.com/.test(l.url)).length, 0);
 }
 
 /* ============================================================ */

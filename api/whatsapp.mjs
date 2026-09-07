@@ -1761,10 +1761,17 @@ async function manda(envio) {
           : envio.plantilla
           ? {
               type: 'template',
-              template: {
+              template: Object.assign({
                 name: envio.plantilla.nombre,
                 language: { code: envio.plantilla.idioma || 'es_MX' }
-              }
+              }, (envio.plantilla.parametros && envio.plantilla.parametros.length)
+                /* Las variables del cuerpo ({{1}}, {{2}}…), en orden. Con el
+                   destino del cliente el mensaje deja de sonar a plantilla
+                   (investigación del 7-sep-2026, docs/SEGUIMIENTO.md). */
+                ? { components: [{ type: 'body', parameters: envio.plantilla.parametros.map(function (p) {
+                    return { type: 'text', text: String(p) };
+                  }) }] }
+                : {})
             }
           /* Una foto NUESTRA, por su direccion publica. Meta la baja
              sola: no hay que subirla ni guardar su id. Asi es como se
@@ -1955,9 +1962,15 @@ function envioDelToque(f, d) {
     }
     return null;
   }
+  /* {{1}} = «tu viaje a Puerto Vallarta» (o «tu viaje» si no se sabe el
+     destino): la única variable de las tres plantillas. Nunca vacía, nunca
+     con signos raros (regla de Meta). */
+  const v = f.viajeDatos || {};
+  const destino = String(v.destino || '').replace(/[#$%{}]/g, '').trim();
+  const viaje = destino ? 'tu viaje a ' + destino : 'tu viaje';
   return Object.assign(base, {
-    plantilla: { nombre: nombre, idioma: process.env.WHATSAPP_PLANTILLA_IDIOMA || 'es_MX' },
-    texto: '[plantilla ' + nombre + ']'
+    plantilla: { nombre: nombre, idioma: process.env.WHATSAPP_PLANTILLA_IDIOMA || 'es_MX', parametros: [viaje] },
+    texto: '[plantilla ' + nombre + ' · ' + viaje + ']'
   });
 }
 

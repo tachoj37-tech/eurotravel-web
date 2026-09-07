@@ -50,25 +50,66 @@ queda en el registro:
 (El código conserva el camino de texto libre por si algún día los
 tiempos vuelven a caber en la ventana; con estos no se usa.)
 
+### Lo que dice la investigación (7-sep-2026)
+
+Se buscó lo publicado sobre seguimiento de cotizaciones por WhatsApp y
+las reglas de Meta para plantillas. Lo que cambia los textos:
+
+- **Una secuencia de tres en una semana no es acoso** si cada mensaje
+  trae algo nuevo y **ninguno repite el precio**: día 1 comprobar que
+  llegó, día 3 un dato que destrabe, día 7 cerrar o pedir permiso de
+  archivar. Un solo seguimiento recupera entre 20 y 30 % de las
+  cotizaciones que se quedaron calladas; las secuencias de 4 a 7 toques
+  triplican la respuesta de las de 1 a 3
+  ([CommuniQate](https://www.communiqate.nl/en/hub/offerte-opvolgen-via-whatsapp),
+  [Leo Transforma](https://www.leotransforma.co/blog/seguimiento-cotizacion-whatsapp),
+  [Cirrus Insight](https://www.cirrusinsight.com/blog/sales-follow-up-statistics)).
+- **La pregunta más contestada es la que se responde con una palabra**:
+  «¿sigue en pie o lo dejamos?» supera por mucho a «¿qué decidiste?».
+  Ofrecer una salida digna en el último mensaje **sube** la respuesta, no
+  la baja ([Wassenger](https://wassenger.com/blog/en/how-to-follow-up-on-whatsapp),
+  [EveryCatch](https://everycatch.com/learn/articles/how-to-use-whatsapp-for-business-follow-up-without-overstepping)).
+- **En México, el seguimiento a las 24 h bien armado responde arriba del
+  50 %**, y conviene mandar entre media mañana y primeras horas de la
+  tarde, nunca de noche ni en fin de semana
+  ([ITPago](https://itpago.com/blog/7-mensajes-de-seguimiento-a-clientes-por-whatsapp-en-mexico)).
+  El cron ya respeta las 9 a.m. a 9 p.m.
+- **Meta, en 2026, rechaza más plantillas de marketing que no ofrecen
+  salida** («responde STOP») y las vagas («Recordatorio: {{1}}»). Reglas
+  de variables: no empezar ni terminar el cuerpo con una, no ponerlas
+  juntas, un valor de muestra por variable, sin `#`, `$` ni `%`
+  ([Spur](https://www.spurnow.com/en/blogs/why-are-my-whatsapp-templates-getting-rejected),
+  [Jesty](https://jestycrm.com/blog/whatsapp-message-template-guidelines-how-to-avoid-meta-rejection)).
+- **Personalizar sube la respuesta**: por eso cada plantilla lleva UNA
+  variable, `{{1}}`, que el bot llena con «tu viaje a Puerto Vallarta»
+  (o «tu viaje» si no sabe el destino).
+
+Lo que ya estaba y se confirma: nunca precio ni descuento en el
+seguimiento, escasez solo real (las fechas sí se llenan), tres toques y
+silencio.
+
 ### Las plantillas que hay que crear
 
 En **WhatsApp Manager → Herramientas de la cuenta → Plantillas de
-mensaje → Crear plantilla**. Categoría: *Marketing* (Meta clasifica los
-seguimientos de cotización como marketing; si la aprueban como
-*Utilidad* mejor, sale más barata). Idioma: **Español (MEX)**. Sin
-variables, sin encabezado, sin botones. Texto tal cual:
+mensaje → Crear plantilla**. Categoría: **Marketing**. Idioma: **Español
+(MEX)**. Sin encabezado, sin pie, sin botones. **Una variable, `{{1}}`**;
+cuando Meta pida el valor de muestra, escribe `tu viaje a Puerto
+Vallarta`. Texto tal cual:
 
-**`seguimiento_24h`**:
+**`seguimiento_24h`** (comprobar que llegó, fácil de contestar, con salida):
 
-> Hola 🙌 Ayer te pasé la cotización de tu viaje con Eurotravel. Si te quedó alguna duda, aquí ando.
+> Hola 🙌 Ayer te pasé la cotización de {{1}} con Eurotravel. ¿Te llegó bien? Si quieres, te la ajusto (fecha, cuántos van o la unidad) sin compromiso. Si prefieres que no te escriba más, dime *stop* y listo.
 
-**`seguimiento_3d`**:
+**`seguimiento_3d`** (un dato que destraba: casi siempre están juntando al grupo):
 
-> Hola 🙌 Hace unos días te pasé la cotización de tu viaje con Eurotravel. Si quieres ajustar algo (fecha, unidad, cuántos van), dime y lo vemos. Sin compromiso.
+> Hola 🙌 ¿Cómo va lo de {{1}}? Si todavía están juntando al grupo, te mando un resumen para que se los reenvíes. ¿Lo vemos esta semana o lo dejamos para más adelante?
 
-**`seguimiento_7d`**:
+**`seguimiento_7d`** (cerrar con salida digna; la escasez es real):
 
-> Hola, te escribo por lo de tu viaje 🚌 Las fechas se van apartando con anticipo y no quisiera que la tuya se quede sin unidad. Si sigues con el plan, dime y te digo cómo apartar; si ya no, también dímelo y no te molesto más 🙌
+> Hola, te escribo por última vez por lo de {{1}} 🚌 Las fechas se van apartando y no quisiera que la tuya se quede sin unidad. Si sigue en pie, dime y te digo cómo apartar; si ya no, también dímelo y aquí lo dejo, sin problema 🙌
+
+Si el cliente contesta **stop**, el bot le dice que no le vuelve a
+escribir por su cuenta y el seguimiento se cierra solo.
 
 Cuando Meta las apruebe (minutos a un día), en Vercel:
 
