@@ -130,6 +130,10 @@ titulo('la plática de un cliente real, ahora con el agente');
   okQue('con todo junto, el motor cotiza: el cliente recibe la espera (compuerta)', /en breve te paso tu cotizaci/i.test(alCliente));
   /* «No me pidió unidad, el cliente no sabe en qué lo llevan» (7-sep-2026). */
   okQue('  y la espera le dice en qué lo llevan (Sprinter para 12)', /Ser[ií]an en Sprinter para 12/.test(alCliente));
+  /* Efecto dotación: con la espera va la foto de la unidad que le tocaría. */
+  const fotosAlCliente = mandados.filter((m) => mismo(m.to, C) && m.image && m.image.link);
+  okQue('  y con la espera va la foto de la Sprinter («ésta es la que les tocaría»)',
+    fotosAlCliente.some((m) => /sprinter/i.test(m.image.link) && /les tocar[ií]a/.test(m.image.caption || '')));
   const instrucciones = JSON.stringify(sistemasVistos[sistemasVistos.length - 1] || []);
   okQue('  la IA sabe que para Tequila/Chapala pregunta «¿Es ida y vuelta el mismo día?»', /Es ida y vuelta el mismo d[ií]a/.test(instrucciones));
   okQue('  y que nombra la unidad en el mismo mensaje en que le dicen cuántos', /EN EL MISMO MENSAJE/.test(instrucciones));

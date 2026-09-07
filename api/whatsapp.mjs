@@ -200,6 +200,29 @@ const TEXTO_ESPERA_PRECIO =
 const TEXTO_ESPERA_CON_CALENDARIO = TEXTO_ESPERA_PRECIO;
 /* «sprinter» → «Sprinter»; un nombre de camión («Neobus», «Irizar i6S») se
    queda como está; «autobus» a secas no se nombra (todavía no escogió). */
+/* La primera foto de la unidad que le tocaría, por su dirección pública.
+   «sprinter»/«suburban» directo; un camión por su nombre («Neobus»); si no
+   se sabe cuál (autobús sin escoger) no hay foto. */
+function fotoParaLaEspera(u) {
+  const sitio = String(process.env.SITIO_URL || '').replace(/\/+$/, '');
+  if (!sitio) return null;
+  const t = String(u || '').trim();
+  let id = null;
+  if (/^sprinter$/i.test(t)) id = 'sprinter';
+  else if (/^suburban$/i.test(t)) id = 'suburban';
+  else if (t && !/^autob[uú]s$/i.test(t)) {
+    const n = t.toLowerCase();
+    const unidad = (conversacion.UNIDADES || []).find(function (x) {
+      return x.id === t || String(x.name || '').toLowerCase() === n;
+    });
+    id = unidad ? unidad.id : null;
+  }
+  if (!id) return null;
+  const medios = conversacion.mediosDe(id);
+  const foto = medios && medios.fotos && medios.fotos[0];
+  return foto ? sitio + '/' + foto : null;
+}
+
 function nombreBonitoDeUnidad(u) {
   const t = String(u || '').trim();
   if (!t) return null;
@@ -307,6 +330,22 @@ async function precioDe(envio, opciones) {
       pasaAPersona: true,
       escribio: '[precio por confirmar]'
     }];
+    /* Y la foto de la unidad que le tocaría, mientras espera el precio:
+       efecto dotación («ésta es la que les tocaría») y reciprocidad —se le
+       da algo antes de pedirle nada—. Auditoría de psicología del
+       7-sep-2026. Solo si se sabe cuál unidad es; un autobús sin escoger
+       no se enseña, para no enseñarle uno que no será. */
+    const fotoDeLaUnidad = fotoParaLaEspera(res.unidadNombre || res.unidad || unidad);
+    if (fotoDeLaUnidad) {
+      mios.push({
+        numeroDeOrigen: envio.numeroDeOrigen,
+        para: envio.para,
+        ligaDeFoto: fotoDeLaUnidad,
+        texto: 'Ésta es la que les tocaría 🚐',
+        pasaAPersona: false,
+        escribio: '[precio por confirmar · foto]'
+      });
+    }
     const dueno = tickets.numeroDelDueno(process.env);
     if (dueno) {
       mios.push({

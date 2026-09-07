@@ -3804,7 +3804,9 @@ function listaCortaDeAutobuses(gente) {
    alrededores de Guadalajara, pueblos mágicos cercanos, bodas y eventos
    locales (dictado del dueño, 7-sep-2026). Sirve para PREGUNTAR mejor;
    el precio lo pone el Excel como siempre. */
-const DESTINO_DE_UN_DIA = /tequila|chapala|ajijic|jocotepec|tapalpa|mazamitla|tlaquepaque|tonal[aá]|zapopan|tlajomulco|amatit[aá]n|magdalena|cocula|\btala\b|ameca|etzatl[aá]n|guachimont|san juan de los lagos|lagos de moreno|boda|evento|salón|salon|hacienda|quinta|jardín|jardin/i;
+/* Mazamitla NO está: «mayormente son más días» (dictado del dueño,
+   7-sep-2026). */
+const DESTINO_DE_UN_DIA = /tequila|chapala|ajijic|jocotepec|tapalpa|tlaquepaque|tonal[aá]|zapopan|tlajomulco|amatit[aá]n|magdalena|cocula|\btala\b|ameca|etzatl[aá]n|guachimont|san juan de los lagos|lagos de moreno|boda|evento|salón|salon|hacienda|quinta|jardín|jardin/i;
 function esDestinoDeUnDia(destino) {
   return DESTINO_DE_UN_DIA.test(normaliza(String(destino || '')));
 }
