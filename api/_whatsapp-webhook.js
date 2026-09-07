@@ -584,7 +584,18 @@ function avisoEsNuestro(aviso, env) {
   return true;
 }
 
-function procesa(crudo, firma, entorno) {
+/* ------------------------------------------------------------
+   LA PUERTA, SEPARADA
+   ------------------------------------------------------------
+   Firma (Meta directo) o tramo secreto + WABA + número (Dualhook), y el
+   cuerpo legible. Vive aparte de `procesa` porque `whatsapp.mjs` la
+   necesita ANTES de tocar red o almacén: hasta la auditoría del
+   7-sep-2026, los audios se bajaban y los mensajes se escribían en el
+   almacén antes de saber si el aviso era nuestro, y `POST /api/whatsapp`
+   sin llave es público. Devuelve `{ rechazo }` con el status y cuerpo que
+   toca contestar, o `{ aviso }` ya parseado si todo está bien.
+   ------------------------------------------------------------ */
+function revisaLaPuerta(crudo, firma, entorno) {
   const env = entorno || process.env;
   const porRutaSecreta = env.RUTA_SECRETA_OK === '1';
 
@@ -593,14 +604,14 @@ function procesa(crudo, firma, entorno) {
        secreto. Aquí se exige saber quiénes somos: sin WABA o número
        configurados, cerrado a fallos. */
     if (!env.WHATSAPP_WABA_ID || !env.WHATSAPP_PHONE_ID) {
-      return { status: 503, cuerpo: { error: 'sin WABA o numero configurados' }, envios: [] };
+      return { rechazo: { status: 503, cuerpo: { error: 'sin WABA o numero configurados' }, envios: [] } };
     }
   } else {
     if (!env.WHATSAPP_APP_SECRET) {
-      return { status: 503, cuerpo: { error: 'sin secreto' }, envios: [] };
+      return { rechazo: { status: 503, cuerpo: { error: 'sin secreto' }, envios: [] } };
     }
     if (!firmaValida(crudo, firma, env.WHATSAPP_APP_SECRET)) {
-      return { status: 401, cuerpo: { error: 'firma invalida' }, envios: [] };
+      return { rechazo: { status: 401, cuerpo: { error: 'firma invalida' }, envios: [] } };
     }
   }
 
@@ -610,20 +621,38 @@ function procesa(crudo, firma, entorno) {
   } catch (e) {
     if (porRutaSecreta) {
       /* Sin firma, un cuerpo ilegible no se puede atribuir a nadie: no se acepta. */
-      return { status: 400, cuerpo: { error: 'cuerpo ilegible' }, envios: [] };
+      return { rechazo: { status: 400, cuerpo: { error: 'cuerpo ilegible' }, envios: [] } };
     }
     /* Firma buena pero cuerpo ilegible: es cosa nuestra, no de un
        atacante. Se acepta para que Meta no reintente en balde. */
-    return { status: 200, cuerpo: { ok: true, aviso: 'cuerpo ilegible' }, envios: [] };
+    return { rechazo: { status: 200, cuerpo: { ok: true, aviso: 'cuerpo ilegible' }, envios: [] } };
   }
 
   if (porRutaSecreta && !avisoEsNuestro(aviso, env)) {
-    return { status: 403, cuerpo: { error: 'aviso de otra cuenta' }, envios: [] };
+    return { rechazo: { status: 403, cuerpo: { error: 'aviso de otra cuenta' }, envios: [] } };
   }
+  return { aviso: aviso };
+}
+
+/* El reloj de la petición. `AHORA_DE_PRUEBA` es para las pruebas; en
+   producción se ignora aunque alguien la deje puesta (auditoría del
+   7-sep-2026: congelaría el freno, los vencimientos y el seguimiento sin
+   que nada avisara). */
+function relojDe(env) {
+  const e = env || process.env;
+  if (e.VERCEL_ENV === 'production') return Date.now();
+  return Number(e.AHORA_DE_PRUEBA) || Date.now();
+}
+
+function procesa(crudo, firma, entorno) {
+  const env = entorno || process.env;
+  const puerta = revisaLaPuerta(crudo, firma, env);
+  if (puerta.rechazo) return puerta.rechazo;
+  const aviso = puerta.aviso;
 
   const envios = [];
   const entradas = (aviso && aviso.entry) || [];
-  const ahora = Number(env.AHORA_DE_PRUEBA) || Date.now();
+  const ahora = relojDe(env);
 
   /* ------------------------------------------------------------
      LOS RECORDATORIOS, COLGADOS DEL TRÁFICO
@@ -686,10 +715,19 @@ function procesa(crudo, firma, entorno) {
 
       for (let k = 0; k < valor.messages.length; k++) {
         const m = valor.messages[k] || {};
+        /* Una reacción (👍 a un mensaje) o un sticker no son una pregunta:
+           no se contestan, no despiertan al dueño y no reinician nada.
+           Antes caían en «Lo recibí 👍 Cuéntame: ¿a dónde van…?» y le
+           mandaban al dueño «te están escribiendo» (auditoría 7-sep-2026). */
+        if (m.type === 'reaction' || m.type === 'sticker') continue;
+        /* El freno NO aplica al dueño: contestando una tanda de tickets
+           pasaba de 12 por minuto y sus «va» se perdían. Y el freno va
+           ANTES de marcar el id como visto: lo frenado no queda «contestado»
+           y el reintento de Meta sí entra. Con el reloj de la petición
+           (`AHORA_DE_PRUEBA` en pruebas), para poder «esperar un minuto». */
+        const loEscribeElDueno = tickets.esDelDueno(m.from, env);
+        if (!loEscribeElDueno && !pasaElFreno(m.from || 'desconocido', ahora)) continue;
         if (yaContestado(m.id)) continue;
-        /* Con el reloj de la petición (`AHORA_DE_PRUEBA` en pruebas): así una
-           prueba larga de un solo cliente puede «esperar un minuto». */
-        if (!pasaElFreno(m.from || 'desconocido', ahora)) continue;
 
         /* ------------------------------------------------------------
            ¿ESTO LO ESCRIBIÓ EL DUEÑO?
@@ -1084,7 +1122,8 @@ function procesa(crudo, firma, entorno) {
                    guion preguntaba «¿cuál te late?» y repetía la lista; el
                    agente RECOMIENDA uno con una razón, como manda la casa. */
                 const conAgente = agenteIA(env) && !!texto;
-                const respuesta = conversacion.respuestaA(texto, suEstado, env.HOY_DE_PRUEBA);
+                const respuesta = conversacion.respuestaA(texto, suEstado,
+                  env.VERCEL_ENV === 'production' ? undefined : env.HOY_DE_PRUEBA);
                 if (conAgente && respuesta && typeof respuesta === 'object') {
                   respuesta.agente = true;
                   respuesta.estadoAntes = estadoAntes;
@@ -1478,6 +1517,8 @@ function numerosDelAviso(aviso) {
 module.exports = {
   verificaSuscripcion,
   procesa,
+  revisaLaPuerta,
+  relojDe,
   idsDeAudio,
   firmaValida,
   rutaSecretaValida,

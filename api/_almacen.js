@@ -99,6 +99,7 @@ function hayAlmacen() { return !!config(); }
    distinguir «no hay columna» de «no hay red» sin que `pide` deje de
    ser una sola puerta. */
 let ultimoError = null;
+const ESPERA_ALMACEN_MS = 4000;
 
 async function pide(camino, opciones) {
   const c = config();
@@ -108,6 +109,9 @@ async function pide(camino, opciones) {
   try {
     const r = await fetch(c.url + '/rest/v1/' + camino, {
       method: o.metodo || 'GET',
+      /* Tope de tiempo: un almacén colgado no puede colgar al bot (Meta
+         reintenta a los ~30 s). Auditoría 7-sep-2026. */
+      signal: AbortSignal.timeout(ESPERA_ALMACEN_MS),
       headers: Object.assign({
         'apikey': c.clave,
         'Authorization': 'Bearer ' + c.clave,

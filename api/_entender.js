@@ -417,6 +417,9 @@ async function entiende(mensaje, opciones) {
   try {
     const r = await pide('https://api.anthropic.com/v1/messages', {
       method: 'POST',
+      /* Tope de tiempo (auditoría 7-sep-2026): si la IA no contesta, sigue
+         el guion; nunca se cuelga el webhook. */
+      signal: AbortSignal.timeout(12000),
       headers: {
         'content-type': 'application/json',
         'x-api-key': clave,

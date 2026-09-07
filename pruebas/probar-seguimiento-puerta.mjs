@@ -96,10 +96,13 @@ console.log('\n== LA PUERTA ==');
 {
   delete process.env.CRON_SECRET;
   const r = await GET('Bearer lo-que-sea');
-  ok('sin CRON_SECRET → 503', r.status, 503);
+  /* Hacia afuera es un 404 como cualquier tramo equivocado: no se cuenta
+     que existe el seguimiento ni que está sin configurar (auditoría
+     7-sep-2026). El detalle va al registro. */
+  ok('sin CRON_SECRET → 404, sin contar nada', [r.status, await r.text()], [404, 'No encontrado']);
 
   process.env.CRON_SECRET = 'corto';
-  ok('CRON_SECRET de menos de 16 → 503', (await GET('Bearer corto')).status, 503);
+  ok('CRON_SECRET de menos de 16 → 404', (await GET('Bearer corto')).status, 404);
 
   process.env.CRON_SECRET = 'secreto-del-cron-de-prueba-largo';
   const r2 = await GET('Bearer otro-secreto-que-no-es-el-bueno');

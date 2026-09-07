@@ -303,6 +303,7 @@ function sanea(texto) {
 }
 
 const ACCIONES = ['seguir', 'cotizar', 'fotos', 'video', 'persona', 'apartar', 'dueno'];
+const ESPERA_IA_MS = 12000;
 
 function limpiaDatos(d) {
   const x = d && typeof d === 'object' ? d : {};
@@ -346,6 +347,9 @@ async function conversa(mensaje, opciones) {
   try {
     const r = await pide('https://api.anthropic.com/v1/messages', {
       method: 'POST',
+      /* Tope de tiempo: una IA colgada no puede colgar al bot (auditoría
+         7-sep-2026); si no contesta a tiempo, contesta el guion. */
+      signal: AbortSignal.timeout(ESPERA_IA_MS),
       headers: { 'content-type': 'application/json', 'x-api-key': clave, 'anthropic-version': '2023-06-01' },
       body: JSON.stringify({ model: MODELO, max_tokens: TOPE_SALIDA, system: bloques,
         messages: [{ role: 'user', content: texto }] })

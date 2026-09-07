@@ -120,6 +120,12 @@ async function transcribeLosAudios(crudo) {
 const EUROSYSTEM = process.env.EUROSYSTEM_URL || 'https://eurosystem.site';
 const ESPERA_CALENDARIO_MS = 4000;
 
+/* La fecha de mentiras de las pruebas. En producción se ignora aunque
+   alguien la deje puesta (auditoría 7-sep-2026). */
+function hoyDePrueba() {
+  return process.env.VERCEL_ENV === 'production' ? '' : (process.env.HOY_DE_PRUEBA || '');
+}
+
 /* EuroSystem cuenta por CATEGORÍA (SPRINTER, SUBURBAN, AUTOBUS). Aquí
    llega a veces la categoría y a veces el nombre del camión que el
    cliente escogió («Neobus», «Irizar i6S»): con el nombre EuroSystem
@@ -277,7 +283,7 @@ async function precioDe(envio, opciones) {
   const confirmado = !!(opciones && opciones.confirmado);
   const totalFijado = (opciones && typeof opciones.totalFijado === 'number') ? opciones.totalFijado : null;
   const res = envio.resumen || {};
-  const hoy = process.env.HOY_DE_PRUEBA || new Date().toISOString().slice(0, 10);
+  const hoy = hoyDePrueba() || new Date().toISOString().slice(0, 10);
 
   /* ---- la compuerta: todo pasa por el dueño ---- */
   if (!confirmado && encendido('CONFIRMAR_PRECIOS')) {
@@ -582,7 +588,7 @@ function hayCupoDeIA(hoy) {
 }
 
 async function loQueLaIAEntendio(envio) {
-  const hoy = process.env.HOY_DE_PRUEBA ||
+  const hoy = hoyDePrueba() ||
     new Date().toISOString().slice(0, 10);
   if (!process.env.ANTHROPIC_API_KEY) return null;
   if (!hayCupoDeIA(hoy)) {
@@ -722,7 +728,7 @@ async function loQueLaIAEntendio(envio) {
    a pedir lo que falta— y el cliente no se queda en silencio.
    ------------------------------------------------------------ */
 async function datosDelContrato(envio) {
-  const hoy = process.env.HOY_DE_PRUEBA ||
+  const hoy = hoyDePrueba() ||
     new Date().toISOString().slice(0, 10);
   if (!process.env.ANTHROPIC_API_KEY) return null;
   if (!hayCupoDeIA(hoy)) {
@@ -1116,7 +1122,7 @@ function viajeConPrecio(ficha) {
 
 async function loQueDiceElAgente(envio) {
   if (!process.env.ANTHROPIC_API_KEY) return false;
-  const hoy = process.env.HOY_DE_PRUEBA || new Date().toISOString().slice(0, 10);
+  const hoy = hoyDePrueba() || new Date().toISOString().slice(0, 10);
   if (!hayCupoDeIA(hoy)) return false;
   const cliente = envio.para;
   const texto = envio.crudoDelCliente;
@@ -1616,6 +1622,8 @@ function numeroParaMeta(n) {
    200 de todas formas. Un error al responderle a UN cliente no
    puede tumbar el webhook para todos los demás.
    ------------------------------------------------------------ */
+const ESPERA_ENVIO_MS = 8000;
+
 async function manda(envio) {
   const token = process.env.WHATSAPP_TOKEN;
   const numero = envio.numeroDeOrigen || process.env.WHATSAPP_PHONE_ID;
@@ -1626,6 +1634,10 @@ async function manda(envio) {
   try {
     const r = await fetch(GRAFO + '/' + numero + '/messages', {
       method: 'POST',
+      /* Tope de tiempo: Meta reintenta el aviso a los ~30 s, y un envío
+         colgado es la forma más fácil de que el cliente reciba todo dos
+         veces (auditoría 7-sep-2026). */
+      signal: AbortSignal.timeout(ESPERA_ENVIO_MS),
       headers: {
         'Authorization': 'Bearer ' + token,
         'Content-Type': 'application/json'
@@ -1864,15 +1876,19 @@ async function atiendeSeguimiento(a, b, esWeb) {
   };
   const secreto = process.env.CRON_SECRET;
   if (!secreto || String(secreto).length < 16) {
+    /* Hacia afuera, lo mismo que cualquier tramo equivocado: un 404 que no
+       cuenta que existe el seguimiento ni que está sin configurar
+       (auditoría 7-sep-2026). El detalle, solo al registro. */
     console.error('[seguimiento] falta CRON_SECRET en Vercel (16+ caracteres): el cron no corre');
-    return contesta(503, { error: 'Sin configurar' });
+    return contesta(404, null, NO_HAY);
   }
   if (!llaveDelCronValida(cabecera, secreto)) return contesta(404, null, NO_HAY);
   if (a.method !== 'GET') return contesta(405, { error: 'Método no permitido' });
   avisaEstadoDelAlmacen();
-  /* `AHORA_DE_PRUEBA` es el mismo reloj de mentiras que usa el webhook
-     en las pruebas: el seguimiento depende de la hora del día. */
-  return contesta(200, await mandaSeguimientos(Number(process.env.AHORA_DE_PRUEBA) || undefined));
+  /* El mismo reloj de mentiras que usa el webhook en las pruebas, y que
+     en producción se ignora. */
+  const reloj = webhook.relojDe(process.env);
+  return contesta(200, await mandaSeguimientos(reloj));
 }
 
 async function atiende(a) {
@@ -1933,18 +1949,7 @@ async function atiendeInterno(a, b, opciones) {
         { status: 500, headers: TIPO_JSON });
     }
 
-    const [audios, numeros] = await Promise.all([
-      transcribeLosAudios(crudo),
-      cargaLoQueSeSabe(crudo)
-    ]);
-    /* OJO CON EL TERCER ARGUMENTO · `procesa` usa lo que le llegue ahi EN
-       LUGAR de `process.env`, no ademas. Pasarle `{ audios }` a secas le
-       borraba `WHATSAPP_APP_SECRET` y contestaba 503 a todo. Lo cazo
-       `probar-whatsapp-cascara`. Por eso va el entorno completo. */
-    const r = webhook.procesa(crudo, a.headers.get('x-hub-signature-256'),
-      Object.assign({}, process.env, { audios }, marcaDePuerta));
-    for (const envio of r.envios) await reparte(envio);
-    await guardaLoQueQuedo(numeros);
+    const r = await atiendeElAviso(crudo, a.headers.get('x-hub-signature-256'), marcaDePuerta);
     return new Response(JSON.stringify(r.cuerpo), { status: r.status, headers: TIPO_JSON });
   }
 
@@ -1973,21 +1978,52 @@ async function atiendeInterno(a, b, opciones) {
     return;
   }
 
+  const r = await atiendeElAviso(crudo, req.headers['x-hub-signature-256'], marcaDePuerta);
+  res.status(r.status).json(r.cuerpo);
+}
+
+/* ------------------------------------------------------------
+   UN SOLO CAMINO PARA LAS DOS FIRMAS (Web y Node)
+   ------------------------------------------------------------
+   Antes eran dos copias; una decía `manda` donde la otra decía `reparte`
+   y el defecto durmió hasta que se notó. Y el orden importa (auditoría
+   del 7-sep-2026):
+     1 · LA PUERTA PRIMERO. Firma o tramo secreto + WABA, y cuerpo
+         legible, ANTES de bajar audios, leer el almacén o escribir en
+         él. Hasta hoy `cargaLoQueSeSabe` escribía los mensajes de
+         cualquiera y `POST /api/whatsapp` sin llave es público.
+     2 · Cada envío va en su propio try/catch: un tropiezo en uno no
+         tumba el webhook (500 → Meta reintenta → el id ya estaba
+         marcado → el mensaje se perdía para siempre).
+     3 · Lo que quedó se guarda solo si el aviso fue bueno (200).
+   OJO CON EL ENTORNO · `procesa` usa lo que le llegue EN LUGAR de
+   `process.env`, no además. Por eso va el entorno completo con los
+   audios y la marca de la puerta.
+   ------------------------------------------------------------ */
+async function atiendeElAviso(crudo, firma, marcaDePuerta) {
+  const entorno = Object.assign({}, process.env, marcaDePuerta);
+  const puerta = webhook.revisaLaPuerta(crudo, firma, entorno);
+  if (puerta.rechazo) return puerta.rechazo;
+
   const [audios, numeros] = await Promise.all([
     transcribeLosAudios(crudo),
     cargaLoQueSeSabe(crudo)
   ]);
-  /* Mismo cuidado que arriba: el entorno completo, no solo los audios. */
-  const r = webhook.procesa(crudo, req.headers['x-hub-signature-256'],
-    Object.assign({}, process.env, { audios }, marcaDePuerta));
-  /* `reparte`, NO `manda`. Aqui decia `manda` y con eso este camino se
-     quedaba sin el precio, sin la IA de respaldo y sin los datos del
-     contrato: las tres cosas se resuelven en `reparte`. Vercel usa hoy
-     la firma Web, asi que no se notaba — hasta el dia que cambiara. Dos
-     caminos que hacen cosas distintas es un defecto dormido. */
-  for (const envio of r.envios) await reparte(envio);
-  await guardaLoQueQuedo(numeros);
-  res.status(r.status).json(r.cuerpo);
+  const r = webhook.procesa(crudo, firma, Object.assign({}, entorno, { audios }));
+  for (const envio of r.envios) {
+    try {
+      await reparte(envio);
+    } catch (e) {
+      console.error('[whatsapp] un envío tronó y se siguió con los demás (' +
+        (envio && envio.escribio ? envio.escribio : 'sin marca') + '): ' + (e && e.message));
+    }
+  }
+  if (r.status === 200) {
+    try { await guardaLoQueQuedo(numeros); } catch (e) {
+      console.error('[whatsapp] no se pudo guardar lo que quedó: ' + (e && e.message));
+    }
+  }
+  return r;
 }
 
 /* Del más confiable al menos. A diferencia del de Stripe, aquí NO se acepta
