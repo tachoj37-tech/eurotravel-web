@@ -1055,13 +1055,18 @@ async function loQueDiceElAgente(envio) {
     }
   }
 
-  const antes = envio.estadoAntes && typeof envio.estadoAntes === 'object' ? envio.estadoAntes : {};
-  const hayViaje = !!(antes.destino || antes.salida || antes.gente || antes.origen);
+  let antes = envio.estadoAntes && typeof envio.estadoAntes === 'object' ? envio.estadoAntes : {};
   /* El viaje que ya tiene precio pedido o dado vive en la ficha, no en la
      plática (que se cierra al pedirlo). Se le cuenta a la IA para que no
      vuelva a preguntar «¿a dónde van?» después de «ok», y para que si el
      cliente quiere OTRO viaje, lo tome de cero. */
   const viajeDeLaFicha = viajeConPrecio(tickets.fichaDe(cliente));
+  /* Una plática que quedó en «confirmar» con el precio ya pedido es un
+     residuo del defecto del 7-sep-2026 (las guardadas antes del arreglo
+     viven hasta siete días en el almacén). Se descarta: si no, ese cliente
+     recibiría una espera y un ticket más. */
+  if (viajeDeLaFicha && antes.paso === 'confirmar') antes = {};
+  const hayViaje = !!(antes.destino || antes.salida || antes.gente || antes.origen);
   const dicho = await agente.conversa(texto, {
     hoy: hoy, cliente: cliente, estado: antes,
     viaje: viajeDeLaFicha,

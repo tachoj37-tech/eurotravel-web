@@ -230,6 +230,27 @@ titulo('después de la espera no se vuelve a pedir el precio (7-sep-2026)');
 }
 
 /* ============================================================ */
+titulo('una plática vieja atorada en «confirmar» no vuelve a pedir el precio');
+{
+  /* Las pláticas guardadas ANTES del arreglo del 7-sep-2026 traen todos los
+     datos en el paso «confirmar» y viven hasta siete días. Con el precio ya
+     pedido en la ficha, se descartan. */
+  limpia();
+  const C = '5213366670209';
+  const fichas = (await import(pathToFileURL(path.join(RAIZ, 'api', '_tickets.js')).href)).default;
+  webhook.siembraCharla(C, { paso: 'confirmar', destino: 'Puerto Vallarta', origen: 'Guadalajara',
+    salida: '2026-09-09', regreso: '2026-09-14', gente: 12, unidad: 'sprinter', recorridos: 0 });
+  fichas.anotaEtapa(C, 'pidio_precio', { porConfirmar: { cotiza: null, resumen: { destino: 'Puerto Vallarta', origen: 'Guadalajara', salida: '2026-09-09', regreso: '2026-09-14', gente: 12, unidad: 'sprinter' }, desde: Date.now() } });
+  laIA = function (t) {
+    if (/^ok$/i.test(t)) return { respuesta: 'Va, en cuanto lo tenga te aviso 🙌', datos: {}, accion: 'seguir' };
+    return null;
+  };
+  await dice('ok', C);
+  ok('«ok» con la plática vieja: contesta la IA, sin espera', textos(C).slice(-1)[0], 'Va, en cuanto lo tenga te aviso 🙌');
+  ok('  y sin ticket al dueño', textos(DUENO).filter((t) => /Precio por confirmar/.test(t)).length, 0);
+}
+
+/* ============================================================ */
 titulo('lo que la IA no puede decir, no sale');
 {
   limpia();
