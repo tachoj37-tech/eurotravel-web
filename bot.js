@@ -1839,7 +1839,10 @@ function alSiguienteHueco(e) {
   if (!e.destino) e.paso = 'destino';
   else if (!e.salida) e.paso = 'salida';
   else if (!e.regreso) e.paso = 'regreso';
-  else if (!e.gente && !e.unidad) e.paso = 'cuantos';
+  /* SIEMPRE se pregunta cuántos son, aunque el cliente ya haya nombrado la
+     unidad: sin la cuenta no se sabe si caben, y un autobús se aceptaba
+     con la gente desconocida (auditoría 7-sep-2026, A5). */
+  else if (!e.gente) e.paso = 'cuantos';
   /* ------------------------------------------------------------
      Y SI ES AUTOBÚS, CUÁL AUTOBÚS
      ------------------------------------------------------------
@@ -2668,8 +2671,14 @@ function porNombre(nombre) {
 /* Cómo se llama la unidad de este viaje, para el encabezado del precio.
    Devuelve null si no se sabe, y quien llama pone lo de siempre. */
 function unidadDelResumen(r) {
+  /* «autobus» sin modelo escogido NO es el i6S: prometerle al cliente un
+     camión concreto que nadie escogió es mentirle encima del precio
+     (auditoría 7-sep-2026, C15). Se dice «Autobús» a secas. */
+  if (r && r.unidad === 'autobus' && !(r.unidadNombre && porNombre(r.unidadNombre))) {
+    return 'Autobús' + (r.gente ? ' · ' + r.gente + ' pasajeros' : '');
+  }
   const u = (r && r.unidadNombre && porNombre(r.unidadNombre)) ||
-    (r && r.unidad && porId(r.unidad === 'autobus' ? 'irizar-i6s' : r.unidad));
+    (r && r.unidad && porId(r.unidad));
   return u ? u.name + ' · hasta ' + u.max + ' pasajeros' : null;
 }
 
@@ -3745,20 +3754,50 @@ function aplicaEntendido(datos, hoy) {
 function pegaDatos(estado, datos) {
   const e = Object.assign({}, estado || {});
   const d = datos || {};
+  /* ------------------------------------------------------------
+     EL CLIENTE PUEDE CORREGIR (auditoría 7-sep-2026, A3)
+     ------------------------------------------------------------
+     Antes un dato solo entraba si el hueco estaba vacío o si el paso
+     era justo ése: «mejor a Mazamitla» se ignoraba y se cotizaba
+     Vallarta; «somos 30» se ignoraba y quedaban 15 en una Sprinter. La
+     IA solo manda en `datos` lo que el cliente dijo AHORA (y su prompt
+     dice que lo sabido es sagrado salvo que el cliente lo cambie), así
+     que un dato distinto es una corrección: se toma. Si cambian los
+     que van, se vuelve a ver en qué caben.
+     ------------------------------------------------------------ */
   if (d.destino) {
     const limpio = limpiaDestino(d.destino);
-    if (!e.destino || destinoFlojo(e.destino) || e.paso === 'destino') e.destino = limpio;
+    if (!e.destino || destinoFlojo(e.destino) || e.paso === 'destino' ||
+        normaliza(limpio) !== normaliza(e.destino)) e.destino = limpio;
   }
-  if (d.origen && (!e.origen || e.paso === 'origen' || e.origenSupuesto)) {
+  if (d.origen) {
     /* «Guadalajara norte», «zapopan», «gdl centro»: para cotizar es la
        ciudad; la zona y la colonia van al contrato, no aquí. */
     const o = normaliza(d.origen);
     e.origen = /guadalajara|gdl|zapopan|tlaquepaque|tonala|tlajomulco|zona metropolitana/.test(o)
       ? 'Guadalajara' : d.origen;
   }
-  if (d.salida && (!e.salida || e.paso === 'salida')) e.salida = d.salida;
-  if (d.regreso && (!e.regreso || e.paso === 'regreso')) e.regreso = d.regreso;
-  if (d.gente && (!e.gente || e.paso === 'cuantos')) e.gente = d.gente;
+  if (d.salida) e.salida = d.salida;
+  if (d.regreso) e.regreso = d.regreso;
+  if (d.gente && Number(d.gente) !== Number(e.gente)) {
+    e.gente = d.gente;
+    /* Cambió cuántos van: la unidad que había ya no cuenta si no caben
+       (o si ya no hace falta un autobús). Se vuelve a escoger. */
+    if (e.unidad) {
+      const n = Number(e.gente);
+      const bus = e.unidadId ? UNIDADES.find(function (u) { return u.id === e.unidadId; }) : null;
+      const noCabe = (bus && Number(bus.max) < n) ||
+        (e.unidad === 'sprinter' && n > 20) || (e.unidad === 'suburban' && n > 6) ||
+        (e.unidad === 'autobus' && n <= 20);
+      if (noCabe) {
+        /* Si era un camión concreto, que el agente se lo diga con nombre
+           y número («el i6 es de 47 y son 60») y ofrezca los que sí. */
+        if (bus && Number(bus.max) < n) e.noCabe = { nombre: bus.name, asientos: Number(bus.max), gente: n };
+        else delete e.noCabe;
+        delete e.unidad; delete e.unidadNombre; delete e.unidadId;
+      }
+    }
+  }
   if (d.unidad && !e.unidad) e.unidad = d.unidad;
   /* El autobús concreto, cuando el agente lo recomendó y el cliente dijo
      que sí: se guarda con su nombre, que es lo que imprime el contrato. */

@@ -259,7 +259,9 @@ console.log('\n== COTIZAR LA SPRINTER, PASO A PASO ==');
   const c = conversa(['quiero una sprinter', 'Chapala',
     /* ORDEN NUEVO (2-sep-2026, §2 del guion): destino, fechas, y hasta
        despues «de donde salen». Antes el origen iba en tercer lugar. */
-    '10 de septiembre', '13 de septiembre', 'Guadalajara',
+    /* Y desde la fase 3 de la auditoría (7-sep-2026) SIEMPRE se pregunta
+       cuántos son, aunque el cliente ya haya nombrado la unidad. */
+    '10 de septiembre', '13 de septiembre', 'somos 12', 'Guadalajara',
     /* «Por la zona» se agregó el 1-sep-2026: desde R40 se pregunta por cada
        recorrido si pasa de los 80 km, y ese paso va antes de las horas. */
     '2 dias', 'Por la zona',
@@ -281,7 +283,9 @@ console.log('\n== COTIZAR LA SPRINTER, PASO A PASO ==');
 }
 {
   /* Antes de cotizar tiene que enseñar QUE entendio. */
-  const c = conversa(['sprinter', 'Chapala', '10/9', '13/9', 'Guadalajara', 'ninguno']);
+  /* Desde la fase 3 de la auditoría (7-sep-2026) SIEMPRE se pregunta cuántos
+     son, aunque el cliente ya haya nombrado la unidad. */
+  const c = conversa(['sprinter', 'Chapala', '10/9', '13/9', 'somos 12', 'Guadalajara', 'ninguno']);
   const t = c.ultimo.texto;
   okQue('confirma antes de cotizar', /confirmar/i.test(t));
   okQue('  repitiendo el destino', /Chapala/.test(t));
@@ -292,11 +296,11 @@ console.log('\n== COTIZAR LA SPRINTER, PASO A PASO ==');
 console.log('\n== R22: EL VIAJE DE UN DIA NO PAGA MOVIMIENTOS ==');
 {
   const c = conversa(['sprinter', 'Tequila', '10 de septiembre', '10 de septiembre',
-    'Guadalajara']);
+    'somos 12', 'Guadalajara']);
   okQue('con salida y regreso el mismo dia NO pregunta recorridos',
     /confirmar/i.test(c.ultimo.texto));
   const fin = conversa(['sprinter', 'Tequila', '10 de septiembre', '10 de septiembre',
-    'Guadalajara', 'si']).ultimo;
+    'somos 12', 'Guadalajara', 'si']).ultimo;
   ok('  y cotiza sin movimientos', fin.cotiza && fin.cotiza.movimientos.length, 0);
 }
 
@@ -325,7 +329,7 @@ console.log('\n== NO SE DEJA LLEVAR A UN IMPOSIBLE ==');
 
 console.log('\n== SE PUEDE CORREGIR SIN EMPEZAR DE CERO ==');
 {
-  const c = conversa(['sprinter', 'Chapala', '10/9', '13/9', 'Guadalajara', 'ninguno',
+  const c = conversa(['sprinter', 'Chapala', '10/9', '13/9', 'somos 12', 'Guadalajara', 'ninguno',
     'cambiar algo', 'el destino', 'Mazamitla', 'si']);
   ok('cambiar el destino conserva las fechas',
     c.ultimo.cotiza && [c.ultimo.cotiza.destino.direccion, c.ultimo.cotiza.salida],
@@ -772,7 +776,7 @@ console.log('\n== LOS PASEOS CON NOMBRE ==');
 }
 {
   const c = conversa(['sprinter', 'Ciudad de México', '10 de octubre', '13 de octubre',
-    'Guadalajara', '3 dias', 'Taxco', 'Nos vamos lejos', 'Hasta 8 horas', 'si']);
+    'somos 12', 'Guadalajara', '3 dias', 'Taxco', 'Nos vamos lejos', 'Hasta 8 horas', 'si']);
   const m = c.ultimo.cotiza.movimientos;
   ok('el paseo va en UN día, el primero', m.filter(function (x) { return x.paseo; }).length, 1);
   ok('  y es el que escogió', m[0].paseo, 'Taxco');
@@ -781,7 +785,7 @@ console.log('\n== LOS PASEOS CON NOMBRE ==');
 }
 {
   const c = conversa(['sprinter', 'Ciudad de México', '10 de octubre', '13 de octubre',
-    'Guadalajara', '3 dias', 'ninguno', 'Por la zona', 'Hasta 8 horas', 'si']);
+    'somos 12', 'Guadalajara', '3 dias', 'ninguno', 'Por la zona', 'Hasta 8 horas', 'si']);
   const m = c.ultimo.cotiza.movimientos;
   ok('sin paseo no se manda ninguno', m.some(function (x) { return x.paseo; }), false);
   /* Si no dijo que se van lejos NO se inventa un kilometraje: sin `km` el

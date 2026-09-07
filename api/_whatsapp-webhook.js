@@ -914,7 +914,8 @@ function procesa(crudo, firma, entorno) {
           if (cambioDeTotal && fichaDelCliente && typeof fichaDelCliente.total === 'number') {
             const leido = confirmacion.interpreta(cambioDeTotal[1] + (cambioDeTotal[2] ? ' ' + cambioDeTotal[2] : ''));
             if (leido.tipo === 'precio') {
-              const anticipo = Math.min(leido.total, Math.ceil(leido.total * tarifa.ANTICIPO / 500) * 500);
+              const multiplo = tarifa.ANTICIPO_MULTIPLO || 500;
+              const anticipo = Math.min(leido.total, Math.ceil(leido.total * tarifa.ANTICIPO / multiplo) * multiplo);
               tickets.anotaEtapa(dirigido.cliente, fichaDelCliente.etapa, { total: leido.total, anticipo: anticipo }, ahora);
               envios.push({
                 numeroDeOrigen: deQuien, para: m.from,
@@ -997,6 +998,23 @@ function procesa(crudo, firma, entorno) {
               escribio: '[del dueño · ' + dirigido.via + ']'
             });
             /* Y desde aquí el bot se calla con ese cliente. */
+            tickets.callaLaIA(dirigido.cliente);
+            tickets.yaLoContesto(dirigido.cliente);
+          } else if (dirigido && dirigido.via === 'cita' &&
+                     (m.type === 'image' || m.type === 'document' || m.type === 'audio' || m.type === 'video') &&
+                     m[m.type] && m[m.type].id) {
+            /* Una foto, un PDF o una nota de voz citando el ticket: se
+               reenvía al cliente tal cual (auditoría 7-sep-2026, A13). Antes
+               caía en «No supe para quién es» aunque SÍ había citado. */
+            envios.push({
+              numeroDeOrigen: deQuien,
+              para: dirigido.cliente,
+              texto: (m[m.type].caption || ''),
+              reenviaMedio: m[m.type].id,
+              tipoMedio: m.type,
+              pasaAPersona: false,
+              escribio: '[del dueño · ' + m.type + ']'
+            });
             tickets.callaLaIA(dirigido.cliente);
             tickets.yaLoContesto(dirigido.cliente);
           } else {

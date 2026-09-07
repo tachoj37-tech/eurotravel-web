@@ -47,8 +47,11 @@ const ALIAS_UNIDAD = [
   [/\b(century|irizar century|el clasico|el cl[aá]sico)\b/i, 'irizar'],
   [/\b(neobus|neo bus)\b/i, 'neobus'],
   [/\b(g ?8|marcopolo|paradiso)\b/i, 'g8'],
-  [/\b(sprinter|esprinter|printer|camioneta)\b/i, 'sprinter'],
-  [/\b(suburban|suburvan|camioneta ejecutiva)\b/i, 'suburban']
+  /* La Suburban ANTES que la Sprinter: «camioneta ejecutiva» contiene
+     «camioneta» y se llevaba las fotos de la Sprinter (auditoría
+     7-sep-2026, A15). */
+  [/\b(suburban|suburvan|camioneta ejecutiva)\b/i, 'suburban'],
+  [/\b(sprinter|esprinter|printer|camioneta)\b/i, 'sprinter']
 ];
 function unidadPorTexto(t) {
   const s = String(t || '');
@@ -320,10 +323,22 @@ function sanea(texto) {
 const ACCIONES = ['seguir', 'cotizar', 'fotos', 'video', 'persona', 'apartar', 'dueno'];
 const ESPERA_IA_MS = 12000;
 
-function limpiaDatos(d) {
+/* Una fecha de verdad: mes 1-12, día que exista en ese mes, y que no haya
+   pasado (auditoría 7-sep-2026, A10: «2026-13-45» y fechas de hace años
+   llegaban al motor, al ticket y al calendario de EuroSystem). */
+function fechaValida(v, hoy) {
+  if (typeof v !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(v)) return null;
+  const partes = v.split('-').map(Number);
+  const d = new Date(Date.UTC(partes[0], partes[1] - 1, partes[2]));
+  if (d.getUTCFullYear() !== partes[0] || d.getUTCMonth() !== partes[1] - 1 || d.getUTCDate() !== partes[2]) return null;
+  if (hoy && v < String(hoy).slice(0, 10)) return null;
+  return v;
+}
+
+function limpiaDatos(d, hoy) {
   const x = d && typeof d === 'object' ? d : {};
   const texto = function (v, tope) { return (typeof v === 'string' && v.trim()) ? v.trim().slice(0, tope || 80) : null; };
-  const fecha = function (v) { return (typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v)) ? v : null; };
+  const fecha = function (v) { return fechaValida(v, hoy); };
   const numero = function (v, max) { const n = Number(v); return Number.isFinite(n) && n > 0 && n <= max ? Math.round(n) : null; };
   const unidad = ['sprinter', 'suburban', 'autobus'].indexOf(String(x.unidad || '').toLowerCase()) >= 0 ? String(x.unidad).toLowerCase() : null;
   const ids = unidades().map(function (u) { return u.id; });
@@ -388,7 +403,7 @@ async function conversa(mensaje, opciones) {
     let unidadPedida = typeof json.unidadPedida === 'string' && ids.indexOf(json.unidadPedida) >= 0
       ? json.unidadPedida : null;
     if (!unidadPedida) unidadPedida = unidadPorTexto(texto);
-    return { respuesta: respuesta, datos: limpiaDatos(json.datos), accion: accion, unidadPedida: unidadPedida };
+    return { respuesta: respuesta, datos: limpiaDatos(json.datos, hoy), accion: accion, unidadPedida: unidadPedida };
   } catch (e) {
     console.error('[agente] no se pudo: ' + e.message);
     return null;

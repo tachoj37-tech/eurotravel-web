@@ -252,7 +252,8 @@ function diasDeViaje(salida, regreso) {
    bot: el cliente solo ve el total y el anticipo. */
 function conTotalFijado(precio, total, resumen) {
   const base = precio || {};
-  const anticipo = Math.ceil(total * tarifa.ANTICIPO / 500) * 500;
+  const multiplo = tarifa.ANTICIPO_MULTIPLO || 500;
+  const anticipo = Math.ceil(total * tarifa.ANTICIPO / multiplo) * multiplo;
   /* Sin cotizador (autobús, Suburban) el precio no trae días: se sacan
      de las fechas para que el texto no diga «undefined días» (C3). */
   const r = resumen || {};
@@ -1273,6 +1274,15 @@ async function loQueDiceElAgente(envio) {
        dueño, 6-sep-2026).
        ------------------------------------------------------------ */
     if (accion === 'cotizar') {
+      /* Si el cliente preguntó algo en el mismo mensaje en que completó
+         el viaje («…de Guadalajara, ¿traen aire?»), la respuesta de la IA
+         sale ANTES de la espera; antes se tiraba (auditoría 7-sep-2026,
+         A12). Una respuesta que solo repite «te paso el precio» no. */
+      if (dicho.respuesta && !/precio|cotizaci/i.test(dicho.respuesta)) {
+        await manda({ numeroDeOrigen: envio.numeroDeOrigen, para: cliente, texto: dicho.respuesta,
+          pasaAPersona: false, escribio: '[agente · antes del precio]' });
+        agente.recuerda(cliente, 'bot', dicho.respuesta);
+      }
       const confirmar = Object.assign({}, nuevo, { paso: 'confirmar' });
       let r = null;
       try { r = conversacion.respuestaA('sí está bien', confirmar, hoy); } catch (e) { r = null; }
@@ -1350,6 +1360,11 @@ async function loQueDiceElAgente(envio) {
     return false;
   }
 
+  /* Sin respuesta no hay qué mandar: antes salía un texto vacío, Meta lo
+     rechazaba y el cliente se quedaba sin nada (auditoría 7-sep-2026, A1:
+     «¿cuánto sale?» antes de tener todos los datos). Se devuelve `false`
+     y contesta el guion con lo que falta. */
+  if (!dicho.respuesta) return false;
   await manda({ numeroDeOrigen: envio.numeroDeOrigen, para: cliente, texto: dicho.respuesta,
     pasaAPersona: false, escribio: '[agente]' });
   agente.recuerda(cliente, 'bot', dicho.respuesta);
@@ -1716,13 +1731,16 @@ async function manda(envio) {
            quién es.
            ------------------------------------------------------------ */
         ...(envio.reenviaMedio
-          ? {
-              type: envio.tipoMedio === 'document' ? 'document' : 'image',
-              [envio.tipoMedio === 'document' ? 'document' : 'image']: {
-                id: envio.reenviaMedio,
-                caption: envio.texto
-              }
-            }
+          ? (function () {
+              /* Foto y PDF llevan pie; audio y video no lo admiten. */
+              const tipo = ['image', 'document', 'audio', 'video'].indexOf(envio.tipoMedio) >= 0
+                ? envio.tipoMedio : 'image';
+              const medio = { id: envio.reenviaMedio };
+              if ((tipo === 'image' || tipo === 'document' || tipo === 'video') && envio.texto) medio.caption = envio.texto;
+              const cuerpo = { type: tipo };
+              cuerpo[tipo] = medio;
+              return cuerpo;
+            })()
           /* Una PLANTILLA aprobada por Meta, para escribirle a quien
              lleva más de 24 h sin contestar: fuera de esa ventana Meta
              rechaza el texto libre (código 131047). Sin variables: el
@@ -2073,8 +2091,19 @@ async function atiendeElAviso(crudo, firma, marcaDePuerta) {
     cargaLoQueSeSabe(crudo)
   ]);
   const r = webhook.procesa(crudo, firma, Object.assign({}, entorno, { audios }));
+  /* Una ráfaga: dos mensajes del mismo cliente en un aviso. `procesa` es
+     síncrona y el agente corre después, así que el segundo traía como
+     «estado de antes» lo que el GUION entendió del primero, no lo que
+     leyó la IA (auditoría 7-sep-2026, A8). Del segundo en adelante, el
+     estado de antes es la plática que el agente acaba de guardar. */
+  const yaAtendidosPorElAgente = [];
   for (const envio of r.envios) {
     try {
+      if (envio && envio.agente && envio.crudoDelCliente && envio.para) {
+        const repetido = yaAtendidosPorElAgente.some(function (n) { return tickets.mismoNumero(n, envio.para); });
+        if (repetido) envio.estadoAntes = webhook.charlaDe(envio.para);
+        else yaAtendidosPorElAgente.push(envio.para);
+      }
       await reparte(envio);
     } catch (e) {
       console.error('[whatsapp] un envío tronó y se siguió con los demás (' +
