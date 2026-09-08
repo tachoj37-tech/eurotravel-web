@@ -3834,6 +3834,8 @@ function pegaDatos(estado, datos) {
   }
   if (d.origen && e.origenSupuesto) { delete e.origenSupuesto; }
   if (d.ocasion && !e.ocasion) e.ocasion = d.ocasion;
+  /* El nombre dicho en el chat manda sobre el del perfil de WhatsApp. */
+  if (d.nombre) e.nombre = d.nombre;
   /* Los recorridos también se corrigen: «espérame, sí nos vamos a mover»
      cambia el precio (auditoría general del 8-sep, hallazgo 17). */
   if (typeof d.recorridos === 'number') e.recorridos = d.recorridos;

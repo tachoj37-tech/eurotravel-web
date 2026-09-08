@@ -219,3 +219,22 @@ create table if not exists vistos (
   cuando timestamptz not null default now()
 );
 alter table vistos enable row level security;
+
+-- ------------------------------------------------------------
+-- 8-SEP-2026 · EL REGISTRO POR TURNO DEL MODELO (reparación, Falla 1)
+-- ------------------------------------------------------------
+-- Por cada llamada a la IA: qué se le mandó (el bloque dinámico; el
+-- cacheado es fijo) y qué contestó, crudo. Es la única forma de ver la
+-- verdad cuando el bot «no se acuerda». Se purga con los mensajes.
+-- ------------------------------------------------------------
+create table if not exists turnos (
+  id        bigint generated always as identity primary key,
+  numero    text        not null,
+  cuando    timestamptz not null default now(),
+  mensaje   text,
+  dinamico  text,
+  respuesta text,
+  uso       jsonb
+);
+create index if not exists turnos_numero_cuando on turnos (numero, cuando desc);
+alter table turnos enable row level security;

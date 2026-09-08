@@ -361,6 +361,27 @@ async function leeCharla(numero) {
    la conversación no se puede volver a pintar.
    ============================================================ */
 
+/* El registro por turno del modelo (reparación del 8-sep-2026, Falla 1):
+   qué se le mandó (bloque dinámico) y qué contestó, crudo. Tabla `turnos`
+   (bloque 8-sep de docs/ALMACEN.sql); sin la tabla, falla en silencio y
+   queda la línea `[turno]` del registro de Vercel. */
+async function anotaTurno(turno) {
+  if (!turno || !turno.cliente) return false;
+  return !!(await pide('turnos', {
+    metodo: 'POST',
+    cabeceras: { 'Prefer': 'return=minimal' },
+    cuerpo: {
+      numero: llave(turno.cliente),
+      cuando: turno.cuando || new Date().toISOString(),
+      mensaje: String(turno.mensaje || '').slice(0, 2000),
+      dinamico: String(turno.dinamico || '').slice(0, 8000),
+      respuesta: String(turno.respuestaCruda || '').slice(0, 2000),
+      uso: turno.uso || null
+    },
+    sinRespuesta: true
+  }));
+}
+
 async function anotaMensaje(numero, de, texto, tipo) {
   const k = llave(numero);
   if (!k || !texto) return false;
@@ -500,7 +521,7 @@ module.exports = {
   hayAlmacen, llave,
   guardaFicha, leeFicha, fichasDelTablero, fichasDeSeguimiento, marcaToque,
   guardaCharla, leeCharla,
-  anotaMensaje, mensajesDe, tiraLoViejo, marcaVistos,
+  anotaMensaje, mensajesDe, tiraLoViejo, marcaVistos, anotaTurno,
   guardaTicket, leeTicket,
   guardaPrecio, preciosParecidos,
   VIDA_DIAS, VIDA_CHARLA_MS

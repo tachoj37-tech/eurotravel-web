@@ -1293,6 +1293,48 @@ function repartoPorPersona(texto, cliente, ficha, antes) {
   };
 }
 
+/* ------------------------------------------------------------
+   «LO QUE YA HICE» · las acciones del bot, para que el modelo las vea
+   ------------------------------------------------------------
+   El modelo no recuerda lo que mandó; solo sabe lo que está en el
+   contexto de este turno (reparación del 8-sep-2026, Fallas 1 y 2).
+   ------------------------------------------------------------ */
+const ETAPAS_DESPUES_DEL_PRECIO = ['con_precio', 'va_a_apartar', 'mando_comprobante', 'datos_del_contrato', 'contrato_listo'];
+function loQueYaHice(ficha, antes) {
+  const h = [];
+  const vistas = (antes && Array.isArray(antes.fotosVistas)) ? antes.fotosVistas : [];
+  vistas.forEach(function (id) {
+    const u = unidadDelCatalogo(id);
+    h.push('mandé fotos de ' + ((u && u.name) || id) + ' (no las vuelvas a mandar)');
+  });
+  if (ficha && ficha.viajeDatos && ficha.viajeDatos.fotoMandada && !vistas.length) h.push('mandé la foto de la unidad');
+  const e = ficha && ficha.etapa;
+  if (e === 'pidio_precio') h.push('pedí el precio al vendedor; el cliente ya recibió «en breve te paso tu cotización»');
+  if (ETAPAS_DESPUES_DEL_PRECIO.indexOf(e) >= 0) h.push('entregué el precio');
+  if (['va_a_apartar', 'mando_comprobante', 'datos_del_contrato', 'contrato_listo'].indexOf(e) >= 0) h.push('mandé los datos de depósito (anticipo y CLABE)');
+  if (['mando_comprobante', 'datos_del_contrato', 'contrato_listo'].indexOf(e) >= 0) h.push('recibí su comprobante; se están juntando los datos del contrato');
+  if (e === 'contrato_listo') h.push('el contrato está completo; falta confirmar el pago');
+  return h;
+}
+
+/* ¿La respuesta pregunta un dato que YA está en el estado? Devuelve el
+   campo, o null. */
+const PREGUNTA_DE = {
+  destino: /a d[oó]nde (van|va el plan|se van|quieren ir)|qu[eé] destino|para d[oó]nde/i,
+  salida: /qu[eé] d[ií]a salen|cu[aá]ndo salen|fecha de salida|qu[eé] fecha (salen|ser[ií]a)|para qu[eé] d[ií]a/i,
+  regreso: /cu[aá]ndo (regresan|vuelven)|qu[eé] d[ií]a (regresan|vuelven)|ida y vuelta el mismo d[ií]a/i,
+  gente: /cu[aá]ntos (van|son|ser[ií]an|viajan)|cu[aá]ntas personas/i,
+  origen: /de d[oó]nde salen|salen de la zona metropolitana/i,
+  nombre: /c[oó]mo te llamas|cu[aá]l es tu nombre|me dices tu nombre/i
+};
+function preguntaRepetida(respuesta, estado) {
+  const t = String(respuesta || '');
+  const e = estado || {};
+  return Object.keys(PREGUNTA_DE).find(function (k) {
+    return e[k] !== undefined && e[k] !== null && e[k] !== '' && PREGUNTA_DE[k].test(t);
+  }) || null;
+}
+
 /* Un cambio de fecha (salida o regreso) sobre un viaje que YA tiene precio
    dado, dicho en una plática sin otro viaje a medias. */
 function cambioDeFechaConPrecio(ficha, datos, antes) {
@@ -1362,14 +1404,19 @@ async function loQueDiceElAgente(envio) {
      recibiría una espera y un ticket más. */
   if (viajeDeLaFicha && antes.paso === 'confirmar') antes = {};
   const hayViaje = !!(antes.destino || antes.salida || antes.gente || antes.origen);
-  const dicho = await agente.conversa(texto, {
+  const opcionesDeLaIA = {
     hoy: hoy, cliente: cliente, estado: antes,
     viaje: viajeDeLaFicha,
+    /* «LO QUE YA HICE»: fotos, precio, datos de depósito, comprobante
+       (reparación del 8-sep-2026, Fallas 1 y 2). */
+    hechos: loQueYaHice(tickets.fichaDe(cliente), antes),
     falta: hayViaje ? conversacion.loQueFalta(antes) : (viajeDeLaFicha ? null : 'a dónde van'),
     historial: agente.historialDe(cliente),
     voz: { usted: /^(1|si|sí|usted)$/i.test(String(process.env.AGENTE_DE_USTED || '')) }
-  });
+  };
+  const dicho = await agente.conversa(texto, opcionesDeLaIA);
   if (!dicho) return false;
+  if (dicho.turno && almacen.hayAlmacen()) almacen.anotaTurno(dicho.turno).catch(function () {});
 
   /* Lo que la IA leyó se pega al estado de ANTES; lo que el guion había
      decidido de este mensaje se descarta. */
@@ -1397,6 +1444,26 @@ async function loQueDiceElAgente(envio) {
   const nuevo = conversacion.pegaDatos(antes, dicho.datos);
   webhook.guardaCharla(cliente, nuevo);
   agente.recuerda(cliente, 'cliente', texto);
+  /* Validación ANTES de mandar (Falla 1): si la IA pregunta un dato que ya
+     está en el estado, se regenera UNA vez diciéndoselo; si insiste, contesta
+     el guion con lo que de verdad falta. Nunca sale la pregunta repetida. */
+  if (dicho.accion === 'seguir' && dicho.respuesta) {
+    const repetida = preguntaRepetida(dicho.respuesta, nuevo);
+    if (repetida) {
+      console.error('[agente] volvió a preguntar «' + repetida + '» (ya se sabe: ' + nuevo[repetida] + '); se regenera');
+      const otra = await agente.conversa(texto, Object.assign({}, opcionesDeLaIA, {
+        estado: nuevo, falta: conversacion.loQueFalta(nuevo) || null,
+        aviso: 'Ese dato ya lo tienes: ' + repetida + ' = ' + nuevo[repetida] + '. No lo preguntes; sigue con lo que falta.'
+      }));
+      if (otra && otra.accion === 'seguir' && otra.respuesta && !preguntaRepetida(otra.respuesta, conversacion.pegaDatos(nuevo, otra.datos))) {
+        dicho.respuesta = otra.respuesta;
+      } else {
+        console.error('[agente] insistió; contesta el guion con lo que falta');
+        dicho.respuesta = conversacion.loQueFalta(nuevo) ? preguntaParaElCliente(nuevo)
+          : (viajeDeLaFicha && viajeDeLaFicha.estado === 'dado' ? '¿Te la aparto?' : '¿Te saco el precio?');
+      }
+    }
+  }
 
   const yaEstaTodo = !conversacion.loQueFalta(nuevo);
   let accion = dicho.accion;

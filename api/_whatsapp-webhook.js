@@ -1465,8 +1465,10 @@ function procesa(crudo, firma, entorno) {
                    su lugar sería un estado vacío pero VERDADERO, y hay
                    código que distingue las dos cosas. Un cambio así se
                    ve inofensivo y no lo es. */
+                /* El del perfil solo llena el hueco: si el cliente ya dijo
+                   cómo se llama, ese nombre se queda (Falla 1, 8-sep-2026). */
                 const suEstado = suNombre
-                  ? Object.assign(charlaDe(m.from) || {}, { nombre: suNombre })
+                  ? Object.assign({ nombre: suNombre }, charlaDe(m.from) || {})
                   : charlaDe(m.from);
                 /* ------------------------------------------------------------
                    EL AGENTE (dictado del dueño, 5-sep-2026): «no quiero
