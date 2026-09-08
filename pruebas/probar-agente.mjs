@@ -518,5 +518,88 @@ titulo('con el agente apagado, todo sigue como antes');
   process.env.AGENTE_IA = '1';
 }
 
+/* ============================================================ */
+titulo('el candado se saca del prompt en vivo: ninguna regla suelta le llega al cliente (auditoría 7-sep-2026, 1)');
+{
+  /* La auditoría comprobó que de 242 renglones del prompt, 205 pasaban el
+     candado viejo (que solo tenía las cadenas del incidente). Ahora el
+     candado se arma con el prompt mismo. */
+  const conversacion = (await import(pathToFileURL(path.join(RAIZ, 'bot.js')).href)).default;
+  const prompt = agente.instruccionesDelAgente({});
+  const reglas = prompt.split('\n').filter((r) => r.trim().length >= 30 && !/^\s*(\{|Cliente:)/.test(r));
+  const pasan = reglas.filter((r) => !agente.esTextoInterno(r));
+  okQue('de ' + reglas.length + ' renglones del prompt, pasan el candado a lo más 40 (pasan ' + pasan.length + ')', pasan.length <= 40);
+  okQue('  y los que pasan son puras frases de ejemplo entre comillas', pasan.every((r) => /«|"/.test(r)));
+  /* La regla exacta que se fugó el 7-sep, tal como la escribe el prompt
+     («es» en vez de «=»): frenada. */
+  okQue('la regla del origen, tal como está en el prompt, se frena',
+    agente.esTextoInterno('· El origen se pregunta como sí/no: «¿Salen de la zona metropolitana de Guadalajara?». Con «sí», datos.origen es "Guadalajara"; solo si dice que no, pregunta de qué ciudad.'));
+  okQue('  también sin el «datos.»', agente.esTextoInterno('El origen se pregunta como sí/no: «¿Salen de la zona metropolitana de Guadalajara?». Solo si dice que no, pregunta de qué ciudad.'));
+  okQue('  «Uno por mensaje. Cuando el cliente ya dio algo…»', agente.esTextoInterno('Uno por mensaje. Cuando el cliente ya dio algo, no lo vuelvas a preguntar.'));
+  okQue('  «"accion":"seguir"» suelto', agente.esTextoInterno('"accion":"seguir"'));
+  okQue('  la frase del «mismo día» con CUALQUIER destino, no solo Tequila (hallazgo 4)',
+    agente.esTextoInterno('si es ida y vuelta el mismo día (lo más común para Chapala); pregunta EXACTAMENTE «¿Es ida y vuelta el mismo día?» y, si dice que sí, regreso = salida'));
+  okQue('  la marca de plantilla (hallazgo 5)', agente.esTextoInterno('[plantilla eurotravel_toque1 · tu viaje a Puerto Vallarta]'));
+  okQue('  y «[fecha]» sin llenar (hallazgo 10)', agente.esTextoInterno('Tu fecha [fecha] sigue libre, ¿te la aparto?'));
+  /* Lo que SÍ puede decir: las frases de venta del guion y los ejemplos del prompt. */
+  ['¡Qué tal! Bienvenido a Eurotravel 🚐 ¿A dónde va el plan?',
+    '¿Salen de la zona metropolitana de Guadalajara?',
+    'Para 20 la unidad es la Sprinter, es la que hay para grupos de hasta 20. ¿Qué día salen?',
+    'Va, Chapala. ¿Es ida y vuelta el mismo día?',
+    'Listo, i6S. Allá, ¿se van a andar moviendo con el camión o solo los llevamos y traemos?',
+    'Va. En breve te paso tu cotización y la disponibilidad de tu viaje 🙌',
+    'Salen en la noche, duermen en el camino y amanecen allá sin gastar en hotel. ¿Qué día salen?',
+    'Te recomiendo el Neobus: es el que mejor se ajusta para 48 y trae baño. ¿Te late?',
+    conversacion.mensajeDeAutobuses(50)
+  ].forEach((f) => okQue('  pasa: «' + f.slice(0, 50).replace(/\n/g, ' ') + '…»', !agente.esTextoInterno(f)));
+
+  /* Y de punta a punta: la IA repite una regla del prompt y el cliente
+     recibe algo del guion en su lugar. */
+  limpia();
+  const C = '5213366670220';
+  laIA = function (t) {
+    if (/vallarta/i.test(t)) return { respuesta: 'Vallarta, va. ¿Qué día salen?', datos: { destino: 'Puerto Vallarta' }, accion: 'seguir' };
+    return { respuesta: 'El origen se pregunta como sí/no: «¿Salen de la zona metropolitana de Guadalajara?». Solo si dice que no, pregunta de qué ciudad. Nunca preguntes zona, norte/sur, colonia ni dirección: eso se pide hasta el contrato.', datos: {}, accion: 'seguir' };
+  };
+  await dice('a vallarta', C);
+  await dice('el 9 de septiembre', C);
+  const todo = textos(C).join('\n');
+  okQue('la regla NO le llegó al cliente', !/se pregunta como sí\/no|Nunca preguntes zona/.test(todo));
+  okQue('  y sí recibió algo (el guion tomó la vuelta)', textos(C).length >= 2 && textos(C).slice(-1)[0].trim().length > 0);
+}
+
+/* ============================================================ */
+titulo('a otro número nunca, desde la única puerta de salida (auditoría 7-sep-2026, 2 y 3)');
+{
+  limpia();
+  const { manda } = await import(pathToFileURL(path.join(RAIZ, 'api', 'whatsapp.mjs')).href);
+  const C = '5213366670221';
+  const salio = await manda({ numeroDeOrigen: '111', para: C, pasaAPersona: false, escribio: '[prueba]',
+    texto: 'Claro 🙌 Márcame o escríbeme al *33 2400 2285* y te atiendo.' });
+  okQue('el envío sale', salio === true);
+  ok('  pero al cliente le llega la espera honesta, sin el teléfono', textos(C).slice(-1)[0], 'Va, en breve te contestan por aquí mismo 🙌');
+  okQue('  y al dueño el ticket de «quiere hablar contigo»', /Quiere hablar contigo/.test(textos(DUENO).join('\n')) && new RegExp(C).test(textos(DUENO).join('\n')));
+  /* La marca de plantilla no sale como texto… */
+  mandados = [];
+  const bloqueado = await manda({ numeroDeOrigen: '111', para: C, pasaAPersona: false, texto: '[plantilla eurotravel_toque1 · tu viaje a Puerto Vallarta]' });
+  okQue('la marca «[plantilla …]» como texto se frena', bloqueado === false && textos(C).length === 0);
+  /* …pero la plantilla de verdad sí se manda (el candado no la toca). */
+  mandados = [];
+  const plantilla = await manda({ numeroDeOrigen: '111', para: C, pasaAPersona: false,
+    plantilla: { nombre: 'eurotravel_toque1', idioma: 'es_MX', parametros: ['tu viaje a Puerto Vallarta'] },
+    texto: '[plantilla eurotravel_toque1 · tu viaje a Puerto Vallarta]' });
+  okQue('  y la plantilla de verdad sí sale', plantilla === true && mandados.length === 1 && mandados[0].type === 'template');
+}
+
+/* ============================================================ */
+titulo('lo que el dueño teclea como comando no se anota en la plática del cliente (auditoría 7-sep-2026, 9)');
+{
+  const es = (t) => webhook.esComandoDelDueno({ text: { body: t } });
+  okQue('«total 48000» es comando', es('total 48000') && es('total $48,000') && es('Total 48 mil'));
+  okQue('«3312345678 yo» y «3312345678 bot» son comandos', es('3312345678 yo') && es('3312345678 bot') && es('+52 1 33 1234 5678: yo'));
+  okQue('«tablero», «ver», «yo», «bot» siguen siendo comandos', es('tablero') && es('yo') && es('bot'));
+  okQue('  pero lo que sí le dice a un cliente, no', !es('quedamos en 48,000') && !es('3312345678 quedamos en 48,000') && !es('va'));
+}
+
 console.log('\n' + buenas + ' buenas, ' + malas + ' malas');
 process.exit(malas ? 1 : 0);

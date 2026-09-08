@@ -78,6 +78,15 @@ okQue('y aunque venga con otro prefijo',
 okQue('un cliente NO es el dueño', !tk.esDelDueno(CLIENTE, ENV));
 okQue('sin número configurado, nadie es el dueño',
   !tk.esDelDueno(DUENO, { DUENO_WHATSAPP: '' }));
+/* Auditoría 7-sep-2026, hallazgo 7: ser el dueño se decide con el número
+   COMPLETO. Un número de otro país que termine en los mismos 10 dígitos
+   NO es el dueño (antes entraba y podía pedir «tablero»). */
+okQue('otro país con los mismos 10 dígitos al final NO es el dueño',
+  !tk.esDelDueno('13311112222', ENV) && !tk.esDelDueno('343311112222', ENV));
+okQue('  y con 10 dígitos pelones en la variable, sí lo es',
+  tk.esDelDueno('5213311112222', { DUENO_WHATSAPP: '3311112222' }));
+okQue('  «mismoNumero» sigue agrupando por los últimos 10 (no autoriza)',
+  tk.mismoNumero('13311112222', DUENO));
 
 /* ============================================================ */
 titulo('el ticket');
@@ -142,13 +151,30 @@ hook.olvidaTodo(); tk.olvidaTodo();
 
 hook.olvidaTodo(); tk.olvidaTodo();
 {
-  /* Camino 2: sin memoria. Empieza su mensaje con el número, que el
-     ticket le dejó escrito. Esto es lo que funciona aunque Vercel haya
-     reciclado la instancia. */
+  /* Camino 2: sin ticket en memoria. Empieza su mensaje con el número,
+     que el ticket le dejó escrito. Esto es lo que funciona aunque Vercel
+     haya reciclado la instancia: la ficha del cliente la siembra el
+     almacén (cargaLoQueSeSabe carga la del número tecleado). Aquí se
+     siembra a mano, como lo haría el almacén. */
+  tk.anotaEtapa(CLIENTE, 'visto', {}, Date.now());
   const r = corre(aviso(DUENO, CLIENTE + ': quedamos en 46,500'));
-  ok('sin memoria, el número del mensaje basta', r.envios[0].para, CLIENTE);
+  ok('sin ticket en memoria, el número del mensaje basta', r.envios[0].para, CLIENTE);
   ok('  y el número no se le reenvía al cliente', r.envios[0].texto,
     'quedamos en 46,500');
+}
+
+hook.olvidaTodo(); tk.olvidaTodo();
+{
+  /* Auditoría 7-sep-2026, hallazgo 6: un dedazo en el número mandaba el
+     viaje y el precio de un cliente a un desconocido. A un número que
+     nunca ha hablado con el bot (ni ficha ni charla) no se le manda nada:
+     se le avisa al dueño. Esta aserción cambió de lado a propósito:
+     antes «sin memoria, el número basta»; ahora el número basta si el
+     cliente existe. */
+  const r = corre(aviso(DUENO, '5213399998889: quedamos en 46,500'));
+  ok('a un número desconocido NO se le manda nada: el aviso va al dueño', r.envios[0].para, DUENO);
+  okQue('  diciéndole que no conoce ese número', /No conozco el número/.test(r.envios[0].texto));
+  okQue('  y sin que el texto llegue a nadie más', r.envios.length === 1);
 }
 
 /* ============================================================ */

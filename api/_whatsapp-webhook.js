@@ -555,9 +555,28 @@ const PIDE_VER =
 const PIDE_TOMO = /^\s*(yo|tomo|lo tomo|me lo quedo|lo atiendo yo)\s*[.!]*\s*$/i;
 const PIDE_SUELTA = /^\s*(bot|ia|suelta|su[eé]ltalo|libera|lib[eé]ralo|retoma)\s*[.!]*\s*$/i;
 
+/* «total 48000» y «3312345678 yo» también son comandos: no se le dijeron
+   a ningún cliente y no deben quedar en su plática (auditoría 7-sep-2026,
+   hallazgo 9). El número al frente se quita antes de comparar. */
+const PIDE_TOTAL = /^\s*total\s+\$?\s*[\d.,\s]+\s*(mil|k)?\s*$/i;
 function esComandoDelDueno(mensaje) {
   const t = String((mensaje && mensaje.text && mensaje.text.body) || '');
-  return PIDE_TABLERO.test(t) || PIDE_VER.test(t) || PIDE_TOMO.test(t) || PIDE_SUELTA.test(t);
+  const sinNumero = t.replace(/^\s*\+?\d[\d\s()-]{9,17}\s*[:\-,]?\s*/, '');
+  return PIDE_TABLERO.test(t) || PIDE_VER.test(t) || PIDE_TOTAL.test(t) ||
+    PIDE_TOMO.test(t) || PIDE_SUELTA.test(t) || PIDE_TOMO.test(sinNumero) || PIDE_SUELTA.test(sinNumero);
+}
+
+/* ¿Este número ya habló con el bot? Vale la ficha (sembrada del almacén)
+   o una charla en memoria. Se compara por los últimos 10 dígitos porque
+   el dueño teclea «3312345678» y Meta manda «5213312345678». */
+function conoceAlCliente(numero) {
+  if (tickets.fichaDe(numero)) return true;
+  const cola = String(numero || '').replace(/\D/g, '').slice(-10);
+  if (!cola) return false;
+  for (const k of charlas.keys()) {
+    if (String(k).replace(/\D/g, '').slice(-10) === cola) return true;
+  }
+  return false;
 }
 
 /* ------------------------------------------------------------
@@ -1062,6 +1081,19 @@ function procesa(crudo, firma, entorno) {
               texto: 'Ese no es el ticket del precio 🙈 Contesta el que dice *💰 Precio por confirmar* ' +
                 '(el más reciente de ese cliente), o escríbeme «' + dirigido.cliente + ' 52,000» con su número y el precio.',
               pasaAPersona: false, escribio: '[precio · ticket equivocado]'
+            });
+            continue;
+          }
+          if (dirigido && dirigido.texto && dirigido.via === 'numero' && !conoceAlCliente(dirigido.cliente)) {
+            /* Un dedazo en el número mandaba el viaje y el precio de un
+               cliente a un desconocido (auditoría 7-sep-2026, hallazgo 6).
+               A un número que nunca ha hablado con el bot no se le manda
+               nada: se le avisa al dueño y él revisa. */
+            envios.push({
+              numeroDeOrigen: deQuien, para: m.from,
+              texto: '🙈 No conozco el número *' + dirigido.cliente + '*: nadie con ese número ha escrito al bot. ' +
+                'No le mandé nada. Revisa el número, o contesta citando un mensaje de ese cliente.',
+              pasaAPersona: false, escribio: '[del dueño · número desconocido]'
             });
             continue;
           }
@@ -1723,6 +1755,8 @@ module.exports = {
   revisaLaPuerta,
   relojDe,
   sinMandarAOtroNumero,
+  OTRO_NUMERO,
+  conoceAlCliente,
   idsDeAudio,
   firmaValida,
   rutaSecretaValida,

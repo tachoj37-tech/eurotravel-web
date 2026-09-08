@@ -1146,7 +1146,9 @@ function preguntaParaElCliente(estado) {
    = "Guadalajara"». Este candado está en `manda`, la única puerta de
    salida, para que no dependa de quién armó el texto.
    ------------------------------------------------------------ */
-const TEXTO_INTERNO = /datos\.[a-z]+\s*=|Pregunta EXACTAMENTE|EXACTAMENTE eso|\(ver lista\)|lo m[aá]s com[uú]n\)|\{\{\d\}\}|\bloQueFalta\b|\baccion\b\s*[:=]|"respuesta"\s*:|YA SE SABE DEL VIAJE|PRECIO YA (PEDIDO|DADO)|LO QUE SIGUE POR SABER|VIAJES ANTERIORES DE ESTE CLIENTE|REGLAS DE FORMA|PROHIBIDO, SIN EXCEPCI|ACCIONES \(el motor|TU TRABAJO:|LO [UÚ]NICO CIERTO|unidadPedida|NUNCA zona, norte\/sur/;
+/* Las marcas y los fragmentos del prompt viven en _agente.js
+   (`esTextoInterno`), para que la entrada (`sanea`) y la salida (`manda`)
+   frenen exactamente lo mismo. Aquí solo se suman las frases del guion. */
 
 /* Y, además de las marcas, las FRASES MISMAS que `loQueFalta` le dice a la
    IA, sacadas del guion en vivo (no copiadas a mano): si mañana alguien
@@ -1176,7 +1178,7 @@ const FRASES_PARA_LA_IA = (function () {
 function esTextoInterno(texto) {
   const t = String(texto || '');
   if (!t) return false;
-  if (TEXTO_INTERNO.test(t)) return true;
+  if (agente.esTextoInterno(t)) return true;
   const bajo = t.toLowerCase();
   return FRASES_PARA_LA_IA.some(function (f) { return bajo.indexOf(f) >= 0; });
 }
@@ -1560,6 +1562,12 @@ async function cargaLoQueSeSabe(crudo) {
       for (const c of (e.changes || [])) {
         for (const m of (((c && c.value) || {}).messages || [])) {
           if (!m || !tickets.mismoNumero(m.from, dueno)) continue;
+          /* Si tecleó el número del cliente («3312345678 …»), la ficha de
+             ESE cliente también se carga: sin esto, en una instancia fría
+             el webhook no veía su precio por confirmar ni sabía si el
+             número existe (auditoría 7-sep-2026, hallazgo 6). */
+          const tecleado = tickets.clienteDeLaRespuesta(m, tickets.tickets);
+          if (tecleado && tecleado.via === 'numero' && numeros.indexOf(tecleado.cliente) < 0) numeros.push(tecleado.cliente);
           const citado = m.context && m.context.id;
           if (!citado || tickets.tickets.get(citado)) continue;
           const t = await almacen.leeTicket(citado).catch(function () { return null; });
@@ -1814,10 +1822,35 @@ async function manda(envio) {
      sí (los tickets traen nombres de campos a propósito). */
   const dueno = tickets.numeroDelDueno(process.env);
   const esParaElDueno = dueno && tickets.mismoNumero(envio.para, dueno);
-  if (!esParaElDueno && !envio.esTicket && esTextoInterno(envio.texto)) {
+  /* Una plantilla no manda `texto`: ese campo es solo la marca para el log
+     (`[plantilla …]`), y la marca misma es texto interno. */
+  if (!esParaElDueno && !envio.esTicket && !envio.plantilla && esTextoInterno(envio.texto)) {
     console.error('[fuga] se frenó un texto interno que iba a un cliente (' +
       (envio.escribio || 'sin marca') + '): ' + String(envio.texto).slice(0, 120).replace(/\n/g, ' '));
     return false;
+  }
+  /* Y a un cliente que YA está en WhatsApp nunca se le manda a otro número
+     (dictado del dueño, 6-sep-2026). Este candado estaba en un solo
+     llamador; la auditoría del 7-sep encontró dos caminos que lo brincaban
+     (el respaldo de la IA y el precio con «requiere asesor»). Aquí, en la
+     única puerta de salida, ya no depende de quién armó el texto: el
+     cliente recibe una espera honesta y el dueño el aviso. */
+  if (!esParaElDueno && !envio.esTicket && !envio.plantilla && !envio.reenviaMedio &&
+      webhook.OTRO_NUMERO.test(String(envio.texto || ''))) {
+    console.error('[otro-numero] se cambió un texto que mandaba al cliente a otro número (' +
+      (envio.escribio || 'sin marca') + ')');
+    envio = Object.assign({}, envio, {
+      texto: 'Va, en breve te contestan por aquí mismo 🙌', opciones: [], pasaAPersona: false,
+      escribio: (envio.escribio || '') + ' · sin otro número'
+    });
+    if (dueno) {
+      await manda({
+        numeroDeOrigen: envio.numeroDeOrigen, para: dueno, esTicket: true, sobreCliente: envio.para,
+        pasaAPersona: false, escribio: '[ticket · quiere hablar contigo]',
+        texto: '🙋 *Quiere hablar contigo*\n\nEl guion quiso mandarlo al teléfono; le dije que en breve ' +
+          'se le contesta por aquí. Contéstame *este mensaje* y le llega tal cual.\n_cliente: ' + envio.para + '_'
+      });
+    }
   }
   try {
     const r = await fetch(GRAFO + '/' + numero + '/messages', {
@@ -2025,7 +2058,11 @@ async function mandaSeguimientos(ahora) {
 
     if (await manda(envio)) {
       cuenta.mandados++;
-      almacen.anotaMensaje(f.cliente, 'bot', envio.texto, 'texto').catch(function () {});
+      /* A la memoria va lo que el cliente LEYÓ, nunca la marca
+         `[plantilla …]`: esa marca se sembraba luego en el historial del
+         agente como turno suyo, y es justo lo que la IA copia
+         (auditoría 7-sep-2026, hallazgo 5). */
+      almacen.anotaMensaje(f.cliente, 'bot', envio.textoParaLaMemoria || envio.texto, 'texto').catch(function () {});
     }
   }
   console.log('[seguimiento] ' + JSON.stringify(cuenta));
@@ -2070,9 +2107,16 @@ function envioDelToque(f, d) {
   const v = f.viajeDatos || {};
   const destino = String(v.destino || '').replace(/[#$%{}]/g, '').trim();
   const viaje = destino ? 'tu viaje a ' + destino : 'tu viaje';
+  /* Lo que se guarda en la memoria del cliente es el texto libre del mismo
+     toque (el que dice lo mismo que la plantilla), no la marca. */
+  const textoLibre = recordatorios.recordatorio(d.toque, {
+    cliente: f.cliente, vuelta: Math.floor((f.precioEn || 0) / 1000),
+    fecha: v.salida ? tickets.comoSeDice(v.salida) : null, fechaLibre: false
+  });
   return Object.assign(base, {
     plantilla: { nombre: nombre, idioma: process.env.WHATSAPP_PLANTILLA_IDIOMA || 'es_MX', parametros: [viaje] },
-    texto: '[plantilla ' + nombre + ' · ' + viaje + ']'
+    texto: '[plantilla ' + nombre + ' · ' + viaje + ']',
+    textoParaLaMemoria: textoLibre || ('Te escribí para retomar ' + viaje + ' 🙌')
   });
 }
 

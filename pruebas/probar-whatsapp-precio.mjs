@@ -538,13 +538,16 @@ function idDelUltimoTicket() {
   okQue('  y sin precio', !/\*Total: \$/.test(t));
 }
 
-/* 6 · Honesto cuando ya no hay nada: la instancia se recicló y no hay almacén. */
+/* 6 · Honesto cuando ya no hay nada: la instancia se recicló y no hay almacén.
+   Auditoría 7-sep-2026, hallazgo 6: a un número que el bot no conoce (ni ficha
+   ni charla) no se le manda nada; el aviso va al dueño. Antes el «va» llegaba
+   literal a quien fuera: un dedazo en el número era una fuga. */
 {
   webhook.olvidaTodo(); mandados = [];
-  await contesta('5213366670013: va', null);   // por número, sin ticket en memoria
+  await contesta('5213366670013: va', null);   // por número, sin ticket ni ficha
   okQue('sin precio guardado no se inventa nada al cliente', !/\*Total: \$/.test(textos('5213366670013').join('\n')));
-  okQue('  el «va» llega literal, como cualquier texto (no había nada que confirmar)',
-    /^va$/m.test(textos('5213366670013').join('\n')));
+  okQue('  y a un número desconocido no le llega ni el «va»', textos('5213366670013').length === 0);
+  okQue('  el dueño recibe «no conozco el número»', /No conozco el número/.test(textos(DUENO).join('\n')));
 }
 
 process.env.CONFIRMAR_PRECIOS = '0';

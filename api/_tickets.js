@@ -75,9 +75,26 @@ function mismoNumero(a, b) {
   return x.slice(-10) === y.slice(-10);
 }
 
+/* Un número mexicano con su lada completa: «521…» (13 dígitos, como lo
+   manda Meta) y «52…» (12) son el mismo, y 10 dígitos pelones se toman
+   como de México. Un número de otro país se queda como está. */
+function conLadaCompleta(numero) {
+  const n = soloDigitos(numero);
+  if (n.length === 10) return '52' + n;
+  if (n.length === 13 && n.slice(0, 3) === '521') return '52' + n.slice(3);
+  return n;
+}
+
+/* Ser el dueño se decide con el número COMPLETO, no con los últimos 10:
+   con los últimos 10 un número de otro país que terminara igual entraba
+   por su rama y podía pedir «tablero» —la cartera entera— o «ver»
+   cualquier conversación (auditoría 7-sep-2026, hallazgo 7). Los últimos
+   10 siguen sirviendo para AGRUPAR mensajes (`mismoNumero`), no para
+   autorizar. */
 function esDelDueno(numero, entorno) {
   const d = numeroDelDueno(entorno);
-  return !!d && mismoNumero(numero, d);
+  if (!d) return false;
+  return conLadaCompleta(numero) === conLadaCompleta(d);
 }
 
 /* ------------------------------------------------------------

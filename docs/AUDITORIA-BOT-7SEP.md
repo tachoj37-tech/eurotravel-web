@@ -105,6 +105,30 @@ IA quiera meter en un dato del contrato.
 |---|---|---|---|---|
 | D1 | CRÍTICO | `whatsapp.mjs` rama «fotos» del agente | El remate después de las fotos se armaba con `loQueFalta`, que es texto de instrucciones para la IA: a un cliente le llegó «Pregunta EXACTAMENTE eso… datos.origen = "Guadalajara"». Los tres revisores no lo vieron porque el texto de `origen` en `loQueFalta` se volvió una instrucción larga el 6-sep. | **Resuelto el 7-sep**: el remate usa la pregunta del guion; `manda` frena cualquier texto con marcas internas hacia un cliente (`[fuga]` en el registro); `sanea()` igual. Pruebas en `probar-agente.mjs` y `probar-fase1.mjs`. |
 
+## E · Segunda auditoría de fugas (7-sep-2026, tarde), después de D1
+
+Un agente revisor (Opus) buscó cualquier camino por el que texto interno o
+un «márcame a otro número» pudiera llegarle a un cliente. Cada hallazgo se
+comprobó con script, no por lectura. Estado al cierre del día:
+
+| # | Grav. | Qué encontró | Estado |
+|---|---|---|---|
+| E1 | CRÍTICO | El candado de D1 estaba ajustado a las **cadenas exactas del incidente**, no a la clase de texto: de 242 renglones del prompt, 205 pasaban `sanea()` y `esTextoInterno()` a la vez, incluida la misma regla que se fugó (el prompt dice `datos.origen es` y el candado buscaba `datos.origen =`). | **Resuelto.** El candado se saca del prompt en vivo (`_agente.js`: `FRAGMENTOS_DEL_PROMPT`, cada oración de cada regla, sin los ejemplos entre comillas) y vive en un solo lugar para `sanea` y `manda`. Prueba: de los renglones del prompt pasan ≤ 40 y todos son frases de ejemplo entre comillas. |
+| E2 | CRÍTICO | La IA de respaldo (`loQueLaIAEntendido` → `aplicaEntendido`) contestaba «Márcame o escríbeme al 33 2400 2285» cuando el agente no respondía y el cliente pedía persona; `sinMandarAOtroNumero` vivía en un solo llamador. | **Resuelto.** El candado de «otro número» está en `manda`, la única puerta de salida: el cliente recibe «en breve te contestan por aquí mismo» y el dueño un ticket «quiere hablar contigo». |
+| E3 | ALTO | El precio con `requiereAsesor` (viajes de más de 1,400 km) o sin respuesta del motor salía con «márcame al 33 2400 2285», incluso **después** del «va» del dueño. | **Resuelto** por E2 (mismo candado en `manda`). |
+| E4 | ALTO | `FRASES_PARA_LA_IA` cubría el paso «regreso» de destino de un día solo con Tequila (el destino va interpolado); con Chapala o Tapalpa la frase pasaba. | **Resuelto.** Marcas por forma: `pregunta EXACTAMENTE` sin distinguir mayúsculas y `lo más común para`. |
+| E5 | ALTO | La marca `[plantilla …]` de los toques se guardaba en el almacén como mensaje del bot y de ahí se sembraba en el historial del agente como turno suyo. | **Resuelto.** Al almacén va el texto libre del mismo toque (`textoParaLaMemoria`); la marca es texto interno y `manda` la frena si va como texto (la plantilla real sí sale). |
+| E6 | MEDIO | Un dedazo del dueño en «5213322220001 quedamos en 52,000» mandaba el viaje y el precio a un desconocido. | **Resuelto.** A un número sin ficha ni charla no se le manda nada; al dueño le llega «No conozco el número…». Y `cargaLoQueSeSabe` ahora carga la ficha del número tecleado (antes, en instancia fría, tampoco veía su precio por confirmar). |
+| E7 | MEDIO | `esDelDueno` comparaba solo los últimos 10 dígitos: un número extranjero terminado igual entraba por la rama del dueño («tablero» = la cartera entera). | **Resuelto.** Autoriza el número completo con lada (52/521 son el mismo); los últimos 10 solo agrupan. |
+| E8 | MEDIO | `ESPIAR=1` copia cada mensaje al número configurado y cada copia ocupa un lugar de los 300 tickets. | **Pendiente, decisión del dueño**: el espejo se apaga al lanzar (`ESPIAR` fuera de Vercel). |
+| E9 | MEDIO | «total 48000» y «3312345678 yo» se anotaban en la plática del cliente como si el dueño se lo hubiera dicho. | **Resuelto.** `esComandoDelDueno` los reconoce (con el número al frente o sin él). |
+| E10 | BAJO | `[fecha]` sin llenar en los textos con calendario (hoy inalcanzables). | **Cubierto**: `\[fecha\]` es marca interna. |
+| E11 | BAJO | `para: dueno || numeroDeOrigen` con `DUENO_WHATSAPP` vacía (hoy inalcanzable). | Sin cambio; queda anotado. |
+
+Limpio según el revisor: ningún `esTicket` va a un cliente (16 puntos
+comprobados), el remate de fotos, `sacaJSON`, `reinyectaAlGuion`, los
+textos de `_seguimiento.js` y `_recordatorios.js`.
+
 ## Fases para arreglarlo
 
 Cada fase termina con la suite completa en verde y en producción. Se

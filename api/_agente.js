@@ -319,12 +319,76 @@ function olvidaTodo() { historiales.clear(); }
 
 /* ---- lo que dice el agente, saneado ---- */
 /* Si la IA repite sus instrucciones o nombres de campos, eso no sale. */
-const TEXTO_INTERNO = /datos\.[a-z]+\s*=|Pregunta EXACTAMENTE|EXACTAMENTE eso|\(ver lista\)|\{\{\d\}\}|\baccion\b\s*[:=]|"respuesta"\s*:|YA SE SABE DEL VIAJE|PRECIO YA (PEDIDO|DADO)|LO QUE SIGUE POR SABER|unidadPedida/;
+/* ------------------------------------------------------------
+   EL CANDADO CONTRA TEXTO INTERNO
+   ------------------------------------------------------------
+   Dos capas, y las dos viven aquí para que `sanea` (la entrada) y
+   `manda` (la salida, en whatsapp.mjs) frenen exactamente lo mismo.
+
+   1 · MARCAS DE FORMA: cosas que solo existen en el prompt o en el
+       JSON del motor (`datos.origen`, `"accion"`, `{{1}}`, títulos en
+       mayúsculas…). Un cliente nunca las dice y una respuesta de venta
+       nunca las trae.
+
+   2 · EL PROMPT MISMO, renglón por renglón. La auditoría del 7-sep-2026
+       comprobó que de 242 renglones del prompt, 205 pasaban el candado
+       de marcas: la IA no repite el bloque entero, repite UNA regla
+       («El origen se pregunta como sí/no…» le llegó a un cliente tal
+       cual). Así que el candado se saca del prompt en vivo: cada
+       oración de cada regla, sus primeros 40 caracteres. Si mañana
+       cambia el prompt, el candado cambia solo. Se saltan las oraciones
+       que empiezan con una frase de ejemplo entre comillas: ésas la IA
+       SÍ las puede decir.
+   ------------------------------------------------------------ */
+const TEXTO_INTERNO = /datos\.[a-z]+\b|[Pp]regunta EXACTAMENTE|EXACTAMENTE eso|\(ver lista\)|lo m[aá]s com[uú]n (para|\))|\{\{\d\}\}|\bloQueFalta\b|\baccion\b\s*"?\s*[:=]|"accion"|"respuesta"\s*:|YA SE SABE DEL VIAJE|PRECIO YA (PEDIDO|DADO)|LO QUE SIGUE POR SABER|VIAJES ANTERIORES DE ESTE CLIENTE|REGLAS DE FORMA|PROHIBIDO, SIN EXCEPCI|ACCIONES \(el motor|TU TRABAJO:|LO [UÚ]NICO CIERTO|unidadPedida|NUNCA zona, norte\/sur|\[fecha\]|\[plantilla |ÚLTIMOS MENSAJES:|^Tú: |\nTú: |DESTINOS DE UN D[IÍ]A \(|· "[a-z]+":|Tu "respuesta"|"datos" trae|"regreso" igual/;
+
+const LARGO_DE_FRAGMENTO = 40;
+const FRAGMENTOS_DEL_PROMPT = (function () {
+  const vistos = new Set();
+  [instruccionesDelAgente({}), instruccionesDelAgente({ usted: true })].forEach(function (prompt) {
+    String(prompt || '').split('\n').forEach(function (renglon) {
+      /* Los ejemplos de conversación del prompt («Cliente: …» / el JSON
+         de respuesta) son frases que la IA SÍ debe decir: no son candado. */
+      if (/^\s*(\{|Cliente:|Tú:)/.test(renglon)) return;
+      /* Y dentro de una regla, lo que va entre comillas es ejemplo de lo
+         que se dice al cliente: se quita antes de sacar fragmentos. */
+      const sinEjemplos = renglon
+        .replace(/«[^»]*»/g, ' ')
+        .replace(/"respuesta"\s*:\s*"[^"]*"/g, ' ')
+        .replace(/"[^"\n]{15,}"/g, ' ');
+      /* El renglón entero y cada una de sus oraciones: la IA repite a
+         veces la regla completa y a veces una oración de en medio. */
+      [sinEjemplos].concat(sinEjemplos.split(/(?<=[.;:!?])\s+/)).forEach(function (oracion) {
+        const limpia = oracion.replace(/^[\s·•\-–—*]+/, '').replace(/\s+/g, ' ').trim();
+        if (limpia.length < 30) return;
+        if (/^[«"“¿¡(]/.test(limpia)) return;
+        const fragmento = limpia.toLowerCase().slice(0, LARGO_DE_FRAGMENTO);
+        /* Un fragmento que es pura frase de venta corta no sirve de
+           candado: se pide que traiga al menos cuatro palabras. */
+        if (fragmento.split(/\s+/).length < 4) return;
+        vistos.add(fragmento);
+      });
+    });
+  });
+  return Array.from(vistos);
+})();
+
+function pareceTextoDelPrompt(texto) {
+  const bajo = String(texto || '').toLowerCase();
+  if (bajo.length < 30) return false;
+  return FRAGMENTOS_DEL_PROMPT.some(function (f) { return bajo.indexOf(f) >= 0; });
+}
+
+function esTextoInterno(texto) {
+  const t = String(texto || '');
+  if (!t) return false;
+  return TEXTO_INTERNO.test(t) || pareceTextoDelPrompt(t);
+}
 
 function sanea(texto) {
   const t = String(texto || '').replace(/\s+\n/g, '\n').trim();
   if (!t) return null;
-  if (TEXTO_INTERNO.test(t)) return null;
+  if (esTextoInterno(t)) return null;
   if (DINERO.test(t)) return null;
   if (PALABRAS_PROHIBIDAS.test(t)) return null;
   if (t.length > 480) return null;
@@ -424,5 +488,7 @@ async function conversa(mensaje, opciones) {
 module.exports = {
   conversa, sanea, limpiaDatos, instruccionesDelAgente, textoDelContexto,
   recuerda, historialDe, siembraHistorial, olvidaTodo, PALABRAS_PROHIBIDAS,
-  unidadPorTexto, fichaDeUnidades
+  unidadPorTexto, fichaDeUnidades,
+  /* El candado, para que `manda` frene lo mismo que `sanea`. */
+  esTextoInterno, pareceTextoDelPrompt, TEXTO_INTERNO, FRAGMENTOS_DEL_PROMPT
 };
