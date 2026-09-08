@@ -1319,6 +1319,27 @@ function repartoPorPersona(texto, cliente, ficha, antes) {
 }
 
 /* ------------------------------------------------------------
+   FILTRO DE SALIDA (reparación del 8-sep-2026, Falla 4)
+   ------------------------------------------------------------
+   Devuelve el motivo si el texto NO debe salir hacia un cliente, o ''.
+   Forma de código o JSON (```, llaves, <>), rastros de herramientas o
+   del prompt, errores del programa, rutas de archivo, o un largo fuera
+   de lo humano: la IA ya viene recortada a 480; los textos del motor
+   (precio con apartado, lista de autobuses) llegan a ~700, así que el
+   tope general es 1200 y para lo que escribió la IA, 600.
+   ------------------------------------------------------------ */
+const FORMA_DE_CODIGO = /```|[{}<>]|\btool_(use|result)\b|\bfunction\b|\bsystem prompt\b|\bprompt\b|\binstrucciones del (agente|sistema)\b|\bException\b|\bundefined\b|\bnull\b|\bNaN\b|\/api\/|\.(m?js|json|ts)\b|\bError:|\bTypeError\b|\bReferenceError\b|\bstack\b/i;
+function filtrarSalida(texto, escribio) {
+  const t = String(texto || '');
+  const m = t.match(FORMA_DE_CODIGO);
+  if (m) return 'forma de código o error: «' + m[0] + '»';
+  const deLaIA = /agente/.test(String(escribio || ''));
+  if (deLaIA && t.length > 600) return 'texto de la IA demasiado largo (' + t.length + ')';
+  if (t.length > 1200) return 'texto demasiado largo (' + t.length + ')';
+  return '';
+}
+
+/* ------------------------------------------------------------
    LOS DATOS DE DEPÓSITO LOS ESCRIBE EL CÓDIGO (reparación 8-sep, Falla 6)
    ------------------------------------------------------------
    La CLABE, el banco y el beneficiario viven en UN lugar: las variables
@@ -1383,6 +1404,23 @@ function preguntaRepetida(respuesta, estado) {
   return Object.keys(PREGUNTA_DE).find(function (k) {
     return e[k] !== undefined && e[k] !== null && e[k] !== '' && PREGUNTA_DE[k].test(t);
   }) || null;
+}
+
+/* El viaje que ya está en precio (pedido o dado), como estado de plática:
+   para sembrarlo cuando el cliente cambia UNA cosa después del precio. */
+function viajeBaseDeLaFicha(ficha) {
+  if (!ficha) return null;
+  const v = (ficha.porConfirmar && ficha.porConfirmar.resumen) || ficha.viajeDatos;
+  if (!v || !v.destino) return null;
+  const base = { destino: v.destino, origen: v.origen || null, salida: v.salida || null, regreso: v.regreso || null,
+    gente: v.gente || null, ocasion: v.ocasion || null };
+  if (typeof v.recorridos === 'number') base.recorridos = v.recorridos;
+  if (v.nombre) base.nombre = v.nombre;
+  const u = unidadDelCatalogo(v.unidadNombre || v.unidad);
+  if (u) { base.unidad = u.cat; base.unidadNombre = u.name; if (u.cat === 'autobus') base.unidadId = u.id; }
+  else if (v.unidad) base.unidad = String(v.unidad).toLowerCase();
+  Object.keys(base).forEach(function (k) { if (base[k] === null) delete base[k]; });
+  return base;
 }
 
 /* Un cambio de fecha (salida o regreso) sobre un viaje que YA tiene precio
@@ -1490,6 +1528,30 @@ async function loQueDiceElAgente(envio) {
       });
     }
     return true;
+  }
+  /* ------------------------------------------------------------
+     UN CAMBIO DESPUÉS DEL PRECIO NO ARRANCA DE CERO (reparación 8-sep, Falla 5)
+     ------------------------------------------------------------
+     «Mejor Mazatlán», «seremos 16», «mejor el 21» cuando el viaje ya está
+     en precio (pedido o dado): la plática está cerrada y el cambio caía
+     en una plática vacía que volvía a preguntar fechas y gente. Ahora el
+     viaje conocido se siembra y solo se cambia lo que cambió. Un «otro
+     viaje» explícito sí arranca de cero (ése es otro viaje, no un cambio).
+     ------------------------------------------------------------ */
+  const cambiaAlgo = !!(dicho.datos && (dicho.datos.destino || dicho.datos.gente || dicho.datos.salida || dicho.datos.regreso || dicho.datos.unidad || dicho.datos.autobus));
+  const esOtroViaje = /\botro viaje\b|\botra cotizaci|\bun viaje m[aá]s\b|\baparte\b|\btambi[eé]n quiero\b|\badem[aá]s\b/i.test(String(texto || ''));
+  if (viajeDeLaFicha && viajeDeLaFicha.estado && !hayViaje && cambiaAlgo && !esOtroViaje) {
+    const base = viajeBaseDeLaFicha(tickets.fichaDe(cliente));
+    if (base) {
+      antes = Object.assign({}, base, antes.nombre ? { nombre: antes.nombre } : {});
+      console.log('[agente] cambio sobre un viaje con precio: se siembra el viaje conocido y se cambia solo lo nuevo');
+    }
+  }
+  /* El nombre que dio en el chat sobrevive al cierre de la plática: vive en
+     el viaje de la ficha. */
+  if ((!antes.nombre || antes.nombre === (envio.nombreDelPerfil || antes.nombre)) && viajeDeLaFicha) {
+    const base = viajeBaseDeLaFicha(tickets.fichaDe(cliente));
+    if (base && base.nombre) antes = Object.assign({}, antes, { nombre: base.nombre });
   }
   const nuevo = conversacion.pegaDatos(antes, dicho.datos);
   webhook.guardaCharla(cliente, nuevo);
@@ -2184,7 +2246,15 @@ async function manda(envio) {
   if (!esParaElDueno && !envio.esTicket && !envio.plantilla && esTextoInterno(envio.texto)) {
     console.error('[fuga] se frenó un texto interno que iba a un cliente (' +
       (envio.escribio || 'sin marca') + '): ' + String(envio.texto).slice(0, 120).replace(/\n/g, ' '));
-    return false;
+    /* Reparación del 8-sep-2026 (Falla 4): el cliente no se queda en
+       silencio; recibe el texto neutro y el dueño el aviso. */
+    if (dueno) {
+      await manda({ numeroDeOrigen: envio.numeroDeOrigen, para: dueno, esTicket: true, sobreCliente: envio.para, pasaAPersona: false,
+        texto: '⚠️ *Frené un mensaje con texto interno* para el cliente ' + envio.para +
+          '. Le dije «dame un momento». Revisa el registro ([fuga]) y contéstale citando este mensaje.',
+        escribio: '[incidente · fuga]' });
+    }
+    envio = Object.assign({}, envio, { texto: 'Dame un momento, te confirmo enseguida 🙌', opciones: [], escribio: (envio.escribio || '') + ' · filtrado' });
   }
   /* Y a un cliente que YA está en WhatsApp nunca se le manda a otro número
      (dictado del dueño, 6-sep-2026). Este candado estaba en un solo
@@ -2192,6 +2262,25 @@ async function manda(envio) {
      (el respaldo de la IA y el precio con «requiere asesor»). Aquí, en la
      única puerta de salida, ya no depende de quién armó el texto: el
      cliente recibe una espera honesta y el dueño el aviso. */
+  /* FILTRO DE SALIDA (reparación del 8-sep-2026, Falla 4): nada con forma de
+     código, JSON, error o instrucción le llega a un cliente. Si se frena,
+     el cliente recibe un texto neutro, el incidente queda completo en el
+     registro y el dueño recibe el aviso. Es aparte del candado de texto
+     interno: éste ataca la FORMA, aquél el contenido del prompt. */
+  if (!esParaElDueno && !envio.esTicket && !envio.plantilla && envio.texto) {
+    const motivo = filtrarSalida(envio.texto, envio.escribio);
+    if (motivo) {
+      console.error('[filtro-salida] INCIDENTE (' + motivo + ', ' + (envio.escribio || 'sin marca') + '): ' +
+        String(envio.texto).slice(0, 400).replace(/\n/g, '⏎'));
+      if (dueno) {
+        await manda({ numeroDeOrigen: envio.numeroDeOrigen, para: dueno, esTicket: true, sobreCliente: envio.para, pasaAPersona: false,
+          texto: '⚠️ *Frené un mensaje con forma de código o error* para el cliente ' + envio.para + ' (' + motivo +
+            '). Le dije «dame un momento». Revisa el registro ([filtro-salida]) y contéstale citando este mensaje.',
+          escribio: '[incidente · filtro de salida]' });
+      }
+      envio = Object.assign({}, envio, { texto: 'Dame un momento, te confirmo enseguida 🙌', opciones: [], escribio: (envio.escribio || '') + ' · filtrado' });
+    }
+  }
   /* Una CLABE que no sea la configurada es un desastre (reparación Falla 6):
      cualquier número de 18 dígitos hacia un cliente que no coincida con
      `CLABE` se frena, queda como incidente crítico y se avisa al dueño. Y si

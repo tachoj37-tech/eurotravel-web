@@ -615,7 +615,10 @@ titulo('a otro número nunca, desde la única puerta de salida (auditoría 7-sep
   /* La marca de plantilla no sale como texto… */
   mandados = [];
   const bloqueado = await manda({ numeroDeOrigen: '111', para: C, pasaAPersona: false, texto: '[plantilla eurotravel_toque1 · tu viaje a Puerto Vallarta]' });
-  okQue('la marca «[plantilla …]» como texto se frena', bloqueado === false && textos(C).length === 0);
+  /* Reparación del 8-sep-2026 (Falla 4): lo frenado no deja al cliente en
+     silencio; recibe el texto neutro (y la marca nunca sale). */
+  okQue('la marca «[plantilla …]» como texto se frena (sale el texto neutro, nunca la marca)',
+    bloqueado === true && textos(C).length === 1 && /Dame un momento/.test(textos(C)[0]) && !/plantilla/.test(textos(C)[0]));
   /* …pero la plantilla de verdad sí se manda (el candado no la toca). */
   mandados = [];
   const plantilla = await manda({ numeroDeOrigen: '111', para: C, pasaAPersona: false,
