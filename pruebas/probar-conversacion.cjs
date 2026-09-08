@@ -264,8 +264,10 @@ function cotiza(extra) {
   okQue('con nombre, el cierre lo usa', /¿Te la aparto, Marisol\?/.test(con.texto));
 
   const sin = cotiza({});
-  okQue('sin nombre, sigue cerrando igual de bien',
-    /¿A qué nombre la aparto\?/.test(sin.texto));
+  /* 8-sep-2026: sin nombre NO se pide el nombre (antes del depósito no se
+     pregunta nada); cierra con «¿Te la aparto?». */
+  okQue('sin nombre, sigue cerrando igual de bien, sin pedirlo',
+    /¿Te la aparto\?/.test(sin.texto) && !/nombre/i.test(sin.texto));
   okQue('  y no deja un hueco vacío', !/undefined|null|,\s*\?/.test(sin.texto));
 
   /* «No en cada mensaje» — regla del propio documento. Un nombre

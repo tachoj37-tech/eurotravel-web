@@ -521,6 +521,24 @@ function idDelUltimoTicket() {
   await dice('y para el 20 de octubre?', C);
   okQue('«para el 20 de octubre» no se toma como 20 personas', !/por persona/.test(textos(C).join('\n')));
 
+  /* 2c · «¿cuál es la cuenta?» / «apártamela» con el precio dado: el anticipo
+     y los datos para depositar, YA, sin pedir nombre ni hora (dictado del
+     dueño, 8-sep-2026). */
+  process.env.CLABE = '012345678901234567';
+  process.env.SITIO_URL = 'https://eurotravel-web.vercel.app';
+  webhook.guardaCharla(C, null);
+  for (const pide of ['cuál es la cuenta para depositar?', 'apártamela', 'ok me la aparto, cómo te pago?']) {
+    mandados = [];
+    await dice(pide, C);
+    const t = textos(C).join('\n');
+    okQue('«' + pide + '»: dice el anticipo y pide el comprobante', /de anticipo/.test(t) && /comprobante/.test(t));
+    okQue('  sin pedir nombre, hora ni dirección', !/nombre|hora|direcci/i.test(t.replace(/ficha/g, '')));
+    okQue('  con la ficha bancaria como imagen', mandados.some((m) => mismo(m.to, C) && m.image && /ficha-bancaria\.png$/.test(m.image.link || '')));
+    okQue('  y la CLABE sola para copiar', textos(C).indexOf('012345678901234567') >= 0);
+  }
+  ok('  y la ficha quedó en «va_a_apartar»', tk.fichaDe(C).etapa, 'va_a_apartar');
+  delete process.env.CLABE; delete process.env.SITIO_URL;
+
   /* 3 · Y ya no queda nada por confirmar: un segundo «va» es texto normal
      del dueño —se pasa literal, como cualquier palabra suya— y NO manda el
      precio dos veces. (Primero se escribió esperando el aviso de «ya no

@@ -560,6 +560,36 @@ const PIDE_SUELTA = /^\s*(bot|ia|suelta|su[eé]ltalo|libera|lib[eé]ralo|retoma)
    hallazgo 9). El número al frente se quita antes de comparar. */
 const PIDE_TOTAL = /^\s*total\s+\$?\s*[\d.,\s]+\s*(mil|k)?\s*$/i;
 
+/* Con el precio ya dado: quiere apartar, o pregunta a qué cuenta. Las dos
+   se contestan igual: el anticipo y los datos para depositar, sin pedirle
+   nada antes (dictado del dueño, 8-sep-2026). */
+const APARTAR_O_CUENTA = /\b(apart\w*|reserv\w*|bloque[aá]\w*|amarr\w*|le entramos|le entro|va que va|quedamos as[ií]|a qu[eé] cuenta|qu[eé] cuenta|n[uú]mero de cuenta|clabe|transferencia|transferir|te transfiero|deposit\w*|d[oó]nde (te |le )?pago|c[oó]mo (te |le )?pago|datos bancarios|datos (del|para el|para) (dep[oó]sito|pago)|para transferir|anticipo|banco)\b/i;
+const ETAPAS_CON_PRECIO_DADO = ['con_precio', 'va_a_apartar'];
+function quiereApartarConPrecio(ficha, texto, charla) {
+  if (!ficha || typeof ficha.total !== 'number' || ficha.total <= 0) return false;
+  if (ETAPAS_CON_PRECIO_DADO.indexOf(ficha.etapa) < 0) return false;
+  /* Sin acentos: «apártamela», «depósito», «dónde». */
+  const t = String(texto || '').normalize('NFD').replace(/[̀-ͯ]/g, '');
+  if (!t || t.length > 160 || !APARTAR_O_CUENTA.test(t)) return false;
+  /* Un viaje nuevo a medias en la plática: eso no es «apártame el de antes». */
+  if (charla && (charla.destino || charla.salida)) return false;
+  return true;
+}
+function respuestaDeApartar(ficha) {
+  const anticipo = (typeof ficha.anticipo === 'number' && ficha.anticipo > 0)
+    ? '$' + ficha.anticipo.toLocaleString('en-US') : null;
+  return {
+    texto: 'Va 🙌 Para apartar tu fecha ' +
+      (anticipo ? 'son *' + anticipo + '* de anticipo' : 'es el anticipo que te pasé') +
+      '; el resto lo puedes ir abonando o liquidarlo el día del viaje.\n\n' +
+      'En cuanto deposites, mándame aquí la foto del comprobante y te confirmo tu fecha.',
+    pasa: true,
+    pideDatosBancarios: true,
+    opciones: [],
+    estado: null
+  };
+}
+
 /* El «ya no» del cliente, en sus palabras (dictado del dueño, 8-sep-2026:
    nada de pedirle «stop»). Mensaje completo y corto; con un arranque de
    cortesía opcional («gracias», «hola», «muchas gracias») y un remate
@@ -1329,6 +1359,20 @@ function procesa(crudo, firma, entorno) {
               const f = tickets.fichaDe(m.from);
               const juntandoDatos = f && (f.etapa === 'mando_comprobante' ||
                 f.etapa === 'datos_del_contrato');
+              /* ------------------------------------------------------------
+                 CON EL PRECIO DADO, «APÁRTAMELA» O «¿A QUÉ CUENTA?» ES UNA
+                 SOLA COSA: LOS DATOS PARA DEPOSITAR, YA
+                 ------------------------------------------------------------
+                 Dictado del dueño (8-sep-2026): «no me estás dejando pedir
+                 la transferencia»; antes del depósito no se pregunta nada
+                 (ni nombre, ni hora, ni direcciones: eso viene después del
+                 comprobante). Lo decide el motor, sin IA: la IA contestaba
+                 «te paso los datos en un momento, primero ¿a qué hora
+                 salen?». No entra si va otro viaje a medias.
+                 ------------------------------------------------------------ */
+              if (!juntandoDatos && quiereApartarConPrecio(f, texto, charlaDe(m.from))) {
+                return respuestaDeApartar(f);
+              }
               if (!juntandoDatos) {
                 /* CON el estado de esta persona, y con la fecha de hoy.
                    Sin las dos cosas el bot no puede sostener una

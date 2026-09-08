@@ -401,8 +401,10 @@ hook.olvidaTodo(); tk.olvidaTodo();
   const suyos = r.envios.filter(function (e) { return e.para === C; });
 
   ok('salen tres mensajes: acuse, ficha y CLABE', suyos.length, 3);
-  okQue('  el primero le contesta y le pide el nombre',
-    /te la aparto/i.test(suyos[0].texto) && /nombre/i.test(suyos[0].texto));
+  /* 8-sep-2026: antes del depósito no se pide el nombre; se le pide el
+     comprobante. Cambió de lado a propósito. */
+  okQue('  el primero le contesta y le pide el comprobante, no el nombre',
+    /te la aparto/i.test(suyos[0].texto) && /comprobante/i.test(suyos[0].texto) && !/nombre/i.test(suyos[0].texto));
   okQue('  el segundo es la ficha, por su liga',
     /\/img\/ficha-bancaria\.png$/.test(suyos[1].ligaDeFoto || ''));
 

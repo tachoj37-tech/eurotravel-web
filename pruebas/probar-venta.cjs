@@ -111,8 +111,9 @@ titulo('el precio siempre cierra con un paso concreto');
    decision, y nombra SU destino y SU fecha en vez de «tu viaje». */
 ['fiesta', 'empresa', null].forEach(function (oc) {
   const t = cotiza({ gente: 16, ocasion: oc, salida: '2026-09-12' });
+  /* 8-sep-2026: el cierre ya no pide el nombre (nada antes del depósito). */
   okQue('con ocasión «' + oc + '» cierra asumiendo, no pidiendo permiso',
-    /¿A qué nombre la aparto\?\s*$/.test(t));
+    /¿Te la aparto\?\s*$/.test(t));
   okQue('y con ocasión «' + oc + '» le repite SU destino y SU día',
     /te bloqueo tu Tequila del 12/.test(t));
 });

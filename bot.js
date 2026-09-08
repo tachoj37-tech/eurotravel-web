@@ -1372,7 +1372,9 @@ function cierreDelPrecio(anticipo, saldo, resumen, pesos) {
      ------------------------------------------------------------ */
   return 'Con *' + pesos(anticipo) + '* te bloqueo ' + suyo +
     ', y los ' + pesos(saldo) + ' restantes los liquidas antes de salir.\n\n' +
-    (r.nombre ? '¿Te la aparto, ' + r.nombre + '?' : '¿A qué nombre la aparto?');
+    /* Sin nombre no se pide el nombre: antes del depósito no se pregunta
+       nada (dictado del dueño, 8-sep-2026). */
+    (r.nombre ? '¿Te la aparto, ' + r.nombre + '?' : '¿Te la aparto?');
 }
 
 const COMPARACION = {
@@ -2908,7 +2910,10 @@ function respuestaBase(mensaje, estado, hoy) {
   if (/\b(a que cuenta|que cuenta|numero de cuenta|clabe|transferencia|transferir|te transfiero|deposit|donde (te )?pago|como (te )?pago|como le pago|donde le deposito|datos bancarios|banco)\b/.test(t) ||
       QUIERE_APARTAR.test(t)) {
     return {
-      texto: 'Va, te la aparto 🙌\n\n¿A qué nombre la pongo?',
+      /* Sin pedir nombre: antes del depósito no se pregunta nada; los
+         datos del contrato se piden después del comprobante (dictado del
+         dueño, 8-sep-2026). */
+      texto: 'Va, te la aparto 🙌\n\nEn cuanto deposites, mándame aquí la foto del comprobante y te confirmo tu fecha.',
       pasa: true,
       /* ------------------------------------------------------------
          LOS DATOS DE LA CUENTA NO VIVEN AQUÍ
