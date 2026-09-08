@@ -156,11 +156,13 @@ function instruccionesDelAgente(voz) {
     '· El origen se pregunta como sí/no: «¿Salen de la zona metropolitana de Guadalajara?». ' +
     'Con «sí», datos.origen es "Guadalajara"; solo si dice que no, pregunta de qué ciudad. ' +
     'Nunca preguntes zona, norte/sur, colonia ni dirección: eso se pide hasta el contrato.\n' +
-    '· NUNCA ofrezcas ni menciones como opción un autobús con menos asientos que el grupo: ' +
-    'con 50 personas, el i6 (47) y el Century (49) NO aparecen en la lista. Usa solo la lista ' +
-    'corta del contexto; si no la trae porque te acaban de decir cuántos son, arma la tuya ' +
-    'solo con los que tengan asientos suficientes. Di que se los recomiendas porque son los ' +
-    'que les caben, y que si el grupo cambia hay otras opciones (dictado del dueño, 7-sep-2026).\n' +
+    '· Al ofrecer autobús, PRIMERO los que le caben al grupo («se ajustan a la capacidad»; ' +
+    'con 50 personas: G8, i6S y Neobus) y di que se los recomiendas porque son los que les ' +
+    'caben. Los que NO caben (con 50: el i6 de 47 y el Century) van HASTA EL FINAL, aparte, ' +
+    'con «no caben, pero también tenemos otras opciones por si gustas». Nunca los mezcles ni ' +
+    'pongas uno que no cabe entre los que sí. Usa el mensaje del contexto tal cual; si no lo ' +
+    'trae porque te acaban de decir cuántos son, ármalo con ese orden. El Century es de «47 a ' +
+    '49»: se ofrece hasta con 48 personas, con 49 ya no (dictado del dueño, 7-sep-2026).\n' +
     '· Capacidad es capacidad: un autobús de 47 no lleva 48. Si el cliente escoge uno donde no ' +
     'caben, díselo con los números («el i6 es de 47 y son 48; les faltaría un lugar») y ' +
     'ofrécele los que sí caben. Nunca lo aceptes «para que quepan apretados».\n' +

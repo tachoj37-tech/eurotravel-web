@@ -1188,18 +1188,24 @@ function sinAutobusesQueNoCaben(respuesta, estado) {
   const gente = Number(estado && estado.gente) || 0;
   if (!respuesta || gente <= 20 || (estado && estado.unidadNombre)) return respuesta;
   const texto = String(respuesta).toLowerCase();
-  const noCaben = (conversacion.UNIDADES || []).filter(function (u) {
-    return u.cat === 'autobus' && Number(u.max) < gente && u.name &&
-      texto.indexOf(String(u.name).toLowerCase()) >= 0;
+  const nombraUnAutobus = (conversacion.UNIDADES || []).some(function (u) {
+    return u.cat === 'autobus' && u.name && texto.indexOf(String(u.name).toLowerCase()) >= 0;
   });
-  if (!noCaben.length) return respuesta;
-  const lista = conversacion.listaCortaDeAutobuses(gente);
-  if (!lista.length) {
-    return 'Para ' + gente + ' no nos cabe todo el grupo en un solo autobús (el más grande es de 51). ' +
-      'Se puede con dos unidades; ¿te armo esa opción?';
-  }
-  return 'Para ' + gente + ' les caben estos:\n' + lista.join('\n') +
-    '\n\nTe los recomiendo porque son los que les caben; si el grupo cambia, hay otras opciones. ¿Cuál te late?';
+  if (!nombraUnAutobus) return respuesta;
+  /* Dictado del dueño, 7-sep-2026: primero los que caben («se ajustan a la
+     capacidad»), y hasta el final los que no, como otras opciones. Si la IA
+     nombró autobuses en el paso de elegir, sale el mensaje del guion, con
+     el orden y las frases exactas, y no la versión de la IA. */
+  const grupos = conversacion.autobusesPara(gente);
+  if (!grupos.caben.length) return conversacion.mensajeDeAutobuses(gente);
+  const bienOrdenado = grupos.noCaben.every(function (renglon) {
+    /* «Irizar i6» es prefijo de «Irizar i6S»: se busca el nombre completo,
+       sin letra ni número pegados después. */
+    const nombre = renglon.split(' — ')[0].toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const donde = texto.search(new RegExp(nombre + '(?![a-z0-9])'));
+    return donde < 0 || (texto.indexOf('no caben') >= 0 && donde > texto.indexOf('no caben'));
+  });
+  return bienOrdenado ? respuesta : conversacion.mensajeDeAutobuses(gente);
 }
 
 /* Qué viaje de la ficha ya está en precio: pedido (espera el «va» del
@@ -1448,9 +1454,9 @@ async function loQueDiceElAgente(envio) {
      «¿cuánto sale?» antes de tener todos los datos). Se devuelve `false`
      y contesta el guion con lo que falta. */
   if (!dicho.respuesta) return false;
-  /* Con 50 personas nunca se ofrece un camión de 47 (dictado del dueño,
-     7-sep-2026). Si la IA nombró uno que no cabe, sale la lista del guion
-     con los que sí, y punto. Lo decide el código, no el prompt. */
+  /* Al elegir autobús, primero los que caben y hasta el final los que no
+     (dictado del dueño, 7-sep-2026). Si la IA los mezcló, sale el mensaje
+     del guion, y punto. Lo decide el código, no el prompt. */
   const respuestaFinal = sinAutobusesQueNoCaben(dicho.respuesta, nuevo);
   await manda({ numeroDeOrigen: envio.numeroDeOrigen, para: cliente, texto: respuestaFinal,
     pasaAPersona: false, escribio: respuestaFinal === dicho.respuesta ? '[agente]' : '[agente · lista corregida]' });

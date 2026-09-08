@@ -3831,15 +3831,47 @@ function pegaDatos(estado, datos) {
    línea y asientos. Nada más —dictado del dueño (6-sep-2026): «no le digas
    de baño, puerta ni nada; solo qué calidad es y cuántos asientos»—. Los
    detalles salen solo si el cliente pregunta por una unidad. */
-function listaCortaDeAutobuses(gente) {
+function renglonDeAutobus(u) {
+  const linea = String(u.tag || '').replace(/^Autob[uú]s\s*·\s*/i, '').trim();
+  return u.name + ' — ' + linea + ' — ' + (u.asientos || u.max) + ' asientos';
+}
+
+/* Los autobuses en dos grupos, para N personas: `caben` (de más a menos
+   asientos) y `noCaben` (los demás). Dictado del dueño, 7-sep-2026: al
+   cliente se le enseñan primero los que le caben, y HASTA EL ÚLTIMO los
+   otros, con «no caben, pero también tenemos otras opciones por si
+   gustas». El Century cuenta como 49 pero su `max` es 48: con 48 se
+   ofrece, con 49 no (ver unidades.js). */
+function autobusesPara(gente) {
   const n = Number(gente) || 0;
-  return UNIDADES
-    .filter(function (u) { return u.cat === 'autobus' && Number(u.max) >= n; })
-    .sort(function (a, b) { return Number(b.max) - Number(a.max); })
-    .map(function (u) {
-      const linea = String(u.tag || '').replace(/^Autob[uú]s\s*·\s*/i, '').trim();
-      return u.name + ' — ' + linea + ' — ' + u.max + ' asientos';
-    });
+  const porAsientos = function (a, b) { return Number(b.max) - Number(a.max); };
+  const buses = UNIDADES.filter(function (u) { return u.cat === 'autobus'; }).sort(porAsientos);
+  return {
+    caben: buses.filter(function (u) { return Number(u.max) >= n; }).map(renglonDeAutobus),
+    noCaben: buses.filter(function (u) { return Number(u.max) < n; }).map(renglonDeAutobus)
+  };
+}
+
+function listaCortaDeAutobuses(gente) {
+  return autobusesPara(gente).caben;
+}
+
+/* El mensaje completo que ve el cliente cuando toca elegir autobús. Lo
+   arma el código, no la IA, para que el orden y las frases sean siempre
+   los que dictó el dueño. */
+function mensajeDeAutobuses(gente) {
+  const n = Number(gente) || 0;
+  const g = autobusesPara(n);
+  if (!g.caben.length) {
+    return 'Para ' + n + ' no nos cabe todo el grupo en un solo autobús (el más grande es de 51). ' +
+      'Se puede con dos unidades; ¿te armo esa opción?';
+  }
+  let texto = 'Para ' + n + ' se ajustan a la capacidad estos:\n' + g.caben.join('\n') +
+    '\n\nTe los recomiendo porque son los que les caben.';
+  if (g.noCaben.length) {
+    texto += '\n\nEstos no caben, pero también tenemos otras opciones por si gustas:\n' + g.noCaben.join('\n');
+  }
+  return texto + '\n\n¿Cuál te late? Si quieres te recomiendo uno.';
 }
 
 /* Qué le falta al viaje, en palabras, para decírselo al agente. `null`
@@ -3858,17 +3890,16 @@ function esDestinoDeUnDia(destino) {
 function loQueFalta(estado) {
   const e = alSiguienteHueco(Object.assign({}, estado || {}));
   if (e.paso === 'elegirBus') {
-    const lista = listaCortaDeAutobuses(e.gente);
     const aviso = e.noCabe
       ? 'OJO: el cliente pidió el ' + e.noCabe.nombre + ' y NO le cabe (' + e.noCabe.asientos +
         ' asientos para ' + e.noCabe.gente + ' personas). Díselo con esos números, sin regaño, y ' +
-        'ofrécele los de la lista. '
+        'luego el mensaje de abajo. '
       : '';
-    return aviso + 'cuál autobús. PRIMERO enséñale las opciones que le caben, tal cual esta lista, un ' +
-      'renglón por unidad y sin agregar baño, puertas ni aire:\n' + lista.join('\n') +
-      '\nY cierra con «¿cuál te late? Si quieres te recomiendo uno». SOLO si pide ' +
-      'recomendación, recomienda uno de esa lista con una razón. Cuando elija (o diga «el que ' +
-      'tú digas» y tú recomiendes uno), ponlo en datos.autobus';
+    return aviso + 'cuál autobús. Manda este mensaje TAL CUAL, sin agregar baño, puertas ni aire ' +
+      '(primero los que caben; los que no caben van hasta el final, como otras opciones):\n' +
+      mensajeDeAutobuses(e.gente) +
+      '\nSOLO si pide recomendación, recomienda uno de los que caben con una razón. Cuando ' +
+      'elija (o diga «el que tú digas» y tú recomiendes uno), ponlo en datos.autobus';
   }
   return {
     destino: 'a dónde van',
@@ -3889,7 +3920,7 @@ function loQueFalta(estado) {
 
 module.exports = {
   respuestaA, textoDeCotizacion, textoDeSolicitud, aplicaEntendido, continuaCon, mediosDe,
-  pegaDatos, loQueFalta, listaCortaDeAutobuses,
+  pegaDatos, loQueFalta, listaCortaDeAutobuses, autobusesPara, mensajeDeAutobuses,
   hayQueRevisarDisponibilidad,
   /* Se exportan para poder probarlos solos: son los que leen la frase
      de un jalon, y ahi es donde se han colado los defectos de dinero. */

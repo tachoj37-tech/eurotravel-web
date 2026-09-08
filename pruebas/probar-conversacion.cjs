@@ -460,7 +460,10 @@ function cotiza(extra) {
      el bot no lo podía ofrecer. */
   const century = catalogo.filter(function (u) { return /Century/i.test(u.name); })[0];
   okQue('el Century está en el catálogo', !!century);
-  ok('  con 47 pasajeros', century && century.max, 47);
+  /* 7-sep-2026: el dueño lo puso como «47 a 49» y dictó que se ofrezca
+     hasta con 48 personas y con 49 ya no; por eso `max` es 48. */
+  ok('  se ofrece como «47 a 49 pasajeros»', century && century.cap, '47 a 49 pasajeros');
+  ok('  y su tope para ofrecerlo es 48', century && century.max, 48);
   /* Su forma de venderse es la regla más delicada del catálogo, y ya
      la cubre la prueba de arriba — pero se comprueba aquí también,
      nombrándola, porque es la unidad por la que se escribió. */
@@ -471,8 +474,10 @@ function cotiza(extra) {
   /* Las capacidades, confirmadas contra el sitio oficial el 4-sep-2026.
      Se cuidan porque un número de más son personas paradas el día del
      viaje — y ésa no se corrige después. */
+  /* El Century vale 48 y no 49: es «47 a 49» y el dueño dejó un lugar de
+     margen (7-sep-2026). */
   const capacidades = { 'Irizar i6S': 51, 'Irizar i6': 47, 'Irizar PB': 47,
-    'Neobus': 50, 'Irizar Century': 47, 'Marcopolo Paradiso G8': 51 };
+    'Neobus': 50, 'Irizar Century': 48, 'Marcopolo Paradiso G8': 51 };
   const malas = Object.keys(capacidades).filter(function (n) {
     const u = catalogo.filter(function (x) { return x.name === n; })[0];
     return !u || Number(u.max) !== capacidades[n];

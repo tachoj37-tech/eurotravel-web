@@ -126,17 +126,18 @@ window.UNIDADES = [
      acabe la animación — pasó la primera vez que se leyó, y por eso
      el número se saca del texto y no del contador.
 
-     HAY DOS CENTURYS DE 49, y aun así aquí dice 47. No es un
-     descuido: el dueño lo aclaró el 4-sep-2026 y el número que el bot
-     puede prometer es el que aguantan TODOS, no el del mejor. Si
-     dijera 49 y llegara uno de 47, dos personas se quedan paradas el
-     día del viaje — y ésa no se corrige después. Prometer de menos no
-     cuesta nada; prometer de más cuesta el viaje.
+     HAY CENTURYS DE 47 Y DE 49. Se ofrece como «47 a 49 pasajeros»
+     (dictado del dueño, 7-sep-2026), y `max` es 48 a propósito: con
+     48 personas sí se ofrece («caben en el de 49»), con 49 ya no. Es
+     su regla textual: «Si son 48, lo ofreces. Si son 49, no lo
+     ofreces. Si son 46, caben también en el de 47». Un lugar de
+     margen para que nadie se quede parado el día del viaje.
+     `asientos` es el texto que ve el cliente en la lista del bot.
      ------------------------------------------------------------ */
-  { id: 'irizar', cat: 'autobus', cotizadorAutomatico: false, tag: 'Autobús · Clásico', name: 'Irizar Century', cap: '47 pasajeros', max: 47, img: 'irizar',
+  { id: 'irizar', cat: 'autobus', cotizadorAutomatico: false, tag: 'Autobús · Clásico', name: 'Irizar Century', cap: '47 a 49 pasajeros', max: 48, asientos: '47 a 49', img: 'irizar',
     desc: 'Autobús completo y de trato sencillo: el que mejor se ajusta cuando el presupuesto del grupo es corto, sin recortar lo que importa — aire, baño y seguro de viajero.',
     amen: ['Aire acondicionado', 'Baño a bordo', 'Asientos reclinables', 'Cajuela amplia'],
-    spec: [['i-users', '47 pasajeros'], ['i-snow', 'Aire acondicionado'], ['i-wc', 'Baño a bordo'], ['i-seat', 'Asientos reclinables'], ['i-bag', 'Cajuela amplia'], ['i-shield', 'Seguro de viajero incluido'], ['i-route', 'Sirve igual para un día que para varios']] },
+    spec: [['i-users', '47 a 49 pasajeros'], ['i-snow', 'Aire acondicionado'], ['i-wc', 'Baño a bordo'], ['i-seat', 'Asientos reclinables'], ['i-bag', 'Cajuela amplia'], ['i-shield', 'Seguro de viajero incluido'], ['i-route', 'Sirve igual para un día que para varios']] },
   { id: 'sprinter', cat: 'sprinter', cotizadorAutomatico: true, tag: 'Sprinter · Grupos pequeños', name: 'Sprinter', cap: '20 pasajeros', max: 20, img: 'sprinter',
     desc: 'Moderna, segura y funcional. Diseño compacto y elegante para moverse igual de bien en ciudad que en carretera: traslados ejecutivos, eventos y excursiones familiares.',
     amen: ['Aire acondicionado', 'Asientos reclinables', 'Audio', 'Pantalla'],

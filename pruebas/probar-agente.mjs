@@ -360,10 +360,39 @@ titulo('con 50 nunca se ofrece un autobús de 47 (7-sep-2026)');
   for (const t of ['a vallarta', 'el 9 de septiembre', 'el 14']) await dice(t, C);
   await dice('somos 50', C);
   const lista = textos(C).slice(-1)[0];
-  okQue('el i6 de 47 NO aparece', !/Irizar i6 —|Irizar i6\b(?! ?S)/.test(lista));
-  okQue('el Century de 49 NO aparece', !/Century/.test(lista));
-  okQue('  sí aparecen los que caben (G8, i6S, Neobus)', /G8/.test(lista) && /i6S/.test(lista) && /Neobus/.test(lista));
-  okQue('  y dice por qué se los recomienda y que hay otras opciones', /porque son los que les caben/.test(lista) && /otras opciones/.test(lista));
+  /* Dictado del dueño, 7-sep-2026: primero los que caben («se ajustan a la
+     capacidad»), y HASTA EL FINAL los que no, como otras opciones. */
+  const corte = lista.indexOf('no caben');
+  okQue('el mensaje tiene su parte de «no caben, pero también tenemos otras opciones»', corte > 0 && /otras opciones por si gustas/.test(lista));
+  const antesDelCorte = lista.slice(0, corte), despuesDelCorte = lista.slice(corte);
+  okQue('primero van los que caben (G8, i6S, Neobus)', /G8/.test(antesDelCorte) && /i6S/.test(antesDelCorte) && /Neobus/.test(antesDelCorte));
+  okQue('  y dice que se ajustan a la capacidad / que son los que les caben', /se ajustan a la capacidad/.test(antesDelCorte) && /porque son los que les caben/.test(antesDelCorte));
+  okQue('el i6 de 47 NO va entre los que caben', !/Irizar i6 —/.test(antesDelCorte));
+  okQue('el Century NO va entre los que caben', !/Century/.test(antesDelCorte));
+  okQue('  pero los dos sí salen al final, como otras opciones', /Irizar i6 —/.test(despuesDelCorte) && /Century/.test(despuesDelCorte));
+  okQue('  y el Century se anuncia como «47 a 49 asientos»', /Century — Clásico — 47 a 49 asientos/.test(despuesDelCorte));
+  okQue('  cierra preguntando cuál', /¿Cuál te late\?/.test(lista));
+}
+
+/* ============================================================ */
+titulo('el Century cuenta como 49: con 48 se ofrece, con 49 no, con 46 también (7-sep-2026)');
+{
+  const bot = (await import(pathToFileURL(path.join(RAIZ, 'bot.js')).href)).default;
+  const caben = function (n) { return bot.autobusesPara(n).caben.join('\n'); };
+  const noCaben = function (n) { return bot.autobusesPara(n).noCaben.join('\n'); };
+  okQue('con 48, el Century cabe («caben en el de 49»)', /Century/.test(caben(48)) && !/Century/.test(noCaben(48)));
+  okQue('con 49, el Century NO se ofrece', !/Century/.test(caben(49)) && /Century/.test(noCaben(49)));
+  okQue('con 46, el Century cabe («caben también en el de 47»)', /Century/.test(caben(46)));
+  okQue('con 46 también caben el i6 y el PB', /Irizar i6 —/.test(caben(46)) && /Irizar PB/.test(caben(46)));
+  okQue('con 48, el i6 y el PB (47) ya no caben', /Irizar i6 —/.test(noCaben(48)) && /Irizar PB/.test(noCaben(48)));
+  okQue('con 50 caben G8, i6S y Neobus', /G8/.test(caben(50)) && /i6S/.test(caben(50)) && /Neobus/.test(caben(50)));
+  okQue('  y no caben i6, PB ni Century', /Irizar i6 —/.test(noCaben(50)) && /Irizar PB/.test(noCaben(50)) && /Century/.test(noCaben(50)));
+  okQue('con 52 no cabe ninguno y se ofrecen dos unidades', bot.autobusesPara(52).caben.length === 0 && /dos unidades/.test(bot.mensajeDeAutobuses(52)));
+  const m = bot.mensajeDeAutobuses(50);
+  okQue('el mensaje de 50 pone los que caben ANTES de «no caben»', m.indexOf('G8') < m.indexOf('no caben') && m.indexOf('Neobus') < m.indexOf('no caben'));
+  okQue('  y los que no caben DESPUÉS', m.indexOf('Century') > m.indexOf('no caben') && m.indexOf('Irizar i6 —') > m.indexOf('no caben'));
+  okQue('con 21 caben todos y no hay parte de «no caben»', bot.autobusesPara(21).noCaben.length === 0 && !/no caben/.test(bot.mensajeDeAutobuses(21)));
+  okQue('la instrucción a la IA trae el mensaje con ese orden', /no caben, pero también tenemos otras opciones/.test(bot.loQueFalta({ destino: 'Puerto Vallarta', salida: '2026-09-09', regreso: '2026-09-14', gente: 50 }) || ''));
 }
 
 /* ============================================================ */
