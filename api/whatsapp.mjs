@@ -2612,13 +2612,15 @@ function llaveDeLaUrl(a, esWeb) {
    ------------------------------------------------------------ */
 async function mandaSeguimientos(ahora) {
   const t = ahora || Date.now();
-  const cuenta = { revisadas: 0, mandados: 0, cerradas: 0, esperan: 0, sinPlantilla: 0 };
+  const cuenta = { revisadas: 0, mandados: 0, cerradas: 0, esperan: 0, sinPlantilla: 0, alDueno: 0 };
   if (!almacen.hayAlmacen()) {
     console.error('[seguimiento] sin almacén: no hay fichas que seguir');
     return cuenta;
   }
   const fichas = await almacen.fichasDeSeguimiento().catch(function () { return null; });
   if (!fichas) return cuenta;
+  /* Los que le tocan al dueño se juntan en UN mensaje al final. */
+  const paraElDueno = [];
 
   for (const f of fichas) {
     cuenta.revisadas++;
@@ -2631,18 +2633,29 @@ async function mandaSeguimientos(ahora) {
     }
     if (!d.toque) { cuenta.esperan++; continue; }
 
-    /* Primero se arma el envío: sin plantilla no hay qué mandar, y
-       entonces NO se marca (auditoría 7-sep-2026, B4/C10): antes los tres
-       toques se consumían en silencio y, cuando el dueño configuraba las
-       plantillas, esos clientes ya estaban «completos». Se avisa una vez
-       por cliente y toque, no cada 15 minutos. */
-    const envio = envioDelToque(f, d, cuenta);
+    /* Primero se arma el envío. Desde el 8-sep-2026 («quitamos lo de
+       Meta») siempre hay algo que hacer: texto libre si la ventana está
+       abierta, plantilla si la hay, y si no, el toque se lo lleva el dueño
+       (`alDueno`). Solo queda sin envío si no hay texto para ese toque. */
+    const envio = envioDelToque(f, d);
     if (!envio) { cuenta.sinPlantilla++; continue; }
 
     /* La marca es condicional (B9/C13): solo gana la corrida que vio
        `toques` en el valor leído. Sin marca no se manda. */
     const marcada = await almacen.marcaToque(f.cliente, hechos, d.toque).catch(function () { return false; });
     if (!marcada) { cuenta.enOtraCorrida = (cuenta.enOtraCorrida || 0) + 1; continue; }
+
+    if (envio.alDueno) {
+      /* Fuera de la ventana y sin plantilla: le toca al dueño, desde su
+         teléfono. Se marca el toque (no se repite) y se junta en el
+         resumen. */
+      const v = f.viajeDatos || {};
+      paraElDueno.push('• ' + f.cliente + ' · ' + (v.destino || 'viaje') + (v.salida ? ' ' + tickets.comoSeDice(v.salida) : '') +
+        (v.gente ? ' · ' + v.gente + ' pax' : '') + (typeof f.total === 'number' ? ' · $' + f.total.toLocaleString('en-US') : '') +
+        ' · ' + (d.toque === 2 ? 'día 3' : d.toque === 3 ? 'día 7' : 'día 1'));
+      cuenta.alDueno++;
+      continue;
+    }
 
     if (await manda(envio)) {
       cuenta.mandados++;
@@ -2653,14 +2666,28 @@ async function mandaSeguimientos(ahora) {
       almacen.anotaMensaje(f.cliente, 'bot', envio.textoParaLaMemoria || envio.texto, 'texto').catch(function () {});
     }
   }
+  const dueno = tickets.numeroDelDueno(process.env);
+  if (paraElDueno.length && !dueno) {
+    console.error('[seguimiento] ' + paraElDueno.length + ' toque(s) le tocan al dueño pero falta DUENO_WHATSAPP; quedaron marcados sin avisar');
+  }
+  if (paraElDueno.length && dueno) {
+    await manda({
+      numeroDeOrigen: process.env.WHATSAPP_PHONE_ID, para: dueno, esTicket: true, pasaAPersona: false,
+      texto: '📋 *Seguimiento: escríbeles tú desde tu teléfono*\n\nNo contestaron después del precio y ya pasó la ventana ' +
+        'de 24 h de WhatsApp (para no pagar plantillas). Un mensaje corto tuyo los despierta:\n\n' + paraElDueno.join('\n') +
+        '\n\nIdeas: «¿cómo va lo del viaje? si cambió algo te lo ajusto» (día 3) · «te escribo por última vez; si sigue en pie ' +
+        'dime y te digo cómo apartar» (día 7).',
+      escribio: '[seguimiento · al dueño]'
+    });
+  }
   console.log('[seguimiento] ' + JSON.stringify(cuenta));
   return cuenta;
 }
 
-/* Texto libre si la ventana de 24 h de Meta sigue abierta; si no, la
-   plantilla aprobada cuyo nombre está en WHATSAPP_PLANTILLA_TOQUE1/2/3.
-   Sin plantilla y con la ventana cerrada no se manda nada, y se dice. */
-const avisadosSinPlantilla = new Set();
+/* Texto libre si la ventana de 24 h de Meta sigue abierta (el toque de
+   las 22 h cae ahí a propósito); si no, la plantilla aprobada cuyo nombre
+   está en WHATSAPP_PLANTILLA_TOQUE1/2/3; y sin plantilla, `{ alDueno }`:
+   el dueño le escribe desde su teléfono. */
 function envioDelToque(f, d) {
   const base = { numeroDeOrigen: process.env.WHATSAPP_PHONE_ID, para: f.cliente };
   if (d.ventanaAbierta) {
@@ -2679,15 +2706,10 @@ function envioDelToque(f, d) {
   }
   const nombre = process.env['WHATSAPP_PLANTILLA_TOQUE' + d.toque];
   if (!nombre) {
-    const marca = almacen.llave(f.cliente) + '|' + d.toque;
-    if (!avisadosSinPlantilla.has(marca)) {
-      avisadosSinPlantilla.add(marca);
-      while (avisadosSinPlantilla.size > 2000) avisadosSinPlantilla.delete(avisadosSinPlantilla.values().next().value);
-      console.error('[seguimiento] toque ' + d.toque + ' a …' + almacen.llave(f.cliente).slice(-4) +
-        ': la ventana de 24 h de Meta ya cerró y no hay WHATSAPP_PLANTILLA_TOQUE' + d.toque +
-        ': no se manda (se reintenta cuando exista la plantilla)');
-    }
-    return null;
+    /* Sin plantilla (lo normal desde el 8-sep-2026: «quitamos lo de Meta»):
+       el toque no se le manda al cliente; se le avisa al dueño para que le
+       escriba él desde su teléfono, que no paga ventana. */
+    return { alDueno: true };
   }
   /* {{1}} = «tu viaje a Puerto Vallarta» (o «tu viaje» si no se sabe el
      destino): la única variable de las tres plantillas. Nunca vacía, nunca

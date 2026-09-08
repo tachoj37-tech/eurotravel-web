@@ -142,7 +142,9 @@ ok('ni quinto', r.recordatorio(5, { cliente: '52133' }), null);
 
 /* Era [1, 24, 72], luego [4, 24, 72]. El 6-sep-2026 el dueño lo dejó en
    24 horas, 3 días y 7 días. */
-ok('y los tiempos son 24 h, 3 d y 7 d', r.A_LAS_HORAS, [24, 72, 168]);
+/* 8-sep-2026: 22 h en vez de 24, para caer dentro de la ventana de Meta
+   y salir sin plantilla («quitamos lo de Meta»). */
+ok('y los tiempos son 22 h, 3 d y 7 d', r.A_LAS_HORAS, [22, 72, 168]);
 
 /* ============================================================ */
 titulo('a cada quien le toca una distinta');

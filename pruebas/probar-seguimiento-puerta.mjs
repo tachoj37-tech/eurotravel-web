@@ -30,7 +30,8 @@ process.env.WHATSAPP_VERIFY_TOKEN = 'token-de-alta-largo-de-verdad';
 process.env.WHATSAPP_TOKEN = 'dh_live_de_mentiras';
 process.env.WHATSAPP_API_BASE = 'https://api.dualhook.com/v25.0';
 delete process.env.WHATSAPP_APP_SECRET;
-process.env.DUENO_WHATSAPP = '';
+/* El dueño existe: desde el 8-sep-2026 los toques sin plantilla le llegan a él. */
+process.env.DUENO_WHATSAPP = '5213319153931';
 process.env.ALMACEN_URL = 'https://abcdefghijklmnopqrst.supabase.co';
 process.env.ALMACEN_CLAVE = 'sb_secret_de_mentiras';
 delete process.env.WHATSAPP_PLANTILLA_TOQUE1;
@@ -52,6 +53,9 @@ function ok(que, dio, esperaba) {
   if (bien) { buenas++; console.log('ok   ' + que); }
   else { malas++; console.log('MAL  ' + que + '\n     dio      ' + JSON.stringify(dio) + '\n     esperaba ' + JSON.stringify(esperaba)); }
 }
+function okQue(que, condicion) { ok(que, !!condicion, true); }
+const AL_DUENO = '523319153931';
+const textoDe = (m) => ((m.cuerpo.text || {}).body || '');
 
 /* ---- la base y WhatsApp de mentiras ---- */
 let mandados = [];
@@ -147,9 +151,14 @@ console.log('\n== A QUIÉN SE LE ESCRIBE (con plantilla del primer toque) ==');
   ok('mandó UNO (A)', cuenta.mandados, 1);
   ok('uno espera (C)', cuenta.esperan, 1);
   ok('uno cerrado (D, contestó)', cuenta.cerradas, 1);
-  ok('uno sin plantilla (B)', cuenta.sinPlantilla, 1);
+  /* 8-sep-2026 («quitamos lo de Meta»): sin plantilla para el toque de B,
+     el toque va al dueño en un resumen, y B queda marcada. */
+  ok('uno al dueño (B, sin plantilla)', cuenta.alDueno, 1);
+  ok('  y ya no se cuenta como «sin plantilla»', cuenta.sinPlantilla, 0);
+  const alDueno = mandados.filter((m) => m.cuerpo.to === AL_DUENO);
+  okQue('  el dueño recibe UN resumen con el número de B y «día 3»', alDueno.length === 1 && /3322222222/.test(textoDe(alDueno[0])) && /día 3/.test(textoDe(alDueno[0])));
 
-  ok('a A se le escribió por WhatsApp', mandados.length, 1);
+  ok('a A se le escribió por WhatsApp (y al dueño el resumen)', mandados.length, 2);
   ok('  al número de A, en formato 52 + 10', mandados[0].cuerpo.to, '523311111111');
   ok('  como plantilla (la ventana de 24 h ya cerró)', mandados[0].cuerpo.type, 'template');
   ok('  la del primer toque', mandados[0].cuerpo.template.name, 'seguimiento_24h');
@@ -164,11 +173,12 @@ console.log('\n== A QUIÉN SE LE ESCRIBE (con plantilla del primer toque) ==');
   const deA = marcas.filter((m) => m.numero === '3311111111');
   ok('A quedó marcada con toques = 1 (antes de mandar), de 0 a 1', deA.length === 1 && [deA[0].de, deA[0].a], [0, 1]);
   ok('  y la marca no reescribió la ficha entera', upserts.filter((u) => u.numero === '3311111111').length, 0);
-  ok('B NO se marcó: sin plantilla no hay qué mandar y se reintenta cuando exista', marcas.filter((m) => m.numero === '3322222222').length, 0);
+  const deB = marcas.filter((m) => m.numero === '3322222222');
+  ok('B SÍ se marcó (1 → 2): el toque se lo lleva el dueño, no se repite', deB.length === 1 && [deB[0].de, deB[0].a], [1, 2]);
   const deD = marcas.filter((m) => m.numero === '3344444444');
   ok('D quedó cerrada con toques = 3', deD.length === 1 && deD[0].a, 3);
   ok('C no se tocó', marcas.filter((m) => m.numero === '3333333333').length, 0);
-  ok('a B, C y D no se les escribió', mandados.filter((m) => m.cuerpo.to !== '523311111111').length, 0);
+  ok('a B, C y D no se les escribió', mandados.filter((m) => m.cuerpo.to !== '523311111111' && m.cuerpo.to !== AL_DUENO).length, 0);
 
   /* Dos corridas del cron a la vez: la segunda ve que otra ya marcó y NO manda. */
   enBase[0].toques = 0; mandados = []; marcas = []; otraCorridaGano = true;
@@ -180,15 +190,32 @@ console.log('\n== A QUIÉN SE LE ESCRIBE (con plantilla del primer toque) ==');
 }
 
 /* ============================================================ */
-console.log('\n== SIN PLANTILLA NO SALE NADA ==');
+console.log('\n== SIN PLANTILLA Y FUERA DE LA VENTANA: AL CLIENTE NADA, AL DUEÑO EL RESUMEN ==');
 {
   enBase = [
     { numero: '3311111111', cliente: '5213311111111', etapa: 'con_precio', precio_en: iso(AHORA - 25 * H), cliente_en: iso(AHORA - 26 * H), toques: 0 }
   ];
   mandados = []; upserts = [];
   const cuenta = await (await GET(LLAVE)).json();
-  ok('sin WHATSAPP_PLANTILLA_TOQUE1 no se manda', [cuenta.mandados, mandados.length], [0, 0]);
-  ok('  y se cuenta como sin plantilla', cuenta.sinPlantilla, 1);
+  ok('sin WHATSAPP_PLANTILLA_TOQUE1 al cliente no se le manda nada', [cuenta.mandados, mandados.filter((m) => m.cuerpo.to === '523311111111').length], [0, 0]);
+  ok('  se cuenta como «al dueño»', cuenta.alDueno, 1);
+  okQue('  y el dueño recibe el resumen para escribirle él', mandados.length === 1 && mandados[0].cuerpo.to === AL_DUENO && /Seguimiento: escríbeles tú/.test(textoDe(mandados[0])));
+}
+
+/* ============================================================ */
+console.log('\n== A LAS 22 H, CON LA VENTANA ABIERTA, VA TEXTO LIBRE SIN PLANTILLA ==');
+{
+  enBase = [
+    /* Precio hace 22 h; el cliente escribió hace 23: la ventana de 24 h sigue abierta. */
+    { numero: '3355555555', cliente: '5213355555555', etapa: 'con_precio', precio_en: iso(AHORA - 22 * H), cliente_en: iso(AHORA - 23 * H), toques: 0, viaje_datos: { salida: '2026-10-10', destino: 'Puerto Vallarta' } }
+  ];
+  mandados = []; upserts = []; marcas = [];
+  const cuenta = await (await GET(LLAVE)).json();
+  ok('a las 22 h se manda el primero', cuenta.mandados, 1);
+  ok('  como texto libre, no plantilla', mandados[0].cuerpo.type, 'text');
+  ok('  al cliente, no al dueño', mandados[0].cuerpo.to, '523355555555');
+  okQue('  con el texto del primer toque (¿te llegó bien?)', /lleg|ver|cotizaci|duda|sigo/i.test(textoDe(mandados[0])));
+  ok('  y sin costo de plantilla (alDueno 0)', cuenta.alDueno, 0);
 }
 
 /* ============================================================ */

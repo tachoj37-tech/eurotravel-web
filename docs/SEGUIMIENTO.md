@@ -23,7 +23,14 @@ nada que los llamara. Ahora sí.
    pendientes y, para cada una, `api/_seguimiento.js` decide:
    - **Contestó después del precio** → se cierra, no se le escribe.
    - **Avanzó** (dijo que sí, mandó comprobante, ya tiene contrato) → se cierra.
-   - **Le toca** (24 h, 3 d o 7 d desde el precio, y no se ha mandado ese) → se manda.
+   - **Le toca** (22 h, 3 d o 7 d desde el precio, y no se ha mandado ese) → se manda.
+     Desde el 8-sep-2026 («quitamos lo de Meta, es mucho»): el de 22 h cae
+     dentro de la ventana de 24 h del último mensaje del cliente y sale como
+     **texto libre, sin plantilla ni costo**. Los de 3 y 7 días, fuera de la
+     ventana, **no se le mandan al cliente**: el dueño recibe un resumen
+     («📋 Seguimiento: escríbeles tú») con número, viaje y día, y les escribe
+     desde su teléfono, que no paga ventana. Solo si algún día se configuran
+     `WHATSAPP_PLANTILLA_TOQUE2/3`, esos toques vuelven a salir solos.
    - **Es de noche** (9 p.m. a 9 a.m. de Guadalajara) → espera a la mañana.
    - **Pasaron 8 días** → se cierra aunque falte uno. Tres toques y silencio.
    - Si se saltaron dos (cron caído) se manda **solo** el que toca ahora.
@@ -34,21 +41,33 @@ Los textos son los de `api/_recordatorios.js`: el primero no vende
 («¿te llegó bien?»), el segundo abre una duda, el tercero usa la
 aversión a la pérdida una sola vez. Nunca precio, nunca descuento.
 
-## La ventana de 24 horas de Meta: los tres van por plantilla
+## La ventana de 24 horas de Meta: el primero cabe, los otros dos van al dueño
 
 Meta solo deja mandar **texto libre** dentro de las 24 horas siguientes
 al **último mensaje del cliente**. Fuera de esa ventana solo pasan
-**plantillas aprobadas** (Dualhook va por la API de Meta, así que la
-regla es la misma).
+**plantillas aprobadas**, que cuestan unos 4 centavos de dólar cada una
+(Dualhook va por la API de Meta, así que la regla es la misma).
 
-Con toques a 24 h / 3 d / 7 d, el cliente siempre lleva más de 24 horas
-sin escribir cuando le toca uno. Así que **los tres toques salen como
-plantilla**. Sin la plantilla configurada, ese toque **no se manda** y
-queda en el registro:
-`[seguimiento] toque 2 a …1234: la ventana de 24 h de Meta ya cerró y no hay WHATSAPP_PLANTILLA_TOQUE2`.
+Decisión del dueño, 8-sep-2026: **«quitamos lo de Meta, es mucho»** (las
+plantillas eran la mitad del costo mensual del bot). Por eso:
 
-(El código conserva el camino de texto libre por si algún día los
-tiempos vuelven a caber en la ventana; con estos no se usa.)
+- El **primer toque es a las 22 h** del precio, no a las 24: el cliente
+  casi siempre escribió poco antes de recibir el precio, así que la
+  ventana sigue abierta y el toque sale como **texto libre, gratis**.
+- Los de **3 y 7 días** caen fuera de la ventana. Sin plantilla, el bot
+  **no le escribe al cliente**: marca el toque (para no repetirlo) y le
+  manda al dueño **un solo resumen** por corrida del cron, con número,
+  viaje, gente, total y a qué día va cada uno, más dos ideas de texto. El
+  dueño les escribe desde su teléfono, que no paga ventana. En el registro
+  se cuenta como `alDueno`.
+- Si algún día se configuran `WHATSAPP_PLANTILLA_TOQUE2/3`, esos toques
+  vuelven a salir solos como plantilla. `WHATSAPP_PLANTILLA_TOQUE1` no
+  hace falta salvo que el cliente lleve más de un día sin escribir cuando
+  le toque el primero (raro: el precio llega en la misma plática).
+
+Si no hay `DUENO_WHATSAPP`, los toques que le tocaban al dueño quedan
+marcados y se avisa en el registro: `[seguimiento] N toque(s) le tocan al
+dueño pero falta DUENO_WHATSAPP`.
 
 ### Lo que dice la investigación (7-sep-2026)
 
@@ -88,7 +107,11 @@ Lo que ya estaba y se confirma: nunca precio ni descuento en el
 seguimiento, escasez solo real (las fechas sí se llenan), tres toques y
 silencio.
 
-### Las plantillas que hay que crear
+### Las plantillas (opcionales desde el 8-sep-2026)
+
+Ya no hacen falta para que el seguimiento funcione. Quedan documentadas
+por si el dueño algún día prefiere pagarlas para que los toques de 3 y 7
+días salgan solos. La de 24 h que ya creó queda sin uso y no estorba.
 
 En **WhatsApp Manager → Herramientas de la cuenta → Plantillas de
 mensaje → Crear plantilla**. Categoría: **Marketing**. Idioma: **Español
@@ -129,9 +152,9 @@ Cuando Meta las apruebe (minutos a un día), en Vercel:
 | `WHATSAPP_PLANTILLA_IDIOMA` | `es_MX` (es el valor por omisión; solo si Meta la registró con otro código) |
 
 Costo aproximado de una plantilla de marketing en México: unos 4
-centavos de dólar por mensaje. Con 400 cotizaciones al mes y tres
-plantillas por cliente que no contesta, menos de 50 dólares al mes en
-el peor caso.
+centavos de dólar por mensaje. Con 500 conversaciones al mes salían unos
+25 dólares mensuales solo de plantillas; sin ellas el seguimiento cuesta
+cero y el bot queda en la IA y Dualhook.
 
 ## Lo que el dueño tiene que hacer (una vez)
 
@@ -146,7 +169,8 @@ el peor caso.
    ```powershell
    -join ((48..57 + 97..122) | Get-Random -Count 32 | ForEach-Object { [char]$_ })
    ```
-3. **Las plantillas**, como arriba. Sin ellas no sale ningún toque.
+3. **Contestar el resumen.** Cuando le llegue «📋 Seguimiento: escríbeles
+   tú», escribirles desde su teléfono. Las plantillas son opcionales.
 
 ## Cómo saber que está corriendo
 
@@ -154,12 +178,13 @@ En los registros de Vercel (`get_runtime_logs`, query `seguimiento`) cada
 15 minutos aparece una línea:
 
 ```
-[seguimiento] {"revisadas":3,"mandados":1,"cerradas":1,"esperan":1,"sinPlantilla":0}
+[seguimiento] {"revisadas":3,"mandados":1,"cerradas":1,"esperan":1,"sinPlantilla":0,"alDueno":1}
 ```
 
 Si aparece `falta CRON_SECRET`, falta el paso 2. Si aparece
 `la tabla fichas no tiene las columnas del seguimiento`, falta el paso 1.
-Si `sinPlantilla` no es cero, falta el paso 3.
+`alDueno` son los toques que le llegaron al dueño en el resumen para que
+escriba él; `sinPlantilla` ya solo sube si no hay texto para ese toque.
 
 ## Pruebas
 

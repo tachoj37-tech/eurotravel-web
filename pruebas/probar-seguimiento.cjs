@@ -6,15 +6,17 @@
    1 · Que NUNCA se le escriba a quien ya contestó. Dictado del
        dueño: «si el cliente contesta, ya no quiero mensajes
        automáticos».
-   2 · Que sean 24 horas, 3 días y 7 días desde que RECIBIÓ el
-       precio (dictado del 6-sep-2026, segunda vuelta), y que no
-       haya cuarto.
+   2 · Que sean 22 horas, 3 días y 7 días desde que RECIBIÓ el
+       precio (dictado del 6-sep-2026: 24 h / 3 d / 7 d; el 8-sep el
+       primero bajó a 22 h para caber en la ventana de Meta y salir
+       sin plantilla), y que no haya cuarto.
    3 · Que de noche no se mande nada, y que a las 9 de la mañana de
        Guadalajara sí (Vercel corre en UTC: son las 15:00 allá).
    4 · Que si se pasaron dos toques se mande uno solo, el que toca.
    5 · Que la ventana de 24 h de Meta se calcule desde el último
-       mensaje del CLIENTE, no desde el precio. Con estos tiempos
-       casi siempre está cerrada: los toques van por plantilla.
+       mensaje del CLIENTE, no desde el precio. El de 22 h cae
+       dentro (texto libre); los de 3 y 7 días caen fuera y van
+       al dueño, salvo que haya plantilla.
    ------------------------------------------------------------ */
 
 const s = require('../api/_seguimiento.js');
@@ -59,7 +61,9 @@ ok('03:00 UTC son las 9 p.m.: ya no', s.esHoraDeEscribir(Date.parse('2026-09-08T
 /* ============================================================ */
 titulo('los tiempos');
 
-ok('son 24 h, 3 días y 7 días', s.HORAS, [24, 72, 168]);
+/* 8-sep-2026: el primero a las 22 h, para caer dentro de la ventana de 24 h
+   y salir como texto libre sin plantilla («quitamos lo de Meta»). */
+ok('son 22 h, 3 días y 7 días', s.HORAS, [22, 72, 168]);
 ok('y son los mismos que conoce _recordatorios', s.HORAS, r.A_LAS_HORAS);
 ok('se cierra a los 8 días', s.TOPE_MS / D, 8);
 
@@ -68,8 +72,10 @@ titulo('a quién le toca');
 
 ok('sin precio no hay nada', s.decide({ cliente: 'x', etapa: 'con_precio' }, DIA).toque, 0);
 ok('a las 4 horas, todavía no', s.decide(ficha({ precioEn: DIA - 4 * H, clienteEn: DIA - 5 * H }), DIA), { toque: 0, motivo: 'aún no' });
-ok('a las 23:59, todavía no', s.decide(ficha({ precioEn: DIA - 24 * H + 60000 }), DIA).toque, 0);
-ok('a las 24 en punto, el primero', s.decide(ficha({ precioEn: DIA - 24 * H }), DIA).toque, 1);
+ok('a las 21:59, todavía no', s.decide(ficha({ precioEn: DIA - 22 * H + 60000 }), DIA).toque, 0);
+ok('a las 22 en punto, el primero', s.decide(ficha({ precioEn: DIA - 22 * H }), DIA).toque, 1);
+ok('  y con el cliente escribiendo 23 h antes, la ventana sigue abierta: texto libre',
+  s.decide(ficha({ precioEn: DIA - 22 * H, clienteEn: DIA - 23 * H }), DIA).ventanaAbierta, true);
 ok('a las 25, el primero (y la ventana ya cerró: va por plantilla)',
   s.decide(ficha(), DIA), { toque: 1, motivo: 'toca', ventanaAbierta: false });
 ok('con el primero ya mandado, a las 25 nada', s.decide(ficha({ toques: 1 }), DIA).toque, 0);

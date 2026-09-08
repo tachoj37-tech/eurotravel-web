@@ -40,8 +40,14 @@
 
 const HORA_MS = 60 * 60 * 1000;
 
-/* A cuántas horas del precio va cada toque: 24 h, 3 días, 7 días. */
-const HORAS = [24, 72, 168];
+/* A cuántas horas del precio va cada toque: 22 h, 3 días, 7 días.
+   El primero a las 22 y no a las 24 (dictado del dueño, 8-sep-2026:
+   «quitamos lo de Meta, es mucho»): así cae DENTRO de la ventana de 24 h
+   del último mensaje del cliente y sale como texto libre, sin plantilla
+   ni costo. Los de 3 y 7 días, fuera de la ventana, no se le mandan al
+   cliente: se le avisa al dueño para que le escriba él desde su teléfono
+   (gratis), salvo que haya plantillas configuradas. */
+const HORAS = [22, 72, 168];
 /* Después de esto ya no se manda nada, aunque falte un toque: 8 días. */
 const TOPE_MS = 192 * HORA_MS;
 /* La ventana de Meta, con media hora de margen. */

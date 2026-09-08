@@ -7,7 +7,6 @@ cada vez que algo se cierra.
 
 | # | Qué | Cómo | Cómo se comprueba |
 |---|---|---|---|
-| 2 | **Tres plantillas en Meta** | WhatsApp Manager → Plantillas → Crear: `seguimiento_24h`, `seguimiento_3d`, `seguimiento_7d`, Marketing, Español (MEX), una variable `{{1}}` con muestra «tu viaje a Puerto Vallarta». Textos exactos en `docs/SEGUIMIENTO.md`. Al aprobarse: `WHATSAPP_PLANTILLA_TOQUE1/2/3` en Vercel + Redeploy | El registro deja de decir «no hay WHATSAPP_PLANTILLA_TOQUEn» y `mandados` sube |
 | 20 | **Correr los tres bloques del 8-SEP de `docs/ALMACEN.sql`** (tabla `vistos`, tabla `turnos`, columna `fichas.fotos`) | Supabase → SQL Editor → pegar el archivo completo otra vez | Sin ellos: un reintento de Meta puede contestar dos veces; el registro por turno solo queda en Vercel; las fotos vistas solo viven en la plática |
 | 21 | **Fundir la rama `fix/memoria-agente` a `main`** (reparación dirigida, 6 commits, sección H de la auditoría) | Decirme «fúndela» o hacerlo tú en GitHub | Se despliega solo; luego `npm run reparacion` y las 8 pruebas de humo |
 | 23 | **Correr las cinco conversaciones con el modelo real** (`scripts/conversar.mjs`) | En PowerShell: `$env:ANTHROPIC_API_KEY="tu llave"; node scripts/conversar.mjs` (cuesta menos de $0.30) | Pegarme las transcripciones y marcar dónde todavía suena a guion |
@@ -45,7 +44,7 @@ revisa en **Vercel → eurotravel-web → Settings → Environment Variables
 | ✅ | **`GROQ_API_KEY`** | El lector de notas de voz (puesta el 8-sep-2026) | Se confirma con la nota de voz de las pruebas de humo |
 | ⬜ | **`GOOGLE_ROUTES_KEY`** | Los destinos que no están en la lista se cotizan por kilómetros con Google | Cotiza un destino raro (p. ej. «Zacatecas»); si el ticket llega sin precio calculado y el registro dice «no se pudo cotizar», falta |
 | ✅ | **`CRON_SECRET`** | El seguimiento (puesta el 8-sep-2026; el cron corre desde las 04:45 con `{"revisadas":…}`) | `[seguimiento] {…}` cada 15 min |
-| ⬜ | **`WHATSAPP_PLANTILLA_TOQUE1/2/3`** | Los tres avisos | Cuando Meta apruebe las plantillas |
+| — | `WHATSAPP_PLANTILLA_TOQUE1/2/3` | **Ya no hacen falta** (8-sep-2026: «quitamos lo de Meta»). El toque de 22 h sale como texto libre; los de 3 y 7 días te llegan a ti en un resumen para que escribas desde tu teléfono | Opcional: si algún día las configuras, esos toques vuelven a salir solos |
 | ⬜ | `ESPIAR` (opcional) | Que te llegue copia de lo que el bot le dice a cada cliente, en vivo, los primeros días | Ponla en `1` la primera semana y quítala después |
 
 ### Cuentas y datos
@@ -54,7 +53,7 @@ revisa en **Vercel → eurotravel-web → Settings → Environment Variables
 |---|---|---|
 | ✅ | El número real conectado por Dualhook (pagado, 12 €/mes) | Dualhook |
 | ✅ | El SQL del almacén corrido | Supabase, proyecto del bot |
-| ⬜ | Las tres plantillas aprobadas por Meta | WhatsApp Manager → Plantillas |
+| — | Plantillas de Meta | Ya no hacen falta (8-sep-2026); la de 24 h que creaste queda sin uso, no estorba |
 | ⬜ | Perfil de WhatsApp Business completo: foto, nombre, descripción, dirección, horario, sitio | WhatsApp Business → Perfil de empresa |
 | ✅ | Teléfono de guardia: 33 1915 3931, su personal (8-sep-2026) | `datos-bot.json` |
 | ✅ | Prueba social y seguridad en `datos-bot.json`: rutas Vallarta/Mazatlán/CDMX/Tequila, GPS real, permiso no se menciona, años solo de i6S (2023), i6 (2017) y G8 (2026), choferes «con experiencia» (8-sep-2026) | `datos-bot.json`, `_agente.js`, `_psicologia.js` |
@@ -87,6 +86,10 @@ Cuando las ocho pasen, se anuncia el número.
 
 ## Hecho el 8-sep-2026 (madrugada)
 
+**Seguimiento sin plantillas de Meta** («quitamos lo de Meta, es mucho»):
+el primer toque baja a 22 h y sale como texto libre gratis; los de 3 y 7
+días le llegan al dueño en un resumen para que escriba él desde su
+teléfono. Costo mensual estimado con 500 conversaciones: de ~60 a ~35 USD.
 Columna del relevo corrida; `CRON_SECRET` y `GROQ_API_KEY` en Vercel con
 Redeploy (el cron ya corre); plantilla `seguimiento_24h` creada en Meta (las
 otras dos mañana); las plantillas no ofrecen «stop»: el bot detecta el «ya

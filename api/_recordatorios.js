@@ -224,7 +224,9 @@ function recordatorio(toque, opciones) {
 /* Los tiempos, en horas, contados desde que el cliente RECIBIÓ el
    precio: 24 h, 3 días, 7 días. Dictado del dueño el 6-sep-2026 (antes
    fueron 1/24/72 y 4/24/72). Quien los aplica es `_seguimiento.js`. */
-const A_LAS_HORAS = [24, 72, 168];
+/* 22 h (dentro de la ventana de 24 h de Meta: texto libre, sin plantilla),
+   3 días y 7 días (esos van al dueño si no hay plantilla). 8-sep-2026. */
+const A_LAS_HORAS = [22, 72, 168];
 
 module.exports = {
   recordatorio, variante, revuelve, A_LAS_HORAS,
