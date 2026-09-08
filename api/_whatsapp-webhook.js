@@ -724,6 +724,18 @@ function procesa(crudo, firma, entorno) {
     const cambios = entradas[i].changes || [];
     for (let j = 0; j < cambios.length; j++) {
       const valor = (cambios[j] && cambios[j].value) || {};
+      /* Para saber si Dualhook nos avisa de lo que el DUEÑO escribe desde
+         el teléfono del negocio (los «ecos»): si llega un campo que no
+         sea `messages`, o llaves que no conocemos, se apunta sin
+         contenido. Con eso se decide si el relevo puede ser automático
+         (7-sep-2026). */
+      const campo = cambios[j] && cambios[j].field;
+      const llavesRaras = Object.keys(valor).filter(function (k) {
+        return ['messaging_product', 'metadata', 'contacts', 'messages', 'statuses', 'errors'].indexOf(k) < 0;
+      });
+      if ((campo && campo !== 'messages') || llavesRaras.length) {
+        console.log('[aviso] campo=' + (campo || '?') + ' llaves=' + Object.keys(valor).join(','));
+      }
 
       /* Los acuses de entrega («entregado», «leído») llegan por aquí
          mismo y NO son mensajes. Contestarlos sería escribirle al
