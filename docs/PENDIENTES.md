@@ -87,7 +87,13 @@ Columna del relevo corrida; `CRON_SECRET` y `GROQ_API_KEY` en Vercel con
 Redeploy (el cron ya corre); plantilla `seguimiento_24h` creada en Meta (las
 otras dos mañana); las plantillas no ofrecen «stop»: el bot detecta el «ya
 no» del cliente; teléfono de guardia, base de la cancelación (sobre el
-total) y prueba social dictados y guardados.
+total) y prueba social dictados y guardados. `DUENO_WHATSAPP` apuntando a su
+personal. Primera prueba de humo real: el almacén se cayó por una llave mal
+pegada (arreglado por él); «entre 20 cuánto sería» ahora lo contesta el
+motor con el reparto por persona; con el precio ya no se repite la foto ni
+lleva pie (sección F de la auditoría). Anuncios para Meta Ads en
+`docs/ANUNCIOS.md` e `img/anuncios/` (Higgsfield sin créditos: quedan
+pendientes las versiones generadas).
 
 ## Hecho el 7-sep-2026 (para no volver a preguntarlo)
 

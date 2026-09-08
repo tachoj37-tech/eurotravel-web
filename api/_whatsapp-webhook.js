@@ -1529,6 +1529,9 @@ function procesa(crudo, firma, entorno) {
           /* El texto ENTERO, no el recortado de `escribio`: la IA tiene
              que leer lo mismo que escribió el cliente. */
           crudoDelCliente: (r.noEntendio || r.datosDelContrato || siempreIA(env) || r.agente) ? texto : null,
+          /* Siempre, con o sin IA: el motor lo necesita para lo que decide
+             él solo (el reparto por persona después del precio). */
+          textoDelCliente: texto || null,
           /* Y la otra puerta a la IA: los datos del contrato, donde entra
              SIEMPRE. Va con lo que ya se tenía, para que lo nuevo se
              junte con lo viejo en vez de reemplazarlo. */

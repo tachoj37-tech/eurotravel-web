@@ -130,10 +130,11 @@ titulo('la plática de un cliente real, ahora con el agente');
   okQue('con todo junto, el motor cotiza: el cliente recibe la espera (compuerta)', /en breve te paso tu cotizaci/i.test(alCliente));
   /* «No me pidió unidad, el cliente no sabe en qué lo llevan» (7-sep-2026). */
   okQue('  y la espera le dice en qué lo llevan (Sprinter para 12)', /Ser[ií]an en Sprinter para 12/.test(alCliente));
-  /* Efecto dotación: con la espera va la foto de la unidad que le tocaría. */
+  /* Efecto dotación: con la espera va la foto de la unidad. Sin pie: el
+     dueño quitó el «ésta es la que les tocaría» el 8-sep-2026. */
   const fotosAlCliente = mandados.filter((m) => mismo(m.to, C) && m.image && m.image.link);
-  okQue('  y con la espera va la foto de la Sprinter («ésta es la que les tocaría»)',
-    fotosAlCliente.some((m) => /sprinter/i.test(m.image.link) && /les tocar[ií]a/.test(m.image.caption || '')));
+  okQue('  y con la espera va la foto de la Sprinter, sin pie',
+    fotosAlCliente.some((m) => /sprinter/i.test(m.image.link) && !m.image.caption));
   const instrucciones = JSON.stringify(sistemasVistos[sistemasVistos.length - 1] || []);
   okQue('  la IA sabe que para Tequila/Chapala pregunta «¿Es ida y vuelta el mismo día?»', /Es ida y vuelta el mismo d[ií]a/.test(instrucciones));
   okQue('  y que nombra la unidad en el mismo mensaje en que le dicen cuántos', /EN EL MISMO MENSAJE/.test(instrucciones));
@@ -516,6 +517,37 @@ titulo('con el agente apagado, todo sigue como antes');
   await dice('hola', C);
   okQue('AGENTE_IA=0: contesta el guion', /Eurotravel/.test(textos(C).join('\n')) && !/NO DEBERÍA/.test(textos(C).join('\n')));
   process.env.AGENTE_IA = '1';
+}
+
+/* ============================================================ */
+titulo('si ya pidió fotos de la unidad, con el precio no se le repite la foto (8-sep-2026)');
+{
+  limpia();
+  const C = '5213366670222';
+  laIA = function (t) {
+    if (/tequila/i.test(t)) return { respuesta: 'Tequila, va. ¿Qué día salen?', datos: { destino: 'Tequila' }, accion: 'seguir' };
+    if (/20 de septiembre/i.test(t)) return { respuesta: '¿Es ida y vuelta el mismo día?', datos: { salida: '2026-09-20' }, accion: 'seguir' };
+    if (/^s[ií], mismo/i.test(t)) return { respuesta: 'Listo. ¿Como cuántos van?', datos: { regreso: '2026-09-20' }, accion: 'seguir' };
+    if (/somos 15/i.test(t)) return { respuesta: 'Para 15 la unidad es la Sprinter. ¿Salen de la zona metropolitana de Guadalajara?', datos: { gente: 15 }, accion: 'seguir' };
+    if (/fotos/i.test(t)) return { respuesta: null, datos: {}, accion: 'fotos', unidadPedida: 'sprinter' };
+    if (/^s[ií]$/i.test(t)) return { respuesta: null, datos: { origen: 'Guadalajara' }, accion: 'cotizar' };
+    return null;
+  };
+  await dice('vamos a tequila', C);
+  await dice('el 20 de septiembre', C);
+  await dice('sí, mismo día', C);
+  await dice('somos 15', C);
+  await dice('tienes fotos de la sprinter?', C);
+  const fotosPedidas = mandados.filter((m) => mismo(m.to, C) && m.image && m.image.link).length;
+  okQue('al pedir fotos llegan fotos de la Sprinter', fotosPedidas >= 1);
+  okQue('  y la plática recuerda que ya las vio', ((webhook.charlaDe(C) || {}).fotosVistas || []).indexOf('sprinter') >= 0);
+  const antesDelPrecio = mandados.length;
+  await dice('sí', C);
+  const alCliente = textos(C).slice(-2).join('\n');
+  okQue('con todo, llega la espera del precio', /en breve te paso tu cotizaci/i.test(alCliente));
+  const fotosConElPrecio = mandados.slice(antesDelPrecio).filter((m) => mismo(m.to, C) && m.image && m.image.link).length;
+  ok('  y con el precio NO va otra vez la foto', fotosConElPrecio, 0);
+  okQue('  y ningún mensaje dice «ésta es la que les tocaría»', !/les tocar[ií]a/.test(textos(C).join('\n')));
 }
 
 /* ============================================================ */

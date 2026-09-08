@@ -495,6 +495,32 @@ function idDelUltimoTicket() {
   okQue('  y no le llegó la palabra «va»', !/^va$/m.test(despues));
   okQue('  el bot no se calló con ese cliente', !webhook.iaCallada ? true : !webhook.iaCallada(C));
 
+  /* 2b · «¿y entre 20 cuánto sería?»: el reparto lo hace el motor, con el
+     mismo total (8-sep-2026: la IA lo leía como «quiero apartar»). */
+  mandados = [];
+  await dice('entre 20 cuánto sería?', C);
+  const reparto = textos(C).join('\n');
+  okQue('«entre 20» contesta el reparto por persona', /Entre 20 sale a \*\$[\d,]+ por persona\*/.test(reparto));
+  okQue('  con el mismo total', /El total es el mismo, \*\$[\d,]+\*/.test(reparto));
+  okQue('  dice hasta cuántos caben en la Sprinter', /Sprinter es hasta 20/.test(reparto));
+  okQue('  y NO dice «te la aparto» como si hubiera dicho que sí', !/Va, te la aparto/.test(reparto));
+  okQue('  y cierra preguntando si la aparta', /¿Te la aparto\?/.test(reparto));
+  ok('  al dueño no le llegó nada nuevo', textos(DUENO).length, 0);
+  /* La ficha ahora dice 20, para el contrato. */
+  const tk = (await import(pathToFileURL(path.join(RAIZ, 'api', '_tickets.js')).href)).default;
+  okQue('  la ficha quedó con 20 personas', (tk.fichaDe(C).viajeDatos || {}).gente === 20);
+  /* Y si el grupo ya no cabe: otra cotización, con el viaje ya sabido. */
+  mandados = [];
+  await dice('y si somos 30?', C);
+  const treinta = textos(C).join('\n');
+  okQue('«si somos 30»: ya no caben en la Sprinter, es otra cotización', /ya no caben en Sprinter \(es hasta 20\)/.test(treinta) && /otra cotización/.test(treinta));
+  okQue('  y la plática arranca con el viaje sabido y 30 personas', (webhook.charlaDe(C) || {}).gente === 30 && /Chapala/i.test((webhook.charlaDe(C) || {}).destino || ''));
+  webhook.guardaCharla(C, null);
+  /* Una fecha no es gente: «para el 20 de octubre» no reparte nada. */
+  mandados = [];
+  await dice('y para el 20 de octubre?', C);
+  okQue('«para el 20 de octubre» no se toma como 20 personas', !/por persona/.test(textos(C).join('\n')));
+
   /* 3 · Y ya no queda nada por confirmar: un segundo «va» es texto normal
      del dueño —se pasa literal, como cualquier palabra suya— y NO manda el
      precio dos veces. (Primero se escribió esperando el aviso de «ya no

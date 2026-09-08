@@ -356,12 +356,14 @@ async function precioDe(envio, opciones) {
        7-sep-2026. Solo si se sabe cuál unidad es; un autobús sin escoger
        no se enseña, para no enseñarle uno que no será. */
     const fotoDeLaUnidad = fotoParaLaEspera(res.unidadNombre || res.unidad || unidad);
-    if (fotoDeLaUnidad) {
+    /* Sin pie, y no si ya pidió fotos de esa unidad en esta plática
+       (`sinFoto`): dictado del dueño, 8-sep-2026. */
+    if (fotoDeLaUnidad && !envio.sinFoto) {
       mios.push({
         numeroDeOrigen: envio.numeroDeOrigen,
         para: envio.para,
         ligaDeFoto: fotoDeLaUnidad,
-        texto: 'Ésta es la que les tocaría 🚐',
+        texto: '',
         pasaAPersona: false,
         escribio: '[precio por confirmar · foto]'
       });
@@ -535,12 +537,14 @@ async function precioDe(envio, opciones) {
      ------------------------------------------------------------ */
   const sitio = String(process.env.SITIO_URL || '').replace(/\/+$/, '');
   const foto = salida.medios && salida.medios.fotos && salida.medios.fotos[0];
-  if (sitio && foto && precio && typeof precio.total === 'number') {
+  /* Sin pie (dictado del dueño, 8-sep-2026: «nomás mándale la foto»), y
+     no se manda si ya la vio en esta plática (`sinFoto`). */
+  if (sitio && foto && precio && typeof precio.total === 'number' && !envio.sinFoto) {
     mios.push({
       numeroDeOrigen: envio.numeroDeOrigen,
       para: envio.para,
       ligaDeFoto: sitio + '/' + foto,
-      texto: 'Ésta es la que les tocaría 👆',
+      texto: '',
       pasaAPersona: false,
       escribio: '[foto de la unidad]'
     });
@@ -1212,6 +1216,64 @@ function sinAutobusesQueNoCaben(respuesta, estado) {
 
 /* Qué viaje de la ficha ya está en precio: pedido (espera el «va» del
    dueño) o dado. En una línea, sin cifras: la IA no debe repetir montos. */
+/* ------------------------------------------------------------
+   «¿Y ENTRE 20?» · EL REPARTO POR PERSONA LO HACE EL MOTOR
+   ------------------------------------------------------------
+   Con el precio ya dado, el cliente pregunta cuánto sale entre otro
+   número de personas. El total no cambia (se cobra por unidad, no por
+   cabeza); cambia la cuenta. Si el grupo nuevo ya no cabe en la unidad,
+   no es una cuenta: es otra cotización, y se le ofrece.
+
+   Solo mensajes cortos con un número y una palabra de grupo; una fecha
+   («para el 20») no es gente. Y solo si NO va otro viaje en la plática.
+   ------------------------------------------------------------ */
+const PIDE_REPARTO = /\b(?:entre|si\s+somos|si\s+fu[eé]ramos|si\s+vamos|somos|para|con|de)\s+(\d{1,3})\b|\b(\d{1,3})\s+(?:personas|pax|gentes?|pasajeros)\b/i;
+const ETAPAS_CON_PRECIO = ['con_precio', 'va_a_apartar', 'mando_comprobante', 'datos_del_contrato', 'contrato_listo'];
+
+function unidadDelCatalogo(x) {
+  const clave = String(x || '').trim().toLowerCase();
+  if (!clave) return null;
+  return (conversacion.UNIDADES || []).find(function (u) {
+    return String(u.id).toLowerCase() === clave || String(u.name || '').toLowerCase() === clave;
+  }) || null;
+}
+
+function repartoPorPersona(texto, cliente, ficha, antes) {
+  const t = String(texto || '').trim();
+  if (!ficha || !ficha.viajeDatos || typeof ficha.total !== 'number' || ficha.total <= 0) return null;
+  if (ETAPAS_CON_PRECIO.indexOf(ficha.etapa) < 0) return null;
+  if (antes && (antes.destino || antes.salida)) return null;
+  if (t.length > 70) return null;
+  const m = t.match(PIDE_REPARTO);
+  if (!m) return null;
+  const n = Number(m[1] || m[2]);
+  if (!n || n < 2 || n > 120) return null;
+  const hablaDeGente = /persona|pax|gente|pasajero|somos|entre|fu[eé]ramos/i.test(t);
+  if (!hablaDeGente && /\b(el|del|d[ií]a)\s+\d{1,3}\b|\b\d{1,3}\s+de\s+[a-záéíóú]/i.test(t)) return null;
+  if (!hablaDeGente && !/cu[aá]nto|sale|saldr[ií]a|ser[ií]a|cuesta|costar[ií]a|queda/i.test(t)) return null;
+  const v = ficha.viajeDatos;
+  const unidad = unidadDelCatalogo(v.unidad);
+  const max = unidad ? Number(unidad.max) : 0;
+  const nombre = unidad ? unidad.name : String(v.unidad || 'la unidad');
+  const pesos = function (x) { return '$' + Math.round(x).toLocaleString('en-US'); };
+  if (max && n > max) {
+    return {
+      texto: 'Para ' + n + ' ya no caben en ' + nombre + ' (es hasta ' + max + '). Para ese grupo va autobús y es ' +
+        'otra cotización; ¿te la saco para ' + n + '?',
+      /* La plática arranca con el viaje ya sabido y la gente nueva: al «sí»
+         solo falta escoger autobús. */
+      estado: { destino: v.destino, origen: v.origen, salida: v.salida, regreso: v.regreso, gente: n }
+    };
+  }
+  const porPersona = Math.ceil(ficha.total / n / 10) * 10;
+  tickets.anotaEtapa(cliente, ficha.etapa, { viajeDatos: Object.assign({}, v, { gente: n }) }, Date.now());
+  return {
+    texto: 'Entre ' + n + ' sale a *' + pesos(porPersona) + ' por persona*. El total es el mismo, *' + pesos(ficha.total) +
+      '*' + (max ? ' (' + nombre + ' es hasta ' + max + ')' : '') + '. ¿Te la aparto?',
+    estado: null
+  };
+}
+
 function viajeConPrecio(ficha) {
   if (!ficha) return null;
   const pedido = ficha.porConfirmar && ficha.porConfirmar.resumen;
@@ -1345,6 +1407,12 @@ async function loQueDiceElAgente(envio) {
       : '¿Te saco el precio?');
     await manda({ numeroDeOrigen: envio.numeroDeOrigen, para: cliente, texto: remate, pasaAPersona: false, escribio: '[agente]' });
     agente.recuerda(cliente, 'bot', pie + ' ' + remate);
+    /* La plática recuerda de qué unidad ya vio fotos: con el precio no se
+       le vuelve a mandar la misma (dictado del dueño, 8-sep-2026). */
+    const vistas = Array.isArray(nuevo.fotosVistas) ? nuevo.fotosVistas.slice() : [];
+    if (vistas.indexOf(nombre) < 0) vistas.push(nombre);
+    nuevo.fotosVistas = vistas;
+    webhook.guardaCharla(cliente, nuevo);
     return true;
   }
 
@@ -1395,9 +1463,13 @@ async function loQueDiceElAgente(envio) {
          pierde: queda en la ficha (`porConfirmar`, `viajeDatos`) y de ahí
          se le cuenta a la IA como contexto. */
       webhook.guardaCharla(cliente, (r && r.estado) ? r.estado : null);
+      /* Si ya pidió fotos de esa unidad en esta plática, con el precio no
+         se le repite la foto (dictado del dueño, 8-sep-2026). */
+      const unidadCotizada = unidadDelCatalogo(nuevo.unidadId || nuevo.unidadNombre || resumen.unidad || nuevo.unidad);
+      const yaVioFotos = Array.isArray(nuevo.fotosVistas) && !!unidadCotizada && nuevo.fotosVistas.indexOf(unidadCotizada.id) >= 0;
       const salidas = await precioDe({
         numeroDeOrigen: envio.numeroDeOrigen, para: cliente,
-        cotiza: (r && r.cotiza) || null, resumen: resumen
+        cotiza: (r && r.cotiza) || null, resumen: resumen, sinFoto: yaVioFotos
       });
       for (const s of salidas) await manda(s);
       const alCliente = salidas.find(function (s) { return s.para === cliente; });
@@ -1467,6 +1539,23 @@ async function loQueDiceElAgente(envio) {
 }
 
 async function reparte(envio) {
+  /* «¿Y entre 20 cuánto sería?» después del precio: el reparto por persona
+     lo hace el MOTOR, con o sin IA. La IA no puede decir cifras (DINERO) y
+     el 8-sep-2026 leyó esa pregunta como «quiero apartar». Mismo total,
+     otra cuenta; si ya no caben en la unidad, es otra cotización. */
+  if (envio.textoDelCliente && envio.para) {
+    const reparto = repartoPorPersona(envio.textoDelCliente, envio.para, tickets.fichaDe(envio.para), envio.estadoAntes);
+    if (reparto) {
+      await manda({ numeroDeOrigen: envio.numeroDeOrigen, para: envio.para, texto: reparto.texto,
+        pasaAPersona: false, escribio: '[reparto por persona]' });
+      agente.recuerda(envio.para, 'cliente', envio.textoDelCliente);
+      agente.recuerda(envio.para, 'bot', reparto.texto);
+      /* Lo que el guion haya decidido de este mensaje se descarta: la
+         plática queda como la deja el reparto (nada, o el viaje nuevo). */
+      webhook.guardaCharla(envio.para, reparto.estado || null);
+      return;
+    }
+  }
   if (envio.agente && envio.crudoDelCliente) {
     if (await loQueDiceElAgente(envio)) return;
   }
@@ -1915,7 +2004,7 @@ async function manda(envio) {
           : envio.ligaDeFoto
           ? {
               type: 'image',
-              image: { link: envio.ligaDeFoto, caption: envio.texto }
+              image: Object.assign({ link: envio.ligaDeFoto }, envio.texto ? { caption: envio.texto } : {})
             }
           : {
               type: 'text',

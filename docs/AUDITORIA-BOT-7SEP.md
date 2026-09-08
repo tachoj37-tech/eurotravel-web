@@ -129,6 +129,18 @@ Limpio según el revisor: ningún `esTicket` va a un cliente (16 puntos
 comprobados), el remate de fotos, `sacaJSON`, `reinyectaAlGuion`, los
 textos de `_seguimiento.js` y `_recordatorios.js`.
 
+## F · Prueba de humo del dueño (8-sep-2026, madrugada)
+
+Primera cotización real desde el tercer teléfono, con el número personal
+del dueño recibiendo tickets.
+
+| # | Grav. | Qué vio | Causa | Estado |
+|---|---|---|---|---|
+| F1 | CRÍTICO | Después de pedir fotos, el bot volvió a preguntar «¿a dónde van?» y todos los datos; y el ticket no le llegó al personal. | El Redeploy de las 05:24 dejó `ALMACEN_CLAVE` inválida (401 en cada llamada): sin almacén, cada mensaje cae en una instancia sin memoria. El ticket se fue al `DUENO_WHATSAPP` viejo. | **Corregido por el dueño** (llave nueva `sb_secret_` y su número). No es código. |
+| F2 | ALTO | Con el precio dado, «entre 20 cuánto sería?» → «Va, te la aparto». | La IA leyó la pregunta como «apartar»; y aunque hubiera contestado, no puede decir cifras (`DINERO`). | **Resuelto**: el reparto por persona lo hace el motor antes de la IA (`repartoPorPersona` en whatsapp.mjs), con el mismo total; si el grupo ya no cabe en la unidad, ofrece otra cotización con el viaje ya sabido. Una fecha («para el 20 de octubre») no cuenta como gente. |
+| F3 | MEDIO | Con el precio llegó otra vez la foto de la Sprinter, con «Ésta es la que les tocaría», aunque ya había pedido fotos. | El precio no sabía qué fotos ya se mandaron. | **Resuelto**: la plática recuerda `fotosVistas`; con el precio (y con la espera) no se repite la foto de esa unidad, y la foto va sin pie. |
+| F4 | BAJO | «¿Te la aparto, Peueba?» | Es el nombre del perfil de WhatsApp del teléfono de prueba; el filtro deja pasar cualquier palabra de letras. | Sin cambio: con un cliente real es su nombre. Si el dueño prefiere no usar el nombre del perfil, se quita en una línea. |
+
 ## Fases para arreglarlo
 
 Cada fase termina con la suite completa en verde y en producción. Se
