@@ -171,6 +171,7 @@ async function guardaFicha(ficha) {
      para que «bot» sí borre el «yo» en la base. */
   if (!columnaFaltante.en_manos_de) fila.en_manos_de = ficha.enManosDe || null;
   if (ficha.viajeDatos) fila.viaje_datos = ficha.viajeDatos;
+  if (Array.isArray(ficha.fotos) && ficha.fotos.length && !columnaFaltante.fotos) fila.fotos = ficha.fotos;
   if (ficha.contratoSubido) fila.contrato_subido = ficha.contratoSubido;
   /* El seguimiento (6-sep-2026): cuándo recibió el precio, cuántos
      toques van y cuándo escribió él por última vez. Van solo cuando hay
@@ -249,6 +250,7 @@ function deLaFila(f) {
     contratoAvisado: !!f.contrato_avisado,
     porConfirmar: f.por_confirmar || null,
     viajeDatos: f.viaje_datos || null,
+    fotos: Array.isArray(f.fotos) ? f.fotos : [],
     contratoSubido: f.contrato_subido || null,
     precioEn: f.precio_en ? Date.parse(f.precio_en) : null,
     toques: Number(f.toques) || 0,

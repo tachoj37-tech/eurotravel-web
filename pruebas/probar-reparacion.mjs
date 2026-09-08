@@ -134,5 +134,67 @@ titulo('R1b · los cuatro datos en un solo mensaje: al siguiente turno, nada rep
   okQue('  el bloque de estado del último turno trae los cuatro datos', /Nombre: Mariana/.test(p.dinamico) && /Destino: Puerto Vallarta/.test(p.dinamico) && /Salida: 2026-10-20/.test(p.dinamico) && /Pasajeros: 18/.test(p.dinamico));
 }
 
+/* ============================================================ */
+titulo('R2 · pedir foto, recibirla, «apártamelo»: cero fotos repetidas (Falla 2)');
+{
+  limpia();
+  const C = '5213366670403';
+  tk.anotaEtapa(C, 'con_precio', { total: 7000, anticipo: 1500,
+    viajeDatos: { origen: 'Guadalajara', destino: 'Tequila', salida: '2026-09-20', regreso: '2026-09-20', gente: 15, unidad: 'Sprinter' } }, Date.now());
+  process.env.CLABE = '012345678901234567';
+  laIA = function (t) {
+    if (/fotos/i.test(t)) return { respuesta: null, datos: {}, accion: 'fotos', unidadPedida: 'sprinter' };
+    return { respuesta: 'Va 🙌', datos: {}, accion: 'seguir' };
+  };
+  const fotosA = (desde) => mandados.slice(desde).filter((m) => mismo(m.to, C) && m.image && m.image.link).length;
+  await dice('mándame fotos de la sprinter', C);
+  okQue('al pedir fotos llegan (hasta 3)', fotosA(0) >= 1 && fotosA(0) <= 3);
+  const antes1 = mandados.length;
+  await dice('apártamela', C);
+  ok('con «apártamela» NO va ninguna foto de la unidad', mandados.slice(antes1).filter((m) => mismo(m.to, C) && m.image && /sprinter/i.test(m.image.link || '')).length, 0);
+  okQue('  y sí van el anticipo y la CLABE', /de anticipo/.test(textos(C).slice(antes1).join('\n')) && textos(C).indexOf('012345678901234567') >= 0);
+  const antes2 = mandados.length;
+  await dice('mándame las fotos', C);
+  ok('si vuelve a pedir las mismas fotos, no se repiten', fotosA(antes2), 0);
+  okQue('  se le dice que van arriba', /van arriba/.test(textos(C).slice(-1)[0] || ''));
+  const antes3 = mandados.length;
+  await dice('no me llegaron las fotos, mándamelas otra vez', C);
+  okQue('  pero si dice que no le llegaron, sí se mandan de nuevo', fotosA(antes3) >= 1);
+  okQue('el historial del agente registra la acción', agente.historialDe(C).some((t) => /\[Acción: envié \d fotos/.test(t.texto)));
+  delete process.env.CLABE;
+}
+
+/* ============================================================ */
+titulo('R4 · el mismo webhook tres veces: una sola respuesta (Falla 2)');
+{
+  limpia();
+  const C = '5213366670404';
+  laIA = () => ({ respuesta: '¡Qué tal! ¿A dónde va el plan?', datos: {}, accion: 'seguir' });
+  const cuerpo = JSON.stringify({ entry: [{ changes: [{ value: { metadata: { phone_number_id: '111' },
+    messages: [{ id: 'wamid.repetido-r4', from: C, type: 'text', text: { body: 'hola' } }] } }] }] });
+  for (let i = 0; i < 3; i++) {
+    await atiende(new Request('https://x/api/whatsapp', { method: 'POST', body: cuerpo, headers: { 'x-hub-signature-256': firma(cuerpo) } }));
+  }
+  ok('tres entregas del mismo wamid → una sola respuesta al cliente', textos(C).length, 1);
+  ok('  y una sola llamada a la IA', llamadasALaIA, 1);
+}
+
+/* ============================================================ */
+titulo('R5 · tres mensajes seguidos en un aviso: un solo turno (Falla 2)');
+{
+  limpia();
+  const C = '5213366670405';
+  laIA = (t) => ({ respuesta: 'Vallarta del 20 con 18, va. ¿Regresan el mismo día?', datos: { destino: 'Puerto Vallarta', salida: '2026-10-20', gente: 18 }, accion: 'seguir' });
+  const cuerpo = JSON.stringify({ entry: [{ changes: [{ value: { metadata: { phone_number_id: '111' },
+    messages: [
+      { id: 'wamid.r5-1', from: C, type: 'text', text: { body: 'a vallarta' } },
+      { id: 'wamid.r5-2', from: C, type: 'text', text: { body: 'el 20 de octubre' } },
+      { id: 'wamid.r5-3', from: C, type: 'text', text: { body: 'somos 18' } }
+    ] } }] }] });
+  await atiende(new Request('https://x/api/whatsapp', { method: 'POST', body: cuerpo, headers: { 'x-hub-signature-256': firma(cuerpo) } }));
+  ok('una ráfaga de tres en un aviso → una sola llamada a la IA', llamadasALaIA, 1);
+  okQue('  y el cliente recibe una respuesta, no tres', textos(C).length >= 1 && textos(C).length <= 2);
+}
+
 console.log('\n' + buenas + ' buenas, ' + malas + ' malas');
 process.exit(malas ? 1 : 0);

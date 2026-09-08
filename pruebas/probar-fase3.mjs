@@ -145,19 +145,19 @@ titulo('una ráfaga de dos mensajes en un aviso');
 {
   limpia();
   const C = '5213366673002';
+  /* Reparación del 8-sep-2026 (Falla 2, R5): la ráfaga se une en UN turno
+     antes de procesar; la IA lee los dos mensajes juntos y contesta una vez. */
   laIA = function (t) {
-    if (/boda de mi prima/i.test(t)) return { respuesta: 'Qué padre, una boda en Tapalpa. ¿Qué día es?', datos: { destino: 'Tapalpa', ocasion: 'boda' }, accion: 'seguir' };
-    if (/12 de octubre/i.test(t)) return { respuesta: 'El 12, va. ¿Es ida y vuelta el mismo día?', datos: { salida: '2026-10-12' }, accion: 'seguir' };
+    if (/boda de mi prima/i.test(t) && /12 de octubre/i.test(t)) return { respuesta: 'Qué padre, una boda en Tapalpa el 12. ¿Es ida y vuelta el mismo día?', datos: { destino: 'Tapalpa', ocasion: 'boda', salida: '2026-10-12' }, accion: 'seguir' };
     return null;
   };
   await aviso([
     { from: C, type: 'text', text: { body: 'voy a la boda de mi prima en Tapalpa' } },
     { from: C, type: 'text', text: { body: 'el 12 de octubre' } }
   ]);
-  ok('la IA contestó los dos', textos(C).length, 2);
-  const segundo = JSON.stringify(sistemasVistos[sistemasVistos.length - 1] || []);
-  okQue('el segundo partió de lo que leyó la IA (destino=Tapalpa)', /YA SE SABE DEL VIAJE: destino=Tapalpa/.test(segundo));
-  okQue('  y no de lo que entendió el guion («La Boda de Mi Prima…»)', !/destino=La Boda/i.test(segundo));
+  ok('la ráfaga se une: la IA contesta UNA vez', textos(C).length, 1);
+  const visto = JSON.stringify(sistemasVistos[sistemasVistos.length - 1] || []);
+  okQue('  y el guion no metió «La Boda de Mi Prima» como destino', !/destino=La Boda/i.test(visto));
   const charla = webhook.charlaDe(C) || {};
   ok('la plática quedó con Tapalpa y el 12', [charla.destino, charla.salida], ['Tapalpa', '2026-10-12']);
 }

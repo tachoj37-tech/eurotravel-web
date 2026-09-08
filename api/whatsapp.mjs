@@ -1302,7 +1302,9 @@ function repartoPorPersona(texto, cliente, ficha, antes) {
 const ETAPAS_DESPUES_DEL_PRECIO = ['con_precio', 'va_a_apartar', 'mando_comprobante', 'datos_del_contrato', 'contrato_listo'];
 function loQueYaHice(ficha, antes) {
   const h = [];
-  const vistas = (antes && Array.isArray(antes.fotosVistas)) ? antes.fotosVistas : [];
+  const vistas = ((antes && Array.isArray(antes.fotosVistas)) ? antes.fotosVistas : [])
+    .concat((ficha && Array.isArray(ficha.fotos)) ? ficha.fotos : [])
+    .filter(function (id, i, lista) { return lista.indexOf(id) === i; });
   vistas.forEach(function (id) {
     const u = unidadDelCatalogo(id);
     h.push('mandé fotos de ' + ((u && u.name) || id) + ' (no las vuelvas a mandar)');
@@ -1509,13 +1511,40 @@ async function loQueDiceElAgente(envio) {
       if (medios.video) return true;
     }
     const u = (conversacion.UNIDADES || []).find(function (x) { return x.id === nombre; });
-    const pie = 'Ésta es la *' + ((u && u.name) || nombre) + '*' + (u && u.cap ? ' — ' + u.cap : '') + ' 📸';
+    const nombreBonito = (u && u.name) || nombre;
+    const pie = 'Ésta es la *' + nombreBonito + '*' + (u && u.cap ? ' — ' + u.cap : '') + ' 📸';
+    /* ------------------------------------------------------------
+       NO SE MANDA DOS VECES LA MISMA FOTO (reparación del 8-sep, Falla 2)
+       ------------------------------------------------------------
+       Si esta plática ya llevó fotos de esa unidad, no se repiten: se le
+       dice que van arriba y se sigue. Solo si el cliente pide que se las
+       manden OTRA VEZ («no me llegaron», «de nuevo») se vuelven a mandar.
+       ------------------------------------------------------------ */
+    const fichaFotos = tickets.fichaDe(cliente);
+    const vistasAntes = (Array.isArray(nuevo.fotosVistas) ? nuevo.fotosVistas : [])
+      .concat((fichaFotos && Array.isArray(fichaFotos.fotos)) ? fichaFotos.fotos : []);
+    const pideDeNuevo = /otra vez|de nuevo|no (me )?(llegaron|llegó|llego)|no las (vi|veo)|reenv[ií]a|m[aá]ndalas otra/i.test(String(texto || ''));
+    if (accion === 'fotos' && vistasAntes.indexOf(nombre) >= 0 && !pideDeNuevo) {
+      console.error('[agente] ya mandó fotos de ' + nombre + ' en esta plática; no se repiten');
+      const conPrecioYa = viajeConPrecio(tickets.fichaDe(cliente));
+      const sigue = conPrecioYa && conPrecioYa.estado === 'dado' ? '¿Te la aparto?'
+        : conPrecioYa && conPrecioYa.estado === 'pedido' ? 'En cuanto tenga tu precio te lo paso por aquí 🙌'
+          : (conversacion.loQueFalta(nuevo) ? preguntaParaElCliente(nuevo) : '¿Te saco el precio?');
+      const yaLas = 'Las fotos de la ' + nombreBonito + ' van arriba 👆 ' + sigue;
+      await manda({ numeroDeOrigen: envio.numeroDeOrigen, para: cliente, texto: yaLas, pasaAPersona: false, escribio: '[agente · fotos ya mandadas]' });
+      agente.recuerda(cliente, 'bot', yaLas);
+      return true;
+    }
     let primera = true;
+    let mandadas = 0;
     for (const foto of medios.fotos.slice(0, 3)) {
-      await manda({ numeroDeOrigen: envio.numeroDeOrigen, para: cliente,
-        ligaDeFoto: sitio + '/' + foto, texto: primera ? pie : '', pasaAPersona: false, escribio: '[agente · foto]' });
+      if (await manda({ numeroDeOrigen: envio.numeroDeOrigen, para: cliente,
+        ligaDeFoto: sitio + '/' + foto, texto: primera ? pie : '', pasaAPersona: false, escribio: '[agente · foto]' })) mandadas++;
       primera = false;
     }
+    /* La acción queda en la memoria corta del agente, como turno propio:
+       en el siguiente turno el modelo la ve en «ÚLTIMOS MENSAJES». */
+    if (mandadas) agente.recuerda(cliente, 'bot', '[Acción: envié ' + mandadas + ' fotos de ' + nombreBonito + ']');
     if (accion === 'fotos' && medios.video) {
       const v = 'Y el video por dentro 👇\n' + medios.video;
       await manda({ numeroDeOrigen: envio.numeroDeOrigen, para: cliente, texto: v, pasaAPersona: false, escribio: '[agente · video]' });
@@ -1542,6 +1571,13 @@ async function loQueDiceElAgente(envio) {
     if (vistas.indexOf(nombre) < 0) vistas.push(nombre);
     nuevo.fotosVistas = vistas;
     webhook.guardaCharla(cliente, nuevo);
+    /* Y en la ficha, que sobrevive al cierre de la plática. */
+    const fichaTras = tickets.fichaDe(cliente);
+    const enFicha = (fichaTras && Array.isArray(fichaTras.fotos)) ? fichaTras.fotos.slice() : [];
+    if (enFicha.indexOf(nombre) < 0) {
+      enFicha.push(nombre);
+      tickets.anotaEtapa(cliente, fichaTras ? fichaTras.etapa : 'escribio', { fotos: enFicha }, Date.now());
+    }
     return true;
   }
 
@@ -1595,7 +1631,10 @@ async function loQueDiceElAgente(envio) {
       /* Si ya pidió fotos de esa unidad en esta plática, con el precio no
          se le repite la foto (dictado del dueño, 8-sep-2026). */
       const unidadCotizada = unidadDelCatalogo(nuevo.unidadId || nuevo.unidadNombre || resumen.unidad || nuevo.unidad);
-      const yaVioFotos = Array.isArray(nuevo.fotosVistas) && !!unidadCotizada && nuevo.fotosVistas.indexOf(unidadCotizada.id) >= 0;
+      const fichaAlCotizar = tickets.fichaDe(cliente);
+      const vistasAlCotizar = (Array.isArray(nuevo.fotosVistas) ? nuevo.fotosVistas : [])
+        .concat((fichaAlCotizar && Array.isArray(fichaAlCotizar.fotos)) ? fichaAlCotizar.fotos : []);
+      const yaVioFotos = !!unidadCotizada && vistasAlCotizar.indexOf(unidadCotizada.id) >= 0;
       const salidas = await precioDe({
         numeroDeOrigen: envio.numeroDeOrigen, para: cliente,
         cotiza: (r && r.cotiza) || null, resumen: resumen, sinFoto: yaVioFotos
@@ -1670,6 +1709,46 @@ async function loQueDiceElAgente(envio) {
 /* Clientes a los que el agente contestó en esta vuelta (se vacía en cada
    aviso): para callar el «te están escribiendo» que el guion pidió. */
 const atendidosPorElAgenteAhora = new Set();
+
+/* ------------------------------------------------------------
+   LA RÁFAGA SE UNE EN UN TURNO (reparación del 8-sep-2026, Falla 2)
+   ------------------------------------------------------------
+   «a vallarta» / «el 20» / «somos 18» en tres mensajes seguidos del
+   mismo cliente dentro de un aviso se vuelven UN mensaje («a vallarta
+   \nel 20\nsomos 18») con el id del primero. Así la IA lee todo junto y
+   contesta una vez. Solo texto, solo mensajes consecutivos del mismo
+   número. Si no hay nada que unir, el cuerpo y la firma salen intactos.
+   ------------------------------------------------------------ */
+function uneLaRafaga(crudo, firma) {
+  let aviso;
+  try { aviso = JSON.parse(crudo.toString('utf8')); } catch (e) { return { crudo: crudo, firma: firma }; }
+  let unio = false;
+  for (const e of (aviso && aviso.entry) || []) {
+    for (const c of (e && e.changes) || []) {
+      const valor = c && c.value;
+      if (!valor || !Array.isArray(valor.messages) || valor.messages.length < 2) continue;
+      const salida = [];
+      for (const m of valor.messages) {
+        const ultimo = salida[salida.length - 1];
+        if (ultimo && m && m.type === 'text' && ultimo.type === 'text' && m.from && m.from === ultimo.from &&
+            m.text && ultimo.text && typeof m.text.body === 'string') {
+          ultimo.text.body = String(ultimo.text.body) + '\n' + m.text.body;
+          if (m.timestamp) ultimo.timestamp = m.timestamp;
+          unio = true;
+        } else {
+          salida.push(m && m.type === 'text' && m.text ? Object.assign({}, m, { text: Object.assign({}, m.text) }) : m);
+        }
+      }
+      valor.messages = salida;
+    }
+  }
+  if (!unio) return { crudo: crudo, firma: firma };
+  const nuevo = Buffer.from(JSON.stringify(aviso), 'utf8');
+  const secreto = process.env.WHATSAPP_APP_SECRET;
+  const nuevaFirma = secreto ? 'sha256=' + crypto.createHmac('sha256', secreto).update(nuevo).digest('hex') : firma;
+  console.log('[whatsapp] ráfaga unida en un turno');
+  return { crudo: nuevo, firma: nuevaFirma };
+}
 
 async function reparte(envio) {
   /* «¿Y entre 20 cuánto sería?» después del precio: el reparto por persona
@@ -2197,7 +2276,14 @@ async function manda(envio) {
     /* Una plantilla NO se anota aquí: su `texto` es la marca «[plantilla …]»
        y `mandaSeguimientos` ya anota el texto real (auditoría general del
        8-sep, hallazgo 14). */
-    if (!envio.esTicket && envio.para && envio.texto && !envio.plantilla) {
+    if (!envio.esTicket && envio.para && envio.ligaDeFoto) {
+      /* Una foto queda como ACCIÓN en la conversación guardada, con su
+         pie si lo lleva: así el historial que se le siembra al modelo
+         dice qué mandó (reparación del 8-sep, Falla 2). */
+      almacen.anotaMensaje(envio.para, 'bot',
+        '[Acción: envié foto' + (envio.texto ? ' — ' + String(envio.texto).slice(0, 80) : '') + ']', 'foto')
+        .catch(function () {});
+    } else if (!envio.esTicket && envio.para && envio.texto && !envio.plantilla) {
       almacen.anotaMensaje(envio.para, 'bot', envio.texto, 'texto')
         .catch(function () {});
       /* Y el espejo, si esta prendido. Va DESPUES de mandar y sin
@@ -2523,7 +2609,11 @@ async function atiendeElAviso(crudo, firma, marcaDePuerta) {
   /* Los ids que el almacén ya vio desde otra instancia: no se contestan dos
      veces (hallazgo 10 de la auditoría general del 8-sep). */
   const repetidos = await almacen.marcaVistos(webhook.idsDelAviso(crudo)).catch(function () { return new Set(); });
-  const r = webhook.procesa(crudo, firma, Object.assign({}, entorno, { audios, repetidos }));
+  /* Tres mensajes seguidos del mismo cliente en un aviso son UN turno: se
+     unen en uno solo antes de procesar (reparación del 8-sep, Falla 2,
+     prueba R5). El cuerpo se vuelve a firmar con el secreto de Meta. */
+  const unido = uneLaRafaga(crudo, firma);
+  const r = webhook.procesa(unido.crudo, unido.firma, Object.assign({}, entorno, { audios, repetidos }));
   /* Una ráfaga: dos mensajes del mismo cliente en un aviso. `procesa` es
      síncrona y el agente corre después, así que el segundo traía como
      «estado de antes» lo que el GUION entendió del primero, no lo que

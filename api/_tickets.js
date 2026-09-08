@@ -445,6 +445,11 @@ function anotaEtapa(cliente, etapa, extra, ahora) {
        queda desde que se dio el precio: es lo que va al contrato cuando el
        dueño dice «va» a la ficha. `viaje` de arriba es solo texto. */
     viajeDatos: (extra && extra.viajeDatos) || (antes && antes.viajeDatos) || null,
+    /* Las unidades de las que ya se mandaron fotos (ids del catálogo).
+       Vive en la ficha y no solo en la plática porque la plática se cierra
+       al cotizar y al apartar, y las fotos no se repiten (reparación del
+       8-sep-2026, Falla 2). */
+    fotos: (extra && Array.isArray(extra.fotos)) ? extra.fotos.slice(0, 12) : ((antes && antes.fotos) || []),
     /* Folio y liga del contrato ya registrado en EuroSystem. Con esto, un
        segundo «va» no vuelve a subirlo. */
     contratoSubido: (extra && extra.contratoSubido) || (antes && antes.contratoSubido) || null,

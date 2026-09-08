@@ -238,3 +238,12 @@ create table if not exists turnos (
 );
 create index if not exists turnos_numero_cuando on turnos (numero, cuando desc);
 alter table turnos enable row level security;
+
+-- ------------------------------------------------------------
+-- 8-SEP-2026 · LAS FOTOS YA MANDADAS (reparación, Falla 2)
+-- ------------------------------------------------------------
+-- Ids de las unidades de las que el cliente ya recibió fotos; viven en la
+-- ficha (no en la plática, que se cierra al cotizar) para que no se
+-- repitan. Sin la columna, se guarda sin ella (se reintenta en 10 min).
+-- ------------------------------------------------------------
+alter table fichas add column if not exists fotos jsonb not null default '[]'::jsonb;
