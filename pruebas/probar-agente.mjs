@@ -332,6 +332,16 @@ titulo('después de las fotos, la pregunta es para el cliente, no para la IA');
   okQue('llegaron las fotos', mandados.some((m) => mismo(m.to, C) && m.image));
   okQue('el remate NO trae instrucciones internas', !/EXACTAMENTE|datos\.|ver lista|lo más común\)/.test(nuevos));
   okQue('  y sí trae una pregunta para el cliente', /\?/.test(nuevos));
+
+  /* El peor caso: la IA misma repite sus instrucciones como respuesta. */
+  const antes2 = textos(C).length;
+  laIA = function () {
+    return { respuesta: '¿Te saco el precio? Dime si salen de la zona metropolitana de Guadalajara. Pregunta EXACTAMENTE eso, para que solo diga «sí». Con «sí», datos.origen = "Guadalajara".', datos: {}, accion: 'seguir' };
+  };
+  await dice('y luego?', C);
+  const nuevos2 = textos(C).slice(antes2).join('\n');
+  okQue('si la IA repite sus instrucciones, al cliente NO le llegan', !/EXACTAMENTE|datos\./.test(nuevos2));
+  okQue('  y el cliente recibe algo del guion en su lugar', nuevos2.trim().length > 0);
 }
 
 /* ============================================================ */
