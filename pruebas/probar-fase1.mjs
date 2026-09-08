@@ -145,13 +145,24 @@ titulo('reacciones y stickers no se contestan');
   await manda(avisoDe([{ id: 'wamid.stick1', from: C, type: 'sticker', sticker: { id: 'abc' } }]));
   ok('un sticker: nada al cliente ni al dueño', mandados.length, 0);
 
-  /* «stop»: la salida que piden las plantillas de Meta (7-sep-2026). */
-  limpia();
-  await manda(avisoDe([texto(C, 'STOP')]));
-  ok('«stop»: se le contesta que no se le vuelve a escribir', textos(C).length, 1);
-  okQue('  con ese texto', /no te vuelvo a escribir/i.test(textos(C)[0]));
-  ok('  sin ticket al dueño', textos(DUENO).length, 0);
-  ok('  y sin llamar a la IA', llamadas.filter((l) => /api\.anthropic\.com/.test(l.url)).length, 0);
+  /* El «ya no» del cliente, con sus palabras. Dictado del dueño (8-sep-2026):
+     las plantillas no ofrecen «stop» porque espanta; el bot detecta que ya
+     no quiere y se despide sin insistir. «Stop» sigue valiendo. */
+  for (const adios of ['STOP', 'ya no', 'Ya no, gracias', 'no gracias', 'Gracias, ya no me interesa',
+    'ya no vamos a ir', 'ya contratamos otro, gracias', 'se canceló el viaje', 'Hola, ya no lo vamos a necesitar. Saludos', 'déjalo así']) {
+    limpia();
+    await manda(avisoDe([texto(C, adios)]));
+    ok('«' + adios + '»: se despide en un solo mensaje', textos(C).length, 1);
+    okQue('  con el texto de despedida', /Va, entendido/.test(textos(C)[0] || ''));
+    ok('  sin ticket al dueño', textos(DUENO).length, 0);
+    ok('  y sin llamar a la IA', llamadas.filter((l) => /api\.anthropic\.com/.test(l.url)).length, 0);
+  }
+  /* Y lo que NO es un adiós sigue su camino normal (a la IA o al guion). */
+  for (const sigue of ['ya no, mejor a Chapala', 'no, somos 30', 'ya no el 14, el 15', 'no gracias, sin baño está bien', 'ya no sé si el i6 o el Neobus']) {
+    limpia();
+    await manda(avisoDe([texto(C, sigue)]));
+    okQue('«' + sigue + '» NO es un adiós', !/Va, entendido/.test(textos(C).join('\n')));
+  }
 }
 
 /* ============================================================ */

@@ -72,7 +72,7 @@ revisa en **Vercel → eurotravel-web → Settings → Environment Variables
 5. **Corrección:** «mejor a Chapala» y «somos 30» a media cotización → cambia sin repreguntar lo demás.
 6. **RFC y persona:** «me pasas tu RFC» y «quiero hablar con una persona» → te llega el ticket, el cliente no recibe otro número.
 7. **Tablero y ver:** desde tu personal, «tablero» y «ver 33…».
-8. **Stop:** el cliente escribe «stop» → «no te vuelvo a escribir por mi cuenta».
+8. **Ya no:** el cliente escribe «ya no, gracias» → «Va, entendido 🙌 …» y no le llega ningún toque después.
 
 Cuando las ocho pasen, se anuncia el número.
 

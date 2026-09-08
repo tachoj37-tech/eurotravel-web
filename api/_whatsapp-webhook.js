@@ -559,6 +559,25 @@ const PIDE_SUELTA = /^\s*(bot|ia|suelta|su[eé]ltalo|libera|lib[eé]ralo|retoma)
    a ningún cliente y no deben quedar en su plática (auditoría 7-sep-2026,
    hallazgo 9). El número al frente se quita antes de comparar. */
 const PIDE_TOTAL = /^\s*total\s+\$?\s*[\d.,\s]+\s*(mil|k)?\s*$/i;
+
+/* El «ya no» del cliente, en sus palabras (dictado del dueño, 8-sep-2026:
+   nada de pedirle «stop»). Mensaje completo y corto; con un arranque de
+   cortesía opcional («gracias», «hola», «muchas gracias») y un remate
+   opcional («gracias», «saludos», «de todos modos», «por ahora»). */
+const YA_NO_QUIERE = new RegExp(
+  '^\\s*(?:(?:hola|buen[oa]s?(?: d[ií]as| tardes| noches)?|muchas gracias|mil gracias|gracias|ok|okey|va)[,.! ]*)*' +
+  '(?:' + [
+    'stop', 'alto', 'basta',
+    'no m[aá]s mensajes', 'no me escribas?(?: m[aá]s)?', 'ya no me escribas?', 'ya no me mandes?(?: nada| mensajes)?',
+    'ya no(?: gracias)?', 'ya no,? gracias', 'no,? gracias', 'no gracias',
+    'no me interesa', 'ya no me interesa', 'ya no nos interesa', 'no nos interesa',
+    'ya no (?:lo |la )?(?:vamos a |voy a |lo vamos a |la vamos a )?(?:necesito|necesitamos|necesitar|ocupo|ocupamos|ocupar|queremos|quiero|querer|hacer)',
+    'ya no (?:vamos|iremos|vamos a ir|va a haber viaje|hay viaje|se hizo|se hace|se va a hacer|se arm[oó]|se armó el viaje|se junt[oó] el grupo)',
+    'ya no (?:lo |la )?vamos a hacer', 'ya no (?:sale|sali[oó]) el viaje', 'se (?:cancel[oó]|suspendi[oó]) el viaje', 'se cancel[oó]',
+    'ya contrat(?:amos|é|e) (?:con )?otr[oa]', 'ya (?:lo |la )?resolvimos', 'ya (?:lo |la )?resolv[ií]', 'ya conseguimos (?:otro|camión|transporte)',
+    'd[ée]jalo(?: as[ií])?', 'olv[ií]dalo', 'ya (?:no|nada)', 'nada,? gracias', 'as[ií] d[ée]jalo'
+  ].join('|') + ')' +
+  '(?:[,.! ]*(?:gracias|muchas gracias|mil gracias|saludos|de todos modos|de todas formas|por ahora|por el momento|igual gracias))*\\s*[.!]*\\s*$', 'i');
 function esComandoDelDueno(mensaje) {
   const t = String((mensaje && mensaje.text && mensaje.text.body) || '');
   const sinNumero = t.replace(/^\s*\+?\d[\d\s()-]{9,17}\s*[:\-,]?\s*/, '');
@@ -799,21 +818,23 @@ function procesa(crudo, firma, entorno) {
         const loEscribeElDueno = tickets.esDelDueno(m.from, env);
         if (!loEscribeElDueno && !pasaElFreno(m.from || 'desconocido', ahora)) continue;
         if (yaContestado(m.id)) continue;
-        /* «Stop» (la salida que piden las plantillas de Meta): se le
-           contesta que no se le vuelve a escribir por nuestra cuenta, y ya.
-           Sin IA, sin ticket al dueño. El seguimiento se cierra solo,
-           porque con esto el cliente «contestó después del precio». */
-        if (!loEscribeElDueno && m.type === 'text' &&
-            /^\s*(stop|alto|basta|no m[aá]s mensajes|no me escribas( m[aá]s)?|ya no me escribas)\s*[.!]*\s*$/i
-              .test(String((m.text && m.text.body) || ''))) {
+        /* El cliente dice que ya no, con sus palabras: «ya no», «no gracias»,
+           «ya no vamos a ir», «ya contratamos otro»… Dictado del dueño
+           (8-sep-2026): las plantillas NO ofrecen «stop» porque espanta; el
+           bot detecta el «ya no» y se despide, sin insistir. Sin IA, sin
+           ticket al dueño. El seguimiento se cierra solo, porque con esto
+           el cliente «contestó después del precio». «Stop» sigue valiendo
+           por si alguien lo escribe. Solo mensajes cortos y completos: un
+           «ya no, mejor a Chapala» no es un adiós y sigue a la IA. */
+        if (!loEscribeElDueno && m.type === 'text' && YA_NO_QUIERE.test(String((m.text && m.text.body) || ''))) {
           tickets.anotaEtapa(m.from, tickets.fichaDe(m.from) ? tickets.fichaDe(m.from).etapa : 'escribio',
             { clienteEn: ahora }, ahora);
           envios.push({
             numeroDeOrigen: (((valor || {}).metadata || {}).phone_number_id) || env.WHATSAPP_PHONE_ID,
             para: m.from,
-            texto: 'Listo, no te vuelvo a escribir por mi cuenta 🙌 Si algún día necesitas algo, aquí ando.',
+            texto: 'Va, entendido 🙌 Cualquier cosa que se te ofrezca más adelante, aquí ando.',
             pasaAPersona: false,
-            escribio: '[stop]'
+            escribio: '[ya no quiere]'
           });
           continue;
         }

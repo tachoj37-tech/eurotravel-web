@@ -98,7 +98,12 @@ Vallarta`. Texto tal cual:
 
 **`seguimiento_24h`** (comprobar que llegó, fácil de contestar, con salida):
 
-> Hola 🙌 Ayer te pasé la cotización de {{1}} con Eurotravel. ¿Te llegó bien? Si quieres, te la ajusto (fecha, cuántos van o la unidad) sin compromiso. Si prefieres que no te escriba más, dime *stop* y listo.
+> Hola 🙌 Ayer te pasé la cotización de {{1}} con Eurotravel. ¿Te llegó bien? Si quieres, te la ajusto (fecha, cuántos van o la unidad) sin compromiso.
+
+(Dictado del dueño, 8-sep-2026: **sin ofrecer «stop»**, porque espanta al
+cliente. La investigación decía que Meta rechaza más plantillas de
+marketing sin salida; se acepta ese riesgo. El bot detecta el «ya no» en
+las palabras del cliente y se despide, ver abajo.)
 
 **`seguimiento_3d`** (un dato que destraba: casi siempre están juntando al grupo):
 
@@ -108,8 +113,11 @@ Vallarta`. Texto tal cual:
 
 > Hola, te escribo por última vez por lo de {{1}} 🚌 Las fechas se van apartando y no quisiera que la tuya se quede sin unidad. Si sigue en pie, dime y te digo cómo apartar; si ya no, también dímelo y aquí lo dejo, sin problema 🙌
 
-Si el cliente contesta **stop**, el bot le dice que no le vuelve a
-escribir por su cuenta y el seguimiento se cierra solo.
+Si el cliente contesta que **ya no** («ya no», «no gracias», «ya no
+vamos a ir», «ya contratamos otro», «se canceló», «déjalo así»… y también
+«stop»), el bot se despide con «Va, entendido 🙌 Cualquier cosa que se te
+ofrezca más adelante, aquí ando» y el seguimiento se cierra solo. Un «ya
+no» con datos («ya no, mejor a Chapala») no es un adiós: sigue a la IA.
 
 Cuando Meta las apruebe (minutos a un día), en Vercel:
 
