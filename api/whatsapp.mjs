@@ -364,7 +364,12 @@ async function precioDe(envio, opciones) {
        da algo antes de pedirle nada—. Auditoría de psicología del
        7-sep-2026. Solo si se sabe cuál unidad es; un autobús sin escoger
        no se enseña, para no enseñarle uno que no será. */
-    const fotoDeLaUnidad = fotoParaLaEspera(res.unidadNombre || res.unidad || unidad);
+    /* La foto va CON EL PRECIO, no con la espera (dictado del dueño,
+       8-sep-2026, reparación Falla 6: «unidad + precio total + foto +
+       apartado + CLABE» en el mismo turno). La foto con la espera queda
+       apagada por bandera (`FOTO_CON_LA_ESPERA=1` la reactiva), no borrada. */
+    const fotoDeLaUnidad = process.env.FOTO_CON_LA_ESPERA === '1'
+      ? fotoParaLaEspera(res.unidadNombre || res.unidad || unidad) : null;
     /* Sin pie, y no si ya pidió fotos de esa unidad en esta plática
        (`sinFoto`): dictado del dueño, 8-sep-2026. */
     if (fotoDeLaUnidad && !envio.sinFoto) {
@@ -523,10 +528,16 @@ async function precioDe(envio, opciones) {
     });
   };
 
+  /* El bloque de apartado va PEGADO al precio (dictado del dueño, 8-sep-2026,
+     reparación Falla 6): monto de apartado + CLABE, escritos por el código,
+     nunca por el modelo. Si no hay CLABE configurada, el precio sale sin él
+     y queda en el registro. */
+  const apartado = bloqueApartado(precio);
+  if (!apartado) console.error('[apartado] sin CLABE en Vercel: el precio salió sin los datos de depósito');
   const mios = [{
     numeroDeOrigen: envio.numeroDeOrigen,
     para: envio.para,
-    texto: salida.texto,
+    texto: salida.texto + (apartado ? '\n\n' + apartado : ''),
     pasaAPersona: !!salida.pasa,
     alMandar: marcaQueYaTienePrecio,
     escribio: '[precio]'
@@ -561,6 +572,17 @@ async function precioDe(envio, opciones) {
       texto: '',
       pasaAPersona: false,
       escribio: '[foto de la unidad]'
+    });
+  }
+  /* Y la CLABE sola, pelona, para copiarla con un toque largo (el toque
+     copia el mensaje entero). Va después de la foto, al final. */
+  if (apartado && clabeConfigurada()) {
+    mios.push({
+      numeroDeOrigen: envio.numeroDeOrigen,
+      para: envio.para,
+      texto: clabeConfigurada(),
+      pasaAPersona: false,
+      escribio: '[clabe para copiar]'
     });
   }
 
@@ -1259,12 +1281,15 @@ function repartoPorPersona(texto, cliente, ficha, antes) {
   if (antes && (antes.destino || antes.salida)) return null;
   if (t.length > 70) return null;
   const m = t.match(PIDE_REPARTO);
-  if (!m) return null;
-  const n = Number(m[1] || m[2]);
+  /* «¿Y cuánto sale por persona?» sin número: la misma respuesta, con la
+     gente del viaje (Falla 3: el motor contesta, la IA no divide). */
+  const pideCabeza = /por (persona|cabeza)|cada (uno|quien)|c\/u/i.test(t);
+  if (!m && !pideCabeza) return null;
+  const n = m ? Number(m[1] || m[2]) : Number(ficha.viajeDatos.gente) || 2;
   if (!n || n < 2 || n > 120) return null;
   /* Solo si habla de gente: «para 3 días» o «con 2 paradas» no son personas
      (auditoría general del 8-sep, hallazgo 13). */
-  const hablaDeGente = /persona|pax|gente|pasajero|somos|entre|fu[eé]ramos/i.test(t);
+  const hablaDeGente = /persona|pax|gente|pasajero|somos|entre|fu[eé]ramos|cabeza|cada (uno|quien)|c\/u/i.test(t);
   if (!hablaDeGente) return null;
   if (/\b\d{1,3}\s*(d[ií]as?|paradas?|horas?|noches?|de\s+[a-záéíóú])\b/i.test(t)) return null;
   const v = ficha.viajeDatos;
@@ -1282,15 +1307,120 @@ function repartoPorPersona(texto, cliente, ficha, antes) {
     };
   }
   /* Una pregunta hipotética NO cambia el viaje: la ficha (y el contrato que
-     se sube a EuroSystem) se quedan con la gente original. Si de verdad
-     cambia el grupo, lo dice y se trata como cambio (auditoría general del
-     8-sep, hallazgo 4). */
-  const porPersona = Math.ceil(ficha.total / n / 10) * 10;
+     se sube a EuroSystem) se quedan con la gente original (auditoría general
+     del 8-sep, hallazgo 4). Y SIN dividir (dictado del dueño, 8-sep-2026,
+     reparación Falla 3): el precio es total, por unidad; cómo lo repartan
+     entre ellos es cosa suya. */
   return {
-    texto: 'Entre ' + n + ' sale a *' + pesos(porPersona) + ' por persona*. El total es el mismo, *' + pesos(ficha.total) +
-      '*' + (max ? ' (' + nombre + ' es hasta ' + max + ')' : '') + '. ¿Te la aparto?',
+    texto: 'El precio es por la unidad, no por persona: el total es *' + pesos(ficha.total) + '* para todo el grupo' +
+      (max ? ' (' + nombre + ' es hasta ' + max + ')' : '') + '. Cómo lo repartan entre ustedes es cosa suya. ¿Te la aparto?',
     estado: null
   };
+}
+
+/* ------------------------------------------------------------
+   FILTRO DE SALIDA (reparación del 8-sep-2026, Falla 4)
+   ------------------------------------------------------------
+   Devuelve el motivo si el texto NO debe salir hacia un cliente, o ''.
+   Forma de código o JSON (```, llaves, <>), rastros de herramientas o
+   del prompt, errores del programa, rutas de archivo, o un largo fuera
+   de lo humano: la IA ya viene recortada a 480; los textos del motor
+   (precio con apartado, lista de autobuses) llegan a ~700, así que el
+   tope general es 1200 y para lo que escribió la IA, 600.
+   ------------------------------------------------------------ */
+const FORMA_DE_CODIGO = /```|[{}<>]|\btool_(use|result)\b|\bfunction\b|\bsystem prompt\b|\bprompt\b|\binstrucciones del (agente|sistema)\b|\bException\b|\bundefined\b|\bnull\b|\bNaN\b|\/api\/|\.(m?js|json|ts)\b|\bError:|\bTypeError\b|\bReferenceError\b|\bstack\b/i;
+function filtrarSalida(texto, escribio) {
+  const t = String(texto || '');
+  const m = t.match(FORMA_DE_CODIGO);
+  if (m) return 'forma de código o error: «' + m[0] + '»';
+  const deLaIA = /agente/.test(String(escribio || ''));
+  if (deLaIA && t.length > 600) return 'texto de la IA demasiado largo (' + t.length + ')';
+  if (t.length > 1200) return 'texto demasiado largo (' + t.length + ')';
+  return '';
+}
+
+/* ------------------------------------------------------------
+   LOS DATOS DE DEPÓSITO LOS ESCRIBE EL CÓDIGO (reparación 8-sep, Falla 6)
+   ------------------------------------------------------------
+   La CLABE, el banco y el beneficiario viven en UN lugar: las variables
+   `CLABE` y `DATOS_BANCARIOS` de Vercel (la imagen de la ficha bancaria
+   sigue en img/ficha-bancaria.png). El modelo nunca la ve ni la escribe:
+   el código arma el bloque y lo pega al precio y a cualquier respuesta
+   donde el cliente quiera apartar. El apartado es el anticipo que ya
+   calculó el motor (20 % a múltiplos de $500, como está estipulado).
+   ------------------------------------------------------------ */
+function clabeConfigurada() {
+  const c = String(process.env.CLABE || '').replace(/\D+/g, '');
+  return c.length === 18 ? c : '';
+}
+function bloqueApartado(precio) {
+  const clabe = clabeConfigurada();
+  if (!clabe || !precio || typeof precio.anticipo !== 'number' || precio.anticipo <= 0) return '';
+  const datos = String(process.env.DATOS_BANCARIOS || '').replace(/\s+/g, ' ').trim();
+  return 'Si gustas apartar, son *$' + precio.anticipo.toLocaleString('en-US') + '* de apartado.\n' +
+    'CLABE: ' + clabe + (datos ? ' · ' + datos : '') + '\n' +
+    'Cuando deposites, mándame tu comprobante por aquí.';
+}
+
+/* ------------------------------------------------------------
+   «LO QUE YA HICE» · las acciones del bot, para que el modelo las vea
+   ------------------------------------------------------------
+   El modelo no recuerda lo que mandó; solo sabe lo que está en el
+   contexto de este turno (reparación del 8-sep-2026, Fallas 1 y 2).
+   ------------------------------------------------------------ */
+const ETAPAS_DESPUES_DEL_PRECIO = ['con_precio', 'va_a_apartar', 'mando_comprobante', 'datos_del_contrato', 'contrato_listo'];
+function loQueYaHice(ficha, antes) {
+  const h = [];
+  const vistas = ((antes && Array.isArray(antes.fotosVistas)) ? antes.fotosVistas : [])
+    .concat((ficha && Array.isArray(ficha.fotos)) ? ficha.fotos : [])
+    .filter(function (id, i, lista) { return lista.indexOf(id) === i; });
+  vistas.forEach(function (id) {
+    const u = unidadDelCatalogo(id);
+    h.push('mandé fotos de ' + ((u && u.name) || id) + ' (no las vuelvas a mandar)');
+  });
+  if (ficha && ficha.viajeDatos && ficha.viajeDatos.fotoMandada && !vistas.length) h.push('mandé la foto de la unidad');
+  const e = ficha && ficha.etapa;
+  if (e === 'pidio_precio') h.push('pedí el precio al vendedor; el cliente ya recibió «en breve te paso tu cotización»');
+  if (ETAPAS_DESPUES_DEL_PRECIO.indexOf(e) >= 0) h.push('entregué el precio total con el monto de apartado y la CLABE (el sistema los anexa; tú no escribas cuentas)');
+  if (['va_a_apartar', 'mando_comprobante', 'datos_del_contrato', 'contrato_listo'].indexOf(e) >= 0) h.push('el cliente ya pidió apartar: le mandé otra vez el apartado y la CLABE');
+  if (['mando_comprobante', 'datos_del_contrato', 'contrato_listo'].indexOf(e) >= 0) h.push('recibí su comprobante; se están juntando los datos del contrato');
+  if (e === 'contrato_listo') h.push('el contrato está completo; falta confirmar el pago');
+  return h;
+}
+
+/* ¿La respuesta pregunta un dato que YA está en el estado? Devuelve el
+   campo, o null. */
+const PREGUNTA_DE = {
+  destino: /a d[oó]nde (van|va el plan|se van|quieren ir)|qu[eé] destino|para d[oó]nde/i,
+  salida: /qu[eé] d[ií]a salen|cu[aá]ndo salen|fecha de salida|qu[eé] fecha (salen|ser[ií]a)|para qu[eé] d[ií]a/i,
+  regreso: /cu[aá]ndo (regresan|vuelven)|qu[eé] d[ií]a (regresan|vuelven)|ida y vuelta el mismo d[ií]a/i,
+  gente: /cu[aá]ntos (van|son|ser[ií]an|viajan)|cu[aá]ntas personas/i,
+  origen: /de d[oó]nde salen|salen de la zona metropolitana/i,
+  nombre: /c[oó]mo te llamas|cu[aá]l es tu nombre|me dices tu nombre/i
+};
+function preguntaRepetida(respuesta, estado) {
+  const t = String(respuesta || '');
+  const e = estado || {};
+  return Object.keys(PREGUNTA_DE).find(function (k) {
+    return e[k] !== undefined && e[k] !== null && e[k] !== '' && PREGUNTA_DE[k].test(t);
+  }) || null;
+}
+
+/* El viaje que ya está en precio (pedido o dado), como estado de plática:
+   para sembrarlo cuando el cliente cambia UNA cosa después del precio. */
+function viajeBaseDeLaFicha(ficha) {
+  if (!ficha) return null;
+  const v = (ficha.porConfirmar && ficha.porConfirmar.resumen) || ficha.viajeDatos;
+  if (!v || !v.destino) return null;
+  const base = { destino: v.destino, origen: v.origen || null, salida: v.salida || null, regreso: v.regreso || null,
+    gente: v.gente || null, ocasion: v.ocasion || null };
+  if (typeof v.recorridos === 'number') base.recorridos = v.recorridos;
+  if (v.nombre) base.nombre = v.nombre;
+  const u = unidadDelCatalogo(v.unidadNombre || v.unidad);
+  if (u) { base.unidad = u.cat; base.unidadNombre = u.name; if (u.cat === 'autobus') base.unidadId = u.id; }
+  else if (v.unidad) base.unidad = String(v.unidad).toLowerCase();
+  Object.keys(base).forEach(function (k) { if (base[k] === null) delete base[k]; });
+  return base;
 }
 
 /* Un cambio de fecha (salida o regreso) sobre un viaje que YA tiene precio
@@ -1362,14 +1492,19 @@ async function loQueDiceElAgente(envio) {
      recibiría una espera y un ticket más. */
   if (viajeDeLaFicha && antes.paso === 'confirmar') antes = {};
   const hayViaje = !!(antes.destino || antes.salida || antes.gente || antes.origen);
-  const dicho = await agente.conversa(texto, {
+  const opcionesDeLaIA = {
     hoy: hoy, cliente: cliente, estado: antes,
     viaje: viajeDeLaFicha,
+    /* «LO QUE YA HICE»: fotos, precio, datos de depósito, comprobante
+       (reparación del 8-sep-2026, Fallas 1 y 2). */
+    hechos: loQueYaHice(tickets.fichaDe(cliente), antes),
     falta: hayViaje ? conversacion.loQueFalta(antes) : (viajeDeLaFicha ? null : 'a dónde van'),
     historial: agente.historialDe(cliente),
     voz: { usted: /^(1|si|sí|usted)$/i.test(String(process.env.AGENTE_DE_USTED || '')) }
-  });
+  };
+  const dicho = await agente.conversa(texto, opcionesDeLaIA);
   if (!dicho) return false;
+  if (dicho.turno && almacen.hayAlmacen()) almacen.anotaTurno(dicho.turno).catch(function () {});
 
   /* Lo que la IA leyó se pega al estado de ANTES; lo que el guion había
      decidido de este mensaje se descarta. */
@@ -1394,9 +1529,53 @@ async function loQueDiceElAgente(envio) {
     }
     return true;
   }
+  /* ------------------------------------------------------------
+     UN CAMBIO DESPUÉS DEL PRECIO NO ARRANCA DE CERO (reparación 8-sep, Falla 5)
+     ------------------------------------------------------------
+     «Mejor Mazatlán», «seremos 16», «mejor el 21» cuando el viaje ya está
+     en precio (pedido o dado): la plática está cerrada y el cambio caía
+     en una plática vacía que volvía a preguntar fechas y gente. Ahora el
+     viaje conocido se siembra y solo se cambia lo que cambió. Un «otro
+     viaje» explícito sí arranca de cero (ése es otro viaje, no un cambio).
+     ------------------------------------------------------------ */
+  const cambiaAlgo = !!(dicho.datos && (dicho.datos.destino || dicho.datos.gente || dicho.datos.salida || dicho.datos.regreso || dicho.datos.unidad || dicho.datos.autobus));
+  const esOtroViaje = /\botro viaje\b|\botra cotizaci|\bun viaje m[aá]s\b|\baparte\b|\btambi[eé]n quiero\b|\badem[aá]s\b/i.test(String(texto || ''));
+  if (viajeDeLaFicha && viajeDeLaFicha.estado && !hayViaje && cambiaAlgo && !esOtroViaje) {
+    const base = viajeBaseDeLaFicha(tickets.fichaDe(cliente));
+    if (base) {
+      antes = Object.assign({}, base, antes.nombre ? { nombre: antes.nombre } : {});
+      console.log('[agente] cambio sobre un viaje con precio: se siembra el viaje conocido y se cambia solo lo nuevo');
+    }
+  }
+  /* El nombre que dio en el chat sobrevive al cierre de la plática: vive en
+     el viaje de la ficha. */
+  if ((!antes.nombre || antes.nombre === (envio.nombreDelPerfil || antes.nombre)) && viajeDeLaFicha) {
+    const base = viajeBaseDeLaFicha(tickets.fichaDe(cliente));
+    if (base && base.nombre) antes = Object.assign({}, antes, { nombre: base.nombre });
+  }
   const nuevo = conversacion.pegaDatos(antes, dicho.datos);
   webhook.guardaCharla(cliente, nuevo);
   agente.recuerda(cliente, 'cliente', texto);
+  /* Validación ANTES de mandar (Falla 1): si la IA pregunta un dato que ya
+     está en el estado, se regenera UNA vez diciéndoselo; si insiste, contesta
+     el guion con lo que de verdad falta. Nunca sale la pregunta repetida. */
+  if (dicho.accion === 'seguir' && dicho.respuesta) {
+    const repetida = preguntaRepetida(dicho.respuesta, nuevo);
+    if (repetida) {
+      console.error('[agente] volvió a preguntar «' + repetida + '» (ya se sabe: ' + nuevo[repetida] + '); se regenera');
+      const otra = await agente.conversa(texto, Object.assign({}, opcionesDeLaIA, {
+        estado: nuevo, falta: conversacion.loQueFalta(nuevo) || null,
+        aviso: 'Ese dato ya lo tienes: ' + repetida + ' = ' + nuevo[repetida] + '. No lo preguntes; sigue con lo que falta.'
+      }));
+      if (otra && otra.accion === 'seguir' && otra.respuesta && !preguntaRepetida(otra.respuesta, conversacion.pegaDatos(nuevo, otra.datos))) {
+        dicho.respuesta = otra.respuesta;
+      } else {
+        console.error('[agente] insistió; contesta el guion con lo que falta');
+        dicho.respuesta = conversacion.loQueFalta(nuevo) ? preguntaParaElCliente(nuevo)
+          : (viajeDeLaFicha && viajeDeLaFicha.estado === 'dado' ? '¿Te la aparto?' : '¿Te saco el precio?');
+      }
+    }
+  }
 
   const yaEstaTodo = !conversacion.loQueFalta(nuevo);
   let accion = dicho.accion;
@@ -1442,13 +1621,40 @@ async function loQueDiceElAgente(envio) {
       if (medios.video) return true;
     }
     const u = (conversacion.UNIDADES || []).find(function (x) { return x.id === nombre; });
-    const pie = 'Ésta es la *' + ((u && u.name) || nombre) + '*' + (u && u.cap ? ' — ' + u.cap : '') + ' 📸';
+    const nombreBonito = (u && u.name) || nombre;
+    const pie = 'Ésta es la *' + nombreBonito + '*' + (u && u.cap ? ' — ' + u.cap : '') + ' 📸';
+    /* ------------------------------------------------------------
+       NO SE MANDA DOS VECES LA MISMA FOTO (reparación del 8-sep, Falla 2)
+       ------------------------------------------------------------
+       Si esta plática ya llevó fotos de esa unidad, no se repiten: se le
+       dice que van arriba y se sigue. Solo si el cliente pide que se las
+       manden OTRA VEZ («no me llegaron», «de nuevo») se vuelven a mandar.
+       ------------------------------------------------------------ */
+    const fichaFotos = tickets.fichaDe(cliente);
+    const vistasAntes = (Array.isArray(nuevo.fotosVistas) ? nuevo.fotosVistas : [])
+      .concat((fichaFotos && Array.isArray(fichaFotos.fotos)) ? fichaFotos.fotos : []);
+    const pideDeNuevo = /otra vez|de nuevo|no (me )?(llegaron|llegó|llego)|no las (vi|veo)|reenv[ií]a|m[aá]ndalas otra/i.test(String(texto || ''));
+    if (accion === 'fotos' && vistasAntes.indexOf(nombre) >= 0 && !pideDeNuevo) {
+      console.error('[agente] ya mandó fotos de ' + nombre + ' en esta plática; no se repiten');
+      const conPrecioYa = viajeConPrecio(tickets.fichaDe(cliente));
+      const sigue = conPrecioYa && conPrecioYa.estado === 'dado' ? '¿Te la aparto?'
+        : conPrecioYa && conPrecioYa.estado === 'pedido' ? 'En cuanto tenga tu precio te lo paso por aquí 🙌'
+          : (conversacion.loQueFalta(nuevo) ? preguntaParaElCliente(nuevo) : '¿Te saco el precio?');
+      const yaLas = 'Las fotos de la ' + nombreBonito + ' van arriba 👆 ' + sigue;
+      await manda({ numeroDeOrigen: envio.numeroDeOrigen, para: cliente, texto: yaLas, pasaAPersona: false, escribio: '[agente · fotos ya mandadas]' });
+      agente.recuerda(cliente, 'bot', yaLas);
+      return true;
+    }
     let primera = true;
+    let mandadas = 0;
     for (const foto of medios.fotos.slice(0, 3)) {
-      await manda({ numeroDeOrigen: envio.numeroDeOrigen, para: cliente,
-        ligaDeFoto: sitio + '/' + foto, texto: primera ? pie : '', pasaAPersona: false, escribio: '[agente · foto]' });
+      if (await manda({ numeroDeOrigen: envio.numeroDeOrigen, para: cliente,
+        ligaDeFoto: sitio + '/' + foto, texto: primera ? pie : '', pasaAPersona: false, escribio: '[agente · foto]' })) mandadas++;
       primera = false;
     }
+    /* La acción queda en la memoria corta del agente, como turno propio:
+       en el siguiente turno el modelo la ve en «ÚLTIMOS MENSAJES». */
+    if (mandadas) agente.recuerda(cliente, 'bot', '[Acción: envié ' + mandadas + ' fotos de ' + nombreBonito + ']');
     if (accion === 'fotos' && medios.video) {
       const v = 'Y el video por dentro 👇\n' + medios.video;
       await manda({ numeroDeOrigen: envio.numeroDeOrigen, para: cliente, texto: v, pasaAPersona: false, escribio: '[agente · video]' });
@@ -1475,6 +1681,13 @@ async function loQueDiceElAgente(envio) {
     if (vistas.indexOf(nombre) < 0) vistas.push(nombre);
     nuevo.fotosVistas = vistas;
     webhook.guardaCharla(cliente, nuevo);
+    /* Y en la ficha, que sobrevive al cierre de la plática. */
+    const fichaTras = tickets.fichaDe(cliente);
+    const enFicha = (fichaTras && Array.isArray(fichaTras.fotos)) ? fichaTras.fotos.slice() : [];
+    if (enFicha.indexOf(nombre) < 0) {
+      enFicha.push(nombre);
+      tickets.anotaEtapa(cliente, fichaTras ? fichaTras.etapa : 'escribio', { fotos: enFicha }, Date.now());
+    }
     return true;
   }
 
@@ -1528,7 +1741,10 @@ async function loQueDiceElAgente(envio) {
       /* Si ya pidió fotos de esa unidad en esta plática, con el precio no
          se le repite la foto (dictado del dueño, 8-sep-2026). */
       const unidadCotizada = unidadDelCatalogo(nuevo.unidadId || nuevo.unidadNombre || resumen.unidad || nuevo.unidad);
-      const yaVioFotos = Array.isArray(nuevo.fotosVistas) && !!unidadCotizada && nuevo.fotosVistas.indexOf(unidadCotizada.id) >= 0;
+      const fichaAlCotizar = tickets.fichaDe(cliente);
+      const vistasAlCotizar = (Array.isArray(nuevo.fotosVistas) ? nuevo.fotosVistas : [])
+        .concat((fichaAlCotizar && Array.isArray(fichaAlCotizar.fotos)) ? fichaAlCotizar.fotos : []);
+      const yaVioFotos = !!unidadCotizada && vistasAlCotizar.indexOf(unidadCotizada.id) >= 0;
       const salidas = await precioDe({
         numeroDeOrigen: envio.numeroDeOrigen, para: cliente,
         cotiza: (r && r.cotiza) || null, resumen: resumen, sinFoto: yaVioFotos
@@ -1603,6 +1819,46 @@ async function loQueDiceElAgente(envio) {
 /* Clientes a los que el agente contestó en esta vuelta (se vacía en cada
    aviso): para callar el «te están escribiendo» que el guion pidió. */
 const atendidosPorElAgenteAhora = new Set();
+
+/* ------------------------------------------------------------
+   LA RÁFAGA SE UNE EN UN TURNO (reparación del 8-sep-2026, Falla 2)
+   ------------------------------------------------------------
+   «a vallarta» / «el 20» / «somos 18» en tres mensajes seguidos del
+   mismo cliente dentro de un aviso se vuelven UN mensaje («a vallarta
+   \nel 20\nsomos 18») con el id del primero. Así la IA lee todo junto y
+   contesta una vez. Solo texto, solo mensajes consecutivos del mismo
+   número. Si no hay nada que unir, el cuerpo y la firma salen intactos.
+   ------------------------------------------------------------ */
+function uneLaRafaga(crudo, firma) {
+  let aviso;
+  try { aviso = JSON.parse(crudo.toString('utf8')); } catch (e) { return { crudo: crudo, firma: firma }; }
+  let unio = false;
+  for (const e of (aviso && aviso.entry) || []) {
+    for (const c of (e && e.changes) || []) {
+      const valor = c && c.value;
+      if (!valor || !Array.isArray(valor.messages) || valor.messages.length < 2) continue;
+      const salida = [];
+      for (const m of valor.messages) {
+        const ultimo = salida[salida.length - 1];
+        if (ultimo && m && m.type === 'text' && ultimo.type === 'text' && m.from && m.from === ultimo.from &&
+            m.text && ultimo.text && typeof m.text.body === 'string') {
+          ultimo.text.body = String(ultimo.text.body) + '\n' + m.text.body;
+          if (m.timestamp) ultimo.timestamp = m.timestamp;
+          unio = true;
+        } else {
+          salida.push(m && m.type === 'text' && m.text ? Object.assign({}, m, { text: Object.assign({}, m.text) }) : m);
+        }
+      }
+      valor.messages = salida;
+    }
+  }
+  if (!unio) return { crudo: crudo, firma: firma };
+  const nuevo = Buffer.from(JSON.stringify(aviso), 'utf8');
+  const secreto = process.env.WHATSAPP_APP_SECRET;
+  const nuevaFirma = secreto ? 'sha256=' + crypto.createHmac('sha256', secreto).update(nuevo).digest('hex') : firma;
+  console.log('[whatsapp] ráfaga unida en un turno');
+  return { crudo: nuevo, firma: nuevaFirma };
+}
 
 async function reparte(envio) {
   /* «¿Y entre 20 cuánto sería?» después del precio: el reparto por persona
@@ -1990,7 +2246,15 @@ async function manda(envio) {
   if (!esParaElDueno && !envio.esTicket && !envio.plantilla && esTextoInterno(envio.texto)) {
     console.error('[fuga] se frenó un texto interno que iba a un cliente (' +
       (envio.escribio || 'sin marca') + '): ' + String(envio.texto).slice(0, 120).replace(/\n/g, ' '));
-    return false;
+    /* Reparación del 8-sep-2026 (Falla 4): el cliente no se queda en
+       silencio; recibe el texto neutro y el dueño el aviso. */
+    if (dueno) {
+      await manda({ numeroDeOrigen: envio.numeroDeOrigen, para: dueno, esTicket: true, sobreCliente: envio.para, pasaAPersona: false,
+        texto: '⚠️ *Frené un mensaje con texto interno* para el cliente ' + envio.para +
+          '. Le dije «dame un momento». Revisa el registro ([fuga]) y contéstale citando este mensaje.',
+        escribio: '[incidente · fuga]' });
+    }
+    envio = Object.assign({}, envio, { texto: 'Dame un momento, te confirmo enseguida 🙌', opciones: [], escribio: (envio.escribio || '') + ' · filtrado' });
   }
   /* Y a un cliente que YA está en WhatsApp nunca se le manda a otro número
      (dictado del dueño, 6-sep-2026). Este candado estaba en un solo
@@ -1998,6 +2262,62 @@ async function manda(envio) {
      (el respaldo de la IA y el precio con «requiere asesor»). Aquí, en la
      única puerta de salida, ya no depende de quién armó el texto: el
      cliente recibe una espera honesta y el dueño el aviso. */
+  /* FILTRO DE SALIDA (reparación del 8-sep-2026, Falla 4): nada con forma de
+     código, JSON, error o instrucción le llega a un cliente. Si se frena,
+     el cliente recibe un texto neutro, el incidente queda completo en el
+     registro y el dueño recibe el aviso. Es aparte del candado de texto
+     interno: éste ataca la FORMA, aquél el contenido del prompt. */
+  if (!esParaElDueno && !envio.esTicket && !envio.plantilla && envio.texto) {
+    const motivo = filtrarSalida(envio.texto, envio.escribio);
+    if (motivo) {
+      console.error('[filtro-salida] INCIDENTE (' + motivo + ', ' + (envio.escribio || 'sin marca') + '): ' +
+        String(envio.texto).slice(0, 400).replace(/\n/g, '⏎'));
+      if (dueno) {
+        await manda({ numeroDeOrigen: envio.numeroDeOrigen, para: dueno, esTicket: true, sobreCliente: envio.para, pasaAPersona: false,
+          texto: '⚠️ *Frené un mensaje con forma de código o error* para el cliente ' + envio.para + ' (' + motivo +
+            '). Le dije «dame un momento». Revisa el registro ([filtro-salida]) y contéstale citando este mensaje.',
+          escribio: '[incidente · filtro de salida]' });
+      }
+      envio = Object.assign({}, envio, { texto: 'Dame un momento, te confirmo enseguida 🙌', opciones: [], escribio: (envio.escribio || '') + ' · filtrado' });
+    }
+  }
+  /* Una CLABE que no sea la configurada es un desastre (reparación Falla 6):
+     cualquier número de 18 dígitos hacia un cliente que no coincida con
+     `CLABE` se frena, queda como incidente crítico y se avisa al dueño. Y si
+     el texto le dice al cliente que deposite y no trae la CLABE, se le anexa
+     el bloque de apartado (el código, no el modelo). */
+  if (!esParaElDueno && !envio.esTicket && !envio.plantilla && envio.texto) {
+    const dieciocho = String(envio.texto).match(/\b\d{18}\b/g) || [];
+    const clabeBuena = clabeConfigurada();
+    const ajena = dieciocho.find(function (n) { return n !== clabeBuena; });
+    if (ajena) {
+      console.error('[CLABE-AJENA] INCIDENTE CRÍTICO: se frenó un texto con un número de 18 dígitos que no es la CLABE (' +
+        (envio.escribio || 'sin marca') + '): ' + String(envio.texto).slice(0, 160).replace(/\n/g, ' '));
+      if (dueno) {
+        await manda({ numeroDeOrigen: envio.numeroDeOrigen, para: dueno, esTicket: true, sobreCliente: envio.para, pasaAPersona: false,
+          texto: '🚨 *Frené un mensaje con una CLABE que no es la nuestra* para el cliente ' + envio.para +
+            '. No le llegó nada. Revisa el registro ([CLABE-AJENA]).', escribio: '[incidente · clabe ajena]' });
+      }
+      return false;
+    }
+    const fichaDelPara = tickets.fichaDe(envio.para);
+    const conPrecioYAnticipo = !!(fichaDelPara && typeof fichaDelPara.total === 'number' && fichaDelPara.total > 0 &&
+      typeof fichaDelPara.anticipo === 'number' && fichaDelPara.anticipo > 0);
+    const pideDepositar = /\b(deposita|transfi[eé]re|haz (el|tu) dep[oó]sito|te paso (la cuenta|los datos)|datos (de|para) (dep[oó]sito|transferencia|el dep[oó]sito))\b/i.test(String(envio.texto));
+    if (conPrecioYAnticipo && pideDepositar && clabeBuena && String(envio.texto).indexOf(clabeBuena) < 0) {
+      envio = Object.assign({}, envio, { texto: String(envio.texto) + '\n\n' + bloqueApartado({ anticipo: fichaDelPara.anticipo }) });
+      console.log('[apartado] se anexó el bloque de depósito a un texto que pedía depositar sin la CLABE');
+    }
+  }
+  /* Nada de «por persona» con dinero hacia un cliente (dictado del dueño,
+     8-sep-2026, reparación Falla 3): el precio es total, tal cual lo puso
+     el vendedor. Un texto así se frena y queda en el registro. */
+  if (!esParaElDueno && !envio.esTicket && !envio.plantilla &&
+      /\$\s?[\d.,]+\s*(por (persona|cabeza)|c\/u|cada (uno|quien))/i.test(String(envio.texto || ''))) {
+    console.error('[por-persona] se frenó un texto con precio por persona que iba a un cliente (' +
+      (envio.escribio || 'sin marca') + '): ' + String(envio.texto).slice(0, 120).replace(/\n/g, ' '));
+    return false;
+  }
   if (!esParaElDueno && !envio.esTicket && !envio.plantilla && !envio.reenviaMedio &&
       webhook.OTRO_NUMERO.test(String(envio.texto || ''))) {
     console.error('[otro-numero] se cambió un texto que mandaba al cliente a otro número (' +
@@ -2130,7 +2450,14 @@ async function manda(envio) {
     /* Una plantilla NO se anota aquí: su `texto` es la marca «[plantilla …]»
        y `mandaSeguimientos` ya anota el texto real (auditoría general del
        8-sep, hallazgo 14). */
-    if (!envio.esTicket && envio.para && envio.texto && !envio.plantilla) {
+    if (!envio.esTicket && envio.para && envio.ligaDeFoto) {
+      /* Una foto queda como ACCIÓN en la conversación guardada, con su
+         pie si lo lleva: así el historial que se le siembra al modelo
+         dice qué mandó (reparación del 8-sep, Falla 2). */
+      almacen.anotaMensaje(envio.para, 'bot',
+        '[Acción: envié foto' + (envio.texto ? ' — ' + String(envio.texto).slice(0, 80) : '') + ']', 'foto')
+        .catch(function () {});
+    } else if (!envio.esTicket && envio.para && envio.texto && !envio.plantilla) {
       almacen.anotaMensaje(envio.para, 'bot', envio.texto, 'texto')
         .catch(function () {});
       /* Y el espejo, si esta prendido. Va DESPUES de mandar y sin
@@ -2456,7 +2783,11 @@ async function atiendeElAviso(crudo, firma, marcaDePuerta) {
   /* Los ids que el almacén ya vio desde otra instancia: no se contestan dos
      veces (hallazgo 10 de la auditoría general del 8-sep). */
   const repetidos = await almacen.marcaVistos(webhook.idsDelAviso(crudo)).catch(function () { return new Set(); });
-  const r = webhook.procesa(crudo, firma, Object.assign({}, entorno, { audios, repetidos }));
+  /* Tres mensajes seguidos del mismo cliente en un aviso son UN turno: se
+     unen en uno solo antes de procesar (reparación del 8-sep, Falla 2,
+     prueba R5). El cuerpo se vuelve a firmar con el secreto de Meta. */
+  const unido = uneLaRafaga(crudo, firma);
+  const r = webhook.procesa(unido.crudo, unido.firma, Object.assign({}, entorno, { audios, repetidos }));
   /* Una ráfaga: dos mensajes del mismo cliente en un aviso. `procesa` es
      síncrona y el agente corre después, así que el segundo traía como
      «estado de antes» lo que el GUION entendió del primero, no lo que

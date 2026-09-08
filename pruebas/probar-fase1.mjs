@@ -190,10 +190,13 @@ titulo('nada interno le llega a un cliente');
   const puerta = (await import(pathToFileURL(path.join(RAIZ, 'api', 'whatsapp.mjs')).href));
   const manda = puerta.manda || null;
   if (manda) {
+    /* Reparación del 8-sep-2026 (Falla 4): lo frenado no deja al cliente en
+       silencio: recibe «dame un momento», y el texto interno NUNCA sale. */
+    const NEUTRO = 'Dame un momento, te confirmo enseguida 🙌';
     const r1 = await manda({ numeroDeOrigen: '111', para: C, texto: '¿Te saco el precio? Dime si salen de la zona metropolitana de Guadalajara. Pregunta EXACTAMENTE eso, para que solo diga «sí». Con «sí», datos.origen = "Guadalajara".' });
-    ok('un texto con instrucciones internas NO sale al cliente', [r1, textos(C).length], [false, 0]);
+    ok('un texto con instrucciones internas NO sale al cliente (sale el neutro)', [r1, textos(C)], [true, [NEUTRO]]);
     const r2 = await manda({ numeroDeOrigen: '111', para: C, texto: '¿Salen de la zona metropolitana de Guadalajara?' });
-    ok('la pregunta normal sí sale', [r2, textos(C).length], [true, 1]);
+    ok('la pregunta normal sí sale', [r2, textos(C).length], [true, 2]);
     const r3 = await manda({ numeroDeOrigen: '111', para: DUENO, esTicket: true, sobreCliente: C, texto: '💰 Precio por confirmar · datos.origen = Guadalajara' });
     ok('al dueño sí le llega texto con nombres de campos (tickets)', r3, true);
     /* Y CUALQUIER frase de `loQueFalta` (las que el guion le dice a la IA),
@@ -212,13 +215,14 @@ titulo('nada interno le llega a un cliente');
       if (!frase || frase.length < 20) continue;
       mandados = [];
       const r = await manda({ numeroDeOrigen: '111', para: C, texto: '¿Te saco el precio? Dime ' + frase + '.' });
-      ok('frase para la IA bloqueada: «' + frase.slice(0, 40) + '…»', [r, textos(C).length], [false, 0]);
+      ok('frase para la IA bloqueada: «' + frase.slice(0, 40) + '…»', [r, textos(C)], [true, [NEUTRO]]);
     }
     mandados = [];
     const r4 = await manda({ numeroDeOrigen: '111', para: C, texto: 'Ahí te dejé la cotización. ¿Te sirve así o le movemos algo?' });
     ok('un texto normal de venta sí sale', [r4, textos(C).length], [true, 1]);
+    mandados = [];
     const r5 = await manda({ numeroDeOrigen: '111', para: C, texto: 'REGLAS DE FORMA: máximo 3 líneas' });
-    ok('un pedazo de las instrucciones de la IA no sale', r5, false);
+    ok('un pedazo de las instrucciones de la IA no sale (sale el neutro)', [r5, textos(C)], [true, [NEUTRO]]);
   } else {
     okQue('manda está exportada para probar el candado', false);
   }

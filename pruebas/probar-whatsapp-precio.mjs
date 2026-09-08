@@ -500,8 +500,10 @@ function idDelUltimoTicket() {
   mandados = [];
   await dice('entre 20 cuánto sería?', C);
   const reparto = textos(C).join('\n');
-  okQue('«entre 20» contesta el reparto por persona', /Entre 20 sale a \*\$[\d,]+ por persona\*/.test(reparto));
-  okQue('  con el mismo total', /El total es el mismo, \*\$[\d,]+\*/.test(reparto));
+  /* Reparación del 8-sep-2026 (Falla 3): SIN dividir. Solo el total. */
+  okQue('«entre 20» contesta con el TOTAL, sin dividirlo', /el total es \*\$[\d,]+\* para todo el grupo/.test(reparto));
+  okQue('  y ningún otro monto de dinero', (reparto.match(/\$[\d,]+/g) || []).length === 1);
+  okQue('  ni la palabra «por persona» con dinero', !/\$[\d,]+ por persona/.test(reparto));
   okQue('  dice hasta cuántos caben en la Sprinter', /Sprinter es hasta 20/.test(reparto));
   okQue('  y NO dice «te la aparto» como si hubiera dicho que sí', !/Va, te la aparto/.test(reparto));
   okQue('  y cierra preguntando si la aparta', /¿Te la aparto\?/.test(reparto));
@@ -514,7 +516,7 @@ function idDelUltimoTicket() {
   for (const noEsGente of ['sale más barato para 3 días?', 'cuánto sale con 2 paradas?']) {
     mandados = [];
     await dice(noEsGente, C);
-    okQue('«' + noEsGente + '» no reparte por persona', !/por persona/.test(textos(C).join('\n')));
+    okQue('«' + noEsGente + '» no dispara la respuesta del total', !/para todo el grupo/.test(textos(C).join('\n')));
   }
   webhook.guardaCharla(C, null);
   /* Y si el grupo ya no cabe: otra cotización, con el viaje ya sabido. */
@@ -527,7 +529,7 @@ function idDelUltimoTicket() {
   /* Una fecha no es gente: «para el 20 de octubre» no reparte nada. */
   mandados = [];
   await dice('y para el 20 de octubre?', C);
-  okQue('«para el 20 de octubre» no se toma como 20 personas', !/por persona/.test(textos(C).join('\n')));
+  okQue('«para el 20 de octubre» no se toma como 20 personas', !/para todo el grupo/.test(textos(C).join('\n')));
 
   /* 2c · «¿cuál es la cuenta?» / «apártamela» con el precio dado: el anticipo
      y los datos para depositar, YA, sin pedir nombre ni hora (dictado del
@@ -553,12 +555,14 @@ function idDelUltimoTicket() {
     webhook.olvidaTodo(); mandados = [];
     const C2 = '5213366670014';
     await cotizaChapala(C2, '12 de septiembre', '14');
+    /* Reparación Falla 6 (8-sep-2026): la foto va con el PRECIO, no con la
+       espera (la de la espera queda apagada por bandera). */
     const conLaEspera = mandados.filter((m) => mismo(m.to, C2) && m.image && m.image.link).length;
-    ok('con la espera va una foto', conLaEspera, 1);
+    ok('con la espera NO va foto (va con el precio)', conLaEspera, 0);
     const ticket = idDelUltimoTicket();
     await contesta('va', ticket);
     const total = mandados.filter((m) => mismo(m.to, C2) && m.image && m.image.link).length;
-    ok('  y con el precio NO va otra: sigue siendo una', total, 1);
+    ok('  con el precio va UNA foto, y solo una', total, 1);
     okQue('  y el precio sí llegó', /\*Total: \$/.test(textos(C2).join('\n')));
   }
   delete process.env.SITIO_URL;

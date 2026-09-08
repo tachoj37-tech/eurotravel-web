@@ -334,7 +334,8 @@ function cotiza(extra) {
   const r = cotiza({ nombre: 'Marisol' });
   okQue('el precio sigue sin enseñar kilómetros ni tarifa',
     !/\bkm\b|kil[oó]metro|tarifa|por km/i.test(r.texto));
-  okQue('  sigue anclando por persona', /por persona/i.test(r.texto));
+  /* Reparación del 8-sep-2026 (Falla 3): el precio NO se divide. */
+  okQue('  ya NO ancla por persona (el precio es total)', !/por persona/i.test(r.texto));
   okQue('  sigue diciendo qué incluye ANTES del cierre',
     r.texto.indexOf('Incluye') < r.texto.indexOf('te bloqueo'));
   okQue('  y sigue sin escasez inventada',

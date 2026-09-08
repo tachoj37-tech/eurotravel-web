@@ -46,23 +46,18 @@ function cotiza(resumen) {
 }
 
 /* ============================================================ */
-titulo('el ancla por persona');
+titulo('sin ancla por persona: el precio es total (dictado del dueño, 8-sep-2026)');
 
-okQue('con 16 personas dice cuánto sale cada uno',
-  /Entre 16 son \*\$800 por persona\*/.test(cotiza({ gente: 16 })));
-
-/* El reparto se redondea HACIA ARRIBA a la decena. Prometer $799.94
-   sería prometer un peso que no cuadra al juntar el dinero. */
-okQue('el reparto se redondea a la decena de arriba',
-  /\$1,290 por persona/.test(cotiza({ gente: 10, ocasion: null })
-    .replace('12,800', '12,800')) ||
-  /Entre 10 son \*\$1,280 por persona\*/.test(cotiza({ gente: 10 })));
-
-/* ESTA ES LA IMPORTANTE. Sin saber cuántos van, el bot NO reparte:
-   preferimos quedarnos sin ancla a poner una inventada. */
-okQue('SIN saber cuántos van, no inventa el por persona',
+/* Reparación Falla 3: el vendedor pone el total y el bot lo entrega tal
+   cual, sin dividirlo. Antes aquí se probaba «Entre 16 son $800 por
+   persona»; cambió de lado a propósito. */
+okQue('con 16 personas NO dice cuánto sale cada uno',
+  !/por persona/.test(cotiza({ gente: 16 })));
+okQue('  y el total sigue ahí, una sola vez',
+  (cotiza({ gente: 16 }).match(/\*Total: \$/g) || []).length === 1);
+okQue('SIN saber cuántos van, tampoco',
   !/por persona/.test(cotiza({})));
-okQue('y con una sola persona tampoco reparte',
+okQue('y con una sola persona tampoco',
   !/por persona/.test(cotiza({ gente: 1 })));
 
 /* El total nunca se toca: sale tal cual del motor de cobro. */
@@ -72,8 +67,11 @@ okQue('el total sigue siendo el del motor, sin tocar',
    decirlo dos veces lo hacia sonar a tramite. */
 okQue('y el anticipo aparece en el cierre',
   /Con \*\$3,000\* te bloqueo/.test(cotiza({ gente: 16 })));
-okQue('y el saldo también, dicho como se liquida',
-  /\$9,800 restantes los liquidas antes de salir/.test(cotiza({ gente: 16 })));
+/* Reparación del 8-sep-2026 (Falla 3): el saldo ya no se calcula ni se
+   dice; solo el total y el apartado. El resto «se abona o se liquida el
+   día del viaje», como dictó el dueño el 6-sep. */
+okQue('el saldo ya no se dice: solo total y apartado',
+  !/restantes/.test(cotiza({ gente: 16 })) && /lo puedes ir abonando o liquidarlo el d[ií]a del viaje/.test(cotiza({ gente: 16 })));
 
 /* ============================================================ */
 titulo('la comparación cambia con la ocasión');
@@ -862,8 +860,9 @@ const precioParticular = bot.textoDeCotizacion(PRECIO, {
   gente: 16, ocasion: 'fiesta', destino: 'Tequila, Jalisco',
   origen: 'Guadalajara', salida: '2026-09-12', recorridos: 0
 });
-okQue('al particular SÍ le sale el por persona',
-  /por persona/.test(precioParticular.texto));
+/* Reparación del 8-sep-2026 (Falla 3): a nadie le sale el por persona. */
+okQue('al particular tampoco le sale el por persona',
+  !/por persona/.test(precioParticular.texto));
 okQue('y su comparación', /nadie tiene que manejar/.test(precioParticular.texto));
 
 /* El total es el MISMO. La tarifa de agencia todavía no la define el

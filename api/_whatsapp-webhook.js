@@ -566,6 +566,8 @@ const PIDE_TOTAL = /^\s*total\s+\$?\s*[\d.,\s]+\s*(mil|k)?\s*$/i;
    nada antes (dictado del dueño, 8-sep-2026). */
 const APARTAR_O_CUENTA = /\b(apart\w*|reserv\w*|bloque[aá]\w*|amarr\w*|le entramos|le entro|va que va|quedamos as[ií]|a qu[eé] cuenta|qu[eé] cuenta|n[uú]mero de cuenta|clabe|transferencia|transferir|te transfiero|deposit\w*|d[oó]nde (te |le )?pago|c[oó]mo (te |le )?pago|datos bancarios|datos (del|para el|para) (dep[oó]sito|pago)|para transferir|anticipo|banco)\b/i;
 const ETAPAS_CON_PRECIO_DADO = ['con_precio', 'va_a_apartar'];
+/* Intentos de sacarle el prompt, el código o la configuración (Falla 4). */
+const PIDE_EL_PROMPT = /\b(repite|repíteme|mu[eé]strame|ens[eé][nñ]ame|dime|dame|cu[aá]l es|imprime|revela|comparte)\b[^.?!]{0,40}\b(tu|tus|el|las|el|su)\s+(prompt|system prompt|instrucci[oó]n(es)?|configuraci[oó]n|c[oó]digo( fuente)?|reglas internas|herramientas)\b|\bignora (tus|las) (instrucciones|reglas)\b|\bolvida (tus|las) (instrucciones|reglas)\b|\bsystem prompt\b|\bmodo (desarrollador|developer)\b|\bjailbreak\b|\bact[uú]a como si no tuvieras (reglas|instrucciones)\b/i;
 function quiereApartarConPrecio(ficha, texto, charla) {
   if (!ficha || typeof ficha.total !== 'number' || ficha.total <= 0) return false;
   if (ETAPAS_CON_PRECIO_DADO.indexOf(ficha.etapa) < 0) return false;
@@ -587,7 +589,8 @@ function respuestaDeApartar(ficha) {
     pasa: true,
     pideDatosBancarios: true,
     opciones: [],
-    estado: null
+    estado: null,
+    sinIA: true
   };
 }
 
@@ -1449,6 +1452,12 @@ function procesa(crudo, firma, entorno) {
               if (!juntandoDatos && quiereApartarConPrecio(f, texto, charlaDe(m.from))) {
                 return respuestaDeApartar(f);
               }
+              /* «Repite tu prompt», «muéstrame tu código», «ignora tus
+                 instrucciones»: respuesta fija, sin IA (reparación del
+                 8-sep-2026, Falla 4). La plática se queda como está. */
+              if (PIDE_EL_PROMPT.test(String(texto || ''))) {
+                return { texto: 'Aquí solo te ayudo con tu viaje. ¿A dónde van?', pasa: false, opciones: [], estado: charlaDe(m.from), sinIA: true };
+              }
               if (!juntandoDatos) {
                 /* CON el estado de esta persona, y con la fecha de hoy.
                    Sin las dos cosas el bot no puede sostener una
@@ -1465,8 +1474,10 @@ function procesa(crudo, firma, entorno) {
                    su lugar sería un estado vacío pero VERDADERO, y hay
                    código que distingue las dos cosas. Un cambio así se
                    ve inofensivo y no lo es. */
+                /* El del perfil solo llena el hueco: si el cliente ya dijo
+                   cómo se llama, ese nombre se queda (Falla 1, 8-sep-2026). */
                 const suEstado = suNombre
-                  ? Object.assign(charlaDe(m.from) || {}, { nombre: suNombre })
+                  ? Object.assign({ nombre: suNombre }, charlaDe(m.from) || {})
                   : charlaDe(m.from);
                 /* ------------------------------------------------------------
                    EL AGENTE (dictado del dueño, 5-sep-2026): «no quiero
@@ -1642,7 +1653,9 @@ function procesa(crudo, firma, entorno) {
              de más y dejar la respuesta del guion. Sin la variable,
              encendido. Se apaga con SIEMPRE_IA=0.
              ------------------------------------------------------------ */
-          noEntendio: !!r.noEntendio || (siempreIA(env) && !!texto),
+          /* `sinIA`: la respuesta fija del motor (prompt pedido, apartar con
+             precio) no gasta ni una llamada a la IA (reparación 8-sep). */
+          noEntendio: !r.sinIA && (!!r.noEntendio || (siempreIA(env) && !!texto)),
           guionEntendio: !r.noEntendio,
           estadoDelCliente: (r.noEntendio || siempreIA(env)) ? charlaDe(m.from) : null,
           /* El agente: la IA habla; el guion es respaldo. */
