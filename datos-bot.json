@@ -19,7 +19,7 @@
     "_": "Dictado del dueño (6-sep-2026): «20% 1 mes antes, 40% 1 semana antes, 100% mismo día o 24 horas antes» y «pídeme autorización para mandar un mensaje, yo te digo cuando sí y cuando no». Para el cambio de fecha sigue el 5-sep: pasar al dueño."
   },
   "DATOS_DE_PAGO": {
-    "como_se_mandan": "Dictado 8-sep-2026: con el precio (y cada vez que quiera apartar o pida la cuenta) va el bloque de apartado (monto + banco/beneficiario) y después la CLABE y el número de cuenta, cada uno PELÓN en su propio mensaje, para copiarlos con un toque largo. La imagen de la ficha (img/ficha-bancaria.png) queda apagada por bandera FICHA_COMO_IMAGEN.",
+    "como_se_mandan": "Dictado 8-sep-2026 (tarde): con el precio, y cada vez que quiera apartar, reservar o pida la cuenta: 1) el bloque de apartado (monto + banco/beneficiario), 2) la IMAGEN de la ficha bancaria (img/ficha-bancaria.png), 3) la CLABE pelona en su mensaje y 4) el número de cuenta pelón en el suyo, para copiarlos con un toque largo. Una sola vez por vuelta. FICHA_COMO_IMAGEN=0 apaga la imagen. Horarios y puntos de reunión se ven DESPUÉS del depósito: son datos del contrato.",
     "de_donde_salen": "CLABE, CUENTA y DATOS_BANCARIOS en Vercel; el modelo nunca los ve ni los escribe (el código los inserta)",
     "regla": "solo cuenta empresarial; nunca una cuenta personal ni una que no venga de ahí",
     "liga_stripe": "existe para la página (pagar.js); en WhatsApp la forma normal es la ficha + CLABE, y la liga queda como opción si el dueño la pide",

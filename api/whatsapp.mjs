@@ -1356,17 +1356,36 @@ function bloqueApartado(precio) {
   if (!clabe || !precio || typeof precio.anticipo !== 'number' || precio.anticipo <= 0) return '';
   const datos = String(process.env.DATOS_BANCARIOS || '').replace(/\s+/g, ' ').trim();
   return 'Si gustas apartar, son *$' + precio.anticipo.toLocaleString('en-US') + '* de apartado' +
-    (datos ? ' (' + datos + ')' : '') + '. Te mando la CLABE' + (cuentaConfigurada() ? ' y el número de cuenta' : '') +
-    ' abajo, cada uno en su mensaje: déjalo apretado para copiarlo.\n' +
+    (datos ? ' (' + datos + ')' : '') + '. Abajo te van los datos para depositar.\n' +
     'Cuando deposites, mándame tu comprobante por aquí.';
 }
-/* Los dos mensajes pelones que siguen al bloque. */
+/* Lo que sigue al bloque: la imagen de la ficha (dictado del dueño,
+   8-sep-2026: «esa imagen bonita» primero) y después la CLABE y la cuenta,
+   pelonas, cada una en su mensaje, para copiarlas con un toque largo. */
 function mensajesParaCopiar(numeroDeOrigen, para) {
   const lista = [];
+  const sitio = String(process.env.SITIO_URL || '').replace(/\/+$/, '');
+  if (sitio && process.env.FICHA_COMO_IMAGEN !== '0') {
+    lista.push({ numeroDeOrigen: numeroDeOrigen, para: para, ligaDeFoto: sitio + '/img/ficha-bancaria.png',
+      texto: 'Aquí están los datos 👆 Abajo te van la CLABE' + (cuentaConfigurada() ? ' y la cuenta' : '') +
+        ', cada una en su mensaje: déjala apretada para copiarla.',
+      pasaAPersona: false, escribio: '[ficha bancaria]' });
+  }
   if (clabeConfigurada()) lista.push({ numeroDeOrigen: numeroDeOrigen, para: para, texto: clabeConfigurada(), pasaAPersona: false, escribio: '[clabe para copiar]' });
   if (cuentaConfigurada()) lista.push({ numeroDeOrigen: numeroDeOrigen, para: para, texto: cuentaConfigurada(), pasaAPersona: false, escribio: '[cuenta para copiar]' });
   return lista;
 }
+
+/* ------------------------------------------------------------
+   LOS DATOS DE DEPÓSITO VAN UNA VEZ POR VUELTA
+   ------------------------------------------------------------
+   El 8-sep-2026 la IA contestó «te paso los datos» Y pidió la acción de
+   apartar: cada camino mandó su juego de ficha + CLABE + cuenta, y el
+   cliente los recibió dos veces seguidas. Se anota a quién ya se le
+   mandaron en ESTE aviso y no se repiten.
+   ------------------------------------------------------------ */
+const depositoMandadoAhora = new Set();
+const MARCAS_DE_DEPOSITO = /\[(ficha bancaria|clabe para copiar|cuenta para copiar|datos de depósito)\]/;
 
 /* ------------------------------------------------------------
    «LO QUE YA HICE» · las acciones del bot, para que el modelo las vea
@@ -1392,6 +1411,17 @@ function loQueYaHice(ficha, antes) {
   if (['mando_comprobante', 'datos_del_contrato', 'contrato_listo'].indexOf(e) >= 0) h.push('recibí su comprobante; se están juntando los datos del contrato');
   if (e === 'contrato_listo') h.push('el contrato está completo; falta confirmar el pago');
   return h;
+}
+
+/* En qué va el depósito, en palabras para la IA (bloque «Depósito»). */
+function estadoDelDeposito(ficha) {
+  const e = ficha && ficha.etapa;
+  if (!e || ['escribio', 'cotizando', 'pidio_precio'].indexOf(e) >= 0) return null;
+  if (e === 'con_precio') return 'no ha llegado el comprobante (si quiere apartar, acción "apartar")';
+  if (e === 'va_a_apartar') return 'dijo que aparta, pero NO ha llegado el comprobante (si vuelve a pedir la cuenta, acción "apartar")';
+  if (e === 'mando_comprobante' || e === 'datos_del_contrato') return 'ya mandó su comprobante (lo revisa una persona); se están juntando los datos del contrato';
+  if (e === 'contrato_listo') return 'comprobante recibido y datos del contrato completos; falta confirmar el pago';
+  return null;
 }
 
 /* ¿La respuesta pregunta un dato que YA está en el estado? Devuelve el
@@ -1504,6 +1534,8 @@ async function loQueDiceElAgente(envio) {
     /* «LO QUE YA HICE»: fotos, precio, datos de depósito, comprobante
        (reparación del 8-sep-2026, Fallas 1 y 2). */
     hechos: loQueYaHice(tickets.fichaDe(cliente), antes),
+    /* El sistema sabe si el comprobante llegó; la IA nunca lo pregunta. */
+    deposito: estadoDelDeposito(tickets.fichaDe(cliente)),
     falta: hayViaje ? conversacion.loQueFalta(antes) : (viajeDeLaFicha ? null : 'a dónde van'),
     historial: agente.historialDe(cliente),
     voz: { usted: /^(1|si|sí|usted)$/i.test(String(process.env.AGENTE_DE_USTED || '')) }
@@ -1546,11 +1578,17 @@ async function loQueDiceElAgente(envio) {
      ------------------------------------------------------------ */
   const cambiaAlgo = !!(dicho.datos && (dicho.datos.destino || dicho.datos.gente || dicho.datos.salida || dicho.datos.regreso || dicho.datos.unidad || dicho.datos.autobus));
   const esOtroViaje = /\botro viaje\b|\botra cotizaci|\bun viaje m[aá]s\b|\baparte\b|\btambi[eé]n quiero\b|\badem[aá]s\b/i.test(String(texto || ''));
-  if (viajeDeLaFicha && viajeDeLaFicha.estado && !hayViaje && cambiaAlgo && !esOtroViaje) {
+  /* Una plática «débil» con el viaje ya en precio (un destino suelto sin
+     fecha ni gente, como el «Ernesto Jiménez» que el guion viejo guardó
+     como destino el 7-sep) es basura, no otro viaje: manda el viaje de la
+     ficha. */
+  const platicaDebil = hayViaje && !(antes.salida || antes.gente) && !antes.otroViaje;
+  if (viajeDeLaFicha && viajeDeLaFicha.estado && (!hayViaje || platicaDebil) && (cambiaAlgo || platicaDebil) && !esOtroViaje) {
     const base = viajeBaseDeLaFicha(tickets.fichaDe(cliente));
     if (base) {
       antes = Object.assign({}, base, antes.nombre ? { nombre: antes.nombre } : {});
-      console.log('[agente] cambio sobre un viaje con precio: se siembra el viaje conocido y se cambia solo lo nuevo');
+      console.log('[agente] ' + (platicaDebil ? 'plática débil con viaje en precio: manda el viaje de la ficha' :
+        'cambio sobre un viaje con precio: se siembra el viaje conocido y se cambia solo lo nuevo'));
     }
   }
   /* El nombre que dio en el chat sobrevive al cierre de la plática: vive en
@@ -1560,6 +1598,9 @@ async function loQueDiceElAgente(envio) {
     if (base && base.nombre) antes = Object.assign({}, antes, { nombre: base.nombre });
   }
   const nuevo = conversacion.pegaDatos(antes, dicho.datos);
+  /* «Otro viaje» explícito queda marcado en la plática: los mensajes que
+     sigan son de ese viaje nuevo, no basura que haya que reemplazar. */
+  if (esOtroViaje && viajeDeLaFicha) nuevo.otroViaje = true;
   webhook.guardaCharla(cliente, nuevo);
   agente.recuerda(cliente, 'cliente', texto);
   /* Validación ANTES de mandar (Falla 1): si la IA pregunta un dato que ya
@@ -1698,7 +1739,10 @@ async function loQueDiceElAgente(envio) {
   }
 
   if (accion !== 'seguir') {
-    if (dicho.respuesta && accion !== 'cotizar') {
+    /* «apartar» lo contesta el motor entero (anticipo, ficha, CLABE,
+       cuenta): el texto de la IA («te paso los datos, un momento») sobra y
+       el 8-sep-2026 duplicó los datos. */
+    if (dicho.respuesta && accion !== 'cotizar' && accion !== 'apartar') {
       await manda({ numeroDeOrigen: envio.numeroDeOrigen, para: cliente, texto: dicho.respuesta,
         pasaAPersona: false, escribio: '[agente]' });
       agente.recuerda(cliente, 'bot', dicho.respuesta);
@@ -2310,12 +2354,20 @@ async function manda(envio) {
     const conPrecioYAnticipo = !!(fichaDelPara && typeof fichaDelPara.total === 'number' && fichaDelPara.total > 0 &&
       typeof fichaDelPara.anticipo === 'number' && fichaDelPara.anticipo > 0);
     const pideDepositar = /\b(deposita|transfi[eé]re|haz (el|tu) dep[oó]sito|te paso (la cuenta|los datos)|datos (de|para) (dep[oó]sito|transferencia|el dep[oó]sito))\b/i.test(String(envio.texto));
-    if (conPrecioYAnticipo && pideDepositar && clabeBuena && !envio.conDatosParaCopiar) {
+    if (conPrecioYAnticipo && pideDepositar && clabeBuena && !envio.conDatosParaCopiar &&
+        !depositoMandadoAhora.has(almacen.llave(envio.para))) {
       envio = Object.assign({}, envio, { texto: String(envio.texto) + '\n\n' + bloqueApartado({ anticipo: fichaDelPara.anticipo }), conDatosParaCopiar: true });
       console.log('[apartado] se anexó el bloque de depósito a un texto que pedía depositar sin la CLABE');
       const salio = await manda(envio);
       if (salio) for (const m of mensajesParaCopiar(envio.numeroDeOrigen, envio.para)) await manda(m);
       return salio;
+    }
+    /* Ficha, CLABE o cuenta: una sola vez por vuelta para cada cliente. */
+    if (MARCAS_DE_DEPOSITO.test(String(envio.escribio || ''))) {
+      const k = almacen.llave(envio.para) + '|' + (String(envio.escribio).match(MARCAS_DE_DEPOSITO) || [])[1];
+      if (depositoMandadoAhora.has(k)) { console.log('[apartado] ' + envio.escribio + ' ya se mandó en esta vuelta; no se repite'); return true; }
+      depositoMandadoAhora.add(k);
+      depositoMandadoAhora.add(almacen.llave(envio.para));
     }
   }
   /* Nada de «por persona» con dinero hacia un cliente (dictado del dueño,
@@ -2789,6 +2841,7 @@ async function atiendeElAviso(crudo, firma, marcaDePuerta) {
     cargaLoQueSeSabe(crudo)
   ]);
   atendidosPorElAgenteAhora.clear();
+  depositoMandadoAhora.clear();
   /* Los ids que el almacén ya vio desde otra instancia: no se contestan dos
      veces (hallazgo 10 de la auditoría general del 8-sep). */
   const repetidos = await almacen.marcaVistos(webhook.idsDelAviso(crudo)).catch(function () { return new Set(); });

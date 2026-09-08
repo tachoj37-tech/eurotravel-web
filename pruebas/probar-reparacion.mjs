@@ -237,7 +237,11 @@ titulo('R9 · el precio lleva unidad + total + foto + apartado + CLABE; y la CLA
   okQue('  con banco y beneficiario en el texto', /BBVA · a nombre de Eurotravel/.test(textoPrecio));
   okQue('  la CLABE pelona en su propio mensaje, idéntica a la configurada', tras.some((m) => m.text && m.text.body === CLABE));
   okQue('  y el número de cuenta pelón en el suyo', tras.some((m) => m.text && m.text.body === '0192721740'));
-  okQue('  sin la imagen de la ficha', !tras.some((m) => m.image && /ficha-bancaria/.test(m.image.link || '')));
+  okQue('  con la imagen de la ficha ANTES de los datos pelones', (function () {
+    const i = tras.findIndex((m) => m.image && /ficha-bancaria/.test(m.image.link || ''));
+    const j = tras.findIndex((m) => m.text && m.text.body === CLABE);
+    return i >= 0 && j > i;
+  })());
   okQue('  y «mándame tu comprobante»', /comprobante/.test(textoPrecio));
   const antes2 = mandados.length;
   await dice('ok, quiero apartar', C);
@@ -254,11 +258,51 @@ titulo('R9 · el precio lleva unidad + total + foto + apartado + CLABE; y la CLA
   const salio = await manda({ numeroDeOrigen: '111', para: C, pasaAPersona: false, escribio: '[prueba]', texto: 'Deposita a la CLABE 999999999999999999 por favor' });
   okQue('un texto con OTRA CLABE se frena (no sale)', salio === false && !textos(C).slice(mandados.slice(0, antes4).filter((m) => mismo(m.to, C)).length).join('').includes('999999999999999999'));
   okQue('  y al dueño le llega el incidente', /Frené un mensaje con una CLABE/.test(textos(DUENO).join('\n')));
-  /* Un texto que dice «deposita» sin la CLABE recibe el bloque anexado. */
+  /* Un texto que dice «deposita» sin la CLABE recibe el bloque anexado
+     (en una vuelta nueva: los datos van una vez por vuelta). */
+  await dice('ok', C);
   const antes5 = mandados.length;
   await manda({ numeroDeOrigen: '111', para: C, pasaAPersona: false, escribio: '[prueba]', texto: 'Va, deposita cuando puedas y me mandas el comprobante 🙌' });
   const t5 = textos(C).slice(mandados.slice(0, antes5).filter((m) => mismo(m.to, C)).length).join('\n');
   okQue('«deposita cuando puedas» sin CLABE sale CON el bloque anexado', t5.indexOf(CLABE) >= 0 && /de apartado/.test(t5));
+  delete process.env.CLABE; delete process.env.CUENTA; delete process.env.DATOS_BANCARIOS;
+}
+
+/* ============================================================ */
+titulo('R10 · lo que pasó el 8-sep a las 5 p.m.: plática envenenada + «reservar» + «no sé dónde depositar»');
+{
+  limpia();
+  const C = '5213366670411';
+  const CLABE = '012320001927217407';
+  process.env.CLABE = CLABE; process.env.CUENTA = '0192721740'; process.env.DATOS_BANCARIOS = 'BBVA Bancomer · a nombre de Turismo ET, S.A. de C.V.';
+  /* Ayer: precio dado y «apártamela»; el guion viejo guardó «Ernesto Jiménez»
+     como destino en una plática nueva. */
+  tk.anotaEtapa(C, 'va_a_apartar', { total: 7000, anticipo: 1500,
+    viajeDatos: { origen: 'Guadalajara', destino: 'Tequila', salida: '2026-09-09', regreso: '2026-09-09', gente: 15, unidad: 'Sprinter' } }, Date.now());
+  webhook.guardaCharla(C, { destino: 'Ernesto Jiménez', paso: 'salida', nombre: 'Prueba' });
+  /* La IA de mentiras hace lo mismo que la real hizo: contesta con texto Y
+     pide la acción de apartar. */
+  laIA = (t) => /deposit|reservar/i.test(t)
+    ? { respuesta: 'Te paso los datos para depositar. Un momento.', datos: {}, accion: 'apartar' }
+    : { respuesta: '¿Es ida y vuelta el mismo día a Tequila o se quedan?', datos: {}, accion: 'seguir' };
+  const clabesA = (desde) => textos(C).slice(desde).filter((t) => t === CLABE).length;
+  let antes = textos(C).length; let ia = llamadasALaIA;
+  await dice('reservar', C);
+  okQue('«reservar» con precio dado: los datos de depósito, de inmediato, sin IA', clabesA(antes) === 1 && llamadasALaIA === ia);
+  okQue('  con la imagen de la ficha, y sin volver a preguntar el regreso', mandados.some((m) => mismo(m.to, C) && m.image && /ficha-bancaria/.test(m.image.link || '')) && !/mismo d[ií]a/.test(textos(C).slice(antes).join('\n')));
+  okQue('  la plática envenenada («Ernesto Jiménez» como destino) no lo frenó', true);
+  antes = textos(C).length;
+  await dice('no se donde depositar', C);
+  ok('«no sé dónde depositar»: la CLABE llega UNA vez, no dos', clabesA(antes), 1);
+  ok('  y la cuenta también una vez', textos(C).slice(antes).filter((t) => t === '0192721740').length, 1);
+  okQue('  sin el «te paso los datos, un momento» de la IA', !/Un momento\./.test(textos(C).slice(antes).join('\n')));
+  /* Y si la IA llega a hablar con ese cliente, sabe que el comprobante no ha llegado. */
+  webhook.guardaCharla(C, null);
+  laIA = () => ({ respuesta: 'Va, aquí ando 🙌', datos: {}, accion: 'seguir' });
+  await dice('gracias', C);
+  const p = payloads[payloads.length - 1] || { dinamico: '' };
+  okQue('el bloque de estado le dice a la IA «Depósito: … NO ha llegado el comprobante»', /Depósito: .*NO ha llegado el comprobante/.test(p.dinamico));
+  okQue('  y trae el viaje con precio (no la plática envenenada)', /Tequila/.test(p.dinamico) && !/Ernesto/.test(p.dinamico));
   delete process.env.CLABE; delete process.env.CUENTA; delete process.env.DATOS_BANCARIOS;
 }
 

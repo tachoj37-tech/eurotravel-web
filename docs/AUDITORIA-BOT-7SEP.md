@@ -197,6 +197,20 @@ plantillas. La suite R1–R9 corre con `npm run reparacion`.
 | 4 · Código al cliente | La lectura de `content[0].text` a ciegas y sin filtro de forma; el catch nunca mandaba `e.message` (bien). | `filtrarSalida()` en `manda()`; lo frenado → «dame un momento» + aviso al dueño + incidente completo en el registro; respuesta fija a «repite tu prompt» sin IA; solo bloques de texto de la respuesta. Los ejemplos JSON del prompt se conservan (son el formato de salida). `scripts/filtrar-salientes.mjs` para revisar los últimos 500 salientes con la llave del dueño. | R6, R7 |
 | 5 · No razona | Prompt cacheado de ~10,200 tokens (cache leído desde la 2ª llamada); sin `temperature` (1.0 por omisión); un cambio después del precio caía en una plática vacía. | Cinco pasos de pensamiento al inicio; `temperature: 0.3`; un cambio con el viaje en precio siembra el viaje conocido y cambia solo lo nuevo. | R8 |
 
+**Prueba del dueño de las 5 p.m. (R10, misma tarde):** «reservar» sobre el
+viaje de ayer no mandó la cuenta, la IA volvió a preguntar el regreso,
+inventó «a las 9 de la mañana», preguntó si ya había mandado el comprobante,
+y los datos llegaron dos veces. Causa común: la plática quedó envenenada la
+noche anterior (el guion viejo guardó «Ernesto Jiménez» como destino) y el
+motor la tomó por «otro viaje a medias». Arreglos: una plática con solo un
+destino suelto no bloquea el apartado ni reemplaza al viaje con precio
+(salvo «otro viaje» explícito, que se marca); el bloque de estado lleva
+«Depósito: no ha llegado el comprobante» y la IA tiene prohibido preguntar
+si ya depositó o inventar horarios (eso es del contrato, después del
+depósito); con acción «apartar» el texto de la IA se descarta; los datos de
+depósito van una sola vez por vuelta; y el orden es bloque → imagen de la
+ficha → CLABE pelona → cuenta pelona.
+
 **Lo que NO se cambió, y por qué:** responder 200 a Meta antes de procesar
 (Vercel congela la función al responder; haría falta una cola externa) y el
 lock por teléfono entre avisos distintos (mismo motivo); el dedupe por

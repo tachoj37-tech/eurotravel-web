@@ -574,8 +574,16 @@ function quiereApartarConPrecio(ficha, texto, charla) {
   /* Sin acentos: «apártamela», «depósito», «dónde». */
   const t = String(texto || '').normalize('NFD').replace(/[̀-ͯ]/g, '');
   if (!t || t.length > 160 || !APARTAR_O_CUENTA.test(t)) return false;
-  /* Un viaje nuevo a medias en la plática: eso no es «apártame el de antes». */
-  if (charla && (charla.destino || charla.salida)) return false;
+  /* Un viaje nuevo a medias en la plática (OTRO destino, ya con fecha o
+     gente) no es «apártame el de antes». Una plática con solo un destino
+     suelto —o el mismo destino del viaje con precio— no lo bloquea: el
+     8-sep-2026 un «Ernesto Jiménez» guardado como destino por el guion viejo
+     dejó a un cliente sin la cuenta. */
+  if (charla && charla.destino && (charla.salida || charla.gente)) {
+    const v = ficha.viajeDatos || {};
+    const mismo = String(charla.destino).toLowerCase().trim() === String(v.destino || '').toLowerCase().trim();
+    if (!mismo) return false;
+  }
   return true;
 }
 function respuestaDeApartar(ficha) {
@@ -1688,24 +1696,31 @@ function procesa(crudo, firma, entorno) {
            de arriba: el mensaje de la CLABE va pelón porque el toque
            largo de WhatsApp copia el mensaje ENTERO. */
         if (mandaFicha) {
-          if (env.FICHA_COMO_IMAGEN === '1' && sitio) {
+          /* Dictado del dueño (8-sep-2026, tarde): PRIMERO la imagen de la
+             ficha («esa imagen bonita»), y después los datos brutos, cada
+             uno en su mensaje, para copiarlos. Sin imagen solo si no hay
+             sitio o si se apaga con FICHA_COMO_IMAGEN=0. */
+          const conImagen = env.FICHA_COMO_IMAGEN !== '0' && !!sitio;
+          if (conImagen) {
             envios.push({
               numeroDeOrigen: deQuien,
               para: m.from,
               ligaDeFoto: sitio + '/img/ficha-bancaria.png',
-              texto: 'Aquí están los datos 👆',
+              texto: 'Aquí están los datos 👆 Abajo te van la CLABE' + (numeroDeCuenta ? ' y la cuenta' : '') +
+                ', cada una en su mensaje: déjala apretada para copiarla.',
               pasaAPersona: false,
               escribio: '[ficha bancaria]'
             });
+          } else {
+            envios.push({
+              numeroDeOrigen: deQuien,
+              para: m.from,
+              texto: (cuenta ? cuenta + '\n\n' : '') + 'Te mando la CLABE' + (numeroDeCuenta ? ' y el número de cuenta' : '') +
+                ' abajo, cada uno en su mensaje: déjalo apretado para copiarlo.',
+              pasaAPersona: false,
+              escribio: '[datos de depósito]'
+            });
           }
-          envios.push({
-            numeroDeOrigen: deQuien,
-            para: m.from,
-            texto: (cuenta ? cuenta + '\n\n' : '') + 'Te mando la CLABE' + (numeroDeCuenta ? ' y el número de cuenta' : '') +
-              ' abajo, cada uno en su mensaje: déjalo apretado para copiarlo.',
-            pasaAPersona: false,
-            escribio: '[datos de depósito]'
-          });
           envios.push({
             numeroDeOrigen: deQuien,
             para: m.from,

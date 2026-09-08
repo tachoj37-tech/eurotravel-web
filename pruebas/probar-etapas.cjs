@@ -415,13 +415,13 @@ hook.olvidaTodo(); tk.olvidaTodo();
   /* Dictado del dueño (8-sep-2026): sin imagen; el segundo es el aviso de
      cómo copiar y el tercero la CLABE pelona (la cuenta iría en un cuarto
      si `CUENTA` está configurada). */
-  ok('salen tres mensajes: acuse, aviso de cómo copiar y CLABE', suyos.length, 3);
+  ok('salen tres mensajes: acuse, ficha (imagen) y CLABE', suyos.length, 3);
   /* 8-sep-2026: antes del depósito no se pide el nombre; se le pide el
      comprobante. Cambió de lado a propósito. */
   okQue('  el primero le contesta y le pide el comprobante, no el nombre',
     /te la aparto/i.test(suyos[0].texto) && /comprobante/i.test(suyos[0].texto) && !/nombre/i.test(suyos[0].texto));
-  okQue('  el segundo es el aviso de cómo copiar, sin imagen',
-    /d[eé]jalo apretado para copiarlo/.test(suyos[1].texto || '') && !suyos[1].ligaDeFoto);
+  okQue('  el segundo es la ficha, por su liga, con el aviso de cómo copiar en el pie',
+    /\/img\/ficha-bancaria\.png$/.test(suyos[1].ligaDeFoto || '') && /apretada para copiarla/.test(suyos[1].texto || ''));
 
   /* LO MÁS IMPORTANTE DE ESTE ARCHIVO. Si al mensaje de la CLABE se le
      pega cualquier cosa —un emoji, un punto, una palabra— el toque
@@ -432,8 +432,8 @@ hook.olvidaTodo(); tk.olvidaTodo();
 
   /* Y el aviso de cómo copiarla va en la FICHA, no en el mensaje de la
      CLABE — justo por lo mismo. */
-  okQue('  la instrucción va en el aviso, no en la CLABE',
-    /apretado/i.test(suyos[1].texto));
+  okQue('  la instrucción va en la ficha, no en la CLABE',
+    /apretada/i.test(suyos[1].texto));
 }
 
 /* Sin sitio configurado no se manda una liga rota: se cae al texto de

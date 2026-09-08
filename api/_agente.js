@@ -230,7 +230,11 @@ function instruccionesDelAgente(voz) {
 
     'CON EL PRECIO YA DADO, LO ÚNICO QUE SIGUE ES APARTAR. NUNCA pidas antes del depósito la ' +
     'hora de salida, la dirección, el nombre ni el teléfono: eso lo pide el motor después del ' +
-    'comprobante. Si duda, resuelve la duda y vuelve a «¿te la aparto?» (dictado del dueño, 8-sep-2026).\n\n' +
+    'comprobante. Si duda, resuelve la duda y vuelve a «¿te la aparto?» (dictado del dueño, 8-sep-2026).\n' +
+    'NUNCA preguntes si ya depositó o si ya mandó el comprobante: el sistema lo sabe y te lo dice ' +
+    'en «Depósito». Si dice «no ha llegado» y el cliente quiere apartar, pagar o reservar, es acción ' +
+    '"apartar" (el motor manda los datos otra vez). NUNCA inventes horas de salida, horarios ni ' +
+    'puntos de reunión: eso se acuerda después del depósito.\n\n' +
 
     'FORMATO: devuelve SOLO este JSON, sin explicar nada:\n' +
     '{"respuesta":string|null,"datos":{"nombre":string|null,"destino":string|null,"origen":string|null,' +
@@ -330,12 +334,15 @@ function textoDelContexto(c) {
       return etiquetas[k] + ': ' + String(val).slice(0, 60);
     });
   const precio = v ? (v.estado === 'pedido' ? 'pedido, esperando al vendedor' : 'YA ENTREGADO') : 'todavía no';
+  /* El comprobante: el sistema SABE si llegó. La IA nunca lo pregunta. */
+  const dep = c && c.deposito ? c.deposito : (v && v.estado === 'dado' ? 'no ha llegado el comprobante' : 'no aplica todavía');
   const hechos = (c && Array.isArray(c.hechos)) ? c.hechos.filter(Boolean) : [];
   const aviso = c && c.aviso ? '⚠️ ' + String(c.aviso) + '\n' : '';
   const estadoBloque =
     '══ LO QUE YA SÉ DE ESTE CLIENTE (NUNCA LO VUELVAS A PREGUNTAR) ══\n' +
     (se.length ? se.join(' · ') : '(nada todavía)') + '\n' +
     'Precio: ' + precio + (v && v.resumen ? ' · ' + v.resumen : '') + '\n' +
+    'Depósito: ' + dep + '\n' +
     '══ LO QUE YA HICE ══\n' + (hechos.length ? hechos.map(function (h) { return '- ' + h; }).join('\n') : '- nada aún') + '\n' +
     '══ LO QUE FALTA ══\n' + (falta ? '- ' + falta : (v ? '- nada del viaje: sigue con apartar o resuelve dudas' : '- todo')) + '\n' +
     '════════════════════════════════════════\n';
@@ -517,7 +524,7 @@ async function conversa(mensaje, opciones) {
 
   const bloques = [
     { type: 'text', text: instruccionesDelAgente(o.voz), cache_control: { type: 'ephemeral' } },
-    { type: 'text', text: textoDelContexto({ hoy: hoy, estado: o.estado, falta: o.falta, historial: o.historial, viaje: o.viaje, hechos: o.hechos, aviso: o.aviso }) }
+    { type: 'text', text: textoDelContexto({ hoy: hoy, estado: o.estado, falta: o.falta, historial: o.historial, viaje: o.viaje, hechos: o.hechos, aviso: o.aviso, deposito: o.deposito }) }
   ];
 
   try {
