@@ -40,20 +40,15 @@ window.UNIDADES = [
     desc: 'La unidad más nueva del parque, modelo 2026. Línea premium: lo más cómodo que tenemos para grupos grandes.',
     amen: ['Aire acondicionado', 'Baño a bordo', 'Asientos reclinables'],
     spec: [['i-users', '51 pasajeros'], ['i-snow', 'Aire acondicionado'], ['i-wc', 'Baño a bordo'], ['i-seat', 'Asientos reclinables'], ['i-shield', 'Seguro de viajero incluido']] },
-  /* SIN AÑO, Y ES A PROPÓSITO · corregido por el dueño el 4-sep-2026.
-     Traía `modelo: 2023` y se quitó:
-
-       «el Century a veces es 2007 y el i6 puede ser 2023 o 2017.
-        Yo que tú, esos ni les pongo año. Punto.»
-
-     De cada modelo hay VARIAS unidades y de años distintos. Prometer
-     «2023» y que llegue la de 2017 es la misma falla que prometer 49
-     asientos y que lleguen 47: se descubre el día del viaje, cuando ya
-     no se puede arreglar.
-
-     El único que lleva año es el G8, porque de ése hay uno y es de
-     2026. Quien no tiene año garantizado, no enseña año. */
-  { id: 'irizar-i6s', cat: 'autobus', cotizadorAutomatico: false, tag: 'Autobús · Premium', name: 'Irizar i6S', cap: '51 pasajeros', max: 51, img: 'i6s', full: 'hero2', seat: 'seat_i6s',
+  /* LOS AÑOS · el 4-sep-2026 el dueño quitó el año del i6S («el i6
+     puede ser 2023 o 2017; esos ni les pongo año»). El 8-sep-2026 lo
+     precisó: «puedes decir años del i6S y del i6: el i6S es 2023, el i6
+     es 2017 y el G8 es 2026; eso sí dilo. Los otros no». Así que llevan
+     `modelo` SOLO estas tres; el Century (2007) y el resto no lo llevan
+     ni lo dicen. Prometer un año y que llegue otra unidad es la misma
+     falla que prometer 49 asientos y que lleguen 47: se descubre el día
+     del viaje. Quien no tiene año garantizado, no enseña año. */
+  { id: 'irizar-i6s', cat: 'autobus', cotizadorAutomatico: false, tag: 'Autobús · Premium', name: 'Irizar i6S', cap: '51 pasajeros', max: 51, modelo: 2023, img: 'i6s', full: 'hero2', seat: 'seat_i6s',
     desc: 'Comodidad, tecnología y diseño para viajes con estilo. Diseño aerodinámico, acabados premium y suspensión avanzada para un trayecto suave, seguro y placentero.',
     amen: ['Aire acondicionado', 'Baño a bordo', 'Asientos reclinables', '2 puertas'],
     spec: [['i-users', '51 pasajeros'], ['i-snow', 'Aire acondicionado'], ['i-wc', 'Baño a bordo'], ['i-seat', 'Asientos reclinables con descansapiés'], ['i-bag', 'Amplia capacidad de equipaje'], ['i-shield', 'Seguro de viajero incluido'], ['i-route', 'Suspensión avanzada'], ['i-briefcase', 'Ideal para giras y viajes ejecutivos']] },
@@ -72,7 +67,7 @@ window.UNIDADES = [
      «Turismo», que lo ponía un escalón abajo del i6S y no lo está: son
      el mismo camión, y el bot los estaba ofreciendo como si uno fuera
      mejor que el otro. */
-  { id: 'irizar-i6', cat: 'autobus', cotizadorAutomatico: false, tag: 'Autobús · Premium', name: 'Irizar i6', cap: '47 pasajeros', max: 47, img: 'i6', full: 'hero1',
+  { id: 'irizar-i6', cat: 'autobus', cotizadorAutomatico: false, tag: 'Autobús · Premium', name: 'Irizar i6', cap: '47 pasajeros', max: 47, modelo: 2017, img: 'i6', full: 'hero1',
     desc: 'La misma línea premium del i6S: espacio, silencio de marcha y equipamiento completo para trayectos largos.',
     amen: ['Aire acondicionado', 'Baño a bordo', 'Pantallas', 'Audio'],
     spec: [['i-users', '47 pasajeros'], ['i-snow', 'Aire acondicionado'], ['i-wc', 'Baño a bordo'], ['i-tv', 'Pantallas y sistema de audio'], ['i-seat', 'Asientos reclinables'], ['i-bag', 'Cajuela amplia'], ['i-shield', 'Seguro de viajero incluido'], ['i-pin', 'Monitoreo GPS']] },

@@ -7,25 +7,19 @@ cada vez que algo se cierra.
 
 | # | Qué | Cómo | Cómo se comprueba |
 |---|---|---|---|
-| 1 | **`CRON_SECRET` en Vercel** | Inventar 32 caracteres (PowerShell: `-join ((48..57 + 97..122) \| Get-Random -Count 32 \| ForEach-Object { [char]$_ })`), Vercel → eurotravel-web → Settings → Environment Variables → Production → Redeploy | En 15 min el registro dice `[seguimiento] {"revisadas":…}` en vez de «falta CRON_SECRET» |
 | 2 | **Tres plantillas en Meta** | WhatsApp Manager → Plantillas → Crear: `seguimiento_24h`, `seguimiento_3d`, `seguimiento_7d`, Marketing, Español (MEX), una variable `{{1}}` con muestra «tu viaje a Puerto Vallarta». Textos exactos en `docs/SEGUIMIENTO.md`. Al aprobarse: `WHATSAPP_PLANTILLA_TOQUE1/2/3` en Vercel + Redeploy | El registro deja de decir «no hay WHATSAPP_PLANTILLA_TOQUEn» y `mandados` sube |
 | 3 | **Un mensaje de prueba al bot** desde el tercer teléfono | Cualquier texto | En el registro ya no sale «no tiene la columna» (el SQL del 7-sep quedó) |
-| 4 | **Teléfono de guardia** (pregunta 5 del plan) | Decirlo; «el mismo» si es el personal | Va a `datos-bot.json` y al plan |
 | 5 | **«Va» al plan del agente con memoria** | Leer `docs/AGENTE.md` y decir «va» | Arranca la fase 1 del agente |
 | 6 | **La puerta de Dualhook** (auditoría B6) | Decidir: rotar el tramo cada mes, pedir a Dualhook sus IPs de salida, o pedirle un secreto por aviso | Se implementa lo que decida |
-| 7 | **Prueba social y seguridad de la empresa** (`datos-bot.json`) | Rutas frecuentes, tipos de cliente, una o dos frases verificables; confirmar GPS 24/7, permiso vigente, año de las unidades, experiencia de choferes | Deja de haber «PENDIENTE» en esas llaves y el agente puede afirmarlo |
-| 8 | **Cancelación: confirmar el supuesto** | ¿El 20/40/100 % es sobre el total del viaje o sobre lo abonado? | Se ajusta el texto del agente |
 | 9 | **Cambio de fecha: ¿hay política?** | Hoy el bot te pasa al cliente sin explicar nada (dictado 5-sep) | Si dictas una, se escribe |
 | 10 | **Probar de punta a punta desde el tercer teléfono** | Autobús: lista → escoger → «¿salen de la ZMG?» → espera con foto → ticket → tu número → precio al cliente; luego «tablero» desde tu personal | Lo veo en el registro |
 | 11 | **Variables del número de prueba de Meta** | Quitar de Vercel las que ya no se usan (`WHATSAPP_APP_SECRET` y el token viejo) cuando Dualhook esté firme | Menos puertas abiertas |
 | 12 | **Dominio eurotravel.com.mx** | Confirmar si ya está apuntado; `SITIO_URL` en Vercel debe decir el definitivo | Las fotos de la unidad salen con la liga buena |
 | 13 | **EuroSystem: portal de suplantación H-2 y bitácora** | Decisión tuya (auditoría del 6-sep en EuroSystem) | — |
-| 14 | **`GROQ_API_KEY` en Vercel** (el lector de notas de voz) | console.groq.com → API Keys → crear → pegar en Vercel → Redeploy | Una nota de voz al bot: la entiende; el registro deja de decir «falta GROQ_API_KEY» |
 | 15 | **`GOOGLE_ROUTES_KEY` en Vercel** (destinos fuera de la lista) | Confirmar que existe (la página la usa; si el bot cotiza «Zacatecas» sin precio, falta) | El ticket de un destino raro trae «Calculado: $…» |
 | 16 | **Perfil de WhatsApp Business** completo | Foto, nombre, descripción, dirección, horario, sitio | Se ve al abrir el chat |
 | 17 | **El relevo: probarlo** (ya construido el 7-sep) | Desde tu personal, con los 10 dígitos pegados: **«3312345678 yo»** → el bot se calla con ese cliente y te reenvía lo que escriba; le contestas desde el teléfono del negocio o citando el reenvío; **«3312345678 bot»** lo devuelve a la IA. También sirve responder un ticket suyo con «yo»/«bot». El tablero marca con ✋ los chats que tienes | Un cliente de prueba: «yo», escribe, te llega; «bot», la IA vuelve |
 | 19 | **Un mensaje desde el teléfono del negocio al tercer teléfono** | Solo escribirlo | Con el registro sabré si Dualhook avisa de lo que escribes desde el negocio; si sí, el relevo se vuelve automático (te calla el bot con solo escribir tú) |
-| 18 | **Correr el bloque «EL RELEVO» de `docs/ALMACEN.sql`** (una columna) | SQL Editor, pegar el archivo completo otra vez | El registro no dice «no tiene la columna en_manos_de» |
 
 ## Para lanzar el bot · lista de verificación
 
@@ -44,9 +38,9 @@ revisa en **Vercel → eurotravel-web → Settings → Environment Variables
 | ✅ | `ALMACEN_URL`, `ALMACEN_CLAVE` | La memoria | `[almacen] conectado` en el registro |
 | ✅ | `DISPONIBILIDAD_API_KEY`, `CONTRATOS_API_KEY`, `EUROSYSTEM_URL` | Calendario y contrato BORRADOR | Ticket con calendario; contrato con folio |
 | ✅ | `CLABE`, `DATOS_BANCARIOS`, `SITIO_URL` | La ficha bancaria como imagen y la CLABE sola; las fotos de la unidad | El cliente recibe la foto y la ficha |
-| ⬜ | **`GROQ_API_KEY`** | **El lector de notas de voz.** Sin ella, cada audio termina en «¿me lo pones en un mensaje?». Se saca gratis en console.groq.com → API Keys | Manda una nota de voz al bot: debe entenderla. Si falta, el registro dice `[audio] falta GROQ_API_KEY` |
+| ✅ | **`GROQ_API_KEY`** | El lector de notas de voz (puesta el 8-sep-2026) | Se confirma con la nota de voz de las pruebas de humo |
 | ⬜ | **`GOOGLE_ROUTES_KEY`** | Los destinos que no están en la lista se cotizan por kilómetros con Google | Cotiza un destino raro (p. ej. «Zacatecas»); si el ticket llega sin precio calculado y el registro dice «no se pudo cotizar», falta |
-| ⬜ | **`CRON_SECRET`** | El seguimiento | `[seguimiento] {…}` cada 15 min |
+| ✅ | **`CRON_SECRET`** | El seguimiento (puesta el 8-sep-2026; el cron corre desde las 04:45 con `{"revisadas":…}`) | `[seguimiento] {…}` cada 15 min |
 | ⬜ | **`WHATSAPP_PLANTILLA_TOQUE1/2/3`** | Los tres avisos | Cuando Meta apruebe las plantillas |
 | ⬜ | `ESPIAR` (opcional) | Que te llegue copia de lo que el bot le dice a cada cliente, en vivo, los primeros días | Ponla en `1` la primera semana y quítala después |
 
@@ -58,8 +52,8 @@ revisa en **Vercel → eurotravel-web → Settings → Environment Variables
 | ✅ | El SQL del almacén corrido | Supabase, proyecto del bot |
 | ⬜ | Las tres plantillas aprobadas por Meta | WhatsApp Manager → Plantillas |
 | ⬜ | Perfil de WhatsApp Business completo: foto, nombre, descripción, dirección, horario, sitio | WhatsApp Business → Perfil de empresa |
-| ⬜ | Teléfono de guardia | Tú me lo dices |
-| ⬜ | Prueba social y seguridad en `datos-bot.json` (rutas frecuentes, tipos de cliente, GPS, permiso, año de unidades) | Tú me los dictas |
+| ✅ | Teléfono de guardia: 33 1915 3931, su personal (8-sep-2026) | `datos-bot.json` |
+| ✅ | Prueba social y seguridad en `datos-bot.json`: rutas Vallarta/Mazatlán/CDMX/Tequila, GPS real, permiso no se menciona, años solo de i6S (2023), i6 (2017) y G8 (2026), choferes «con experiencia» (8-sep-2026) | `datos-bot.json`, `_agente.js`, `_psicologia.js` |
 | ⬜ | Dominio definitivo (eurotravel.com.mx) y `SITIO_URL` apuntando ahí | Vercel → Domains |
 | ⬜ | Quitar las variables del número de prueba de Meta que ya no se usan | Vercel |
 
@@ -87,7 +81,15 @@ Cuando las ocho pasen, se anuncia el número.
 | E | **Verificar en el registro** cada cosa que cierres de arriba (1, 2, 3, 10) | Que las hagas |
 | F | **Los 40 textos de seguimiento por texto libre** (`_recordatorios.js`) ya no se usan con toques a 24 h+; dejarlos como respaldo documentado o quitarlos | Decisión chica, sin prisa |
 
-## Hecho hoy (para no volver a preguntarlo)
+## Hecho el 8-sep-2026 (madrugada)
+
+Columna del relevo corrida; `CRON_SECRET` y `GROQ_API_KEY` en Vercel con
+Redeploy (el cron ya corre); plantilla `seguimiento_24h` creada en Meta (las
+otras dos mañana); las plantillas no ofrecen «stop»: el bot detecta el «ya
+no» del cliente; teléfono de guardia, base de la cancelación (sobre el
+total) y prueba social dictados y guardados.
+
+## Hecho el 7-sep-2026 (para no volver a preguntarlo)
 
 Auditoría de 45 hallazgos con sus 4 fases cerradas (`docs/AUDITORIA-BOT-7SEP.md`);
 seguimiento 24 h / 3 d / 7 d por cron con plantillas y textos investigados

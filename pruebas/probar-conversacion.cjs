@@ -513,6 +513,13 @@ function cotiza(extra) {
   okQue('el G8 está en el catálogo', !!g8);
   ok('  con 51 pasajeros', g8 && g8.max, 51);
   ok('  y modelo 2026', g8 && g8.modelo, 2026);
+  /* Dictado del dueño (8-sep-2026): el año se dice SOLO del i6S (2023), el
+     i6 (2017) y el G8 (2026). Las demás no llevan `modelo` ni lo dicen. */
+  const porNombre = function (n) { return catalogo.filter(function (u) { return u.name === n; })[0] || {}; };
+  ok('el i6S es 2023', porNombre('Irizar i6S').modelo, 2023);
+  ok('el i6 es 2017', porNombre('Irizar i6').modelo, 2017);
+  ok('las demás no llevan año (Century, PB, Neobus, Sprinter, Suburban)',
+    catalogo.filter(function (u) { return u.modelo && ['Irizar i6S', 'Irizar i6', 'Marcopolo Paradiso G8'].indexOf(u.name) < 0; }).map(function (u) { return u.name; }), []);
   okQue('  premium', g8 && /Premium/i.test(g8.tag));
 
   /* Los escalones, como los dictó el dueño:

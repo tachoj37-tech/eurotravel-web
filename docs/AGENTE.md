@@ -774,11 +774,11 @@ Se preguntan una por una. Van a `datos-bot.json` (y al bloque cacheado).
 | # | Dato | Estado | Dónde se usa |
 |---|---|---|---|
 | 1 | Días de vigencia de una cotización | **69** (6-sep-2026) | `cotizaciones.vigencia_hasta`, texto del precio; se recuerda 90 |
-| 2 | Política de cancelación | **Dictada el 6-sep-2026:** cargo del 20 % si cancela con un mes de anticipación, 40 % con una semana, 100 % el mismo día o 24 h antes. (Supuesto: porcentaje del total del viaje.) **Con compuerta, como el precio:** el agente arma el mensaje con la política, te lo manda como ticket, y sale solo con tu «va» o con el texto que contestes. Sin tu respuesta no manda nada | Ticket al dueño + `pasar_a_humano` con `solicitud_armada` |
+| 2 | Política de cancelación | **Dictada el 6-sep-2026:** cargo del 20 % si cancela con un mes de anticipación, 40 % con una semana, 100 % el mismo día o 24 h antes. **Sobre el total del viaje (confirmado 8-sep-2026);** si el cargo excede lo abonado, la diferencia se pierde y no se persigue (criterio interno, no se le dice al cliente). **Con compuerta, como el precio:** el agente arma el mensaje con la política, te lo manda como ticket, y sale solo con tu «va» o con el texto que contestes. Sin tu respuesta no manda nada | Ticket al dueño + `pasar_a_humano` con `solicitud_armada` |
 | 2b | Cambio de fecha | sin política dictada: el bot la pasa contigo (5-sep) | `pasar_a_humano` |
 | 3 | Liquidación | **Dictada el 6-sep-2026:** no hay fecha límite. El primer abono (apartar) lo antes posible «porque se llena, y así aparta la fecha»; ya con contrato, el resto **lo puede ir abonando o liquidar al abordar**. Los recordatorios de saldo se anclan a la SALIDA (30, 15 y 5 días antes), como recomendación que también recuerda que puede liquidar el día del viaje; nunca como vencimiento | `recordatorios`, texto del agente |
 | 4 | Datos de pago oficiales | **Ya existen (6-sep-2026):** la ficha bancaria como imagen (`img/ficha-bancaria.png`) y la CLABE sola en un segundo mensaje, desde `CLABE` en Vercel. Se queda así: `enviar_documento(tipo: 'datos_de_pago')` manda los dos mensajes; `crear_link_pago` (Stripe) queda como opción, no como camino normal | `enviar_documento`, prueba de legitimidad |
-| 5 | Teléfono de guardia | pendiente | `pasar_a_humano(guardia)`, aviso 72 h antes |
+| 5 | Teléfono de guardia | **33 1915 3931, su personal (8-sep-2026).** Solo para cliente en viaje o emergencia; a un prospecto nunca. Guardado en `datos-bot.json` (`telefono_de_guardia`) | `pasar_a_humano(guardia)`, aviso 72 h antes |
 | ~~6~~ | ~~Vendedores para el round robin~~ | sin panel: quien atiende eres tú | — |
 
 Pendiente aparte, sin prisa: `CRON_SECRET` (lo pones después).

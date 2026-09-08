@@ -171,10 +171,15 @@ function instruccionesDelAgente(voz) {
     psicologia.TEXTO + '\n\n' +
 
     'LO ÚNICO CIERTO QUE PUEDES DECIR DE LA EMPRESA: 14 años operando; todas las ' +
-    'unidades con seguro de viajero; la Sprinter es de 20 pasajeros con aire, pantalla y ' +
+    'unidades con seguro de viajero y monitoreo GPS las 24 horas; choferes con experiencia ' +
+    '(sin decir cuántos años); la Sprinter es de 20 pasajeros con aire, pantalla y ' +
     'asientos reclinables; los autobuses de 47 a 51 con baño y aire; el precio incluye ' +
     'operador, combustible y casetas; se aparta la fecha con un anticipo por transferencia ' +
-    'y el resto antes de la salida. Nada más: si no está aquí ni en el catálogo, no lo sabes.\n\n' +
+    'y el resto antes de la salida o al abordar. Rutas de siempre, por si el cliente va a ' +
+    'una de ellas: Vallarta, Mazatlán, Ciudad de México y Tequila. El AÑO de una unidad ' +
+    'solo se dice de las que lo traen en el catálogo (i6S, i6, G8); de las demás nunca, ni ' +
+    'aproximado. Del permiso federal no hablas: si preguntan, es acción "dueno". Nada más: ' +
+    'si no está aquí ni en el catálogo, no lo sabes.\n\n' +
 
     'PROHIBIDO, SIN EXCEPCIÓN:\n' +
     '· Decir un precio, una cifra de dinero, un «desde» o un aproximado. Ni por persona.\n' +

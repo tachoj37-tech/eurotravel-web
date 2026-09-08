@@ -13,7 +13,8 @@
       { "si_cancela": "con una semana de anticipación", "cargo_porcentaje": 40 },
       { "si_cancela": "el mismo día o 24 horas antes", "cargo_porcentaje": 100 }
     ],
-    "base_del_porcentaje": "SUPUESTO: sobre el total del viaje (el dueño no lo precisó)",
+    "base_del_porcentaje": "sobre el TOTAL del viaje (confirmado por el dueño, 8-sep-2026)",
+    "nota_interna": "El cargo se toma de lo que el cliente ya abonó; si el porcentaje excede lo abonado, la diferencia se pierde y no se persigue («se va enojado y ya no me da lo demás»). Esto es criterio del dueño, NO se le dice al cliente: el bot solo enuncia el porcentaje sobre el total, y todo mensaje de cancelación pasa por su compuerta.",
     "compuerta": "El bot NUNCA manda nada de cancelación por su cuenta: arma el mensaje con la política, se lo manda al dueño como ticket, y sale solo con su «va» (o con el texto que él conteste). Igual que el precio.",
     "_": "Dictado del dueño (6-sep-2026): «20% 1 mes antes, 40% 1 semana antes, 100% mismo día o 24 horas antes» y «pídeme autorización para mandar un mensaje, yo te digo cuando sí y cuando no». Para el cambio de fecha sigue el 5-sep: pasar al dueño."
   },
@@ -30,6 +31,7 @@
     "el_resto": "una vez que apartó y tiene contrato, puede liquidar al abordar o ir abonando antes",
     "que_dice_el_bot": "No hay fecha límite como tal para depositar, pero te recomiendo que sea lo antes posible porque se llena, y así apartas tu fecha. Ya con tu contrato, el resto lo puedes ir abonando o liquidarlo el día del viaje.",
     "recordatorios_de_saldo": "anclados a la salida: 30, 15 y 5 días antes, como recomendación y recordando que también puede liquidar al abordar; nunca como vencimiento",
+    "nota_interna": "A algunos clientes el dueño les pide mínimo el 70 % antes del viaje y el resto al abordar; «no es para todos los clientes» (8-sep-2026). No es regla del bot: no la afirma ni la calcula.",
     "_": "Dictado del dueño (6-sep-2026). Nunca inventar un vencimiento."
   },
   "TICKETS_A": "número personal del dueño, distinto del número del bot (DUENO_WHATSAPP en Vercel cuando entre Dualhook)",
@@ -38,8 +40,8 @@
     { "id": "sprinter",   "tipo": "Sprinter",              "capacidad": 20, "linea": "Grupos pequeños", "rango_recomendado": "hasta 20", "cotiza_sola": true,  "equipamiento": ["Aire acondicionado", "Asientos reclinables", "Audio", "Pantalla"],                 "argumento_media_linea": "PENDIENTE" },
     { "id": "suburban",   "tipo": "Suburban",              "capacidad": 6,  "linea": "Ejecutivo",        "rango_recomendado": "hasta 6",   "cotiza_sola": false, "equipamiento": ["Aire acondicionado", "Servicio ejecutivo", "Equipaje", "Chofer"],                  "argumento_media_linea": "PENDIENTE" },
     { "id": "g8",         "tipo": "Marcopolo Paradiso G8", "capacidad": 51, "linea": "Premium",          "rango_recomendado": "21 a 51",   "cotiza_sola": false, "modelo": 2026, "equipamiento": ["Aire acondicionado", "Baño a bordo", "Asientos reclinables"],      "argumento_media_linea": "PENDIENTE" },
-    { "id": "irizar-i6s", "tipo": "Irizar i6S",            "capacidad": 51, "linea": "Premium",          "rango_recomendado": "21 a 51",   "cotiza_sola": false, "equipamiento": ["Aire acondicionado", "Baño a bordo", "Asientos reclinables", "2 puertas"],  "argumento_media_linea": "PENDIENTE" },
-    { "id": "irizar-i6",  "tipo": "Irizar i6",             "capacidad": 47, "linea": "Premium",          "rango_recomendado": "21 a 47",   "cotiza_sola": false, "equipamiento": ["Aire acondicionado", "Baño a bordo", "Pantallas", "Audio"],                  "argumento_media_linea": "PENDIENTE" },
+    { "id": "irizar-i6s", "tipo": "Irizar i6S",            "capacidad": 51, "linea": "Premium",          "rango_recomendado": "21 a 51",   "cotiza_sola": false, "modelo": 2023, "equipamiento": ["Aire acondicionado", "Baño a bordo", "Asientos reclinables", "2 puertas"],  "argumento_media_linea": "PENDIENTE" },
+    { "id": "irizar-i6",  "tipo": "Irizar i6",             "capacidad": 47, "linea": "Premium",          "rango_recomendado": "21 a 47",   "cotiza_sola": false, "modelo": 2017, "equipamiento": ["Aire acondicionado", "Baño a bordo", "Pantallas", "Audio"],                  "argumento_media_linea": "PENDIENTE" },
     { "id": "neobus",     "tipo": "Neobus",                "capacidad": 50, "linea": "Gran Turismo",     "rango_recomendado": "21 a 50",   "cotiza_sola": false, "equipamiento": ["Aire acondicionado", "Baño a bordo", "Pantallas", "Reclinables"],             "argumento_media_linea": "PENDIENTE" },
     { "id": "irizar-pb",  "tipo": "Irizar PB",             "capacidad": 47, "linea": "Turismo",          "rango_recomendado": "21 a 47",   "cotiza_sola": false, "equipamiento": ["Aire acondicionado", "Baño a bordo", "Piso alto", "Bodega amplia"],           "argumento_media_linea": "PENDIENTE" },
     { "id": "irizar",     "tipo": "Irizar Century",        "capacidad": "47 a 49", "linea": "Clásico",    "rango_recomendado": "21 a 48",   "cotiza_sola": false, "equipamiento": ["Aire acondicionado", "Baño a bordo", "Asientos reclinables", "Cajuela amplia"], "argumento_media_linea": "PENDIENTE", "_": "Dictado del dueño (7-sep-2026): «Vas a ofrecer el Century como 47 a 49 pasajeros… Si son 48, lo ofreces. Si son 49, no lo ofreces. Si son 46, caben también en el de 47». Por eso el tope para ofrecerlo es 48 (unidades.js, max: 48)." }
@@ -54,19 +56,19 @@
   "PRUEBA_SOCIAL": {
     "anos_operando": 14,
     "grupos_por_mes": "NO_SE_USA",
-    "rutas_frecuentes": "PENDIENTE",
-    "tipos_de_cliente": "PENDIENTE",
-    "frases_verificables": "PENDIENTE",
-    "_": "14 anos esta confirmado por el dueno. 'Grupos al mes' se descarto a proposito el 4-sep: es un numero que se despinta."
+    "rutas_frecuentes": ["Puerto Vallarta", "Mazatlán", "Ciudad de México", "Tequila"],
+    "tipos_de_cliente": ["escuelas", "empresas", "familias", "peregrinaciones"],
+    "frases_verificables": ["14 años operando"],
+    "_": "Dictado del dueño (8-sep-2026): las rutas de siempre son Vallarta, Mazatlán, CDMX y, muy variado, Tequila («no te lo van a preguntar»: se usan como prueba social parecida al cliente, no como argumento suelto). 14 años confirmado de nuevo. Tipos de cliente: los que ya afirmaba la psicología del 5-sep; el dueño no los corrigió. 'Grupos al mes' se descartó a propósito el 4-sep."
   },
 
   "DATOS_SEGURIDAD": {
     "seguro_pasajeros": true,
-    "monitoreo_gps": "AFIRMADO_HOY_SIN_CONFIRMAR",
-    "permiso_vigente": "PENDIENTE",
-    "ano_de_unidades": "PENDIENTE",
-    "experiencia_choferes": "PENDIENTE",
-    "_": "El seguro de viajero si esta confirmado. 'Monitoreo GPS 24/7' lo dice hoy el texto de que incluye; hay que confirmarlo o quitarlo."
+    "monitoreo_gps": true,
+    "permiso_vigente": "NO_MENCIONAR",
+    "ano_de_unidades": "solo de las que traen modelo en unidades.js: i6S 2023, i6 2017, G8 2026; de las demás NUNCA se dice el año (el Century es 2007 y no se menciona)",
+    "experiencia_choferes": "con experiencia, sin decir años",
+    "_": "Dictado del dueño (8-sep-2026): GPS «sí es real»; «el permiso federal ni lo toques» (si preguntan, acción «dueno»); «trata de no decir años» salvo i6S, i6 y G8; choferes «tienen experiencia y ya, no pongas años»."
   },
 
   "POLITICA_CAMBIO_FECHA": "pasar al dueño (dictado 5-sep-2026; sin regla dictada al 6-sep)",
@@ -95,6 +97,8 @@
     "rfc_y_datos_fiscales": "Dictado del dueño (7-sep-2026): «cuando pidan RFC o razón social, pregúntame a mí». El bot no los dice: le pasa la pregunta al dueño como ticket (acción «dueno») y su respuesta le llega al cliente tal cual.",
     "base": "Tlaquepaque, Jalisco",
     "telefono": "33 2400 2285",
+    "telefono_de_guardia": "3319153931",
+    "telefono_de_guardia_nota": "Es el personal del dueño (dictado 8-sep-2026, pregunta 5 del plan del agente). SOLO para cliente en viaje o emergencia el día del viaje: va en el aviso de 72 h antes y en pasar_a_humano(guardia) del agente con memoria. A un prospecto nunca se le da (el cliente se queda en este chat).",
     "sitio": "https://eurotravel-web.vercel.app",
     "correo": "PENDIENTE",
     "incluye_siempre": ["operador", "combustible", "casetas", "seguro de viajero"],
