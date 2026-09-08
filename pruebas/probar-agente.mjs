@@ -568,7 +568,7 @@ titulo('el candado se saca del prompt en vivo: ninguna regla suelta le llega al 
   okQue('la regla del origen, tal como está en el prompt, se frena',
     agente.esTextoInterno('· El origen se pregunta como sí/no: «¿Salen de la zona metropolitana de Guadalajara?». Con «sí», datos.origen es "Guadalajara"; solo si dice que no, pregunta de qué ciudad.'));
   okQue('  también sin el «datos.»', agente.esTextoInterno('El origen se pregunta como sí/no: «¿Salen de la zona metropolitana de Guadalajara?». Solo si dice que no, pregunta de qué ciudad.'));
-  okQue('  «Uno por mensaje. Cuando el cliente ya dio algo…»', agente.esTextoInterno('Uno por mensaje. Cuando el cliente ya dio algo, no lo vuelvas a preguntar.'));
+  okQue('  «Con el número de personas TÚ dices la unidad; no la preguntas…»', agente.esTextoInterno('Con el número de personas TÚ dices la unidad; no la preguntas. Los datos llegan en cualquier orden, de golpe o de a poco.'));
   okQue('  «"accion":"seguir"» suelto', agente.esTextoInterno('"accion":"seguir"'));
   okQue('  la frase del «mismo día» con CUALQUIER destino, no solo Tequila (hallazgo 4)',
     agente.esTextoInterno('si es ida y vuelta el mismo día (lo más común para Chapala); pregunta EXACTAMENTE «¿Es ida y vuelta el mismo día?» y, si dice que sí, regreso = salida'));
@@ -660,9 +660,11 @@ titulo('auditoría general del 8-sep: con precio dado, lo que sigue es apartar (
   conPrecio(C);
   laIA = () => ({ respuesta: null, datos: {}, accion: 'fotos', unidadPedida: 'sprinter' });
   await dice('mándame fotos de la sprinter', C);
-  const tras = textos(C).slice(-1)[0] || '';
-  okQue('tras las fotos, a quien ya tiene precio se le remata con «¿Te la aparto?»', /¿Te la aparto\?/.test(tras));
-  okQue('  y no con «¿A dónde van?»', !/d[oó]nde van/i.test(textos(C).join('\n')));
+  /* 8-sep-2026 («que deje de sonar a guion», MODO_GUION apagado): tras las
+     fotos no sale ninguna pregunta enlatada; solo lo que la IA diga, o nada. */
+  okQue('tras las fotos, a quien ya tiene precio NO se le pregunta «¿A dónde van?»', !/d[oó]nde van/i.test(textos(C).join('\n')));
+  okQue('  y sin remate enlatado (las fotos hablan solas)', !/¿Te saco el precio\?|¿Te la aparto\?/.test(textos(C).join('\n')));
+  okQue('  las fotos sí llegaron', mandados.some((m) => mismo(m.to, C) && m.image && /sprinter/i.test(m.image.link || '')));
 
   /* 9 · cambio de fecha después del precio: al dueño, no se confirma. */
   limpia();

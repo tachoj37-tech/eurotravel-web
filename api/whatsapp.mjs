@@ -1424,6 +1424,23 @@ function estadoDelDeposito(ficha) {
   return null;
 }
 
+/* Parecido entre dos textos (0 a 1): coeficiente de Dice sobre palabras,
+   sin acentos ni signos. «Perfecto. ¿Qué día salen?» contra «Perfecto, ¿qué
+   día salen?» da 1; dos preguntas distintas dan menos de 0.5. */
+function parecido(a, b) {
+  const bolsa = function (t) {
+    return String(t || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
+      .replace(/[^a-z0-9ñ\s]/g, ' ').split(/\s+/).filter(function (w) { return w.length > 1; });
+  };
+  const x = bolsa(a), y = bolsa(b);
+  if (!x.length || !y.length) return 0;
+  const cuenta = new Map();
+  x.forEach(function (w) { cuenta.set(w, (cuenta.get(w) || 0) + 1); });
+  let comunes = 0;
+  y.forEach(function (w) { const n = cuenta.get(w) || 0; if (n > 0) { comunes++; cuenta.set(w, n - 1); } });
+  return (2 * comunes) / (x.length + y.length);
+}
+
 /* ¿La respuesta pregunta un dato que YA está en el estado? Devuelve el
    campo, o null. */
 const PREGUNTA_DE = {
@@ -1603,6 +1620,18 @@ async function loQueDiceElAgente(envio) {
   if (esOtroViaje && viajeDeLaFicha) nuevo.otroViaje = true;
   webhook.guardaCharla(cliente, nuevo);
   agente.recuerda(cliente, 'cliente', texto);
+  /* «Ya dijiste eso con esas palabras» (8-sep-2026, «que deje de sonar a
+     guion»): si la respuesta se parece más del 80 % al último mensaje del
+     bot en esta plática, se regenera UNA vez con esa instrucción. */
+  if (dicho.accion === 'seguir' && dicho.respuesta) {
+    const ultimoDelBot = agente.historialDe(cliente).filter(function (t) { return t.de === 'bot'; }).slice(-1)[0];
+    if (ultimoDelBot && parecido(dicho.respuesta, ultimoDelBot.texto) > 0.8) {
+      console.error('[agente] repitió casi lo mismo que su último mensaje; se regenera');
+      const otra = await agente.conversa(texto, Object.assign({}, opcionesDeLaIA, { estado: nuevo,
+        aviso: 'Ya dijiste eso con esas palabras («' + String(ultimoDelBot.texto).slice(0, 120) + '»); dilo distinto o no lo digas.' }));
+      if (otra && otra.accion === 'seguir' && otra.respuesta) dicho.respuesta = otra.respuesta;
+    }
+  }
   /* Validación ANTES de mandar (Falla 1): si la IA pregunta un dato que ya
      está en el estado, se regenera UNA vez diciéndoselo; si insiste, contesta
      el guion con lo que de verdad falta. Nunca sale la pregunta repetida. */
@@ -1716,12 +1745,17 @@ async function loQueDiceElAgente(envio) {
        tiene precio no se le pregunta «¿a dónde van?» (auditoría general del
        8-sep, hallazgo 8). */
     const conPrecio = viajeConPrecio(tickets.fichaDe(cliente));
-    const remate = dicho.respuesta || (
+    /* MODO_GUION (8-sep-2026, «que deje de sonar a guion»): apagado por
+       omisión, tras las fotos NO sale una pregunta enlatada; sale lo que la
+       IA haya dicho, o nada (el cliente ya tiene qué mirar). Con
+       MODO_GUION=1 vuelve el remate fijo de antes. */
+  const modoGuion = process.env.MODO_GUION === '1' || process.env.MODO_GUION === 'true';
+    const remate = dicho.respuesta || (!modoGuion ? '' : (
       (conPrecio && conPrecio.estado === 'dado') ? '¿Te la aparto?'
         : (conPrecio && conPrecio.estado === 'pedido') ? 'En cuanto tenga tu precio te lo paso por aquí 🙌'
-          : (siguiente ? '¿Te saco el precio? ' + siguiente : '¿Te saco el precio?'));
-    await manda({ numeroDeOrigen: envio.numeroDeOrigen, para: cliente, texto: remate, pasaAPersona: false, escribio: '[agente]' });
-    agente.recuerda(cliente, 'bot', pie + ' ' + remate);
+          : (siguiente ? '¿Te saco el precio? ' + siguiente : '¿Te saco el precio?')));
+    if (remate) await manda({ numeroDeOrigen: envio.numeroDeOrigen, para: cliente, texto: remate, pasaAPersona: false, escribio: '[agente]' });
+    agente.recuerda(cliente, 'bot', pie + (remate ? ' ' + remate : ''));
     /* La plática recuerda de qué unidad ya vio fotos: con el precio no se
        le vuelve a mandar la misma (dictado del dueño, 8-sep-2026). */
     const vistas = Array.isArray(nuevo.fotosVistas) ? nuevo.fotosVistas.slice() : [];

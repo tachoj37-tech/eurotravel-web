@@ -211,6 +211,24 @@ depósito); con acción «apartar» el texto de la IA se descarta; los datos de
 depósito van una sola vez por vuelta; y el orden es bloque → imagen de la
 ficha → CLABE pelona → cuenta pelona.
 
+**«Que el agente deje de sonar a guion» (8-sep-2026, noche):** el prompt
+cacheado se reescribió por dictado del dueño: QUIÉN ERES, EL PROCESO QUE
+TE SABES DE MEMORIA (los 8 puntos, ajustados a las políticas dictadas: sin
+fecha límite de liquidación, horarios después del depósito, los
+recordatorios los manda el equipo), CÓMO CONVERSAS, LO QUE SABES DEL
+NEGOCIO (hechos, no pasos: Sprinter hasta 20, lista de autobuses, destinos
+de un día, origen sí/no, capacidad), QUÉ DECIDES TÚ Y QUÉ NO, y los cinco
+pasos en silencio. Se conservan: la psicología de ventas, «lo único
+cierto», PROHIBIDO, ACCIONES y el formato JSON con ejemplos (es la salida
+del modelo). `temperature 0.4`. Validación nueva: si la respuesta se parece
+más del 80 % al último mensaje del bot, se regenera con «ya dijiste eso con
+esas palabras». `MODO_GUION` apagado por omisión: tras las fotos no sale
+pregunta enlatada. Los textos fijos que quedan son de dinero (precio,
+apartado, CLABE), dictados (espera de la compuerta, lista de autobuses,
+«ya no», prompt pedido) o red de seguridad cuando la IA falla. Las cinco
+conversaciones de prueba con el modelo real se corren con
+`scripts/conversar.mjs` (con la llave del dueño, en su máquina).
+
 **Lo que NO se cambió, y por qué:** responder 200 a Meta antes de procesar
 (Vercel congela la función al responder; haría falta una cola externa) y el
 lock por teléfono entre avisos distintos (mismo motivo); el dedupe por
