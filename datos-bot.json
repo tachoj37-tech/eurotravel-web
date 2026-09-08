@@ -19,8 +19,8 @@
     "_": "Dictado del dueño (6-sep-2026): «20% 1 mes antes, 40% 1 semana antes, 100% mismo día o 24 horas antes» y «pídeme autorización para mandar un mensaje, yo te digo cuando sí y cuando no». Para el cambio de fecha sigue el 5-sep: pasar al dueño."
   },
   "DATOS_DE_PAGO": {
-    "como_se_mandan": "dos mensajes: 1) la ficha bancaria como imagen (img/ficha-bancaria.png, con el acuse en el pie) y 2) la CLABE sola, pelona, para que el cliente la copie con un toque largo",
-    "de_donde_salen": "CLABE y DATOS_BANCARIOS en Vercel; la imagen la hizo el dueño con el bot (confirmado 6-sep-2026: «ya me los habías generado, hicimos una imagen»)",
+    "como_se_mandan": "Dictado 8-sep-2026: con el precio (y cada vez que quiera apartar o pida la cuenta) va el bloque de apartado (monto + banco/beneficiario) y después la CLABE y el número de cuenta, cada uno PELÓN en su propio mensaje, para copiarlos con un toque largo. La imagen de la ficha (img/ficha-bancaria.png) queda apagada por bandera FICHA_COMO_IMAGEN.",
+    "de_donde_salen": "CLABE, CUENTA y DATOS_BANCARIOS en Vercel; el modelo nunca los ve ni los escribe (el código los inserta)",
     "regla": "solo cuenta empresarial; nunca una cuenta personal ni una que no venga de ahí",
     "liga_stripe": "existe para la página (pagar.js); en WhatsApp la forma normal es la ficha + CLABE, y la liga queda como opción si el dueño la pide",
     "_": "Pregunta 4 del mandato del 6-sep-2026, contestada con lo que ya existía."

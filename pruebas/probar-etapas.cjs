@@ -412,13 +412,16 @@ hook.olvidaTodo(); tk.olvidaTodo();
   const r = hook.procesa(Buffer.from(cuerpo, 'utf8'), firma, CON);
   const suyos = r.envios.filter(function (e) { return e.para === C; });
 
-  ok('salen tres mensajes: acuse, ficha y CLABE', suyos.length, 3);
+  /* Dictado del dueño (8-sep-2026): sin imagen; el segundo es el aviso de
+     cómo copiar y el tercero la CLABE pelona (la cuenta iría en un cuarto
+     si `CUENTA` está configurada). */
+  ok('salen tres mensajes: acuse, aviso de cómo copiar y CLABE', suyos.length, 3);
   /* 8-sep-2026: antes del depósito no se pide el nombre; se le pide el
      comprobante. Cambió de lado a propósito. */
   okQue('  el primero le contesta y le pide el comprobante, no el nombre',
     /te la aparto/i.test(suyos[0].texto) && /comprobante/i.test(suyos[0].texto) && !/nombre/i.test(suyos[0].texto));
-  okQue('  el segundo es la ficha, por su liga',
-    /\/img\/ficha-bancaria\.png$/.test(suyos[1].ligaDeFoto || ''));
+  okQue('  el segundo es el aviso de cómo copiar, sin imagen',
+    /d[eé]jalo apretado para copiarlo/.test(suyos[1].texto || '') && !suyos[1].ligaDeFoto);
 
   /* LO MÁS IMPORTANTE DE ESTE ARCHIVO. Si al mensaje de la CLABE se le
      pega cualquier cosa —un emoji, un punto, una palabra— el toque
@@ -429,8 +432,8 @@ hook.olvidaTodo(); tk.olvidaTodo();
 
   /* Y el aviso de cómo copiarla va en la FICHA, no en el mensaje de la
      CLABE — justo por lo mismo. */
-  okQue('  la instrucción va en la ficha, no en la CLABE',
-    /apretada/i.test(suyos[1].texto));
+  okQue('  la instrucción va en el aviso, no en la CLABE',
+    /apretado/i.test(suyos[1].texto));
 }
 
 /* Sin sitio configurado no se manda una liga rota: se cae al texto de
@@ -453,8 +456,11 @@ hook.olvidaTodo(); tk.olvidaTodo();
   const suyos = hook.procesa(Buffer.from(cuerpo, 'utf8'), firma, SIN)
     .envios.filter(function (e) { return e.para === C; });
 
-  ok('sin SITIO_URL, un solo mensaje', suyos.length, 1);
-  okQue('  con los datos dentro', /CLABE/.test(suyos[0].texto));
+  /* 8-sep-2026: la imagen ya no hace falta, así que sin SITIO_URL salen los
+     mismos tres mensajes (acuse, aviso con los datos, CLABE pelona). */
+  ok('sin SITIO_URL, salen igual los tres mensajes', suyos.length, 3);
+  okQue('  con los datos bancarios en el aviso', /TURISMO ET/.test(suyos[1].texto));
+  ok('  y la CLABE pelona al final', suyos[2].texto, '012320001927217407');
   const conLiga = suyos.filter(function (e) { return e.ligaDeFoto; });
   ok('  y ninguna liga rota', conLiga, []);
 }

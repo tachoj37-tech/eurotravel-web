@@ -574,17 +574,9 @@ async function precioDe(envio, opciones) {
       escribio: '[foto de la unidad]'
     });
   }
-  /* Y la CLABE sola, pelona, para copiarla con un toque largo (el toque
-     copia el mensaje entero). Va después de la foto, al final. */
-  if (apartado && clabeConfigurada()) {
-    mios.push({
-      numeroDeOrigen: envio.numeroDeOrigen,
-      para: envio.para,
-      texto: clabeConfigurada(),
-      pasaAPersona: false,
-      escribio: '[clabe para copiar]'
-    });
-  }
+  /* Y la CLABE y el número de cuenta, pelones, cada uno en su mensaje, para
+     copiarlos con un toque largo. Van después de la foto, al final. */
+  if (apartado) mensajesParaCopiar(envio.numeroDeOrigen, envio.para).forEach(function (m) { mios.push(m); });
 
   /* ------------------------------------------------------------
      Y SI EL PRECIO NO SALIO, AL DUENO LE LLEGA EL VIAJE
@@ -1353,13 +1345,27 @@ function clabeConfigurada() {
   const c = String(process.env.CLABE || '').replace(/\D+/g, '');
   return c.length === 18 ? c : '';
 }
+function cuentaConfigurada() {
+  return String(process.env.CUENTA || '').replace(/\D+/g, '');
+}
+/* El texto del apartado NO lleva la CLABE adentro: la CLABE y el número de
+   cuenta van cada uno en su propio mensaje, pelones, para copiarlos con un
+   toque largo (dictado del dueño, 8-sep-2026). */
 function bloqueApartado(precio) {
   const clabe = clabeConfigurada();
   if (!clabe || !precio || typeof precio.anticipo !== 'number' || precio.anticipo <= 0) return '';
   const datos = String(process.env.DATOS_BANCARIOS || '').replace(/\s+/g, ' ').trim();
-  return 'Si gustas apartar, son *$' + precio.anticipo.toLocaleString('en-US') + '* de apartado.\n' +
-    'CLABE: ' + clabe + (datos ? ' · ' + datos : '') + '\n' +
+  return 'Si gustas apartar, son *$' + precio.anticipo.toLocaleString('en-US') + '* de apartado' +
+    (datos ? ' (' + datos + ')' : '') + '. Te mando la CLABE' + (cuentaConfigurada() ? ' y el número de cuenta' : '') +
+    ' abajo, cada uno en su mensaje: déjalo apretado para copiarlo.\n' +
     'Cuando deposites, mándame tu comprobante por aquí.';
+}
+/* Los dos mensajes pelones que siguen al bloque. */
+function mensajesParaCopiar(numeroDeOrigen, para) {
+  const lista = [];
+  if (clabeConfigurada()) lista.push({ numeroDeOrigen: numeroDeOrigen, para: para, texto: clabeConfigurada(), pasaAPersona: false, escribio: '[clabe para copiar]' });
+  if (cuentaConfigurada()) lista.push({ numeroDeOrigen: numeroDeOrigen, para: para, texto: cuentaConfigurada(), pasaAPersona: false, escribio: '[cuenta para copiar]' });
+  return lista;
 }
 
 /* ------------------------------------------------------------
@@ -2304,9 +2310,12 @@ async function manda(envio) {
     const conPrecioYAnticipo = !!(fichaDelPara && typeof fichaDelPara.total === 'number' && fichaDelPara.total > 0 &&
       typeof fichaDelPara.anticipo === 'number' && fichaDelPara.anticipo > 0);
     const pideDepositar = /\b(deposita|transfi[eé]re|haz (el|tu) dep[oó]sito|te paso (la cuenta|los datos)|datos (de|para) (dep[oó]sito|transferencia|el dep[oó]sito))\b/i.test(String(envio.texto));
-    if (conPrecioYAnticipo && pideDepositar && clabeBuena && String(envio.texto).indexOf(clabeBuena) < 0) {
-      envio = Object.assign({}, envio, { texto: String(envio.texto) + '\n\n' + bloqueApartado({ anticipo: fichaDelPara.anticipo }) });
+    if (conPrecioYAnticipo && pideDepositar && clabeBuena && !envio.conDatosParaCopiar) {
+      envio = Object.assign({}, envio, { texto: String(envio.texto) + '\n\n' + bloqueApartado({ anticipo: fichaDelPara.anticipo }), conDatosParaCopiar: true });
       console.log('[apartado] se anexó el bloque de depósito a un texto que pedía depositar sin la CLABE');
+      const salio = await manda(envio);
+      if (salio) for (const m of mensajesParaCopiar(envio.numeroDeOrigen, envio.para)) await manda(m);
+      return salio;
     }
   }
   /* Nada de «por persona» con dinero hacia un cliente (dictado del dueño,

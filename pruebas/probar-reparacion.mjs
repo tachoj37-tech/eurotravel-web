@@ -211,6 +211,7 @@ titulo('R9 · el precio lleva unidad + total + foto + apartado + CLABE; y la CLA
   const C = '5213366670407';
   const CLABE = '012345678901234567';
   process.env.CLABE = CLABE;
+  process.env.CUENTA = '0192721740';
   process.env.DATOS_BANCARIOS = 'BBVA · a nombre de Eurotravel SA de CV';
   laIA = function (t) {
     if (/tequila/i.test(t)) return { respuesta: 'Tequila, va. ¿Qué día salen?', datos: { destino: 'Tequila' }, accion: 'seguir' };
@@ -233,8 +234,10 @@ titulo('R9 · el precio lleva unidad + total + foto + apartado + CLABE; y la CLA
   okQue('con el «va» del vendedor el cliente recibe la unidad y el total', /Sprinter/.test(textoPrecio) && /\*Total: \$/.test(textoPrecio));
   okQue('  la foto de la unidad', tras.some((m) => m.image && /sprinter/i.test(m.image.link || '')));
   okQue('  el monto de apartado', /son \*\$[\d,]+\* de apartado/.test(textoPrecio));
-  okQue('  y la CLABE, idéntica a la configurada, con banco y beneficiario', new RegExp('CLABE: ' + CLABE + ' · BBVA').test(textoPrecio));
-  okQue('  más la CLABE pelona para copiar', tras.some((m) => m.text && m.text.body === CLABE));
+  okQue('  con banco y beneficiario en el texto', /BBVA · a nombre de Eurotravel/.test(textoPrecio));
+  okQue('  la CLABE pelona en su propio mensaje, idéntica a la configurada', tras.some((m) => m.text && m.text.body === CLABE));
+  okQue('  y el número de cuenta pelón en el suyo', tras.some((m) => m.text && m.text.body === '0192721740'));
+  okQue('  sin la imagen de la ficha', !tras.some((m) => m.image && /ficha-bancaria/.test(m.image.link || '')));
   okQue('  y «mándame tu comprobante»', /comprobante/.test(textoPrecio));
   const antes2 = mandados.length;
   await dice('ok, quiero apartar', C);
@@ -256,7 +259,7 @@ titulo('R9 · el precio lleva unidad + total + foto + apartado + CLABE; y la CLA
   await manda({ numeroDeOrigen: '111', para: C, pasaAPersona: false, escribio: '[prueba]', texto: 'Va, deposita cuando puedas y me mandas el comprobante 🙌' });
   const t5 = textos(C).slice(mandados.slice(0, antes5).filter((m) => mismo(m.to, C)).length).join('\n');
   okQue('«deposita cuando puedas» sin CLABE sale CON el bloque anexado', t5.indexOf(CLABE) >= 0 && /de apartado/.test(t5));
-  delete process.env.CLABE; delete process.env.DATOS_BANCARIOS;
+  delete process.env.CLABE; delete process.env.CUENTA; delete process.env.DATOS_BANCARIOS;
 }
 
 /* ============================================================ */

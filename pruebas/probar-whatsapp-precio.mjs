@@ -543,7 +543,9 @@ function idDelUltimoTicket() {
     const t = textos(C).join('\n');
     okQue('«' + pide + '»: dice el anticipo y pide el comprobante', /de anticipo/.test(t) && /comprobante/.test(t));
     okQue('  sin pedir nombre, hora ni dirección', !/nombre|hora|direcci/i.test(t.replace(/ficha/g, '')));
-    okQue('  con la ficha bancaria como imagen', mandados.some((m) => mismo(m.to, C) && m.image && /ficha-bancaria\.png$/.test(m.image.link || '')));
+    /* Dictado del dueño (8-sep-2026): sin imagen; solo la CLABE (y la cuenta)
+       pelonas, para copiar. */
+    okQue('  sin la imagen de la ficha (apagada por bandera)', !mandados.some((m) => mismo(m.to, C) && m.image && /ficha-bancaria\.png$/.test(m.image.link || '')));
     okQue('  y la CLABE sola para copiar', textos(C).indexOf('012345678901234567') >= 0);
   }
   ok('  y la ficha quedó en «va_a_apartar»', tk.fichaDe(C).etapa, 'va_a_apartar');

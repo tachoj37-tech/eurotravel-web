@@ -1596,7 +1596,12 @@ function procesa(crudo, firma, entorno) {
         const cuenta = String(env.DATOS_BANCARIOS || '').trim();
         const clabe = String(env.CLABE || '').replace(/\D+/g, '');
         const sitio = String(env.SITIO_URL || '').replace(/\/+$/, '');
-        const mandaFicha = !!(r.pideDatosBancarios && sitio && clabe);
+        /* Dictado del dueño (8-sep-2026): al cliente le llegan SOLO la CLABE y
+           el número de cuenta, cada uno en su mensaje, para copiarlos con un
+           toque largo. La imagen de la ficha queda apagada por bandera
+           (`FICHA_COMO_IMAGEN=1` la reactiva). */
+        const numeroDeCuenta = String(env.CUENTA || '').replace(/\D+/g, '');
+        const mandaFicha = !!(r.pideDatosBancarios && clabe);
 
         const texto2 = (r.pideDatosBancarios && !mandaFicha && cuenta)
           ? r.texto + '\n\nY aquí están los datos para el depósito 👇\n\n' + cuenta
@@ -1683,14 +1688,23 @@ function procesa(crudo, firma, entorno) {
            de arriba: el mensaje de la CLABE va pelón porque el toque
            largo de WhatsApp copia el mensaje ENTERO. */
         if (mandaFicha) {
+          if (env.FICHA_COMO_IMAGEN === '1' && sitio) {
+            envios.push({
+              numeroDeOrigen: deQuien,
+              para: m.from,
+              ligaDeFoto: sitio + '/img/ficha-bancaria.png',
+              texto: 'Aquí están los datos 👆',
+              pasaAPersona: false,
+              escribio: '[ficha bancaria]'
+            });
+          }
           envios.push({
             numeroDeOrigen: deQuien,
             para: m.from,
-            ligaDeFoto: sitio + '/img/ficha-bancaria.png',
-            texto: 'Aquí están los datos 👆\n\nTe mando la CLABE sola abajo: ' +
-              'déjala apretada para copiarla.',
+            texto: (cuenta ? cuenta + '\n\n' : '') + 'Te mando la CLABE' + (numeroDeCuenta ? ' y el número de cuenta' : '') +
+              ' abajo, cada uno en su mensaje: déjalo apretado para copiarlo.',
             pasaAPersona: false,
-            escribio: '[ficha bancaria]'
+            escribio: '[datos de depósito]'
           });
           envios.push({
             numeroDeOrigen: deQuien,
@@ -1700,6 +1714,15 @@ function procesa(crudo, firma, entorno) {
             pasaAPersona: false,
             escribio: '[clabe para copiar]'
           });
+          if (numeroDeCuenta) {
+            envios.push({
+              numeroDeOrigen: deQuien,
+              para: m.from,
+              texto: numeroDeCuenta,
+              pasaAPersona: false,
+              escribio: '[cuenta para copiar]'
+            });
+          }
         }
 
         /* ------------------------------------------------------------
