@@ -83,7 +83,8 @@ function verificaSuscripcion(params, entorno) {
   /* Falla CERRADA. Una variable que se olvidó de configurar no puede
      volverse una puerta abierta. */
   if (!esperado) {
-    return { status: 503, cuerpo: 'Falta WHATSAPP_VERIFY_TOKEN en Vercel.' };
+    console.error('[whatsapp] falta WHATSAPP_VERIFY_TOKEN en Vercel');
+    return { status: 503, cuerpo: 'No disponible.' };
   }
   const p = params || {};
   if (p['hub.mode'] !== 'subscribe') {
@@ -307,7 +308,7 @@ function yaSeAviso(numero, ahora) {
 
 function olvidaTodo() {
   vistos.clear(); remitentes.clear(); charlas.clear(); avisados.clear();
-  nombres.clear();
+  nombres.clear(); lecturasFallidas.clear();
 }
 
 /* ------------------------------------------------------------
@@ -594,20 +595,36 @@ function respuestaDeApartar(ficha) {
    nada de pedirle «stop»). Mensaje completo y corto; con un arranque de
    cortesía opcional («gracias», «hola», «muchas gracias») y un remate
    opcional («gracias», «saludos», «de todos modos», «por ahora»). */
-const YA_NO_QUIERE = new RegExp(
-  '^\\s*(?:(?:hola|buen[oa]s?(?: d[ií]as| tardes| noches)?|muchas gracias|mil gracias|gracias|ok|okey|va)[,.! ]*)*' +
-  '(?:' + [
-    'stop', 'alto', 'basta',
-    'no m[aá]s mensajes', 'no me escribas?(?: m[aá]s)?', 'ya no me escribas?', 'ya no me mandes?(?: nada| mensajes)?',
-    'ya no(?: gracias)?', 'ya no,? gracias', 'no,? gracias', 'no gracias',
-    'no me interesa', 'ya no me interesa', 'ya no nos interesa', 'no nos interesa',
-    'ya no (?:lo |la )?(?:vamos a |voy a |lo vamos a |la vamos a )?(?:necesito|necesitamos|necesitar|ocupo|ocupamos|ocupar|queremos|quiero|querer|hacer)',
-    'ya no (?:vamos|iremos|vamos a ir|va a haber viaje|hay viaje|se hizo|se hace|se va a hacer|se arm[oó]|se armó el viaje|se junt[oó] el grupo)',
-    'ya no (?:lo |la )?vamos a hacer', 'ya no (?:sale|sali[oó]) el viaje', 'se (?:cancel[oó]|suspendi[oó]) el viaje', 'se cancel[oó]',
-    'ya contrat(?:amos|é|e) (?:con )?otr[oa]', 'ya (?:lo |la )?resolvimos', 'ya (?:lo |la )?resolv[ií]', 'ya conseguimos (?:otro|camión|transporte)',
-    'd[ée]jalo(?: as[ií])?', 'olv[ií]dalo', 'ya (?:no|nada)', 'nada,? gracias', 'as[ií] d[ée]jalo'
-  ].join('|') + ')' +
-  '(?:[,.! ]*(?:gracias|muchas gracias|mil gracias|saludos|de todos modos|de todas formas|por ahora|por el momento|igual gracias))*\\s*[.!]*\\s*$', 'i');
+const ARRANQUE_CORTES = '^\\s*(?:(?:hola|buen[oa]s?(?: d[ií]as| tardes| noches)?|muchas gracias|mil gracias|gracias|ok|okey|va)[,.! ]*)*';
+const REMATE_CORTES = '(?:[,.! ]*(?:gracias|muchas gracias|mil gracias|saludos|de todos modos|de todas formas|por ahora|por el momento|igual gracias))*\\s*[.!]*\\s*$';
+/* Los que son un adiós digan lo que digan. */
+const YA_NO_QUIERE = new RegExp(ARRANQUE_CORTES + '(?:' + [
+  'stop', 'alto', 'basta',
+  'no m[aá]s mensajes', 'no me escribas?(?: m[aá]s)?', 'ya no me escribas?', 'ya no me mandes?(?: nada| mensajes)?',
+  'no me interesa', 'ya no me interesa', 'ya no nos interesa', 'no nos interesa',
+  'ya no (?:lo |la )?(?:vamos a |voy a |lo vamos a |la vamos a )?(?:necesito|necesitamos|necesitar|ocupo|ocupamos|ocupar|queremos|quiero|querer|hacer)',
+  'ya no (?:vamos|iremos|vamos a ir|va a haber viaje|hay viaje|se hizo|se hace|se va a hacer|se arm[oó]|se armó el viaje|se junt[oó] el grupo)',
+  'ya no (?:lo |la )?vamos a hacer', 'ya no (?:sale|sali[oó]) el viaje', 'se (?:cancel[oó]|suspendi[oó]) el viaje', 'se cancel[oó]',
+  'ya contrat(?:amos|é|e) (?:con )?otr[oa]', 'ya (?:lo |la )?resolvimos', 'ya (?:lo |la )?resolv[ií]', 'ya conseguimos (?:otro|camión|transporte)',
+  'olv[ií]dalo'
+].join('|') + ')' + REMATE_CORTES, 'i');
+/* Los cortos y ambiguos («no gracias», «ya no», «déjalo así») solo son un
+   adiós cuando ya tiene precio y no hay plática abierta: a media cotización
+   son la respuesta a una pregunta («¿te mando fotos?» → «no gracias»)
+   (auditoría general del 8-sep, hallazgo 5). */
+const YA_NO_CORTO = new RegExp(ARRANQUE_CORTES + '(?:' + [
+  'ya no(?: gracias)?', 'ya no,? gracias', 'no,? gracias', 'no gracias',
+  'd[ée]jalo(?: as[ií])?', 'ya (?:no|nada)', 'nada,? gracias', 'as[ií] d[ée]jalo'
+].join('|') + ')' + REMATE_CORTES, 'i');
+function esUnAdios(texto, ficha, charla) {
+  const t = String(texto || '');
+  if (YA_NO_QUIERE.test(t)) return true;
+  if (!YA_NO_CORTO.test(t)) return false;
+  const conPrecio = !!(ficha && typeof ficha.total === 'number' && ficha.total > 0 &&
+    ['con_precio', 'va_a_apartar'].indexOf(ficha.etapa) >= 0);
+  const platicaAbierta = !!(charla && (charla.destino || charla.salida || charla.gente || charla.paso));
+  return conPrecio && !platicaAbierta;
+}
 function esComandoDelDueno(mensaje) {
   const t = String((mensaje && mensaje.text && mensaje.text.body) || '');
   const sinNumero = t.replace(/^\s*\+?\d[\d\s()-]{9,17}\s*[:\-,]?\s*/, '');
@@ -626,6 +643,18 @@ function conoceAlCliente(numero) {
     if (String(k).replace(/\D/g, '').slice(-10) === cola) return true;
   }
   return false;
+}
+/* Números cuya lectura del almacén FALLÓ en esta vuelta (lo marca
+   whatsapp.mjs): el candado del número desconocido es contra dedazos, no
+   contra fallas de infraestructura. Con la lectura caída, el mensaje del
+   dueño se manda y se le dice que no se pudo comprobar. */
+const lecturasFallidas = new Set();
+function marcaLecturaFallida(numero) {
+  const cola = String(numero || '').replace(/\D/g, '').slice(-10);
+  if (cola) lecturasFallidas.add(cola);
+}
+function lecturaFallida(numero) {
+  return lecturasFallidas.has(String(numero || '').replace(/\D/g, '').slice(-10));
 }
 
 /* ------------------------------------------------------------
@@ -809,6 +838,11 @@ function procesa(crudo, firma, entorno) {
          mismo y NO son mensajes. Contestarlos sería escribirle al
          cliente cada vez que abre la conversación. */
       if (!valor.messages) continue;
+      /* Solo el campo `messages` es de clientes. Un eco de lo que el dueño
+         escribe desde el teléfono del negocio (smb_message_echoes) que
+         llegara con la llave `messages` haría que el bot se contestara a
+         sí mismo (auditoría general del 8-sep, hallazgo 15). */
+      if (campo && campo !== 'messages') continue;
 
       const deQuien = (valor.metadata && valor.metadata.phone_number_id) || '';
 
@@ -848,6 +882,10 @@ function procesa(crudo, firma, entorno) {
         const loEscribeElDueno = tickets.esDelDueno(m.from, env);
         if (!loEscribeElDueno && !pasaElFreno(m.from || 'desconocido', ahora)) continue;
         if (yaContestado(m.id)) continue;
+        /* Y lo que el almacén ya vio desde OTRA instancia (el reintento de
+           Meta cuando la primera vuelta tardó más de 30 s): se contestaba
+           dos veces (auditoría general del 8-sep, hallazgo 10). */
+        if (env.repetidos && typeof env.repetidos.has === 'function' && env.repetidos.has(m.id)) continue;
         /* El cliente dice que ya no, con sus palabras: «ya no», «no gracias»,
            «ya no vamos a ir», «ya contratamos otro»… Dictado del dueño
            (8-sep-2026): las plantillas NO ofrecen «stop» porque espanta; el
@@ -856,7 +894,9 @@ function procesa(crudo, firma, entorno) {
            el cliente «contestó después del precio». «Stop» sigue valiendo
            por si alguien lo escribe. Solo mensajes cortos y completos: un
            «ya no, mejor a Chapala» no es un adiós y sigue a la IA. */
-        if (!loEscribeElDueno && m.type === 'text' && YA_NO_QUIERE.test(String((m.text && m.text.body) || ''))) {
+        if (!loEscribeElDueno && m.type === 'text' &&
+            !(tickets.fichaDe(m.from) && tickets.fichaDe(m.from).enManosDe) &&
+            esUnAdios(String((m.text && m.text.body) || ''), tickets.fichaDe(m.from), charlaDe(m.from))) {
           tickets.anotaEtapa(m.from, tickets.fichaDe(m.from) ? tickets.fichaDe(m.from).etapa : 'escribio',
             { clienteEn: ahora }, ahora);
           envios.push({
@@ -1074,6 +1114,20 @@ function procesa(crudo, firma, entorno) {
               continue;
             }
           }
+          /* Un «total N» que no cuadró (sin ficha, sin precio dado, o un
+             número que no se entiende) se le devuelve al dueño: nunca al
+             cliente literal (auditoría general del 8-sep, hallazgo 7). */
+          if (cambioDeTotal) {
+            envios.push({
+              numeroDeOrigen: deQuien, para: m.from,
+              texto: '🙈 No pude actualizar el total de ' + dirigido.cliente + ': ' +
+                ((fichaDelCliente && typeof fichaDelCliente.total === 'number')
+                  ? 'no entendí el número («' + cambioDeTotal[1].trim() + '»).'
+                  : 'ese cliente todavía no tiene precio dado.') + ' Al cliente no le mandé nada.',
+              pasaAPersona: false, escribio: '[total · no aplicado]'
+            });
+            continue;
+          }
           if (pendiente) {
             const dicho = confirmacion.interpreta(dirigido.texto);
             if (dicho.tipo !== 'texto') {
@@ -1129,13 +1183,24 @@ function procesa(crudo, firma, entorno) {
               confirmacion.interpreta(dirigido.texto).tipo !== 'texto') {
             envios.push({
               numeroDeOrigen: deQuien, para: m.from,
-              texto: 'Ese no es el ticket del precio 🙈 Contesta el que dice *💰 Precio por confirmar* ' +
-                '(el más reciente de ese cliente), o escríbeme «' + dirigido.cliente + ' 52,000» con su número y el precio.',
+              texto: (cargaCitada && cargaCitada.consumido)
+                ? 'Ese precio ya se lo mandé ✅ Si quieres decirle algo más, escríbelo y le llega tal cual.'
+                : 'Ese no es el ticket del precio 🙈 Contesta el que dice *💰 Precio por confirmar* ' +
+                  '(el más reciente de ese cliente), o escríbeme «' + dirigido.cliente + ' 52,000» con su número y el precio.',
               pasaAPersona: false, escribio: '[precio · ticket equivocado]'
             });
             continue;
           }
-          if (dirigido && dirigido.texto && dirigido.via === 'numero' && !conoceAlCliente(dirigido.cliente)) {
+          if (dirigido && dirigido.texto && dirigido.via === 'numero' && !conoceAlCliente(dirigido.cliente) &&
+              lecturaFallida(dirigido.cliente)) {
+            /* El almacén no contestó: se manda igual y se le dice. */
+            envios.push({
+              numeroDeOrigen: deQuien, para: m.from,
+              texto: '⚠️ No pude comprobar el número *' + dirigido.cliente + '* (el almacén no contestó). ' +
+                'Se lo mandé de todos modos.',
+              pasaAPersona: false, escribio: '[del dueño · sin comprobar]'
+            });
+          } else if (dirigido && dirigido.texto && dirigido.via === 'numero' && !conoceAlCliente(dirigido.cliente)) {
             /* Un dedazo en el número mandaba el viaje y el precio de un
                cliente a un desconocido (auditoría 7-sep-2026, hallazgo 6).
                A un número que nunca ha hablado con el bot no se le manda
@@ -1225,8 +1290,19 @@ function procesa(crudo, firma, entorno) {
 
         /* Si el dueño ya entró a esta conversación, el bot no habla.
            Dos voces distintas en el mismo chat acaban con la ilusión
-           de que hay una sola persona atendiendo. */
-        if (tickets.iaCallada(m.from)) continue;
+           de que hay una sola persona atendiendo.
+
+           Pero callado no es ciego: una foto o un documento (el
+           comprobante) se sigue reenviando al dueño y la etapa se sigue
+           anotando; y un texto del cliente cuenta como «contestó», para
+           que el seguimiento no le escriba encima (auditoría general del
+           8-sep, hallazgo 3: el comprobante se tiraba). */
+        const iaCallada = tickets.iaCallada(m.from);
+        if (iaCallada && m.type !== 'image' && m.type !== 'document') {
+          tickets.anotaEtapa(m.from, tickets.fichaDe(m.from) ? tickets.fichaDe(m.from).etapa : 'escribio',
+            { clienteEn: ahora }, ahora);
+          continue;
+        }
 
         let texto;
         let audioLargo = false;
@@ -1453,7 +1529,7 @@ function procesa(crudo, firma, entorno) {
            que nadie tenga que ir a buscarlo.
            ------------------------------------------------------------ */
         const s = r.solicitud || r.resumen || null;
-        tickets.anotaEtapa(m.from, etapas.deLaRespuesta(r, m), {
+        tickets.anotaEtapa(m.from, etapas.deLaRespuesta(r, m, tickets.fichaDe(m.from)), {
           /* Para el seguimiento: escribió AHORA. Si es después del
              precio, ya no se le manda ningún toque. */
           clienteEn: ahora,
@@ -1515,7 +1591,9 @@ function procesa(crudo, firma, entorno) {
           ? r.texto + '\n\nY aquí están los datos para el depósito 👇\n\n' + cuenta
           : r.texto;
 
-        envios.push({
+        /* Con la IA callada (el dueño está en ese chat) el texto al cliente
+           no sale; el reenvío del medio al dueño y la etapa ya quedaron. */
+        if (!iaCallada) envios.push({
           numeroDeOrigen: deQuien,
           para: m.from,
           texto: texto2,
@@ -1752,6 +1830,9 @@ function procesa(crudo, firma, entorno) {
               'Contéstame *este mensaje* y yo se lo paso.\n' +
               '_cliente: ' + m.from + '_',
             pasaAPersona: false,
+            /* Marca para `reparte`: si el agente contestó bien este mismo
+               mensaje, este aviso sobra (auditoría general del 8-sep, 16). */
+            avisoDeEscritura: true,
             escribio: '[aviso]'
           });
         }
@@ -1773,6 +1854,27 @@ function procesa(crudo, firma, entorno) {
    Recibe el aviso YA parseado. La firma se sigue verificando
    sobre el cuerpo crudo, en `procesa`, como siempre.
    ------------------------------------------------------------ */
+/* Los ids (wamid) de los mensajes del aviso, para marcarlos como vistos en
+   el almacén antes de procesar. Acepta el cuerpo crudo o ya parseado. */
+function idsDelAviso(crudo) {
+  let aviso = crudo;
+  if (Buffer.isBuffer(crudo) || typeof crudo === 'string') {
+    try { aviso = JSON.parse(crudo.toString('utf8')); } catch (e) { return []; }
+  }
+  const ids = [];
+  const entradas = (aviso && aviso.entry) || [];
+  for (let i = 0; i < entradas.length; i++) {
+    const cambios = entradas[i].changes || [];
+    for (let j = 0; j < cambios.length; j++) {
+      const mensajes = ((cambios[j] && cambios[j].value) || {}).messages || [];
+      for (let k = 0; k < mensajes.length; k++) {
+        if (mensajes[k] && mensajes[k].id) ids.push(String(mensajes[k].id));
+      }
+    }
+  }
+  return ids.filter(function (id, i) { return ids.indexOf(id) === i; });
+}
+
 function idsDeAudio(aviso) {
   const ids = [];
   const entradas = (aviso && aviso.entry) || [];
@@ -1825,7 +1927,9 @@ module.exports = {
   sinMandarAOtroNumero,
   OTRO_NUMERO,
   conoceAlCliente,
+  marcaLecturaFallida,
   idsDeAudio,
+  idsDelAviso,
   firmaValida,
   rutaSecretaValida,
   avisoEsNuestro,

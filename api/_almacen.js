@@ -394,7 +394,42 @@ async function tiraLoViejo() {
   await pide('charlas?cuando=lt.' + corte, { metodo: 'DELETE', sinRespuesta: true });
   await pide('tickets?creado=lt.' + corte, { metodo: 'DELETE', sinRespuesta: true })
     .catch(function () { return null; });
+  /* Los ids vistos solo sirven contra el reintento de Meta (minutos). */
+  const corteVistos = new Date(Date.now() - 2 * 24 * 3600 * 1000).toISOString();
+  await pide('vistos?cuando=lt.' + corteVistos, { metodo: 'DELETE', sinRespuesta: true })
+    .catch(function () { return null; });
   return true;
+}
+
+/* ------------------------------------------------------------
+   LOS AVISOS YA VISTOS · contra el reintento de Meta en otra instancia
+   ------------------------------------------------------------
+   Meta reintenta el aviso si no ve el 200 en ~30 s, y el reintento cae
+   en otra lambda que no recuerda el `wamid`. La tabla `vistos` tiene el
+   id como llave primaria: un POST que choca (409) es que ya se vio.
+   Devuelve el conjunto de ids repetidos. Sin almacén o sin la tabla, un
+   conjunto vacío: se sigue como antes (memoria de la instancia).
+   ------------------------------------------------------------ */
+async function marcaVistos(ids) {
+  const repetidos = new Set();
+  const c = config();
+  if (!c || !Array.isArray(ids) || !ids.length) return repetidos;
+  await Promise.all(ids.map(async function (id) {
+    try {
+      const r = await fetch(c.url + '/rest/v1/vistos', {
+        method: 'POST',
+        signal: AbortSignal.timeout(ESPERA_ALMACEN_MS),
+        headers: { 'apikey': c.clave, 'Authorization': 'Bearer ' + c.clave, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+        body: JSON.stringify({ id: String(id) })
+      });
+      if (r.status === 409) repetidos.add(id);
+      else if (!r.ok && r.status !== 404) {
+        const detalle = await r.text().catch(function () { return ''; });
+        console.error('[almacen] ' + r.status + ' en vistos: ' + detalle.slice(0, 200));
+      }
+    } catch (e) { /* sin red o sin tiempo: no se frena nada */ }
+  }));
+  return repetidos;
 }
 
 /* ------------------------------------------------------------
@@ -465,7 +500,7 @@ module.exports = {
   hayAlmacen, llave,
   guardaFicha, leeFicha, fichasDelTablero, fichasDeSeguimiento, marcaToque,
   guardaCharla, leeCharla,
-  anotaMensaje, mensajesDe, tiraLoViejo,
+  anotaMensaje, mensajesDe, tiraLoViejo, marcaVistos,
   guardaTicket, leeTicket,
   guardaPrecio, preciosParecidos,
   VIDA_DIAS, VIDA_CHARLA_MS

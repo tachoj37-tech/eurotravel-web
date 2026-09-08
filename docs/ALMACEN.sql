@@ -205,3 +205,17 @@ alter table tickets add column if not exists carga  jsonb;
 -- lo devuelve a la IA. Vive aquí para sobrevivir a la instancia.
 -- ------------------------------------------------------------
 alter table fichas add column if not exists en_manos_de text;   -- 'dueno' o nulo
+
+-- ------------------------------------------------------------
+-- 8-SEP-2026 · LOS AVISOS YA VISTOS
+-- ------------------------------------------------------------
+-- Meta reintenta el aviso si no ve el 200 en ~30 s, y el reintento cae
+-- en otra instancia que no recuerda el id: el cliente recibía la misma
+-- respuesta dos veces. El id (wamid) es llave primaria: el segundo
+-- POST choca con 409 y se descarta. Se purga a los 2 días.
+-- ------------------------------------------------------------
+create table if not exists vistos (
+  id     text primary key,
+  cuando timestamptz not null default now()
+);
+alter table vistos enable row level security;

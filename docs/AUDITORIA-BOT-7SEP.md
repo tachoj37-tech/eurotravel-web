@@ -143,6 +143,43 @@ del dueño recibiendo tickets.
 | F5 | CRÍTICO | «cuál es la cuenta para depositar?» → «te paso los datos en un momento. Primero: ¿a qué hora salen?»; «apártamela» → «¿A qué nombre la pongo?» y luego «¿Qué día salen?». Nunca llegó la cuenta. | La IA contestaba sola la pregunta de la cuenta (acción «seguir») y pedía la hora; el guion pedía el nombre antes del depósito; y al reinyectar «quiero apartar» se restauraba la plática vacía, así que el nombre del cliente arrancaba una cotización nueva. | **Resuelto**: con el precio dado, «apartar» o «¿a qué cuenta?» los contesta el motor en el webhook (`quiereApartarConPrecio`), antes de la IA: anticipo + ficha bancaria + CLABE + «mándame el comprobante». Nada de nombre, hora ni dirección antes del depósito (regla también en el prompt y en el cierre del precio). Los datos del contrato se piden después del comprobante, como ya estaba. |
 | F6 | ALTO | Sin ficha bancaria ni CLABE tras «Va, te la aparto». | `mandaFicha` exige `CLABE` y `SITIO_URL` en Vercel; en el despliegue de la prueba no salió ninguna de las dos formas (ni imagen ni texto de `DATOS_BANCARIOS`). | **Pendiente del dueño**: confirmar que `CLABE`, `DATOS_BANCARIOS` y `SITIO_URL` existen en Production. |
 
+## G · Auditoría general (8-sep-2026, madrugada), pedida por el dueño
+
+Un revisor aparte (Opus) recorrió el bot de punta a punta con la vara
+«¿esto lo haría un vendedor con sentido común?», y comprobó cada
+hallazgo con script. 21 hallazgos; todos los de código cerrados el mismo
+día.
+
+| # | Grav. | Qué encontró | Estado |
+|---|---|---|---|
+| G1 | CRÍTICO | El candado dinámico se comía 14 de 30 frases de venta legítimas («chofer, combustible, casetas, seguro…»): venían de la psicología de ventas y de «lo único cierto». | **Resuelto**: el candado se arma solo con las instrucciones (`soloInstrucciones`), no con los argumentos de venta. |
+| G2 | CRÍTICO | Dos fotos de un cliente nuevo lo encerraban en «datos del contrato» para siempre (la etapa solo sube). | **Resuelto**: una foto es comprobante solo con precio dado (`deLaRespuesta` recibe la ficha). |
+| G3 | CRÍTICO | Con la IA callada (el dueño en el chat), la foto del comprobante se tiraba y nadie se enteraba; el cron seguía escribiéndole. | **Resuelto**: callado no es ciego. El medio se reenvía al dueño y la etapa se anota; el texto del cliente cuenta como «contestó». |
+| G4 | CRÍTICO | «¿Y entre 20?» cambiaba la gente de la ficha y eso llegaba al contrato de EuroSystem. | **Resuelto**: una pregunta hipotética no cambia el viaje. |
+| G5 | CRÍTICO | «No gracias» a «¿te mando fotos?» cerraba la venta y el seguimiento. | **Resuelto**: los «ya no» explícitos siempre; los cortos («no gracias», «ya no», «déjalo así») solo con precio dado y sin plática abierta. |
+| G6 | ALTO | El recordatorio de las 15 h no existía para los tickets del agente (casi todas las cotizaciones). | **Resuelto**: `anotaPendiente` también en la compuerta de `precioDe`. |
+| G7 | ALTO | Un «total N» que no cuadraba le llegaba literal al cliente. | **Resuelto**: se le devuelve al dueño con el motivo; al cliente nada. |
+| G8 | ALTO | Tras las fotos, a quien ya tenía precio se le preguntaba «¿a dónde van?». | **Resuelto**: con precio, el remate es «¿Te la aparto?» (o «en cuanto tenga tu precio»). |
+| G9 | ALTO | Un cambio de fecha después del precio no llegaba al dueño ni cambiaba la ficha; el contrato subía con la fecha vieja. | **Resuelto**: ticket «📅 Quiere cambiar la fecha» al dueño; al cliente «déjame checar ese cambio»; la ficha no se toca. |
+| G10 | ALTO | El reintento de Meta en otra instancia contestaba dos veces. | **Resuelto en código**: tabla `vistos` (id = wamid) en el almacén; el segundo POST choca y se descarta. **Falta el SQL** (bloque 8-sep de `docs/ALMACEN.sql`); sin la tabla sigue como antes. |
+| G11 | ALTO | Con el almacén caído, el dueño no podía escribirle a nadie por número tecleado. | **Resuelto**: si la lectura falló, se manda y se le dice «no pude comprobar el número». |
+| G12 | ALTO | Con el chat en manos del dueño, el bot contestaba el «ya no» del cliente. | **Resuelto**: con relevo activo solo se reenvía. |
+| G13 | MEDIO | «¿Sale más barato para 3 días?» repartía «entre 3». | **Resuelto**: solo si habla de gente; día/parada/hora junto al número no cuentan. |
+| G14 | MEDIO | La marca `[plantilla …]` volvía a quedar en la conversación (por `manda`). | **Resuelto**: una plantilla no se anota en `manda`; el texto real lo anota el seguimiento. |
+| G15 | MEDIO | Un eco de Dualhook con la llave `messages` haría que el bot se contestara a sí mismo. | **Resuelto**: solo se procesa el campo `messages`. |
+| G16 | MEDIO | Después del precio, un «ok» mandaba «💬 Te están escribiendo» aunque la IA contestara bien. | **Resuelto**: el aviso se descarta si el agente atendió ese mensaje. |
+| G17 | MEDIO | Corregir recorridos («sí nos vamos a mover») o unidad («mejor una Suburban») se ignoraba; cambiaba el precio. | **Resuelto**: se corrigen, con revisión de cupo. |
+| G18 | MEDIO | La foto de la unidad salía dos veces por cotización (espera y precio). | **Resuelto**: la ficha recuerda `fotoMandada`. |
+| G19 | MEDIO | El seguimiento no manda nada hasta que Meta apruebe las plantillas. | **Pendiente del dueño** (plantillas 3d y 7d). |
+| G20 | BAJO | Un segundo «va» a un ticket consumido decía «no es el ticket del precio». | **Resuelto**: «ese precio ya se lo mandé». |
+| G21 | BAJO | `GET /api/whatsapp` sin parámetros decía el nombre de la variable. | **Resuelto**: «No disponible.»; el detalle al registro. |
+
+Limpio según el revisor: dinero (anticipo, por persona, días, «total N»,
+precio aprendido), fugas (30 frases nuevas: cero), compuerta con dos
+cotizaciones, lista de autobuses, seguimiento (zona horaria, cierres,
+marca condicional), almacén caído sin borrados ni dobles, ráfagas de
+Dualhook.
+
 ## Fases para arreglarlo
 
 Cada fase termina con la suite completa en verde y en producción. Se

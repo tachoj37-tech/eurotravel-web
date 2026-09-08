@@ -123,7 +123,9 @@ titulo('la purga corre a las 4 de la mañana desde el cron');
   await cron();
   await new Promise((r) => setTimeout(r, 20));
   const borrados = llamadas.filter((l) => l.metodo === 'DELETE').map((l) => l.url.replace(/.*rest\/v1\//, '').replace(/=lt\..*/, ''));
-  ok('a las 4 a.m. se tiran mensajes, charlas y tickets viejos', borrados, ['mensajes?cuando', 'charlas?cuando', 'tickets?creado']);
+  /* Desde el 8-sep-2026 también se purgan los avisos vistos (tabla `vistos`,
+     contra el reintento de Meta). */
+  ok('a las 4 a.m. se tiran mensajes, charlas, tickets y avisos vistos viejos', borrados, ['mensajes?cuando', 'charlas?cuando', 'tickets?creado', 'vistos?cuando']);
   llamadas = [];
   await cron();
   await new Promise((r) => setTimeout(r, 20));

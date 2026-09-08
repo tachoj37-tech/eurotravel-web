@@ -333,6 +333,15 @@ async function precioDe(envio, opciones) {
         desde: Date.now()
       }
     });
+    /* Y queda como pendiente de precio para el recordatorio de las 15 h al
+       dueño: antes solo lo anotaba el camino del guion, y con el agente
+       (el de casi todas las cotizaciones) nadie volvía a mover un ticket
+       sin contestar (auditoría general del 8-sep, hallazgo 6). */
+    tickets.anotaPendiente(envio.para, tickets.armaTicket({
+      cliente: envio.para, origen: res.origen, destino: res.destino,
+      salida: res.salida, regreso: res.regreso, dias: res.dias,
+      unidad: res.unidadNombre || res.unidad || unidad, gente: res.gente, movimientos: res.recorridos
+    }), Date.now());
     /* Fecha cercana o temporada alta: se le dice al cliente que se checa
        disponibilidad, sin prometer nada (dictado del dueño, 6-sep-2026).
        Y se le dice EN QUÉ lo llevan: «no me pidió unidad, el cliente no
@@ -368,6 +377,11 @@ async function precioDe(envio, opciones) {
         escribio: '[precio por confirmar · foto]'
       });
     }
+    /* La ficha recuerda que ya vio la foto de esta unidad (`res` es el
+       resumen que se guarda en `porConfirmar` y luego en `viajeDatos`):
+       con el precio no se manda la misma otra vez (auditoría general del
+       8-sep, hallazgo 18). */
+    if (fotoDeLaUnidad || envio.sinFoto) res.fotoMandada = true;
     const dueno = tickets.numeroDelDueno(process.env);
     if (!dueno) {
       /* Compuerta cerrada y nadie a quién preguntarle: el cliente se
@@ -539,7 +553,7 @@ async function precioDe(envio, opciones) {
   const foto = salida.medios && salida.medios.fotos && salida.medios.fotos[0];
   /* Sin pie (dictado del dueño, 8-sep-2026: «nomás mándale la foto»), y
      no se manda si ya la vio en esta plática (`sinFoto`). */
-  if (sitio && foto && precio && typeof precio.total === 'number' && !envio.sinFoto) {
+  if (sitio && foto && precio && typeof precio.total === 'number' && !envio.sinFoto && !res.fotoMandada) {
     mios.push({
       numeroDeOrigen: envio.numeroDeOrigen,
       para: envio.para,
@@ -1248,9 +1262,11 @@ function repartoPorPersona(texto, cliente, ficha, antes) {
   if (!m) return null;
   const n = Number(m[1] || m[2]);
   if (!n || n < 2 || n > 120) return null;
+  /* Solo si habla de gente: «para 3 días» o «con 2 paradas» no son personas
+     (auditoría general del 8-sep, hallazgo 13). */
   const hablaDeGente = /persona|pax|gente|pasajero|somos|entre|fu[eé]ramos/i.test(t);
-  if (!hablaDeGente && /\b(el|del|d[ií]a)\s+\d{1,3}\b|\b\d{1,3}\s+de\s+[a-záéíóú]/i.test(t)) return null;
-  if (!hablaDeGente && !/cu[aá]nto|sale|saldr[ií]a|ser[ií]a|cuesta|costar[ií]a|queda/i.test(t)) return null;
+  if (!hablaDeGente) return null;
+  if (/\b\d{1,3}\s*(d[ií]as?|paradas?|horas?|noches?|de\s+[a-záéíóú])\b/i.test(t)) return null;
   const v = ficha.viajeDatos;
   const unidad = unidadDelCatalogo(v.unidad);
   const max = unidad ? Number(unidad.max) : 0;
@@ -1265,13 +1281,33 @@ function repartoPorPersona(texto, cliente, ficha, antes) {
       estado: { destino: v.destino, origen: v.origen, salida: v.salida, regreso: v.regreso, gente: n }
     };
   }
+  /* Una pregunta hipotética NO cambia el viaje: la ficha (y el contrato que
+     se sube a EuroSystem) se quedan con la gente original. Si de verdad
+     cambia el grupo, lo dice y se trata como cambio (auditoría general del
+     8-sep, hallazgo 4). */
   const porPersona = Math.ceil(ficha.total / n / 10) * 10;
-  tickets.anotaEtapa(cliente, ficha.etapa, { viajeDatos: Object.assign({}, v, { gente: n }) }, Date.now());
   return {
     texto: 'Entre ' + n + ' sale a *' + pesos(porPersona) + ' por persona*. El total es el mismo, *' + pesos(ficha.total) +
       '*' + (max ? ' (' + nombre + ' es hasta ' + max + ')' : '') + '. ¿Te la aparto?',
     estado: null
   };
+}
+
+/* Un cambio de fecha (salida o regreso) sobre un viaje que YA tiene precio
+   dado, dicho en una plática sin otro viaje a medias. */
+function cambioDeFechaConPrecio(ficha, datos, antes) {
+  if (!ficha || !ficha.viajeDatos || typeof ficha.total !== 'number' || ficha.total <= 0) return null;
+  if (ETAPAS_CON_PRECIO.indexOf(ficha.etapa) < 0) return null;
+  if (antes && (antes.destino || antes.salida)) return null;
+  const d = datos || {};
+  const v = ficha.viajeDatos;
+  const pide = [];
+  if (d.salida && v.salida && d.salida !== v.salida) pide.push('salida ' + tickets.comoSeDice(d.salida));
+  if (d.regreso && v.regreso && d.regreso !== v.regreso) pide.push('regreso ' + tickets.comoSeDice(d.regreso));
+  if (!pide.length) return null;
+  const resumen = (v.origen ? v.origen + ' → ' : '') + (v.destino || '') + ' · ' + (v.salida || '') +
+    (v.regreso ? ' al ' + v.regreso : '') + (v.gente ? ' · ' + v.gente + ' personas' : '') + (v.unidad ? ' · ' + v.unidad : '');
+  return { resumen: resumen, pide: pide.join(', ') };
 }
 
 function viajeConPrecio(ficha) {
@@ -1337,6 +1373,27 @@ async function loQueDiceElAgente(envio) {
 
   /* Lo que la IA leyó se pega al estado de ANTES; lo que el guion había
      decidido de este mensaje se descarta. */
+  /* Con el precio ya dado, un cambio de fecha no se «checa» ni se confirma:
+     lo ve el dueño. Antes la fecha nueva se pegaba a la plática, la ficha
+     seguía con la vieja y el contrato se subía con la vieja (auditoría
+     general del 8-sep, hallazgo 9). */
+  const cambio = cambioDeFechaConPrecio(tickets.fichaDe(cliente), dicho.datos, antes);
+  if (cambio) {
+    const alCliente = 'Va, déjame checar ese cambio y en breve te confirmo 🙌';
+    await manda({ numeroDeOrigen: envio.numeroDeOrigen, para: cliente, texto: alCliente, pasaAPersona: false, escribio: '[cambio de fecha]' });
+    agente.recuerda(cliente, 'cliente', texto);
+    agente.recuerda(cliente, 'bot', alCliente);
+    const dueno = tickets.numeroDelDueno(process.env);
+    if (dueno) {
+      await manda({
+        numeroDeOrigen: envio.numeroDeOrigen, para: dueno, esTicket: true, sobreCliente: cliente, pasaAPersona: false,
+        texto: '📅 *Quiere cambiar la fecha*\n\n' + cambio.resumen + '\nPide: ' + cambio.pide + '.\n\n«' +
+          String(texto).slice(0, 300) + '»\n\nContéstame *este mensaje* y le llega tal cual.\n_cliente: ' + cliente + '_',
+        escribio: '[ticket · cambio de fecha]'
+      });
+    }
+    return true;
+  }
   const nuevo = conversacion.pegaDatos(antes, dicho.datos);
   webhook.guardaCharla(cliente, nuevo);
   agente.recuerda(cliente, 'cliente', texto);
@@ -1402,9 +1459,14 @@ async function loQueDiceElAgente(envio) {
        el 7-sep-2026 le llegó tal cual a un cliente. */
     const siguiente = conversacion.loQueFalta(nuevo)
       ? preguntaParaElCliente(nuevo) : null;
-    const remate = dicho.respuesta || (siguiente
-      ? '¿Te saco el precio? ' + siguiente
-      : '¿Te saco el precio?');
+    /* Con precio ya dado o pedido, el remate no es de captura: a quien ya
+       tiene precio no se le pregunta «¿a dónde van?» (auditoría general del
+       8-sep, hallazgo 8). */
+    const conPrecio = viajeConPrecio(tickets.fichaDe(cliente));
+    const remate = dicho.respuesta || (
+      (conPrecio && conPrecio.estado === 'dado') ? '¿Te la aparto?'
+        : (conPrecio && conPrecio.estado === 'pedido') ? 'En cuanto tenga tu precio te lo paso por aquí 🙌'
+          : (siguiente ? '¿Te saco el precio? ' + siguiente : '¿Te saco el precio?'));
     await manda({ numeroDeOrigen: envio.numeroDeOrigen, para: cliente, texto: remate, pasaAPersona: false, escribio: '[agente]' });
     agente.recuerda(cliente, 'bot', pie + ' ' + remate);
     /* La plática recuerda de qué unidad ya vio fotos: con el precio no se
@@ -1538,6 +1600,10 @@ async function loQueDiceElAgente(envio) {
   return true;
 }
 
+/* Clientes a los que el agente contestó en esta vuelta (se vacía en cada
+   aviso): para callar el «te están escribiendo» que el guion pidió. */
+const atendidosPorElAgenteAhora = new Set();
+
 async function reparte(envio) {
   /* «¿Y entre 20 cuánto sería?» después del precio: el reparto por persona
      lo hace el MOTOR, con o sin IA. La IA no puede decir cifras (DINERO) y
@@ -1556,8 +1622,12 @@ async function reparte(envio) {
       return;
     }
   }
+  /* «💬 Te están escribiendo» sobra cuando el agente ya contestó ese mismo
+     mensaje: el guion no lo entendió (la plática se cierra al cotizar) e
+     izó `pasa`, pero la IA sí (auditoría general del 8-sep, hallazgo 16). */
+  if (envio.avisoDeEscritura && envio.sobreCliente && atendidosPorElAgenteAhora.has(almacen.llave(envio.sobreCliente))) return;
   if (envio.agente && envio.crudoDelCliente) {
-    if (await loQueDiceElAgente(envio)) return;
+    if (await loQueDiceElAgente(envio)) { atendidosPorElAgenteAhora.add(almacen.llave(envio.para)); return; }
   }
 
   if (envio.subeContrato) {
@@ -1677,8 +1747,12 @@ async function cargaLoQueSeSabe(crudo) {
     if (ficha) tickets.siembraFicha(ficha);
     if (charla) webhook.siembraCharla(n, charla);
     /* `undefined` = la lectura falló. Se recuerda para que al guardar no
-       se borre una charla que sí existe (auditoría 7-sep-2026, B10). */
+       se borre una charla que sí existe (auditoría 7-sep-2026, B10). Y se
+       le avisa al webhook: con el almacén caído, el candado del «número
+       desconocido» no debe frenar al dueño (auditoría general del 8-sep,
+       hallazgo 11). */
     charlasQueNoSePudieronLeer[tickets.llave ? tickets.llave(n) : almacen.llave(n)] = (charla === undefined);
+    if (charla === undefined) webhook.marcaLecturaFallida(n);
   }));
 
   /* ------------------------------------------------------------
@@ -2053,7 +2127,10 @@ async function manda(envio) {
        Va DESPUES de mandar y no antes: se apunta lo que de verdad
        salio, no lo que se pensaba mandar.
        ------------------------------------------------------------ */
-    if (!envio.esTicket && envio.para && envio.texto) {
+    /* Una plantilla NO se anota aquí: su `texto` es la marca «[plantilla …]»
+       y `mandaSeguimientos` ya anota el texto real (auditoría general del
+       8-sep, hallazgo 14). */
+    if (!envio.esTicket && envio.para && envio.texto && !envio.plantilla) {
       almacen.anotaMensaje(envio.para, 'bot', envio.texto, 'texto')
         .catch(function () {});
       /* Y el espejo, si esta prendido. Va DESPUES de mandar y sin
@@ -2375,7 +2452,11 @@ async function atiendeElAviso(crudo, firma, marcaDePuerta) {
     transcribeLosAudios(crudo),
     cargaLoQueSeSabe(crudo)
   ]);
-  const r = webhook.procesa(crudo, firma, Object.assign({}, entorno, { audios }));
+  atendidosPorElAgenteAhora.clear();
+  /* Los ids que el almacén ya vio desde otra instancia: no se contestan dos
+     veces (hallazgo 10 de la auditoría general del 8-sep). */
+  const repetidos = await almacen.marcaVistos(webhook.idsDelAviso(crudo)).catch(function () { return new Set(); });
+  const r = webhook.procesa(crudo, firma, Object.assign({}, entorno, { audios, repetidos }));
   /* Una ráfaga: dos mensajes del mismo cliente en un aviso. `procesa` es
      síncrona y el agente corre después, así que el segundo traía como
      «estado de antes» lo que el GUION entendió del primero, no lo que

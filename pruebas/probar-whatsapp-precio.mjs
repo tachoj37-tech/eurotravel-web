@@ -506,9 +506,17 @@ function idDelUltimoTicket() {
   okQue('  y NO dice «te la aparto» como si hubiera dicho que sí', !/Va, te la aparto/.test(reparto));
   okQue('  y cierra preguntando si la aparta', /¿Te la aparto\?/.test(reparto));
   ok('  al dueño no le llegó nada nuevo', textos(DUENO).length, 0);
-  /* La ficha ahora dice 20, para el contrato. */
+  /* La ficha NO cambia: una pregunta hipotética no es un cambio de grupo
+     (auditoría general del 8-sep, hallazgo 4: eso llegaba al contrato). */
   const tk = (await import(pathToFileURL(path.join(RAIZ, 'api', '_tickets.js')).href)).default;
-  okQue('  la ficha quedó con 20 personas', (tk.fichaDe(C).viajeDatos || {}).gente === 20);
+  okQue('  la ficha sigue con sus 12 personas', (tk.fichaDe(C).viajeDatos || {}).gente === 12);
+  /* «para 3 días» o «con 2 paradas» no son personas. */
+  for (const noEsGente of ['sale más barato para 3 días?', 'cuánto sale con 2 paradas?']) {
+    mandados = [];
+    await dice(noEsGente, C);
+    okQue('«' + noEsGente + '» no reparte por persona', !/por persona/.test(textos(C).join('\n')));
+  }
+  webhook.guardaCharla(C, null);
   /* Y si el grupo ya no cabe: otra cotización, con el viaje ya sabido. */
   mandados = [];
   await dice('y si somos 30?', C);
@@ -537,7 +545,23 @@ function idDelUltimoTicket() {
     okQue('  y la CLABE sola para copiar', textos(C).indexOf('012345678901234567') >= 0);
   }
   ok('  y la ficha quedó en «va_a_apartar»', tk.fichaDe(C).etapa, 'va_a_apartar');
-  delete process.env.CLABE; delete process.env.SITIO_URL;
+  delete process.env.CLABE;
+
+  /* 2d · La foto de la unidad va UNA vez por cotización: con la espera, y ya
+     no otra vez con el precio (auditoría general del 8-sep, hallazgo 18). */
+  {
+    webhook.olvidaTodo(); mandados = [];
+    const C2 = '5213366670014';
+    await cotizaChapala(C2, '12 de septiembre', '14');
+    const conLaEspera = mandados.filter((m) => mismo(m.to, C2) && m.image && m.image.link).length;
+    ok('con la espera va una foto', conLaEspera, 1);
+    const ticket = idDelUltimoTicket();
+    await contesta('va', ticket);
+    const total = mandados.filter((m) => mismo(m.to, C2) && m.image && m.image.link).length;
+    ok('  y con el precio NO va otra: sigue siendo una', total, 1);
+    okQue('  y el precio sí llegó', /\*Total: \$/.test(textos(C2).join('\n')));
+  }
+  delete process.env.SITIO_URL;
 
   /* 3 · Y ya no queda nada por confirmar: un segundo «va» es texto normal
      del dueño —se pasa literal, como cualquier palabra suya— y NO manda el
@@ -552,7 +576,9 @@ function idDelUltimoTicket() {
      contestado no le llega al cliente como texto suelto; al dueño se le
      dice cuál ticket es el del precio. */
   okQue('  y NO le llega un «va» suelto al cliente', !/^va$/m.test(textos(C).join('\n')));
-  okQue('  al dueño se le dice que ese ticket ya no es el del precio', /no es el ticket del precio/i.test(textos(DUENO).join('\n')));
+  /* 8-sep-2026 (auditoría general, 20): a un ticket ya consumido se le dice
+     «ya se lo mandé», no «no es el ticket del precio». */
+  okQue('  al dueño se le dice que ese precio ya se lo mandó', /ya se lo mandé/i.test(textos(DUENO).join('\n')));
 }
 
 /* 4 · Un número: ese es el precio, con el anticipo recalculado (20 % a $500). */

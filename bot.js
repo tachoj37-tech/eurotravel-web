@@ -3803,7 +3803,21 @@ function pegaDatos(estado, datos) {
       }
     }
   }
-  if (d.unidad && !e.unidad) e.unidad = d.unidad;
+  /* «Mejor una Suburban»: la unidad también se corrige, con su revisión de
+     cupo (auditoría general del 8-sep, hallazgo 17). El autobús concreto
+     va abajo, por `d.autobus`. */
+  if (d.unidad && d.unidad !== e.unidad) {
+    const topes = { sprinter: 20, suburban: 6 };
+    const n = Number(e.gente) || 0;
+    if (topes[d.unidad] && n > topes[d.unidad]) {
+      e.noCabe = { nombre: d.unidad === 'sprinter' ? 'Sprinter' : 'Suburban', asientos: topes[d.unidad], gente: n };
+    } else {
+      delete e.noCabe;
+      e.unidad = d.unidad; delete e.unidadNombre; delete e.unidadId;
+      const u = UNIDADES.find(function (x) { return x.cat === d.unidad && x.cat !== 'autobus'; });
+      if (u) e.unidadNombre = u.name;
+    }
+  }
   /* El autobús concreto, cuando el agente lo recomendó y el cliente dijo
      que sí: se guarda con su nombre, que es lo que imprime el contrato. */
   if (d.autobus) {
@@ -3820,7 +3834,9 @@ function pegaDatos(estado, datos) {
   }
   if (d.origen && e.origenSupuesto) { delete e.origenSupuesto; }
   if (d.ocasion && !e.ocasion) e.ocasion = d.ocasion;
-  if (typeof d.recorridos === 'number' && typeof e.recorridos !== 'number') e.recorridos = d.recorridos;
+  /* Los recorridos también se corrigen: «espérame, sí nos vamos a mover»
+     cambia el precio (auditoría general del 8-sep, hallazgo 17). */
+  if (typeof d.recorridos === 'number') e.recorridos = d.recorridos;
   if (e.regreso && e.salida && e.regreso < e.salida) e.regreso = null;
   /* Con la gente ya se sabe la unidad chica; los autobuses los escoge el
      cliente en `elegirBus`, como siempre. */

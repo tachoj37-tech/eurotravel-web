@@ -353,9 +353,21 @@ function olvidaTodo() { historiales.clear(); }
 const TEXTO_INTERNO = /datos\.[a-z]+\b|[Pp]regunta EXACTAMENTE|EXACTAMENTE eso|\(ver lista\)|lo m[aá]s com[uú]n (para|\))|\{\{\d\}\}|\bloQueFalta\b|\baccion\b\s*"?\s*[:=]|"accion"|"respuesta"\s*:|YA SE SABE DEL VIAJE|PRECIO YA (PEDIDO|DADO)|LO QUE SIGUE POR SABER|VIAJES ANTERIORES DE ESTE CLIENTE|REGLAS DE FORMA|PROHIBIDO, SIN EXCEPCI|ACCIONES \(el motor|TU TRABAJO:|LO [UÚ]NICO CIERTO|unidadPedida|NUNCA zona, norte\/sur|\[fecha\]|\[plantilla |ÚLTIMOS MENSAJES:|^Tú: |\nTú: |DESTINOS DE UN D[IÍ]A \(|· "[a-z]+":|Tu "respuesta"|"datos" trae|"regreso" igual/;
 
 const LARGO_DE_FRAGMENTO = 40;
+/* Del prompt se toman SOLO las instrucciones. La psicología de ventas y el
+   bloque «LO ÚNICO CIERTO» son argumentos que la IA SÍ debe decir («chofer,
+   combustible, casetas y seguro de viajero», «14 años operando»); la
+   auditoría general del 8-sep encontró que el candado se comía 14 de 30
+   frases de venta legítimas por venir de ahí. */
+function soloInstrucciones(prompt) {
+  let p = String(prompt || '');
+  if (psicologia && psicologia.TEXTO) p = p.split(psicologia.TEXTO).join('\n');
+  p = p.replace(/LO ÚNICO CIERTO QUE PUEDES DECIR DE LA EMPRESA[\s\S]*?(?=\n\n)/, '');
+  return p;
+}
+
 const FRAGMENTOS_DEL_PROMPT = (function () {
   const vistos = new Set();
-  [instruccionesDelAgente({}), instruccionesDelAgente({ usted: true })].forEach(function (prompt) {
+  [instruccionesDelAgente({}), instruccionesDelAgente({ usted: true })].map(soloInstrucciones).forEach(function (prompt) {
     String(prompt || '').split('\n').forEach(function (renglon) {
       /* Los ejemplos de conversación del prompt («Cliente: …» / el JSON
          de respuesta) son frases que la IA SÍ debe decir: no son candado. */
@@ -500,5 +512,5 @@ module.exports = {
   recuerda, historialDe, siembraHistorial, olvidaTodo, PALABRAS_PROHIBIDAS,
   unidadPorTexto, fichaDeUnidades,
   /* El candado, para que `manda` frene lo mismo que `sanea`. */
-  esTextoInterno, pareceTextoDelPrompt, TEXTO_INTERNO, FRAGMENTOS_DEL_PROMPT
+  esTextoInterno, pareceTextoDelPrompt, TEXTO_INTERNO, FRAGMENTOS_DEL_PROMPT, soloInstrucciones
 };

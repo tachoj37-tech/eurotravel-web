@@ -518,6 +518,13 @@ function cotiza(extra) {
   /* Dictado del dueño (8-sep-2026): el año se dice SOLO del i6S (2023), el
      i6 (2017) y el G8 (2026). Las demás no llevan `modelo` ni lo dicen. */
   const porNombre = function (n) { return catalogo.filter(function (u) { return u.name === n; })[0] || {}; };
+  /* Auditoría general del 8-sep, hallazgo 17: recorridos y unidad también
+     se corrigen. */
+  const base = { destino: 'Puerto Vallarta', salida: '2026-09-20', regreso: '2026-09-22', gente: 12, unidad: 'sprinter', recorridos: 0, origen: 'Guadalajara' };
+  ok('«sí nos vamos a mover dos días» corrige los recorridos', bot.pegaDatos(Object.assign({}, base), { recorridos: 2 }).recorridos, 2);
+  ok('«mejor una Suburban» con 4 personas cambia la unidad', bot.pegaDatos(Object.assign({}, base, { gente: 4 }), { unidad: 'suburban' }).unidad, 'suburban');
+  const noCabe = bot.pegaDatos(Object.assign({}, base), { unidad: 'suburban' });
+  okQue('  y con 12 no cambia: en la Suburban no caben (noCabe)', noCabe.unidad === 'sprinter' && noCabe.noCabe && noCabe.noCabe.asientos === 6);
   ok('el i6S es 2023', porNombre('Irizar i6S').modelo, 2023);
   ok('el i6 es 2017', porNombre('Irizar i6').modelo, 2017);
   ok('las demás no llevan año (Century, PB, Neobus, Sprinter, Suburban)',

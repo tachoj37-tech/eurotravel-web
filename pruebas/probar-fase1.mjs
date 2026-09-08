@@ -148,14 +148,29 @@ titulo('reacciones y stickers no se contestan');
   /* El «ya no» del cliente, con sus palabras. Dictado del dueño (8-sep-2026):
      las plantillas no ofrecen «stop» porque espanta; el bot detecta que ya
      no quiere y se despide sin insistir. «Stop» sigue valiendo. */
-  for (const adios of ['STOP', 'ya no', 'Ya no, gracias', 'no gracias', 'Gracias, ya no me interesa',
-    'ya no vamos a ir', 'ya contratamos otro, gracias', 'se canceló el viaje', 'Hola, ya no lo vamos a necesitar. Saludos', 'déjalo así']) {
+  /* Los explícitos son un adiós digan lo que digan. */
+  for (const adios of ['STOP', 'Gracias, ya no me interesa',
+    'ya no vamos a ir', 'ya contratamos otro, gracias', 'se canceló el viaje', 'Hola, ya no lo vamos a necesitar. Saludos']) {
     limpia();
     await manda(avisoDe([texto(C, adios)]));
     ok('«' + adios + '»: se despide en un solo mensaje', textos(C).length, 1);
     okQue('  con el texto de despedida', /Va, entendido/.test(textos(C)[0] || ''));
     ok('  sin ticket al dueño', textos(DUENO).length, 0);
     ok('  y sin llamar a la IA', llamadas.filter((l) => /api\.anthropic\.com/.test(l.url)).length, 0);
+  }
+  /* Los cortos («no gracias», «ya no», «déjalo así») solo con precio dado y
+     sin plática abierta: a media cotización son la respuesta a una pregunta
+     (auditoría general del 8-sep, hallazgo 5). */
+  const tk = (await import(pathToFileURL(path.join(RAIZ, 'api', '_tickets.js')).href)).default;
+  for (const corto of ['ya no', 'Ya no, gracias', 'no gracias', 'déjalo así']) {
+    limpia();
+    await manda(avisoDe([texto(C, corto)]));
+    okQue('«' + corto + '» sin precio NO es un adiós', !/Va, entendido/.test(textos(C).join('\n')));
+    limpia();
+    tk.anotaEtapa(C, 'con_precio', { total: 7000, anticipo: 1500 }, Date.now());
+    await manda(avisoDe([texto(C, corto)]));
+    okQue('«' + corto + '» con precio dado SÍ es un adiós', /Va, entendido/.test(textos(C).join('\n')));
+    tk.olvidaTodo();
   }
   /* Y lo que NO es un adiós sigue su camino normal (a la IA o al guion). */
   for (const sigue of ['ya no, mejor a Chapala', 'no, somos 30', 'ya no el 14, el 15', 'no gracias, sin baño está bien', 'ya no sé si el i6 o el Neobus']) {

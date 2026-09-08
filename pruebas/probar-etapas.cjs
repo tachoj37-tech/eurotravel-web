@@ -100,10 +100,12 @@ titulo('la etapa se lee de lo que el bot decidió');
 /* A propósito NO se vuelve a interpretar el texto del cliente: el bot
    es una máquina de estados y su estado es la verdad. Dos lecturas del
    mismo mensaje es una que un día no coincide con la otra. */
-ok('una foto es un comprobante',
-  etapas.deLaRespuesta({ texto: 'x' }, { type: 'image' }), 'mando_comprobante');
+/* Desde el 8-sep-2026 la foto es comprobante solo con precio dado (la
+   ficha va como tercer argumento). */
+ok('una foto es un comprobante (con precio dado)',
+  etapas.deLaRespuesta({ texto: 'x' }, { type: 'image' }, { etapa: 'con_precio' }), 'mando_comprobante');
 ok('un documento también',
-  etapas.deLaRespuesta({ texto: 'x' }, { type: 'document' }), 'mando_comprobante');
+  etapas.deLaRespuesta({ texto: 'x' }, { type: 'document' }, { etapa: 'con_precio' }), 'mando_comprobante');
 ok('pedir precio es `cotiza`',
   etapas.deLaRespuesta({ texto: 'x', cotiza: {} }, { type: 'text' }), 'pidio_precio');
 ok('un autobús —que no se cotiza solo— también falta de precio',
@@ -118,6 +120,16 @@ ok('un total es que ya tiene precio',
 ok('y el cierre es que dijo que sí',
   etapas.deLaRespuesta({ texto: 'Va, te la aparto 🙌', pideDatosBancarios: true },
     { type: 'text' }), 'va_a_apartar');
+/* Auditoría general del 8-sep, hallazgo 2: una foto solo es comprobante si
+   ya hay precio. Dos fotos de un cliente nuevo lo encerraban en «datos del
+   contrato» para siempre. */
+ok('una foto SIN precio no es comprobante (se queda donde estaba)',
+  etapas.deLaRespuesta({ texto: 'Ya lo vi' }, { type: 'image' }, { etapa: 'cotizando' }), 'cotizando');
+ok('  ni sin ficha', etapas.deLaRespuesta({ texto: 'Ya lo vi' }, { type: 'image' }, null), 'escribio');
+ok('  con precio dado, sí es comprobante',
+  etapas.deLaRespuesta({ texto: '' }, { type: 'image' }, { etapa: 'con_precio', total: 7000 }), 'mando_comprobante');
+ok('  y ya en «va a apartar», también',
+  etapas.deLaRespuesta({ texto: '' }, { type: 'document' }, { etapa: 'va_a_apartar', total: 7000 }), 'mando_comprobante');
 /* Y no al revés: un texto que hable de depósitos sin la bandera NO es
    un cierre. Si lo fuera, cualquier mención movería la etapa. */
 ok('  pero no cualquier mención de un depósito',

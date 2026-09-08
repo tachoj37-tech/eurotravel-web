@@ -87,14 +87,23 @@ function avanza(actual, nueva) {
    estados y su estado es la verdad. Leer el texto otra vez, por
    separado, sería una segunda opinión que un día no coincide.
    ------------------------------------------------------------ */
-function deLaRespuesta(r, mensaje) {
+function deLaRespuesta(r, mensaje, ficha) {
   const m = mensaje || {};
 
   /* Una foto o un documento, con transferencia, es casi siempre el
      comprobante. Es lo más alto que hay: aunque no se pueda dar el
      pago por bueno —eso lo revisa una persona—, lo que NO se puede
-     es tratarlo como a cualquiera. */
-  if (m.type === 'image' || m.type === 'document') return 'mando_comprobante';
+     es tratarlo como a cualquiera.
+
+     Pero SOLO si ya tiene precio: dos fotos de un cliente nuevo lo
+     mandaban a «datos del contrato» para siempre, porque la etapa solo
+     sube (auditoría general del 8-sep, hallazgo 2). Sin precio, la foto
+     no cambia la etapa. */
+  if (m.type === 'image' || m.type === 'document') {
+    const f = ficha || {};
+    const conPrecio = ['con_precio', 'va_a_apartar', 'mando_comprobante'].indexOf(f.etapa) >= 0;
+    return conPrecio ? 'mando_comprobante' : (f.etapa || 'escribio');
+  }
 
   const r2 = r || {};
 

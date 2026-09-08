@@ -165,6 +165,41 @@ hook.olvidaTodo(); tk.olvidaTodo();
 
 hook.olvidaTodo(); tk.olvidaTodo();
 {
+  /* Auditoría general del 8-sep, hallazgo 7: un «total N» que no cuadra se
+     le devuelve al dueño; nunca le llega literal al cliente. */
+  tk.anotaEtapa(CLIENTE, 'visto', {}, Date.now());
+  const r = corre(aviso(DUENO, CLIENTE + ' total 48000'));
+  ok('«total 48000» sin precio dado: el aviso va al dueño', r.envios[0].para, DUENO);
+  okQue('  diciendo que no lo pudo aplicar', /No pude actualizar el total/.test(r.envios[0].texto));
+  okQue('  y al cliente no le llegó «total 48000»', !r.envios.some(function (e) { return e.para === CLIENTE; }));
+  tk.anotaEtapa(CLIENTE, 'con_precio', { total: 40000, anticipo: 8000 }, Date.now());
+  const r2 = corre(aviso(DUENO, CLIENTE + ' total 999'));
+  okQue('«total 999» (bajo el mínimo): al dueño, no al cliente', r2.envios[0].para === DUENO && !r2.envios.some(function (e) { return e.para === CLIENTE; }));
+}
+
+hook.olvidaTodo(); tk.olvidaTodo();
+{
+  /* Auditoría general del 8-sep, hallazgo 11: con el almacén caído, el
+     candado del número desconocido no frena al dueño; se manda y se avisa. */
+  hook.marcaLecturaFallida('5213399998889');
+  const r = corre(aviso(DUENO, '5213399998889: te confirmo tu fecha'));
+  okQue('con la lectura del almacén fallida, el mensaje SÍ se manda al cliente',
+    r.envios.some(function (e) { return e.para === '5213399998889' && e.texto === 'te confirmo tu fecha'; }));
+  okQue('  y al dueño se le dice que no se pudo comprobar', r.envios.some(function (e) { return e.para === DUENO && /No pude comprobar/.test(e.texto); }));
+}
+
+hook.olvidaTodo(); tk.olvidaTodo();
+{
+  /* Auditoría general del 8-sep, hallazgo 10: un aviso que el almacén ya
+     vio desde otra instancia no se contesta. */
+  const r = corre(aviso(CLIENTE, 'hola', { id: 'wamid.repetido-1' }), { repetidos: new Set(['wamid.repetido-1']) });
+  ok('un id ya visto en el almacén no produce ningún envío', r.envios.length, 0);
+  const r2 = corre(aviso(CLIENTE, 'hola', { id: 'wamid.nuevo-1' }), { repetidos: new Set(['wamid.repetido-1']) });
+  okQue('  y uno nuevo sí se contesta', r2.envios.length >= 1);
+}
+
+hook.olvidaTodo(); tk.olvidaTodo();
+{
   /* Auditoría 7-sep-2026, hallazgo 6: un dedazo en el número mandaba el
      viaje y el precio de un cliente a un desconocido. A un número que
      nunca ha hablado con el bot (ni ficha ni charla) no se le manda nada:

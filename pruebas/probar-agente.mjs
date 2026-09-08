@@ -557,10 +557,12 @@ titulo('el candado se saca del prompt en vivo: ninguna regla suelta le llega al 
      candado viejo (que solo tenía las cadenas del incidente). Ahora el
      candado se arma con el prompt mismo. */
   const conversacion = (await import(pathToFileURL(path.join(RAIZ, 'bot.js')).href)).default;
-  const prompt = agente.instruccionesDelAgente({});
+  /* Se miden las INSTRUCCIONES (sin la psicología de ventas ni «lo único
+     cierto», que son frases que la IA sí debe decir; auditoría del 8-sep). */
+  const prompt = agente.soloInstrucciones(agente.instruccionesDelAgente({}));
   const reglas = prompt.split('\n').filter((r) => r.trim().length >= 30 && !/^\s*(\{|Cliente:)/.test(r));
   const pasan = reglas.filter((r) => !agente.esTextoInterno(r));
-  okQue('de ' + reglas.length + ' renglones del prompt, pasan el candado a lo más 40 (pasan ' + pasan.length + ')', pasan.length <= 40);
+  okQue('de ' + reglas.length + ' renglones de instrucciones, pasan el candado a lo más 25 (pasan ' + pasan.length + ')', pasan.length <= 25);
   okQue('  y los que pasan son puras frases de ejemplo entre comillas', pasan.every((r) => /«|"/.test(r)));
   /* La regla exacta que se fugó el 7-sep, tal como la escribe el prompt
      («es» en vez de «=»): frenada. */
@@ -621,6 +623,89 @@ titulo('a otro número nunca, desde la única puerta de salida (auditoría 7-sep
     plantilla: { nombre: 'eurotravel_toque1', idioma: 'es_MX', parametros: ['tu viaje a Puerto Vallarta'] },
     texto: '[plantilla eurotravel_toque1 · tu viaje a Puerto Vallarta]' });
   okQue('  y la plantilla de verdad sí sale', plantilla === true && mandados.length === 1 && mandados[0].type === 'template');
+}
+
+/* ============================================================ */
+titulo('auditoría general del 8-sep: el candado no se come las frases de venta (1)');
+{
+  [
+    'Incluye chofer, combustible, casetas, seguro de viajero y GPS las 24 horas.',
+    'Claro, es lana. ¿Sería mala idea apartarte la fecha mientras lo piensas, para que no se te vaya?',
+    'Todas las unidades van con seguro de viajero y chofer con experiencia.',
+    'Se aparta la fecha con un anticipo por transferencia y el resto lo liquidas antes de salir.',
+    'Escuelas, empresas, familias y peregrinaciones viajan con nosotros; llevamos 14 años operando.',
+    'Y allá tienen la unidad a su disposición para moverse.',
+    'La Sprinter es de 20 pasajeros con aire, pantalla y asientos reclinables. ¿Te la aparto?',
+    'Nadie se queda esperando en la banqueta: pasamos por ustedes a la hora que digan.'
+  ].forEach((f) => okQue('pasa: «' + f.slice(0, 55) + '…»', !agente.esTextoInterno(f)));
+  okQue('  y las instrucciones siguen frenadas',
+    agente.esTextoInterno('· Hasta 20 personas SOLO HAY SPRINTER: no es una recomendación entre varias, es la unidad que hay para ese tamaño') &&
+    agente.esTextoInterno('El origen se pregunta como sí/no: «¿Salen de la zona metropolitana de Guadalajara?». Solo si dice que no, pregunta de qué ciudad.'));
+}
+
+/* ============================================================ */
+titulo('auditoría general del 8-sep: con precio dado, lo que sigue es apartar (8, 9, 12, 16)');
+{
+  const tk = (await import(pathToFileURL(path.join(RAIZ, 'api', '_tickets.js')).href)).default;
+  const conPrecio = (C, extra) => tk.anotaEtapa(C, 'con_precio', Object.assign({
+    total: 7000, anticipo: 1500,
+    viajeDatos: { origen: 'Guadalajara', destino: 'Tequila', salida: '2026-09-20', regreso: '2026-09-20', gente: 15, unidad: 'Sprinter' }
+  }, extra || {}), Date.now());
+
+  /* 8 · fotos con el precio ya dado: el remate es de apartado. */
+  limpia();
+  let C = '5213366670230';
+  conPrecio(C);
+  laIA = () => ({ respuesta: null, datos: {}, accion: 'fotos', unidadPedida: 'sprinter' });
+  await dice('mándame fotos de la sprinter', C);
+  const tras = textos(C).slice(-1)[0] || '';
+  okQue('tras las fotos, a quien ya tiene precio se le remata con «¿Te la aparto?»', /¿Te la aparto\?/.test(tras));
+  okQue('  y no con «¿A dónde van?»', !/d[oó]nde van/i.test(textos(C).join('\n')));
+
+  /* 9 · cambio de fecha después del precio: al dueño, no se confirma. */
+  limpia();
+  C = '5213366670231';
+  conPrecio(C);
+  laIA = (t) => /el 21/i.test(t) ? { respuesta: 'Va, checo el 21 y te digo.', datos: { salida: '2026-09-21' }, accion: 'seguir' } : null;
+  await dice('oye y si mejor nos vamos el 21?', C);
+  okQue('«mejor el 21»: al cliente «déjame checar ese cambio»', /d[eé]jame checar ese cambio/.test(textos(C).slice(-1)[0] || ''));
+  okQue('  y NO le llegó el «checo el 21» de la IA', !/checo el 21/.test(textos(C).join('\n')));
+  okQue('  al dueño le llega «Quiere cambiar la fecha» con la nueva', /Quiere cambiar la fecha/.test(textos(DUENO).join('\n')) && /21/.test(textos(DUENO).join('\n')));
+  okQue('  y la ficha sigue con la fecha original', tk.fichaDe(C).viajeDatos.salida === '2026-09-20');
+
+  /* 12 · con el chat en manos del dueño, el «ya no» no lo contesta el bot. */
+  limpia();
+  C = '5213366670232';
+  conPrecio(C, { enManosDe: 'dueno' });
+  laIA = () => null;
+  await dice('ya no gracias', C);
+  okQue('con el chat tomado por el dueño, el bot no contesta el «ya no»', !/Va, entendido/.test(textos(C).join('\n')));
+  okQue('  y al dueño se le reenvía', /ya no gracias/.test(textos(DUENO).join('\n')));
+
+  /* 16 · «ok» después del precio: la IA contesta y NO sale el «te están escribiendo». */
+  limpia();
+  C = '5213366670233';
+  conPrecio(C);
+  laIA = (t) => /^ok$/i.test(t) ? { respuesta: 'Perfecto, aquí ando para lo que necesites 🙌', datos: {}, accion: 'seguir' } : null;
+  await dice('ok', C);
+  okQue('«ok» con precio dado: contesta la IA', /aquí ando/.test(textos(C).slice(-1)[0] || ''));
+  okQue('  y al dueño NO le llega «Te están escribiendo»', !/Te están escribiendo/.test(textos(DUENO).join('\n')));
+
+  /* 3 · IA callada: el comprobante sí llega al dueño; el texto no se contesta pero cuenta como «contestó». */
+  limpia();
+  C = '5213366670234';
+  conPrecio(C);
+  tk.callaLaIA(C);
+  const foto = JSON.stringify({ entry: [{ changes: [{ value: { metadata: { phone_number_id: '111' },
+    messages: [{ id: 'wamid.foto-callada', from: C, type: 'image', image: { id: 'IMG1' } }] } }] }] });
+  await atiende(new Request('https://x/api/whatsapp', { method: 'POST', body: foto, headers: { 'x-hub-signature-256': firma(foto) } }));
+  okQue('con la IA callada, la foto del depósito SÍ le llega al dueño', mandados.some((m) => mismo(m.to, DUENO) && m.image && m.image.id === 'IMG1'));
+  ok('  y la etapa subió a «mandó comprobante»', tk.fichaDe(C).etapa, 'mando_comprobante');
+  const antesTexto = textos(C).length;
+  await dice('ya te deposité', C);
+  ok('  un texto suyo no se contesta (el dueño está en ese chat)', textos(C).length, antesTexto);
+  okQue('  pero cuenta como «contestó» (clienteEn)', typeof tk.fichaDe(C).clienteEn === 'number');
+  tk.liberaLaIA(C);
 }
 
 /* ============================================================ */
