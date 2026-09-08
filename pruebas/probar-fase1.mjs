@@ -170,6 +170,29 @@ titulo('nada interno le llega a un cliente');
     ok('la pregunta normal sí sale', [r2, textos(C).length], [true, 1]);
     const r3 = await manda({ numeroDeOrigen: '111', para: DUENO, esTicket: true, sobreCliente: C, texto: '💰 Precio por confirmar · datos.origen = Guadalajara' });
     ok('al dueño sí le llega texto con nombres de campos (tickets)', r3, true);
+    /* Y CUALQUIER frase de `loQueFalta` (las que el guion le dice a la IA),
+       sacada del guion en vivo, tampoco sale: si mañana cambian, el candado
+       cambia solo. */
+    const bot = (await import(pathToFileURL(path.join(RAIZ, 'bot.js')).href)).default;
+    const estados = [
+      { destino: 'Puerto Vallarta', salida: '2026-10-10', regreso: '2026-10-12' },
+      { destino: 'Puerto Vallarta', salida: '2026-10-10', regreso: '2026-10-12', gente: 45, unidad: 'autobus' },
+      { destino: 'Puerto Vallarta', salida: '2026-10-10', regreso: '2026-10-12', gente: 12 },
+      { destino: 'Puerto Vallarta', salida: '2026-10-10', regreso: '2026-10-12', gente: 12, origen: 'Guadalajara' },
+      { destino: 'Tequila', salida: '2026-10-10' }
+    ];
+    for (const e of estados) {
+      const frase = bot.loQueFalta(e);
+      if (!frase || frase.length < 20) continue;
+      mandados = [];
+      const r = await manda({ numeroDeOrigen: '111', para: C, texto: '¿Te saco el precio? Dime ' + frase + '.' });
+      ok('frase para la IA bloqueada: «' + frase.slice(0, 40) + '…»', [r, textos(C).length], [false, 0]);
+    }
+    mandados = [];
+    const r4 = await manda({ numeroDeOrigen: '111', para: C, texto: 'Ahí te dejé la cotización. ¿Te sirve así o le movemos algo?' });
+    ok('un texto normal de venta sí sale', [r4, textos(C).length], [true, 1]);
+    const r5 = await manda({ numeroDeOrigen: '111', para: C, texto: 'REGLAS DE FORMA: máximo 3 líneas' });
+    ok('un pedazo de las instrucciones de la IA no sale', r5, false);
   } else {
     okQue('manda está exportada para probar el candado', false);
   }

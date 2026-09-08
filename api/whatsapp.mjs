@@ -1133,7 +1133,7 @@ function preguntaParaElCliente(estado) {
   try {
     const p = conversacion.pregunta ? conversacion.pregunta(estado) : null;
     const t = p && p.texto ? String(p.texto).trim() : '';
-    if (t && !TEXTO_INTERNO.test(t)) return t;
+    if (t && !esTextoInterno(t)) return t;
   } catch (e) { /* sin pregunta: la neutra */ }
   return '¿Me dices lo que falta y te lo armo?';
 }
@@ -1146,7 +1146,40 @@ function preguntaParaElCliente(estado) {
    = "Guadalajara"». Este candado está en `manda`, la única puerta de
    salida, para que no dependa de quién armó el texto.
    ------------------------------------------------------------ */
-const TEXTO_INTERNO = /datos\.[a-z]+\s*=|Pregunta EXACTAMENTE|EXACTAMENTE eso|\(ver lista\)|lo m[aá]s com[uú]n\)|\{\{\d\}\}|\bloQueFalta\b|\baccion\b\s*[:=]|"respuesta"\s*:|YA SE SABE DEL VIAJE|PRECIO YA (PEDIDO|DADO)|LO QUE SIGUE POR SABER/;
+const TEXTO_INTERNO = /datos\.[a-z]+\s*=|Pregunta EXACTAMENTE|EXACTAMENTE eso|\(ver lista\)|lo m[aá]s com[uú]n\)|\{\{\d\}\}|\bloQueFalta\b|\baccion\b\s*[:=]|"respuesta"\s*:|YA SE SABE DEL VIAJE|PRECIO YA (PEDIDO|DADO)|LO QUE SIGUE POR SABER|VIAJES ANTERIORES DE ESTE CLIENTE|REGLAS DE FORMA|PROHIBIDO, SIN EXCEPCI|ACCIONES \(el motor|TU TRABAJO:|LO [UÚ]NICO CIERTO|unidadPedida|NUNCA zona, norte\/sur/;
+
+/* Y, además de las marcas, las FRASES MISMAS que `loQueFalta` le dice a la
+   IA, sacadas del guion en vivo (no copiadas a mano): si mañana alguien
+   cambia esas frases, el candado cambia solo. Se piden con estados de
+   mentiras, uno por paso. */
+const FRASES_PARA_LA_IA = (function () {
+  const frases = [];
+  const estados = [
+    {},
+    { destino: 'Puerto Vallarta' },
+    { destino: 'Puerto Vallarta', salida: '2026-10-10' },
+    { destino: 'Tequila', salida: '2026-10-10' },
+    { destino: 'Puerto Vallarta', salida: '2026-10-10', regreso: '2026-10-12' },
+    { destino: 'Puerto Vallarta', salida: '2026-10-10', regreso: '2026-10-12', gente: 45, unidad: 'autobus' },
+    { destino: 'Puerto Vallarta', salida: '2026-10-10', regreso: '2026-10-12', gente: 12 },
+    { destino: 'Puerto Vallarta', salida: '2026-10-10', regreso: '2026-10-12', gente: 12, origen: 'Guadalajara' }
+  ];
+  estados.forEach(function (e) {
+    try {
+      const t = conversacion.loQueFalta(e);
+      if (typeof t === 'string' && t.trim().length >= 20) frases.push(t.trim().toLowerCase().slice(0, 60));
+    } catch (err) { /* sin frase para ese estado */ }
+  });
+  return frases;
+})();
+
+function esTextoInterno(texto) {
+  const t = String(texto || '');
+  if (!t) return false;
+  if (TEXTO_INTERNO.test(t)) return true;
+  const bajo = t.toLowerCase();
+  return FRASES_PARA_LA_IA.some(function (f) { return bajo.indexOf(f) >= 0; });
+}
 
 /* Qué viaje de la ficha ya está en precio: pedido (espera el «va» del
    dueño) o dado. En una línea, sin cifras: la IA no debe repetir montos. */
@@ -1750,7 +1783,7 @@ async function manda(envio) {
      sí (los tickets traen nombres de campos a propósito). */
   const dueno = tickets.numeroDelDueno(process.env);
   const esParaElDueno = dueno && tickets.mismoNumero(envio.para, dueno);
-  if (!esParaElDueno && !envio.esTicket && TEXTO_INTERNO.test(String(envio.texto || ''))) {
+  if (!esParaElDueno && !envio.esTicket && esTextoInterno(envio.texto)) {
     console.error('[fuga] se frenó un texto interno que iba a un cliente (' +
       (envio.escribio || 'sin marca') + '): ' + String(envio.texto).slice(0, 120).replace(/\n/g, ' '));
     return false;
