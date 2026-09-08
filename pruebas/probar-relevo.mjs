@@ -159,6 +159,15 @@ titulo('«yo» por número escrito, y «yo» sin cliente');
   ok('«<número> yo» toma el chat', tickets.fichaDe(C).enManosDe, 'dueno');
   await dice(C + ' bot', DUENO);
   ok('«<número> bot» lo devuelve', tickets.fichaDe(C).enManosDe, null);
+  /* Como lo quiere el dueño: los 10 dígitos pegados, sin 52 1. */
+  await dice('3366675002 yo', DUENO);
+  ok('«3366675002 yo» (10 dígitos pegados) toma el chat', tickets.fichaDe(C).enManosDe, 'dueno');
+  ok('  y la ficha conserva el número completo para mandar', tickets.fichaDe(C).cliente, C);
+  mandados = [];
+  await dice('me urge', C);
+  okQue('  el reenvío llega al dueño', /en tus manos/.test(textos(DUENO).join('\n')));
+  await dice('3366675002 bot', DUENO);
+  ok('«3366675002 bot» lo devuelve', tickets.fichaDe(C).enManosDe, null);
   mandados = [];
   await dice('yo', DUENO);
   okQue('«yo» sin cliente: se le pregunta de quién', /De qui[eé]n/.test(textos(DUENO).join('\n')));

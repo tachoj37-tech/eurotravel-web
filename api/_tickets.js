@@ -378,6 +378,12 @@ function anotaEtapa(cliente, etapa, extra, ahora) {
   if (!cliente) return null;
   const k = llave(cliente);
   const antes = cartera.get(k);
+  /* El número completo (52 1 33…) se conserva aunque la orden del dueño
+     venga con solo los 10 dígitos («3312345678 yo»): es el que WhatsApp
+     necesita para mandar. */
+  if (antes && antes.cliente && soloDigitos(cliente).length < soloDigitos(antes.cliente).length) {
+    cliente = antes.cliente;
+  }
   /* Si entra un precio por confirmar de OTRO viaje, el que estaba
      esperando se archiva; si entra un viaje con precio dado distinto del
      anterior, el anterior también. */
