@@ -311,9 +311,13 @@ function siembraHistorial(cliente, turnos) {
 function olvidaTodo() { historiales.clear(); }
 
 /* ---- lo que dice el agente, saneado ---- */
+/* Si la IA repite sus instrucciones o nombres de campos, eso no sale. */
+const TEXTO_INTERNO = /datos\.[a-z]+\s*=|Pregunta EXACTAMENTE|EXACTAMENTE eso|\(ver lista\)|\{\{\d\}\}|\baccion\b\s*[:=]|"respuesta"\s*:|YA SE SABE DEL VIAJE|PRECIO YA (PEDIDO|DADO)|LO QUE SIGUE POR SABER|unidadPedida/;
+
 function sanea(texto) {
   const t = String(texto || '').replace(/\s+\n/g, '\n').trim();
   if (!t) return null;
+  if (TEXTO_INTERNO.test(t)) return null;
   if (DINERO.test(t)) return null;
   if (PALABRAS_PROHIBIDAS.test(t)) return null;
   if (t.length > 480) return null;

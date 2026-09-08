@@ -310,6 +310,31 @@ titulo('una plática vieja atorada en «confirmar» no vuelve a pedir el precio'
 }
 
 /* ============================================================ */
+titulo('después de las fotos, la pregunta es para el cliente, no para la IA');
+{
+  /* Visto en producción el 7-sep-2026: «¿Te saco el precio? Dime si salen de
+     la zona metropolitana de Guadalajara. Pregunta EXACTAMENTE eso… datos.origen
+     = "Guadalajara"». Era el texto de instrucciones de `loQueFalta`. */
+  limpia();
+  const C = '5213366670211';
+  laIA = function (t) {
+    if (/vallarta/i.test(t)) return { respuesta: 'Vallarta, va. ¿Qué día salen?', datos: { destino: 'Puerto Vallarta' }, accion: 'seguir' };
+    if (/9 de septiembre/i.test(t)) return { respuesta: 'Listo. ¿Y regresan?', datos: { salida: '2026-09-09' }, accion: 'seguir' };
+    if (/el 14/i.test(t)) return { respuesta: 'Del 9 al 14. ¿Como cuántos van?', datos: { regreso: '2026-09-14' }, accion: 'seguir' };
+    if (/somos 12/i.test(t)) return { respuesta: '12 van perfecto en Sprinter. ¿Salen de la zona metropolitana de Guadalajara?', datos: { gente: 12 }, accion: 'seguir' };
+    if (/fotos/i.test(t)) return { respuesta: null, datos: {}, unidadPedida: 'sprinter', accion: 'fotos' };
+    return null;
+  };
+  for (const t of ['a vallarta', 'el 9 de septiembre', 'el 14', 'somos 12']) await dice(t, C);
+  const antes = textos(C).length;
+  await dice('mándame fotos', C);
+  const nuevos = textos(C).slice(antes).join('\n');
+  okQue('llegaron las fotos', mandados.some((m) => mismo(m.to, C) && m.image));
+  okQue('el remate NO trae instrucciones internas', !/EXACTAMENTE|datos\.|ver lista|lo más común\)/.test(nuevos));
+  okQue('  y sí trae una pregunta para el cliente', /\?/.test(nuevos));
+}
+
+/* ============================================================ */
 titulo('RFC y razón social: «pregúntame a mí» (7-sep-2026)');
 {
   limpia();

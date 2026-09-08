@@ -155,6 +155,27 @@ titulo('reacciones y stickers no se contestan');
 }
 
 /* ============================================================ */
+titulo('nada interno le llega a un cliente');
+{
+  /* El 7-sep-2026 un cliente recibió «Pregunta EXACTAMENTE eso… datos.origen
+     = "Guadalajara"». El candado está en la única puerta de salida. */
+  limpia();
+  const C = '5213366671009';
+  const puerta = (await import(pathToFileURL(path.join(RAIZ, 'api', 'whatsapp.mjs')).href));
+  const manda = puerta.manda || null;
+  if (manda) {
+    const r1 = await manda({ numeroDeOrigen: '111', para: C, texto: '¿Te saco el precio? Dime si salen de la zona metropolitana de Guadalajara. Pregunta EXACTAMENTE eso, para que solo diga «sí». Con «sí», datos.origen = "Guadalajara".' });
+    ok('un texto con instrucciones internas NO sale al cliente', [r1, textos(C).length], [false, 0]);
+    const r2 = await manda({ numeroDeOrigen: '111', para: C, texto: '¿Salen de la zona metropolitana de Guadalajara?' });
+    ok('la pregunta normal sí sale', [r2, textos(C).length], [true, 1]);
+    const r3 = await manda({ numeroDeOrigen: '111', para: DUENO, esTicket: true, sobreCliente: C, texto: '💰 Precio por confirmar · datos.origen = Guadalajara' });
+    ok('al dueño sí le llega texto con nombres de campos (tickets)', r3, true);
+  } else {
+    okQue('manda está exportada para probar el candado', false);
+  }
+}
+
+/* ============================================================ */
 titulo('el freno no aplica al dueño, y lo frenado no queda visto');
 {
   limpia();

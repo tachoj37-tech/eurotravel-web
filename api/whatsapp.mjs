@@ -1125,6 +1125,29 @@ async function reinyectaAlGuion(envio, textoCanonico) {
   return true;
 }
 
+/* La pregunta que el GUION le haría al cliente en el paso en que va la
+   plática. Es texto para el cliente; `loQueFalta` es texto para la IA y
+   no se le puede mandar a nadie. Si el guion no tiene pregunta para ese
+   paso, una neutra. */
+function preguntaParaElCliente(estado) {
+  try {
+    const p = conversacion.pregunta ? conversacion.pregunta(estado) : null;
+    const t = p && p.texto ? String(p.texto).trim() : '';
+    if (t && !TEXTO_INTERNO.test(t)) return t;
+  } catch (e) { /* sin pregunta: la neutra */ }
+  return '¿Me dices lo que falta y te lo armo?';
+}
+
+/* ------------------------------------------------------------
+   NADA INTERNO LE LLEGA A UN CLIENTE
+   ------------------------------------------------------------
+   Instrucciones para la IA, nombres de campos, plantillas sin llenar.
+   El 7-sep-2026 un cliente recibió «Pregunta EXACTAMENTE eso… datos.origen
+   = "Guadalajara"». Este candado está en `manda`, la única puerta de
+   salida, para que no dependa de quién armó el texto.
+   ------------------------------------------------------------ */
+const TEXTO_INTERNO = /datos\.[a-z]+\s*=|Pregunta EXACTAMENTE|EXACTAMENTE eso|\(ver lista\)|lo m[aá]s com[uú]n\)|\{\{\d\}\}|\bloQueFalta\b|\baccion\b\s*[:=]|"respuesta"\s*:|YA SE SABE DEL VIAJE|PRECIO YA (PEDIDO|DADO)|LO QUE SIGUE POR SABER/;
+
 /* Qué viaje de la ficha ya está en precio: pedido (espera el «va» del
    dueño) o dado. En una línea, sin cifras: la IA no debe repetir montos. */
 function viajeConPrecio(ficha) {
@@ -1249,8 +1272,14 @@ async function loQueDiceElAgente(envio) {
       const v = 'Y el video por dentro 👇\n' + medios.video;
       await manda({ numeroDeOrigen: envio.numeroDeOrigen, para: cliente, texto: v, pasaAPersona: false, escribio: '[agente · video]' });
     }
-    const remate = dicho.respuesta || (conversacion.loQueFalta(nuevo)
-      ? '¿Te saco el precio? Dime ' + conversacion.loQueFalta(nuevo) + '.'
+    /* El remate después de las fotos es la PREGUNTA DEL GUION para el paso
+       que sigue, nunca `loQueFalta`: ése es un texto de instrucciones para
+       la IA («Pregunta EXACTAMENTE eso… datos.origen = "Guadalajara"») y
+       el 7-sep-2026 le llegó tal cual a un cliente. */
+    const siguiente = conversacion.loQueFalta(nuevo)
+      ? preguntaParaElCliente(nuevo) : null;
+    const remate = dicho.respuesta || (siguiente
+      ? '¿Te saco el precio? ' + siguiente
       : '¿Te saco el precio?');
     await manda({ numeroDeOrigen: envio.numeroDeOrigen, para: cliente, texto: remate, pasaAPersona: false, escribio: '[agente]' });
     agente.recuerda(cliente, 'bot', pie + ' ' + remate);
@@ -1715,6 +1744,15 @@ async function manda(envio) {
   const numero = envio.numeroDeOrigen || process.env.WHATSAPP_PHONE_ID;
   if (!token || !numero) {
     console.error('[whatsapp] falta WHATSAPP_TOKEN o el numero de origen');
+    return false;
+  }
+  /* Candado de salida: a un CLIENTE no le llega texto interno. Al dueño
+     sí (los tickets traen nombres de campos a propósito). */
+  const dueno = tickets.numeroDelDueno(process.env);
+  const esParaElDueno = dueno && tickets.mismoNumero(envio.para, dueno);
+  if (!esParaElDueno && !envio.esTicket && TEXTO_INTERNO.test(String(envio.texto || ''))) {
+    console.error('[fuga] se frenó un texto interno que iba a un cliente (' +
+      (envio.escribio || 'sin marca') + '): ' + String(envio.texto).slice(0, 120).replace(/\n/g, ' '));
     return false;
   }
   try {
@@ -2208,3 +2246,5 @@ async function crudoDeNode(req) {
 export default atiende;
 export const GET = atiende;
 export const POST = atiende;
+/* Solo para probar el candado de salida sin pasar por todo el webhook. */
+export { manda };
