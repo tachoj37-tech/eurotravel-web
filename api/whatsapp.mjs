@@ -1181,6 +1181,27 @@ function esTextoInterno(texto) {
   return FRASES_PARA_LA_IA.some(function (f) { return bajo.indexOf(f) >= 0; });
 }
 
+/* Si la IA nombró un autobús con menos asientos que el grupo, su respuesta
+   se cambia por la lista del guion con los que SÍ caben. Solo cuando ya se
+   sabe cuántos son, son más de 20 y todavía no escogieron camión. */
+function sinAutobusesQueNoCaben(respuesta, estado) {
+  const gente = Number(estado && estado.gente) || 0;
+  if (!respuesta || gente <= 20 || (estado && estado.unidadNombre)) return respuesta;
+  const texto = String(respuesta).toLowerCase();
+  const noCaben = (conversacion.UNIDADES || []).filter(function (u) {
+    return u.cat === 'autobus' && Number(u.max) < gente && u.name &&
+      texto.indexOf(String(u.name).toLowerCase()) >= 0;
+  });
+  if (!noCaben.length) return respuesta;
+  const lista = conversacion.listaCortaDeAutobuses(gente);
+  if (!lista.length) {
+    return 'Para ' + gente + ' no nos cabe todo el grupo en un solo autobús (el más grande es de 51). ' +
+      'Se puede con dos unidades; ¿te armo esa opción?';
+  }
+  return 'Para ' + gente + ' les caben estos:\n' + lista.join('\n') +
+    '\n\nTe los recomiendo porque son los que les caben; si el grupo cambia, hay otras opciones. ¿Cuál te late?';
+}
+
 /* Qué viaje de la ficha ya está en precio: pedido (espera el «va» del
    dueño) o dado. En una línea, sin cifras: la IA no debe repetir montos. */
 function viajeConPrecio(ficha) {
@@ -1427,9 +1448,13 @@ async function loQueDiceElAgente(envio) {
      «¿cuánto sale?» antes de tener todos los datos). Se devuelve `false`
      y contesta el guion con lo que falta. */
   if (!dicho.respuesta) return false;
-  await manda({ numeroDeOrigen: envio.numeroDeOrigen, para: cliente, texto: dicho.respuesta,
-    pasaAPersona: false, escribio: '[agente]' });
-  agente.recuerda(cliente, 'bot', dicho.respuesta);
+  /* Con 50 personas nunca se ofrece un camión de 47 (dictado del dueño,
+     7-sep-2026). Si la IA nombró uno que no cabe, sale la lista del guion
+     con los que sí, y punto. Lo decide el código, no el prompt. */
+  const respuestaFinal = sinAutobusesQueNoCaben(dicho.respuesta, nuevo);
+  await manda({ numeroDeOrigen: envio.numeroDeOrigen, para: cliente, texto: respuestaFinal,
+    pasaAPersona: false, escribio: respuestaFinal === dicho.respuesta ? '[agente]' : '[agente · lista corregida]' });
+  agente.recuerda(cliente, 'bot', respuestaFinal);
   return true;
 }
 

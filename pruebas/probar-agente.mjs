@@ -345,6 +345,28 @@ titulo('después de las fotos, la pregunta es para el cliente, no para la IA');
 }
 
 /* ============================================================ */
+titulo('con 50 nunca se ofrece un autobús de 47 (7-sep-2026)');
+{
+  limpia();
+  const C = '5213366670212';
+  laIA = function (t) {
+    if (/vallarta/i.test(t)) return { respuesta: 'Vallarta, va. ¿Qué día salen?', datos: { destino: 'Puerto Vallarta' }, accion: 'seguir' };
+    if (/9 de septiembre/i.test(t)) return { respuesta: 'Listo. ¿Y regresan?', datos: { salida: '2026-09-09' }, accion: 'seguir' };
+    if (/el 14/i.test(t)) return { respuesta: 'Del 9 al 14. ¿Como cuántos van?', datos: { regreso: '2026-09-14' }, accion: 'seguir' };
+    /* La IA se equivoca y ofrece el i6 de 47 y el Century de 49 para 50. */
+    if (/somos 50/i.test(t)) return { respuesta: 'Para 50 les caben:\nIrizar i6 — Premium — 47 asientos\nIrizar Century — Clásico — 49 asientos\nNeobus — Gran Turismo — 50 asientos\n¿Cuál te late?', datos: { gente: 50 }, accion: 'seguir' };
+    return null;
+  };
+  for (const t of ['a vallarta', 'el 9 de septiembre', 'el 14']) await dice(t, C);
+  await dice('somos 50', C);
+  const lista = textos(C).slice(-1)[0];
+  okQue('el i6 de 47 NO aparece', !/Irizar i6 —|Irizar i6\b(?! ?S)/.test(lista));
+  okQue('el Century de 49 NO aparece', !/Century/.test(lista));
+  okQue('  sí aparecen los que caben (G8, i6S, Neobus)', /G8/.test(lista) && /i6S/.test(lista) && /Neobus/.test(lista));
+  okQue('  y dice por qué se los recomienda y que hay otras opciones', /porque son los que les caben/.test(lista) && /otras opciones/.test(lista));
+}
+
+/* ============================================================ */
 titulo('RFC y razón social: «pregúntame a mí» (7-sep-2026)');
 {
   limpia();

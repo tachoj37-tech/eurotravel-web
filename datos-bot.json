@@ -42,7 +42,7 @@
     { "id": "irizar-i6",  "tipo": "Irizar i6",             "capacidad": 47, "linea": "Premium",          "rango_recomendado": "21 a 47",   "cotiza_sola": false, "equipamiento": ["Aire acondicionado", "Baño a bordo", "Pantallas", "Audio"],                  "argumento_media_linea": "PENDIENTE" },
     { "id": "neobus",     "tipo": "Neobus",                "capacidad": 50, "linea": "Gran Turismo",     "rango_recomendado": "21 a 50",   "cotiza_sola": false, "equipamiento": ["Aire acondicionado", "Baño a bordo", "Pantallas", "Reclinables"],             "argumento_media_linea": "PENDIENTE" },
     { "id": "irizar-pb",  "tipo": "Irizar PB",             "capacidad": 47, "linea": "Turismo",          "rango_recomendado": "21 a 47",   "cotiza_sola": false, "equipamiento": ["Aire acondicionado", "Baño a bordo", "Piso alto", "Bodega amplia"],           "argumento_media_linea": "PENDIENTE" },
-    { "id": "irizar",     "tipo": "Irizar Century",        "capacidad": 47, "linea": "Clásico",          "rango_recomendado": "21 a 47",   "cotiza_sola": false, "equipamiento": ["Aire acondicionado", "Baño a bordo", "Asientos reclinables", "Cajuela amplia"], "argumento_media_linea": "PENDIENTE" }
+    { "id": "irizar",     "tipo": "Irizar Century",        "capacidad": 47, "linea": "Clásico",          "rango_recomendado": "21 a 47",   "cotiza_sola": false, "equipamiento": ["Aire acondicionado", "Baño a bordo", "Asientos reclinables", "Cajuela amplia"], "argumento_media_linea": "PENDIENTE", "_": "7-sep-2026: el dueño dijo que el Century tiene también versión de 49. Se queda en 47 por su regla del 4-sep (se promete lo que aguantan TODOS, no el mejor) hasta que confirme que quiere prometer 49." }
   ],
 
   "TEMPORADAS_ALTAS": {
