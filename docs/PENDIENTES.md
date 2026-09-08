@@ -23,7 +23,8 @@ cada vez que algo se cierra.
 | 14 | **`GROQ_API_KEY` en Vercel** (el lector de notas de voz) | console.groq.com → API Keys → crear → pegar en Vercel → Redeploy | Una nota de voz al bot: la entiende; el registro deja de decir «falta GROQ_API_KEY» |
 | 15 | **`GOOGLE_ROUTES_KEY` en Vercel** (destinos fuera de la lista) | Confirmar que existe (la página la usa; si el bot cotiza «Zacatecas» sin precio, falta) | El ticket de un destino raro trae «Calculado: $…» |
 | 16 | **Perfil de WhatsApp Business** completo | Foto, nombre, descripción, dirección, horario, sitio | Se ve al abrir el chat |
-| 17 | **El relevo: probarlo** (ya construido el 7-sep) | Desde tu personal: responde cualquier mensaje de un cliente (ticket, reenvío o el «ver 33…») con **«yo»** → el bot se calla y te reenvía lo que escriba; le contestas citando el reenvío; con **«bot»** lo devuelves. También «33 1234 5678 yo» y «33 1234 5678 bot». El tablero marca con ✋ los chats que tienes | Un cliente de prueba: «yo», escribe, te llega; «bot», la IA vuelve |
+| 17 | **El relevo: probarlo** (ya construido el 7-sep) | Desde tu personal, con los 10 dígitos pegados: **«3312345678 yo»** → el bot se calla con ese cliente y te reenvía lo que escriba; le contestas desde el teléfono del negocio o citando el reenvío; **«3312345678 bot»** lo devuelve a la IA. También sirve responder un ticket suyo con «yo»/«bot». El tablero marca con ✋ los chats que tienes | Un cliente de prueba: «yo», escribe, te llega; «bot», la IA vuelve |
+| 19 | **Un mensaje desde el teléfono del negocio al tercer teléfono** | Solo escribirlo | Con el registro sabré si Dualhook avisa de lo que escribes desde el negocio; si sí, el relevo se vuelve automático (te calla el bot con solo escribir tú) |
 | 18 | **Correr el bloque «EL RELEVO» de `docs/ALMACEN.sql`** (una columna) | SQL Editor, pegar el archivo completo otra vez | El registro no dice «no tiene la columna en_manos_de» |
 
 ## Para lanzar el bot · lista de verificación
