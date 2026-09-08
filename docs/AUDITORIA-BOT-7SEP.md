@@ -99,6 +99,12 @@ IA quiera meter en un dato del contrato.
 
 ---
 
+## D · Encontrado en producción después de la auditoría
+
+| # | Grav. | Dónde | Qué pasó | Estado |
+|---|---|---|---|---|
+| D1 | CRÍTICO | `whatsapp.mjs` rama «fotos» del agente | El remate después de las fotos se armaba con `loQueFalta`, que es texto de instrucciones para la IA: a un cliente le llegó «Pregunta EXACTAMENTE eso… datos.origen = "Guadalajara"». Los tres revisores no lo vieron porque el texto de `origen` en `loQueFalta` se volvió una instrucción larga el 6-sep. | **Resuelto el 7-sep**: el remate usa la pregunta del guion; `manda` frena cualquier texto con marcas internas hacia un cliente (`[fuga]` en el registro); `sanea()` igual. Pruebas en `probar-agente.mjs` y `probar-fase1.mjs`. |
+
 ## Fases para arreglarlo
 
 Cada fase termina con la suite completa en verde y en producción. Se
