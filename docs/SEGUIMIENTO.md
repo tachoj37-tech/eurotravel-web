@@ -98,7 +98,7 @@ Vallarta`. Texto tal cual:
 
 **`seguimiento_24h`** (comprobar que llegó, fácil de contestar, con salida):
 
-> Hola 🙌 Ayer te pasé la cotización de {{1}} con Eurotravel. ¿Te llegó bien? Si quieres, te la ajusto (fecha, cuántos van o la unidad) sin compromiso.
+> Hola 🙌 Ayer te pasé la cotización de {{1}}. ¿Sí te llegó bien? Si algo cambió (la fecha, cuántos van o la unidad), dime y te la ajusto en un momento, sin compromiso.
 
 (Dictado del dueño, 8-sep-2026: **sin ofrecer «stop»**, porque espanta al
 cliente. La investigación decía que Meta rechaza más plantillas de
