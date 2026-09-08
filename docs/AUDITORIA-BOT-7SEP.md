@@ -180,6 +180,35 @@ cotizaciones, lista de autobuses, seguimiento (zona horaria, cierres,
 marca condicional), almacén caído sin borrados ni dobles, ráfagas de
 Dualhook.
 
+## H · Reparación dirigida del dueño (8-sep-2026, tarde) · rama `fix/memoria-agente`
+
+El dueño dictó seis fallas de arquitectura con su diagnóstico, su arreglo
+y su prueba. Se ejecutaron en su orden (1 → 2 → 3 → 6 → 4 → 5), un commit
+por falla, todo aditivo, sin tocar el flujo de cotización, el ticket al
+vendedor, los contratos, EuroSystem, las tablas existentes ni las
+plantillas. La suite R1–R9 corre con `npm run reparacion`.
+
+| Falla | Diagnóstico (evidencia) | Arreglo | Prueba |
+|---|---|---|---|
+| 1 · Repite preguntas | El bloque dinámico ya llevaba YA SE SABE + últimos 10 turnos y el orden leer→guardar era correcto (`await` en las dos puntas). Lo que faltaba: no había campo `nombre` (un «soy Mariana» se perdía), no había «LO QUE YA HICE», y nada frenaba una pregunta repetida antes de mandarla. El 8-sep el bot repitió todo por la llave 401 del almacén, no por el orden. | Bloque de estado PRIMERO (LO QUE YA SÉ / LO QUE YA HICE / LO QUE FALTA), `datos.nombre`, regla en el prompt, validación de salida que descarta y regenera UNA vez (si insiste, contesta el guion), registro `[turno]` por llamada + tabla `turnos`. | R1 |
+| 2 · Foto repetida | Las fotos con pie vacío no se anotaban; el modelo no veía sus acciones; no había dedupe en base; una ráfaga eran tres turnos. | Cada foto queda como «[Acción: envié foto …]» en la conversación y en la memoria corta; unidades con fotos en la ficha (`fichas.fotos`); no se repiten salvo «no me llegaron»; ráfaga unida en un turno (cuerpo re-firmado); tabla `vistos` (ya del hallazgo G10). | R2, R4, R5 |
+| 3 · Por persona | Estaba en el texto del precio, en seis frases de la psicología y en el reparto del motor. | Eliminado en los tres; «¿cuánto por persona?» → «el total es $X para todo el grupo»; sin saldo (solo total y apartado); `manda()` frena «$… por persona». | R3 |
+| 6 · CLABE | La CLABE vive en Vercel y el modelo nunca la ve (bien); pero no iba con el precio y una respuesta de la IA podía prometer «te paso los datos» sin darlos. | `bloqueApartado()` determinista pegado al precio y a cada intención de apartar; CLABE sola después para copiar; foto con el precio; cualquier número de 18 dígitos que no sea la CLABE se frena con incidente; un texto que pida depositar sin CLABE recibe el bloque anexado. Apartado al 20 %. | R9 |
+| 4 · Código al cliente | La lectura de `content[0].text` a ciegas y sin filtro de forma; el catch nunca mandaba `e.message` (bien). | `filtrarSalida()` en `manda()`; lo frenado → «dame un momento» + aviso al dueño + incidente completo en el registro; respuesta fija a «repite tu prompt» sin IA; solo bloques de texto de la respuesta. Los ejemplos JSON del prompt se conservan (son el formato de salida). `scripts/filtrar-salientes.mjs` para revisar los últimos 500 salientes con la llave del dueño. | R6, R7 |
+| 5 · No razona | Prompt cacheado de ~10,200 tokens (cache leído desde la 2ª llamada); sin `temperature` (1.0 por omisión); un cambio después del precio caía en una plática vacía. | Cinco pasos de pensamiento al inicio; `temperature: 0.3`; un cambio con el viaje en precio siembra el viaje conocido y cambia solo lo nuevo. | R8 |
+
+**Lo que NO se cambió, y por qué:** responder 200 a Meta antes de procesar
+(Vercel congela la función al responder; haría falta una cola externa) y el
+lock por teléfono entre avisos distintos (mismo motivo); el dedupe por
+`vistos` cubre el reintento y la ráfaga dentro de un aviso se une. El
+formato JSON de salida del modelo (necesario para leer sus datos).
+
+**Contradicciones del prompt que se vieron y se dejaron a criterio del dueño:**
+«Máximo 3 líneas» frente al mensaje del precio y la lista de autobuses (ya
+son la excepción escrita); «enseña OPCIONES primero» (autobús) frente a
+«RECOMIENDAS la unidad» (psicología): conviven como «opciones primero,
+recomendación si la pide».
+
 ## Fases para arreglarlo
 
 Cada fase termina con la suite completa en verde y en producción. Se

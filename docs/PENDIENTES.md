@@ -8,7 +8,8 @@ cada vez que algo se cierra.
 | # | Qué | Cómo | Cómo se comprueba |
 |---|---|---|---|
 | 2 | **Tres plantillas en Meta** | WhatsApp Manager → Plantillas → Crear: `seguimiento_24h`, `seguimiento_3d`, `seguimiento_7d`, Marketing, Español (MEX), una variable `{{1}}` con muestra «tu viaje a Puerto Vallarta». Textos exactos en `docs/SEGUIMIENTO.md`. Al aprobarse: `WHATSAPP_PLANTILLA_TOQUE1/2/3` en Vercel + Redeploy | El registro deja de decir «no hay WHATSAPP_PLANTILLA_TOQUEn» y `mandados` sube |
-| 20 | **Correr el bloque «8-SEP-2026 · LOS AVISOS YA VISTOS» de `docs/ALMACEN.sql`** (tabla `vistos`) | Supabase → SQL Editor → pegar el archivo completo otra vez | Sin él, un reintento de Meta en otra instancia puede contestar dos veces (auditoría G10) |
+| 20 | **Correr los tres bloques del 8-SEP de `docs/ALMACEN.sql`** (tabla `vistos`, tabla `turnos`, columna `fichas.fotos`) | Supabase → SQL Editor → pegar el archivo completo otra vez | Sin ellos: un reintento de Meta puede contestar dos veces; el registro por turno solo queda en Vercel; las fotos vistas solo viven en la plática |
+| 21 | **Fundir la rama `fix/memoria-agente` a `main`** (reparación dirigida, 6 commits, sección H de la auditoría) | Decirme «fúndela» o hacerlo tú en GitHub | Se despliega solo; luego `npm run reparacion` y las 8 pruebas de humo |
 | 3 | **Confirmar `CLABE`, `DATOS_BANCARIOS` y `SITIO_URL` en Vercel (Production)** | En la prueba del 8-sep, tras «te la aparto» no llegó ni la ficha ni la CLABE: `mandaFicha` exige `CLABE` + `SITIO_URL` | Al escribir «apártamela» con precio dado llegan la imagen de la ficha y la CLABE sola |
 | 5 | **«Va» al plan del agente con memoria** | Leer `docs/AGENTE.md` y decir «va» | Arranca la fase 1 del agente |
 | 6 | **La puerta de Dualhook** (auditoría B6) | Decidir: rotar el tramo cada mes, pedir a Dualhook sus IPs de salida, o pedirle un secreto por aviso | Se implementa lo que decida |
