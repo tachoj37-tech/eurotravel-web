@@ -555,12 +555,14 @@ function idDelUltimoTicket() {
     webhook.olvidaTodo(); mandados = [];
     const C2 = '5213366670014';
     await cotizaChapala(C2, '12 de septiembre', '14');
+    /* Reparación Falla 6 (8-sep-2026): la foto va con el PRECIO, no con la
+       espera (la de la espera queda apagada por bandera). */
     const conLaEspera = mandados.filter((m) => mismo(m.to, C2) && m.image && m.image.link).length;
-    ok('con la espera va una foto', conLaEspera, 1);
+    ok('con la espera NO va foto (va con el precio)', conLaEspera, 0);
     const ticket = idDelUltimoTicket();
     await contesta('va', ticket);
     const total = mandados.filter((m) => mismo(m.to, C2) && m.image && m.image.link).length;
-    ok('  y con el precio NO va otra: sigue siendo una', total, 1);
+    ok('  con el precio va UNA foto, y solo una', total, 1);
     okQue('  y el precio sí llegó', /\*Total: \$/.test(textos(C2).join('\n')));
   }
   delete process.env.SITIO_URL;

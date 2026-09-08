@@ -130,11 +130,10 @@ titulo('la plática de un cliente real, ahora con el agente');
   okQue('con todo junto, el motor cotiza: el cliente recibe la espera (compuerta)', /en breve te paso tu cotizaci/i.test(alCliente));
   /* «No me pidió unidad, el cliente no sabe en qué lo llevan» (7-sep-2026). */
   okQue('  y la espera le dice en qué lo llevan (Sprinter para 12)', /Ser[ií]an en Sprinter para 12/.test(alCliente));
-  /* Efecto dotación: con la espera va la foto de la unidad. Sin pie: el
-     dueño quitó el «ésta es la que les tocaría» el 8-sep-2026. */
+  /* Reparación Falla 6 (8-sep-2026): la foto va con el PRECIO, no con la
+     espera (esa queda apagada por bandera FOTO_CON_LA_ESPERA). */
   const fotosAlCliente = mandados.filter((m) => mismo(m.to, C) && m.image && m.image.link);
-  okQue('  y con la espera va la foto de la Sprinter, sin pie',
-    fotosAlCliente.some((m) => /sprinter/i.test(m.image.link) && !m.image.caption));
+  ok('  y con la espera NO va foto (va con el precio)', fotosAlCliente.length, 0);
   const instrucciones = JSON.stringify(sistemasVistos[sistemasVistos.length - 1] || []);
   okQue('  la IA sabe que para Tequila/Chapala pregunta «¿Es ida y vuelta el mismo día?»', /Es ida y vuelta el mismo d[ií]a/.test(instrucciones));
   okQue('  y que nombra la unidad en el mismo mensaje en que le dicen cuántos', /EN EL MISMO MENSAJE/.test(instrucciones));

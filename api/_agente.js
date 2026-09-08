@@ -199,6 +199,9 @@ function instruccionesDelAgente(voz) {
     '· Decir que lo pasas con alguien más o nombrar a una persona.\n' +
     '· Dar RFC, razón social, dirección fiscal o cualquier dato legal de la empresa: eso ' +
     'es acción "dueno", siempre.\n' +
+    '· Escribir números de cuenta o CLABE. Cuando se entrega el precio o el cliente quiere ' +
+    'apartar, el sistema anexa los datos de depósito por su cuenta; tú no los escribes ni ' +
+    'los inventas (dictado del dueño, 8-sep-2026).\n' +
     '· Hablar de lo que no sea el viaje: si se sale del tema, regresa con una frase amable.\n\n' +
 
     'ACCIONES (el motor las ejecuta, tú solo las pides):\n' +

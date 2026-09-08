@@ -205,6 +205,61 @@ titulo('R3 · el vendedor pone $23,000 para 30: el cliente recibe $23,000 y ning
 }
 
 /* ============================================================ */
+titulo('R9 · el precio lleva unidad + total + foto + apartado + CLABE; y la CLABE se repite cada vez que la pida (Falla 6)');
+{
+  limpia();
+  const C = '5213366670407';
+  const CLABE = '012345678901234567';
+  process.env.CLABE = CLABE;
+  process.env.DATOS_BANCARIOS = 'BBVA · a nombre de Eurotravel SA de CV';
+  laIA = function (t) {
+    if (/tequila/i.test(t)) return { respuesta: 'Tequila, va. ¿Qué día salen?', datos: { destino: 'Tequila' }, accion: 'seguir' };
+    if (/20 de septiembre/i.test(t)) return { respuesta: '¿Es ida y vuelta el mismo día?', datos: { salida: '2026-09-20' }, accion: 'seguir' };
+    if (/^s[ií], mismo/i.test(t)) return { respuesta: 'Listo. ¿Cuántos van?', datos: { regreso: '2026-09-20' }, accion: 'seguir' };
+    if (/somos 15/i.test(t)) return { respuesta: 'Para 15 la unidad es la Sprinter. ¿Salen de la zona metropolitana de Guadalajara?', datos: { gente: 15 }, accion: 'seguir' };
+    if (/^s[ií]$/i.test(t)) return { respuesta: null, datos: { origen: 'Guadalajara' }, accion: 'cotizar' };
+    if (/quiero apartar|cuenta/i.test(t)) return { respuesta: null, datos: {}, accion: 'apartar' };
+    return { respuesta: 'Va 🙌', datos: {}, accion: 'seguir' };
+  };
+  for (const t of ['vamos a tequila', 'el 20 de septiembre', 'sí, mismo día', 'somos 15', 'sí']) await dice(t, C);
+  let idx = -1; mandados.forEach((m, i) => { if (mismo(m.to, DUENO) && /Precio por confirmar/.test((m.text && m.text.body) || '')) idx = i; });
+  const ticket = 'wamid.s' + (idx + 1);
+  const antes = mandados.length;
+  const va = JSON.stringify({ entry: [{ changes: [{ value: { metadata: { phone_number_id: '111' },
+    messages: [{ id: 'wamid.r9-va', from: DUENO, type: 'text', text: { body: 'va' }, context: { id: ticket } }] } }] }] });
+  await atiende(new Request('https://x/api/whatsapp', { method: 'POST', body: va, headers: { 'x-hub-signature-256': firma(va) } }));
+  const tras = mandados.slice(antes).filter((m) => mismo(m.to, C));
+  const textoPrecio = tras.map((m) => (m.text && m.text.body) || (m.image && m.image.caption) || '').join('\n');
+  okQue('con el «va» del vendedor el cliente recibe la unidad y el total', /Sprinter/.test(textoPrecio) && /\*Total: \$/.test(textoPrecio));
+  okQue('  la foto de la unidad', tras.some((m) => m.image && /sprinter/i.test(m.image.link || '')));
+  okQue('  el monto de apartado', /son \*\$[\d,]+\* de apartado/.test(textoPrecio));
+  okQue('  y la CLABE, idéntica a la configurada, con banco y beneficiario', new RegExp('CLABE: ' + CLABE + ' · BBVA').test(textoPrecio));
+  okQue('  más la CLABE pelona para copiar', tras.some((m) => m.text && m.text.body === CLABE));
+  okQue('  y «mándame tu comprobante»', /comprobante/.test(textoPrecio));
+  const antes2 = mandados.length;
+  await dice('ok, quiero apartar', C);
+  const t2 = textos(C).slice(mandados.slice(0, antes2).filter((m) => mismo(m.to, C)).length).join('\n');
+  okQue('«ok, quiero apartar»: recibe de nuevo el apartado y la CLABE', /de anticipo|de apartado/.test(t2) && t2.indexOf(CLABE) >= 0);
+  const antes3 = mandados.length;
+  await dice('pásame la cuenta otra vez', C);
+  const t3 = textos(C).slice(mandados.slice(0, antes3).filter((m) => mismo(m.to, C)).length).join('\n');
+  okQue('«pásame la cuenta otra vez»: la recibe otra vez', t3.indexOf(CLABE) >= 0);
+  okQue('  ninguna otra secuencia de 18 dígitos salió nunca', !textos(C).join('\n').replace(new RegExp(CLABE, 'g'), '').match(/\b\d{18}\b/));
+  /* Una CLABE inventada por el modelo se frena y se avisa. */
+  const antes4 = mandados.length;
+  const { manda } = await import(pathToFileURL(path.join(RAIZ, 'api', 'whatsapp.mjs')).href);
+  const salio = await manda({ numeroDeOrigen: '111', para: C, pasaAPersona: false, escribio: '[prueba]', texto: 'Deposita a la CLABE 999999999999999999 por favor' });
+  okQue('un texto con OTRA CLABE se frena (no sale)', salio === false && !textos(C).slice(mandados.slice(0, antes4).filter((m) => mismo(m.to, C)).length).join('').includes('999999999999999999'));
+  okQue('  y al dueño le llega el incidente', /Frené un mensaje con una CLABE/.test(textos(DUENO).join('\n')));
+  /* Un texto que dice «deposita» sin la CLABE recibe el bloque anexado. */
+  const antes5 = mandados.length;
+  await manda({ numeroDeOrigen: '111', para: C, pasaAPersona: false, escribio: '[prueba]', texto: 'Va, deposita cuando puedas y me mandas el comprobante 🙌' });
+  const t5 = textos(C).slice(mandados.slice(0, antes5).filter((m) => mismo(m.to, C)).length).join('\n');
+  okQue('«deposita cuando puedas» sin CLABE sale CON el bloque anexado', t5.indexOf(CLABE) >= 0 && /de apartado/.test(t5));
+  delete process.env.CLABE; delete process.env.DATOS_BANCARIOS;
+}
+
+/* ============================================================ */
 titulo('R4 · el mismo webhook tres veces: una sola respuesta (Falla 2)');
 {
   limpia();

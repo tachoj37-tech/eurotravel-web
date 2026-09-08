@@ -364,7 +364,12 @@ async function precioDe(envio, opciones) {
        da algo antes de pedirle nada—. Auditoría de psicología del
        7-sep-2026. Solo si se sabe cuál unidad es; un autobús sin escoger
        no se enseña, para no enseñarle uno que no será. */
-    const fotoDeLaUnidad = fotoParaLaEspera(res.unidadNombre || res.unidad || unidad);
+    /* La foto va CON EL PRECIO, no con la espera (dictado del dueño,
+       8-sep-2026, reparación Falla 6: «unidad + precio total + foto +
+       apartado + CLABE» en el mismo turno). La foto con la espera queda
+       apagada por bandera (`FOTO_CON_LA_ESPERA=1` la reactiva), no borrada. */
+    const fotoDeLaUnidad = process.env.FOTO_CON_LA_ESPERA === '1'
+      ? fotoParaLaEspera(res.unidadNombre || res.unidad || unidad) : null;
     /* Sin pie, y no si ya pidió fotos de esa unidad en esta plática
        (`sinFoto`): dictado del dueño, 8-sep-2026. */
     if (fotoDeLaUnidad && !envio.sinFoto) {
@@ -523,10 +528,16 @@ async function precioDe(envio, opciones) {
     });
   };
 
+  /* El bloque de apartado va PEGADO al precio (dictado del dueño, 8-sep-2026,
+     reparación Falla 6): monto de apartado + CLABE, escritos por el código,
+     nunca por el modelo. Si no hay CLABE configurada, el precio sale sin él
+     y queda en el registro. */
+  const apartado = bloqueApartado(precio);
+  if (!apartado) console.error('[apartado] sin CLABE en Vercel: el precio salió sin los datos de depósito');
   const mios = [{
     numeroDeOrigen: envio.numeroDeOrigen,
     para: envio.para,
-    texto: salida.texto,
+    texto: salida.texto + (apartado ? '\n\n' + apartado : ''),
     pasaAPersona: !!salida.pasa,
     alMandar: marcaQueYaTienePrecio,
     escribio: '[precio]'
@@ -561,6 +572,17 @@ async function precioDe(envio, opciones) {
       texto: '',
       pasaAPersona: false,
       escribio: '[foto de la unidad]'
+    });
+  }
+  /* Y la CLABE sola, pelona, para copiarla con un toque largo (el toque
+     copia el mensaje entero). Va después de la foto, al final. */
+  if (apartado && clabeConfigurada()) {
+    mios.push({
+      numeroDeOrigen: envio.numeroDeOrigen,
+      para: envio.para,
+      texto: clabeConfigurada(),
+      pasaAPersona: false,
+      escribio: '[clabe para copiar]'
     });
   }
 
@@ -1297,6 +1319,29 @@ function repartoPorPersona(texto, cliente, ficha, antes) {
 }
 
 /* ------------------------------------------------------------
+   LOS DATOS DE DEPÓSITO LOS ESCRIBE EL CÓDIGO (reparación 8-sep, Falla 6)
+   ------------------------------------------------------------
+   La CLABE, el banco y el beneficiario viven en UN lugar: las variables
+   `CLABE` y `DATOS_BANCARIOS` de Vercel (la imagen de la ficha bancaria
+   sigue en img/ficha-bancaria.png). El modelo nunca la ve ni la escribe:
+   el código arma el bloque y lo pega al precio y a cualquier respuesta
+   donde el cliente quiera apartar. El apartado es el anticipo que ya
+   calculó el motor (20 % a múltiplos de $500, como está estipulado).
+   ------------------------------------------------------------ */
+function clabeConfigurada() {
+  const c = String(process.env.CLABE || '').replace(/\D+/g, '');
+  return c.length === 18 ? c : '';
+}
+function bloqueApartado(precio) {
+  const clabe = clabeConfigurada();
+  if (!clabe || !precio || typeof precio.anticipo !== 'number' || precio.anticipo <= 0) return '';
+  const datos = String(process.env.DATOS_BANCARIOS || '').replace(/\s+/g, ' ').trim();
+  return 'Si gustas apartar, son *$' + precio.anticipo.toLocaleString('en-US') + '* de apartado.\n' +
+    'CLABE: ' + clabe + (datos ? ' · ' + datos : '') + '\n' +
+    'Cuando deposites, mándame tu comprobante por aquí.';
+}
+
+/* ------------------------------------------------------------
    «LO QUE YA HICE» · las acciones del bot, para que el modelo las vea
    ------------------------------------------------------------
    El modelo no recuerda lo que mandó; solo sabe lo que está en el
@@ -1315,8 +1360,8 @@ function loQueYaHice(ficha, antes) {
   if (ficha && ficha.viajeDatos && ficha.viajeDatos.fotoMandada && !vistas.length) h.push('mandé la foto de la unidad');
   const e = ficha && ficha.etapa;
   if (e === 'pidio_precio') h.push('pedí el precio al vendedor; el cliente ya recibió «en breve te paso tu cotización»');
-  if (ETAPAS_DESPUES_DEL_PRECIO.indexOf(e) >= 0) h.push('entregué el precio');
-  if (['va_a_apartar', 'mando_comprobante', 'datos_del_contrato', 'contrato_listo'].indexOf(e) >= 0) h.push('mandé los datos de depósito (anticipo y CLABE)');
+  if (ETAPAS_DESPUES_DEL_PRECIO.indexOf(e) >= 0) h.push('entregué el precio total con el monto de apartado y la CLABE (el sistema los anexa; tú no escribas cuentas)');
+  if (['va_a_apartar', 'mando_comprobante', 'datos_del_contrato', 'contrato_listo'].indexOf(e) >= 0) h.push('el cliente ya pidió apartar: le mandé otra vez el apartado y la CLABE');
   if (['mando_comprobante', 'datos_del_contrato', 'contrato_listo'].indexOf(e) >= 0) h.push('recibí su comprobante; se están juntando los datos del contrato');
   if (e === 'contrato_listo') h.push('el contrato está completo; falta confirmar el pago');
   return h;
@@ -2147,6 +2192,34 @@ async function manda(envio) {
      (el respaldo de la IA y el precio con «requiere asesor»). Aquí, en la
      única puerta de salida, ya no depende de quién armó el texto: el
      cliente recibe una espera honesta y el dueño el aviso. */
+  /* Una CLABE que no sea la configurada es un desastre (reparación Falla 6):
+     cualquier número de 18 dígitos hacia un cliente que no coincida con
+     `CLABE` se frena, queda como incidente crítico y se avisa al dueño. Y si
+     el texto le dice al cliente que deposite y no trae la CLABE, se le anexa
+     el bloque de apartado (el código, no el modelo). */
+  if (!esParaElDueno && !envio.esTicket && !envio.plantilla && envio.texto) {
+    const dieciocho = String(envio.texto).match(/\b\d{18}\b/g) || [];
+    const clabeBuena = clabeConfigurada();
+    const ajena = dieciocho.find(function (n) { return n !== clabeBuena; });
+    if (ajena) {
+      console.error('[CLABE-AJENA] INCIDENTE CRÍTICO: se frenó un texto con un número de 18 dígitos que no es la CLABE (' +
+        (envio.escribio || 'sin marca') + '): ' + String(envio.texto).slice(0, 160).replace(/\n/g, ' '));
+      if (dueno) {
+        await manda({ numeroDeOrigen: envio.numeroDeOrigen, para: dueno, esTicket: true, sobreCliente: envio.para, pasaAPersona: false,
+          texto: '🚨 *Frené un mensaje con una CLABE que no es la nuestra* para el cliente ' + envio.para +
+            '. No le llegó nada. Revisa el registro ([CLABE-AJENA]).', escribio: '[incidente · clabe ajena]' });
+      }
+      return false;
+    }
+    const fichaDelPara = tickets.fichaDe(envio.para);
+    const conPrecioYAnticipo = !!(fichaDelPara && typeof fichaDelPara.total === 'number' && fichaDelPara.total > 0 &&
+      typeof fichaDelPara.anticipo === 'number' && fichaDelPara.anticipo > 0);
+    const pideDepositar = /\b(deposita|transfi[eé]re|haz (el|tu) dep[oó]sito|te paso (la cuenta|los datos)|datos (de|para) (dep[oó]sito|transferencia|el dep[oó]sito))\b/i.test(String(envio.texto));
+    if (conPrecioYAnticipo && pideDepositar && clabeBuena && String(envio.texto).indexOf(clabeBuena) < 0) {
+      envio = Object.assign({}, envio, { texto: String(envio.texto) + '\n\n' + bloqueApartado({ anticipo: fichaDelPara.anticipo }) });
+      console.log('[apartado] se anexó el bloque de depósito a un texto que pedía depositar sin la CLABE');
+    }
+  }
   /* Nada de «por persona» con dinero hacia un cliente (dictado del dueño,
      8-sep-2026, reparación Falla 3): el precio es total, tal cual lo puso
      el vendedor. Un texto así se frena y queda en el registro. */
