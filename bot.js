@@ -1370,8 +1370,11 @@ function cierreDelPrecio(anticipo, saldo, resumen, pesos) {
      donde se le pide que diga que sí— y se guarda para las
      objeciones. En el resto de la conversación no aparece.
      ------------------------------------------------------------ */
+  /* Solo dos montos: el total y el apartado. El saldo no se calcula ni se
+     dice (reparación del 8-sep-2026, Falla 3); el resto se abona o se
+     liquida el día del viaje, como dictó el dueño el 6-sep. */
   return 'Con *' + pesos(anticipo) + '* te bloqueo ' + suyo +
-    ', y los ' + pesos(saldo) + ' restantes los liquidas antes de salir.\n\n' +
+    '; el resto lo puedes ir abonando o liquidarlo el día del viaje.\n\n' +
     /* Sin nombre no se pide el nombre: antes del depósito no se pregunta
        nada (dictado del dueño, 8-sep-2026). */
     (r.nombre ? '¿Te la aparto, ' + r.nombre + '?' : '¿Te la aparto?');
@@ -2561,12 +2564,11 @@ function textoDeCotizacion(precio, resumen) {
      ------------------------------------------------------------ */
   const paraAgencia = !!r.agencia;
 
-  let porPersona = '';
-  const gente = Number(r.gente) || 0;
-  if (!paraAgencia && gente > 1 && precio.total > 0) {
-    porPersona = 'Entre ' + gente + ' son *' +
-      pesos(Math.ceil(precio.total / gente / 10) * 10) + ' por persona*\n';
-  }
+  /* SIN «POR PERSONA» (dictado del dueño, 8-sep-2026, reparación Falla 3):
+     el precio se entrega TOTAL, tal cual lo puso el vendedor, sin dividirlo.
+     Cómo lo repartan entre ellos es cosa suya. La variable queda vacía a
+     propósito para no mover la estructura del mensaje. */
+  const porPersona = '';
 
   /* La comparación contra la alternativa real, según la ocasión.
      Si no se detectó ocasión no se pone nada: una comparación

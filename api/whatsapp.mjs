@@ -1259,12 +1259,15 @@ function repartoPorPersona(texto, cliente, ficha, antes) {
   if (antes && (antes.destino || antes.salida)) return null;
   if (t.length > 70) return null;
   const m = t.match(PIDE_REPARTO);
-  if (!m) return null;
-  const n = Number(m[1] || m[2]);
+  /* «¿Y cuánto sale por persona?» sin número: la misma respuesta, con la
+     gente del viaje (Falla 3: el motor contesta, la IA no divide). */
+  const pideCabeza = /por (persona|cabeza)|cada (uno|quien)|c\/u/i.test(t);
+  if (!m && !pideCabeza) return null;
+  const n = m ? Number(m[1] || m[2]) : Number(ficha.viajeDatos.gente) || 2;
   if (!n || n < 2 || n > 120) return null;
   /* Solo si habla de gente: «para 3 días» o «con 2 paradas» no son personas
      (auditoría general del 8-sep, hallazgo 13). */
-  const hablaDeGente = /persona|pax|gente|pasajero|somos|entre|fu[eé]ramos/i.test(t);
+  const hablaDeGente = /persona|pax|gente|pasajero|somos|entre|fu[eé]ramos|cabeza|cada (uno|quien)|c\/u/i.test(t);
   if (!hablaDeGente) return null;
   if (/\b\d{1,3}\s*(d[ií]as?|paradas?|horas?|noches?|de\s+[a-záéíóú])\b/i.test(t)) return null;
   const v = ficha.viajeDatos;
@@ -1282,13 +1285,13 @@ function repartoPorPersona(texto, cliente, ficha, antes) {
     };
   }
   /* Una pregunta hipotética NO cambia el viaje: la ficha (y el contrato que
-     se sube a EuroSystem) se quedan con la gente original. Si de verdad
-     cambia el grupo, lo dice y se trata como cambio (auditoría general del
-     8-sep, hallazgo 4). */
-  const porPersona = Math.ceil(ficha.total / n / 10) * 10;
+     se sube a EuroSystem) se quedan con la gente original (auditoría general
+     del 8-sep, hallazgo 4). Y SIN dividir (dictado del dueño, 8-sep-2026,
+     reparación Falla 3): el precio es total, por unidad; cómo lo repartan
+     entre ellos es cosa suya. */
   return {
-    texto: 'Entre ' + n + ' sale a *' + pesos(porPersona) + ' por persona*. El total es el mismo, *' + pesos(ficha.total) +
-      '*' + (max ? ' (' + nombre + ' es hasta ' + max + ')' : '') + '. ¿Te la aparto?',
+    texto: 'El precio es por la unidad, no por persona: el total es *' + pesos(ficha.total) + '* para todo el grupo' +
+      (max ? ' (' + nombre + ' es hasta ' + max + ')' : '') + '. Cómo lo repartan entre ustedes es cosa suya. ¿Te la aparto?',
     estado: null
   };
 }
@@ -2144,6 +2147,15 @@ async function manda(envio) {
      (el respaldo de la IA y el precio con «requiere asesor»). Aquí, en la
      única puerta de salida, ya no depende de quién armó el texto: el
      cliente recibe una espera honesta y el dueño el aviso. */
+  /* Nada de «por persona» con dinero hacia un cliente (dictado del dueño,
+     8-sep-2026, reparación Falla 3): el precio es total, tal cual lo puso
+     el vendedor. Un texto así se frena y queda en el registro. */
+  if (!esParaElDueno && !envio.esTicket && !envio.plantilla &&
+      /\$\s?[\d.,]+\s*(por (persona|cabeza)|c\/u|cada (uno|quien))/i.test(String(envio.texto || ''))) {
+    console.error('[por-persona] se frenó un texto con precio por persona que iba a un cliente (' +
+      (envio.escribio || 'sin marca') + '): ' + String(envio.texto).slice(0, 120).replace(/\n/g, ' '));
+    return false;
+  }
   if (!esParaElDueno && !envio.esTicket && !envio.plantilla && !envio.reenviaMedio &&
       webhook.OTRO_NUMERO.test(String(envio.texto || ''))) {
     console.error('[otro-numero] se cambió un texto que mandaba al cliente a otro número (' +

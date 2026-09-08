@@ -165,6 +165,46 @@ titulo('R2 · pedir foto, recibirla, «apártamelo»: cero fotos repetidas (Fall
 }
 
 /* ============================================================ */
+titulo('R3 · el vendedor pone $23,000 para 30: el cliente recibe $23,000 y ningún otro número de dinero (Falla 3)');
+{
+  limpia();
+  const C = '5213366670406';
+  process.env.CLABE = '012345678901234567';
+  /* Autobús de 30 (va sin cotizador; el precio lo pone el vendedor). */
+  laIA = function (t) {
+    if (/mazatl/i.test(t)) return { respuesta: 'Mazatlán, va. ¿Qué día salen?', datos: { destino: 'Mazatlán' }, accion: 'seguir' };
+    if (/10 de octubre/i.test(t)) return { respuesta: '¿Y regresan?', datos: { salida: '2026-10-10' }, accion: 'seguir' };
+    if (/el 12/i.test(t)) return { respuesta: 'Del 10 al 12. ¿Cuántos van?', datos: { regreso: '2026-10-12' }, accion: 'seguir' };
+    if (/somos 30/i.test(t)) return { respuesta: 'Para 30 les caben estos:\nMarcopolo Paradiso G8 — Premium — 51 asientos\nIrizar i6S — Premium — 51 asientos\nNeobus — Gran Turismo — 50 asientos\n¿Cuál te late?', datos: { gente: 30 }, accion: 'seguir' };
+    if (/neobus/i.test(t)) return { respuesta: 'Neobus, va. ¿Salen de la zona metropolitana de Guadalajara?', datos: { autobus: 'neobus' }, accion: 'seguir' };
+    if (/^s[ií]$/i.test(t)) return { respuesta: 'Perfecto. Allá, ¿se mueven con el camión o solo los llevamos y traemos?', datos: { origen: 'Guadalajara' }, accion: 'seguir' };
+    if (/solo nos llevan/i.test(t)) return { respuesta: null, datos: { recorridos: 0 }, accion: 'cotizar' };
+    if (/por persona|por cabeza/i.test(t)) return { respuesta: 'El total es el que te pasé; cómo lo repartan entre ustedes ya es cosa suya 🙌 ¿Te la aparto?', datos: {}, accion: 'seguir' };
+    return { respuesta: 'Va 🙌', datos: {}, accion: 'seguir' };
+  };
+  for (const t of ['vamos a mazatlán', 'el 10 de octubre', 'regresamos el 12', 'somos 30', 'el neobus', 'sí', 'solo nos llevan y traen']) await dice(t, C);
+  /* El vendedor contesta el ticket con el total. */
+  let idx = -1; mandados.forEach((m, i) => { if (mismo(m.to, DUENO) && /Precio por confirmar|precio/i.test((m.text && m.text.body) || '')) idx = i; });
+  const ticket = 'wamid.s' + (idx + 1);
+  const antes = mandados.length;
+  const va = JSON.stringify({ entry: [{ changes: [{ value: { metadata: { phone_number_id: '111' },
+    messages: [{ id: 'wamid.r3-va', from: DUENO, type: 'text', text: { body: '23,000' }, context: { id: ticket } }] } }] }] });
+  await atiende(new Request('https://x/api/whatsapp', { method: 'POST', body: va, headers: { 'x-hub-signature-256': firma(va) } }));
+  const precio = textos(C).slice(mandados.slice(0, antes).filter((m) => mismo(m.to, C)).length).join('\n');
+  okQue('el cliente recibe el total de $23,000', /\*Total: \$23,000\*/.test(precio));
+  const montos = (precio.match(/\$[\d,]+/g) || []).map((m) => m.replace(/[^\d]/g, ''));
+  const distintos = montos.filter((m, i) => montos.indexOf(m) === i);
+  okQue('  y los únicos montos son el total y el apartado (' + distintos.join(', ') + ')', distintos.length <= 2 && distintos.indexOf('23000') >= 0);
+  okQue('  sin «por persona»', !/por persona/.test(precio));
+  const antes2 = textos(C).length;
+  await dice('y cuánto sale por persona?', C);
+  const rep = textos(C).slice(antes2).join('\n');
+  okQue('«¿cuánto por persona?» → el total para todo el grupo, sin dividir', /para todo el grupo/.test(rep) && !/\$[\d,]+ por persona/.test(rep));
+  okQue('  con un solo monto: los $23,000', (rep.match(/\$[\d,]+/g) || []).length === 1 && /23,000/.test(rep));
+  delete process.env.CLABE;
+}
+
+/* ============================================================ */
 titulo('R4 · el mismo webhook tres veces: una sola respuesta (Falla 2)');
 {
   limpia();

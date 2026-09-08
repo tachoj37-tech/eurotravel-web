@@ -554,9 +554,11 @@ console.log('\n== EL IVA NO SE NOMBRA, PERO SE COBRA IGUAL ==');
 {
   const t = conv.textoDeCotizacion(
     { total: 9000, anticipo: 1800, saldo: 7200, dias: 3, porcentajeAnticipo: 20 }, {}).texto;
-  okQue('el anticipo y el saldo suman el total', (function () {
+  /* Reparación del 8-sep-2026 (Falla 3): solo dos montos, total y
+     apartado; el saldo ya no se enseña. */
+  okQue('solo salen el total y el apartado (dos montos, sin saldo)', (function () {
     const n = t.match(/\$([\d,]+)/g).map(function (s) { return Number(s.replace(/[$,]/g, '')); });
-    return n[0] === n[1] + n[2];
+    return n.length === 2 && n[0] === 9000 && n[1] === 1800;
   })());
 }
 
@@ -854,7 +856,9 @@ console.log('\n== EL PRECIO QUE DEVUELVE /api/cotizar ==');
     { total: 9000, anticipo: 1800, saldo: 7200, dias: 3, porcentajeAnticipo: 20,
       requiereAsesor: false }, resumen);
   okQue('enseña el total TAL CUAL vino del motor', /\$9,000/.test(r.texto));
-  okQue('  con su anticipo y su saldo', /\$1,800/.test(r.texto) && /\$7,200/.test(r.texto));
+  /* Reparación del 8-sep-2026 (Falla 3): el saldo ya no se dice; solo el
+     total y el apartado. */
+  okQue('  con su anticipo, y sin el saldo', /\$1,800/.test(r.texto) && !/\$7,200/.test(r.texto));
   okQue('  y NO lo baja quitandole el IVA', !/\$7,759/.test(r.texto));
   okQue('  pero la palabra IVA no aparece', !/iva/i.test(conv.normaliza(r.texto)));
   okQue('  ni se habla de factura', !/factura/i.test(r.texto));
