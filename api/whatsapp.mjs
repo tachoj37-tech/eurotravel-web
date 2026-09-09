@@ -1492,6 +1492,29 @@ function preguntaRepetida(respuesta, estado) {
   }) || null;
 }
 
+/* Un «sí» a secas, con sus variantes tapatías, sin un «no» ni un dato al
+   lado: «si», «sí», «simón», «claro», «así es», «el mismo día». */
+function esUnSiSeco(texto) {
+  const t = conversacion.normaliza(texto).replace(/[!.,;:¡¿?]/g, ' ').trim();
+  if (!t || /\bno\b/.test(t) || t.length > 40) return false;
+  return /^(si|sip|simon|claro( que si)?|asi es|exacto|correcto|ese mismo( dia)?|el mismo dia|mismo dia|ida y vuelta( el mismo dia)?|si el mismo dia|si mismo dia|si es ida y vuelta)$/.test(t);
+}
+
+/* Dos «Perfecto.» seguidos suenan a máquina (regla del prompt que la IA
+   no siempre cumple; prueba del dueño 8-sep-2026, 6:58 p.m.). Si la
+   respuesta abre con la misma muletilla que el último mensaje del bot, se
+   le quita la muletilla. */
+const MULETILLA = /^(perfecto|va|claro|dale|listo|sale|genial|excelente|ok|okey|entendido|de acuerdo)\s*[.,!:]\s*/i;
+function sinMuletillaRepetida(respuesta, ultimoTextoDelBot) {
+  const r = String(respuesta || '');
+  const a = r.match(MULETILLA);
+  const b = String(ultimoTextoDelBot || '').match(MULETILLA);
+  if (!a || !b || a[1].toLowerCase() !== b[1].toLowerCase()) return r;
+  const resto = r.slice(a[0].length).trim();
+  if (!resto) return r;
+  return resto.charAt(0).toUpperCase() + resto.slice(1);
+}
+
 /* Con un autobús ya escogido, «¿cuántos van?» sobra (dictado del dueño,
    8-sep-2026: «puedo rentar un i6 sin que responda cuántos somos»). La IA
    lo preguntó igual después de «i6»; se trata como pregunta repetida: se
@@ -1587,6 +1610,24 @@ async function loQueDiceElAgente(envio) {
      viven hasta siete días en el almacén). Se descarta: si no, ese cliente
      recibiría una espera y un ticket más. */
   if (viajeDeLaFicha && antes.paso === 'confirmar') antes = {};
+  /* ------------------------------------------------------------
+     «¿…EL MISMO DÍA…?» → «SÍ» ES REGRESO = SALIDA
+     ------------------------------------------------------------
+     Prueba del dueño (8-sep-2026, 6:58 p.m.): «¿el 11 salen y regresan el
+     mismo día, o se quedan?» → «si» → «¿Qué día regresan de Sayulita?».
+     La IA no aplicó su propia regla. Se aplica aquí, ANTES de que hable:
+     si el último mensaje del bot preguntó por el mismo día y el cliente
+     dice que sí, el regreso es la salida y la IA ya lo ve en LO QUE YA SÉ.
+     ------------------------------------------------------------ */
+  {
+    const ultimoAntesDeHablar = agente.historialDe(cliente).filter(function (t) { return t.de === 'bot'; }).pop();
+    if (antes.salida && !antes.regreso && ultimoAntesDeHablar &&
+        /mismo d[ií]a/i.test(ultimoAntesDeHablar.texto || '') && esUnSiSeco(texto)) {
+      console.error('[agente] «sí» al mismo día: regreso = salida (' + antes.salida + ')');
+      antes = Object.assign({}, antes, { regreso: antes.salida });
+      webhook.guardaCharla(cliente, antes);
+    }
+  }
   const hayViaje = !!(antes.destino || antes.salida || antes.gente || antes.origen);
   const opcionesDeLaIA = {
     hoy: hoy, cliente: cliente, estado: antes,
@@ -1971,7 +2012,9 @@ async function loQueDiceElAgente(envio) {
      del guion, y punto. Lo decide el código, no el prompt. */
   /* Y si pidió ver camiones y la IA no le enseñó ninguno, la lista
      (dictado del dueño, 8-sep-2026). */
-  const respuestaFinal = conLosAutobusesQuePidio(sinAutobusesQueNoCaben(dicho.respuesta, nuevo), texto, nuevo);
+  const respuestaFinal = sinMuletillaRepetida(
+    conLosAutobusesQuePidio(sinAutobusesQueNoCaben(dicho.respuesta, nuevo), texto, nuevo),
+    ultimoDelBot && ultimoDelBot.texto);
   await manda({ numeroDeOrigen: envio.numeroDeOrigen, para: cliente, texto: respuestaFinal,
     pasaAPersona: false, escribio: respuestaFinal === dicho.respuesta ? '[agente]' : '[agente · lista corregida]' });
   agente.recuerda(cliente, 'bot', respuestaFinal);

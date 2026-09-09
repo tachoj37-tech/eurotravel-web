@@ -113,7 +113,11 @@ la unidad. Prueba R12; la de fase 3 cambió de lado con su razón. Y si el
 bot ofreció fotos («¿Te mando fotos de alguno?») y el cliente contesta con
 el nombre de una unidad («i6»), eso es pedir sus fotos: van las fotos, la
 unidad queda escogida y la descripción de la IA sale después como remate
-(antes describía la unidad y no mandaba nada). Prueba R13. En la misma prueba dijo
+(antes describía la unidad y no mandaba nada). Prueba R13. Y a las 6:58:
+«¿el 11 salen y regresan el mismo día, o se quedan?» → «si» → «¿Qué día
+regresan?». Ahora un «sí» a la pregunta del mismo día fija regreso =
+salida antes de que hable la IA (`esUnSiSeco`), y dos «Perfecto» seguidos
+se recortan (`sinMuletillaRepetida`). Prueba R14. En la misma prueba dijo
 «pasado mañana, 11 de septiembre» siendo día 8: «hoy» se calculaba en UTC
 (Vercel); ahora `hoyISO` es hora de Guadalajara en todos los caminos.
 

@@ -226,7 +226,10 @@ titulo('después de la espera no se vuelve a pedir el precio (7-sep-2026)');
   await dice('ok', C);
   ok('«ok» después de la espera: NO se repite la espera', esperas(), 1);
   ok('  ni llega otro ticket', tickets(), 1);
-  ok('  contesta la IA', textos(C).slice(-1)[0], 'Va, en cuanto lo tenga te aviso 🙌');
+  /* Cambió el 8-sep-2026 (R14): la espera anterior ya abría con «Va,», y
+     dos «Va» seguidos suenan a máquina, así que la muletilla repetida se
+     recorta. El contenido es el de la IA. */
+  ok('  contesta la IA (sin repetir el «Va,» de la espera)', textos(C).slice(-1)[0], 'En cuanto lo tenga te aviso 🙌');
   const s1 = JSON.stringify(sistemasVistos[sistemasVistos.length - 1] || []);
   okQue('  y la IA supo que el precio ya estaba pedido', s1.includes('PRECIO YA PEDIDO'));
 

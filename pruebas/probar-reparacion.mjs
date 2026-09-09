@@ -555,5 +555,36 @@ titulo('R13 · «¿Te mando fotos de alguno?» → «i6»: van las fotos del i6,
   okQue('  y el remate no pregunta cuántos son', !/cu[aá]ntos (van|son)/i.test(desde.map((m) => (m.text && m.text.body) || '').join('\n')));
 }
 
+/* ============================================================ */
+titulo('R14 · «¿…el mismo día, o se quedan?» → «si» = regreso el mismo día; y sin dos «Perfecto» seguidos (6:58 p.m.)');
+{
+  limpia();
+  const C = '5213366670415';
+  webhook.guardaCharla(C, { destino: 'Sayulita', paso: 'regreso', salida: '2026-09-11', unidad: 'autobus', unidadNombre: 'Irizar i6', unidadId: 'irizar-i6', nombre: 'Prueba' });
+  agente.recuerda(C, 'cliente', 'quiero reservar');
+  agente.recuerda(C, 'bot', 'Perfecto. Antes de apartar necesito saber: ¿el 11 de septiembre salen y regresan el mismo día, o se quedan más tiempo en Sayulita?');
+  /* La IA de mentiras hace lo que la real hizo: ignora el «sí» y pregunta
+     el regreso, abriendo otra vez con «Perfecto». Y al regenerar, insiste. */
+  laIA = () => ({ respuesta: 'Perfecto. ¿Qué día regresan de Sayulita?', datos: {}, accion: 'seguir' });
+  const antes = textos(C).length;
+  await dice('si', C);
+  const ch = webhook.charlaDe(C) || {};
+  ok('el «sí» dejó regreso = salida', ch.regreso, '2026-09-11');
+  const dicho = textos(C).slice(antes).join('\n');
+  okQue('el cliente NO recibe «¿qué día regresan?»', !/qu[eé] d[ií]a regresan/i.test(dicho));
+  okQue('  recibe lo que sí falta (el origen)', /zona metropolitana|d[oó]nde salen/i.test(dicho));
+  okQue('  y sin abrir con «Perfecto» otra vez', !/^Perfecto/.test(dicho.trim()));
+  /* Y un «no» al mismo día NO fija el regreso: ahí sí toca preguntar el día. */
+  limpia();
+  const D = '5213366670416';
+  webhook.guardaCharla(D, { destino: 'Sayulita', paso: 'regreso', salida: '2026-09-11', unidad: 'autobus', unidadNombre: 'Irizar i6', unidadId: 'irizar-i6', nombre: 'Prueba' });
+  agente.recuerda(D, 'bot', '¿El 11 de septiembre salen y regresan el mismo día?');
+  laIA = () => ({ respuesta: 'Va. ¿Qué día regresan de Sayulita?', datos: {}, accion: 'seguir' });
+  const antesD = textos(D).length;
+  await dice('no', D);
+  okQue('«no» al mismo día no fija el regreso', !(webhook.charlaDe(D) || {}).regreso);
+  okQue('  y sí se le pregunta qué día regresan', /qu[eé] d[ií]a regresan/i.test(textos(D).slice(antesD).join('\n')));
+}
+
 console.log('\n' + buenas + ' buenas, ' + malas + ' malas');
 process.exit(malas ? 1 : 0);
