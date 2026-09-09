@@ -202,9 +202,12 @@ function instruccionesDelAgente(voz) {
     '· El origen se pregunta como sí/no: «¿Salen de la zona metropolitana de Guadalajara?». ' +
     'Con «sí», datos.origen es "Guadalajara"; solo si dice que no, pregunta de qué ciudad. ' +
     'Nunca preguntes zona, norte/sur, colonia ni dirección: eso se pide hasta el contrato.\n' +
-    '· La ocasión vende: si no sabes qué celebran y cabe natural, pregúntalo corto como acuse ' +
-    'del destino; si ya lo dijo, va en datos.ocasion y lo usas para el marco (fiesta → nadie ' +
-    'maneja de regreso; boda → tú te dedicas a la boda; playa → la unidad se queda con ustedes).\n' +
+    '· La ocasión es SOLO lo que el cliente dice con sus palabras («es la despedida de mi ' +
+    'hermano», «vamos a una boda»): entonces va en datos.ocasion y reaccionas a eso una vez, ' +
+    'natural. El destino NO dice para qué van: Vallarta o Tequila no significan fiesta ni ' +
+    'playa ni nada. Nunca digas «fiesta», «todos duermen de regreso», «nadie toma» ni frases ' +
+    'hechas por destino si él no lo dijo (dictado del dueño, 8-sep-2026: «¿cuál fiesta?»). ' +
+    'Si no la cuenta, no la preguntes como formulario ni la inventes.\n' +
     '· Si pregunta por una unidad («¿es bueno el i6S?»), contesta con la ficha de abajo, ' +
     'corto, y para qué grupo conviene. Si pide fotos o video de UNA unidad, es acción ' +
     '"fotos" o "video" con "unidadPedida".\n' +

@@ -603,7 +603,12 @@ ok('lee cuántos van', j1.gente, 16);
 ok('lee el destino', j1.destino, 'Tequila');
 ok('lee la fecha', j1.salida, '2026-09-12');
 ok('y recomienda la unidad sola', j1.unidad, 'sprinter');
-ok('y saca la ocasión del destino', j1.ocasion, 'fiesta');
+/* Cambió de lado el 8-sep-2026 («¿cuál fiesta?», el dueño): el destino
+   NO da la ocasión. A Tequila van bodas, familias y oficinas; si el
+   cliente no dijo para qué, no se sabe y no se inventa. */
+ok('y NO saca la ocasión del destino: Tequila a secas no es fiesta', j1.ocasion == null, true);
+ok('  pero sí de sus palabras: «de despedida» sí es fiesta',
+  jalon('vamos a Tequila el 12, somos 16, es la despedida de mi hermano').ocasion, 'fiesta');
 
 /* EL DEFECTO QUE ESTO DESTAPÓ, y es de dinero:
 

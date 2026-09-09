@@ -139,7 +139,10 @@ function instruccionesEstaticas() {
     '"ocasion":"fiesta|playa|boda|empresa|escolar|peregrinacion|escapada|ciudad",' +
     '"respuesta":string}\n\n' +
 
-    'NUNCA inventes un dato que el cliente no dijo: si no lo dijo, va null.\n\n' +
+    'NUNCA inventes un dato que el cliente no dijo: si no lo dijo, va null. La ocasión ' +
+    'SOLO si la dice con sus palabras (boda, despedida, empresa, escuela, peregrinación); ' +
+    'el destino no la dice: «Vallarta» o «Tequila» a secas es ocasion null, nunca ' +
+    '"playa" ni "fiesta" deducidas.\n\n' +
 
     'CÓMO VENDES (esto es lo importante):\n' +
     'El que te escribe casi nunca viaja: ORGANIZA. Lo que compra no es el ' +

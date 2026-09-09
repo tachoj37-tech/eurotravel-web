@@ -1133,7 +1133,7 @@ function leeDeUnJalon(crudo, hoy) {
     salida: salida,
     regreso: regreso,
     soloIda: /\bsolo ida\b|\bsencillo\b|\bnada mas de ida\b/.test(t),
-    ocasion: ocasionDe(original, destino),
+    ocasion: ocasionDe(original),
     respuesta: null
   };
 }
@@ -1190,22 +1190,18 @@ function paseosDe(destino) {
 
    Saber para qué es el viaje cambia dos cosas, y ninguna es el
    precio: cómo se le contesta al principio, y contra qué se
-   compara el número al final. Un viaje a Tequila se compara con
-   cuatro coches y con que alguien se quede sin tomar; uno de
+   compara el número al final. Una despedida se compara con
+   cuatro coches y con que alguien se quede sin tomar; un viaje de
    empresa, con la factura y la hora de llegada.
 
-   El destino da la ocasión por defecto. Las palabras del cliente
-   MANDAN sobre el destino: una boda en Tequila es una boda.
+   LA OCASIÓN SOLO SALE DE LAS PALABRAS DEL CLIENTE. Hasta el
+   8-sep-2026 el destino la daba por omisión (Tequila → fiesta,
+   Vallarta → playa) y el bot le contestó «la fiesta empieza ahí; de
+   regreso todos duermen y nadie maneja» a alguien que solo dijo
+   «Vallarta». El dueño: «¿cuál fiesta?». A Tequila van bodas,
+   familias y oficinas; a Vallarta, convenciones y abuelos. Si no lo
+   dijo, no se sabe, y no se inventa.
    ------------------------------------------------------------ */
-const OCASION_POR_DESTINO = [
-  { busca: /tequila|amatit[aá]n|guachimontones/i, ocasion: 'fiesta' },
-  { busca: /vallarta|mazatl[aá]n|manzanillo|guayabitos|canc[uú]n|acapulco|sayulita|chacala|barra de navidad|tenacatita|mayto|punta perula|mismaloya|ixtapa|huatulco/i, ocasion: 'playa' },
-  { busca: /talpa|san juan de los lagos|sto\.? toribio|santo toribio/i, ocasion: 'peregrinacion' },
-  { busca: /chapala|ajijic|cosal[aá]|mazamitla|tapalpa|zirahu[eé]n|p[aá]tzcuaro/i, ocasion: 'escapada' },
-  { busca: /ciudad de m[eé]xico|cdmx|puebla|quer[eé]taro|monterrey|le[oó]n|guadalajara/i, ocasion: 'ciudad' }
-];
-
-/* Lo que el cliente dice de su viaje gana sobre el mapa de arriba. */
 const OCASION_POR_PALABRA = [
   { ocasion: 'boda',           palabras: ['boda', 'bodas', 'novia', 'novio', 'xv', 'quince', 'quinceanera', 'quinceañera'] },
   { ocasion: 'fiesta',         palabras: ['despedida', 'cumpleanos', 'cumpleaños', 'cantaritos', 'fiesta', 'party'] },
@@ -1217,25 +1213,20 @@ const OCASION_POR_PALABRA = [
 /* Cuando no hay señal se queda en `null` a propósito: un acuse
    entusiasta y genérico —«¡qué buen plan!»— suena a robot y no a
    vendedor. Sin señal, se contesta corto y ya. */
-function ocasionDe(texto, destino) {
+function ocasionDe(texto) {
   const t = String(texto || '');
   for (let i = 0; i < OCASION_POR_PALABRA.length; i++) {
     if (tiene(t, OCASION_POR_PALABRA[i].palabras)) return OCASION_POR_PALABRA[i].ocasion;
   }
-  const d = String(destino || '');
-  for (let i = 0; i < OCASION_POR_DESTINO.length; i++) {
-    if (OCASION_POR_DESTINO[i].busca.test(d)) return OCASION_POR_DESTINO[i].ocasion;
-  }
   return null;
 }
 
-/* Una línea, específica, al enterarse del destino. Nunca dos. */
+/* Una línea, específica, cuando el cliente DIJO para qué es. Nunca dos,
+   y nada que afirme cosas de la empresa que nadie comprobó («esa ruta
+   la hacemos cada fin» se quitó el 8-sep-2026). */
 const ACUSE_DE_OCASION = {
-  fiesta:        'Buenísimo plan, esa ruta la hacemos cada fin.',
-  playa:         'Va, playa 🌴',
-  peregrinacion: 'Esa ruta la conocemos bien, la hacemos cada año.',
-  escapada:      'Buen destino para desconectarse.',
-  ciudad:        'Perfecto.',
+  fiesta:        'Buen plan 🎉',
+  peregrinacion: 'Esa ruta la conocemos bien.',
   boda:          'Felicidades 🎉 Tú dedícate al evento, de mover gente nos encargamos nosotros.',
   empresa:       'Perfecto.',
   escolar:       'Va.'
@@ -2118,14 +2109,14 @@ function pasoDeCotizacion(t, crudo, estado, hoy) {
     e.destino = (leido.destino
       ? limpiaDestino(leido.destino)
       : limpiaDestino(dicho)).slice(0, 120);
-    /* La ocasión sale de aquí: del destino, y de lo que el cliente
-       haya escrito al decirlo —«vamos a Tequila de despedida»—. No
-       se le pregunta nunca: preguntar «¿para qué es el viaje?» suena
-       a formulario, y de todos modos casi siempre ya lo dijo.
+    /* La ocasión sale SOLO de lo que el cliente haya escrito al decir
+       el destino —«vamos a Tequila de despedida»—; el destino solo no
+       la da (8-sep-2026). No se le pregunta nunca: «¿para qué es el
+       viaje?» suena a formulario, y casi siempre ya lo dijo.
 
        Si ya venía puesta de antes no se pisa: la primera señal es la
-       buena, y el destino no debe sobrescribir una boda. */
-    if (!e.ocasion) e.ocasion = ocasionDe(crudo, e.destino);
+       buena. */
+    if (!e.ocasion) e.ocasion = ocasionDe(crudo);
     const acuse = ACUSE_DE_OCASION[e.ocasion]
       ? '*' + e.destino + '*, va 📍 ' + ACUSE_DE_OCASION[e.ocasion]
       : '*' + e.destino + '*, va 📍';

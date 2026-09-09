@@ -86,6 +86,15 @@ Cuando las ocho pasen, se anuncia el número.
 
 ## Hecho el 8-sep-2026 (madrugada)
 
+**«¿Cuál fiesta?»** (prueba de humo del dueño, 6 p.m.): a un «Vallarta» por
+nota de voz el bot contestó «la fiesta empieza ahí; de regreso todos
+duermen y nadie maneja». La psicología de ventas se reescribió de manual
+de técnicas con frases hechas a principios de vendedor sin frases para
+copiar (`_psicologia.js` = `docs/PSICOLOGIA-DE-VENTAS.md`); la ocasión sale
+SOLO de las palabras del cliente, nunca del destino (`bot.js`, `_entender.js`,
+`_agente.js`). El audio ya funciona: Groq transcribió la nota de voz.
+Conversaciones de prueba borradas con `docs/LIMPIAR-PRUEBAS.sql` + redeploy.
+
 **Seguimiento sin plantillas de Meta** («quitamos lo de Meta, es mucho»):
 el primer toque baja a 22 h y sale como texto libre gratis; los de 3 y 7
 días le llegan al dueño en un resumen para que escriba él desde su
