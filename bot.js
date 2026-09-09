@@ -267,11 +267,19 @@ const MESES = {
 
 function dosDigitos(n) { return (n < 10 ? '0' : '') + n; }
 
-/* El día de hoy en `aaaa-mm-dd`, con la hora LOCAL. Se usan las
-   partes locales del reloj, no `toISOString`, que convierte a UTC y
-   después de las 6 de la tarde daría mañana. */
+/* El día de hoy en `aaaa-mm-dd`, en hora de GUADALAJARA. Ni `toISOString`
+   (UTC) ni las partes «locales» del reloj sirven: en Vercel lo local ES
+   UTC, y a las 6:22 p.m. del 8 el bot le dijo a un cliente «pasado mañana,
+   11 de septiembre» porque para él ya era día 9 (8-sep-2026). Jalisco no
+   cambia de horario desde 2022, así que America/Mexico_City es exacto. */
 function hoyISO(reloj) {
   const d = reloj || new Date();
+  try {
+    const iso = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'America/Mexico_City', year: 'numeric', month: '2-digit', day: '2-digit'
+    }).format(d);
+    if (/^\d{4}-\d{2}-\d{2}$/.test(iso)) return iso;
+  } catch (e) { /* sin Intl (navegador viejo): se cae a lo local */ }
   return d.getFullYear() + '-' + dosDigitos(d.getMonth() + 1) + '-' + dosDigitos(d.getDate());
 }
 
@@ -3872,6 +3880,20 @@ function listaCortaDeAutobuses(gente) {
   return autobusesPara(gente).caben;
 }
 
+/* Todos los autobuses, de más a menos asientos, para cuando el cliente
+   pide «un camión» o pregunta «¿qué camiones tienen?» ANTES de decir
+   cuántos son. Dictado del dueño (8-sep-2026): «si el cliente quiere
+   camiones ofrécele opciones, no hay problema». Antes el bot se aferraba
+   a «depende de cuántos van» y no enseñaba nada. Si ya se sabe cuántos
+   son y son más de 20, va la lista ordenada por lo que les cabe. */
+function mensajeDeTodosLosAutobuses(gente) {
+  const n = Number(gente) || 0;
+  if (n > 20) return mensajeDeAutobuses(n);
+  const todos = autobusesPara(0).caben;
+  return 'Estos son los autobuses que tenemos:\n' + todos.join('\n') +
+    '\n\n¿Cuántos van? Con eso te digo cuáles les caben y te recomiendo uno.';
+}
+
 /* El mensaje completo que ve el cliente cuando toca elegir autobús. Lo
    arma el código, no la IA, para que el orden y las frases sean siempre
    los que dictó el dueño. */
@@ -3943,7 +3965,7 @@ module.exports = {
   leeDeUnJalon, origenDeLaFrase, destinoDeLaFrase, limpiaDestino, esAgencia,
   /* Para probar la tolerancia a faltas sin pasar por todo el bot. */
   esLaPalabra, fonetica, distancia,
-  normaliza, cuantaGente, unidadPara, fechaDe, fechaEnPalabras, hoyISO,
+  normaliza, cuantaGente, unidadPara, fechaDe, fechaEnPalabras, hoyISO, mensajeDeTodosLosAutobuses,
   /* `pregunta` y `diasEntre` se exportan para poder vigilarlos desde las
      pruebas: que ninguna opción se pase de los topes de WhatsApp —3
      botones de 20 caracteres o 10 filas de 24— y que los días se cuenten

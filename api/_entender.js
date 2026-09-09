@@ -408,7 +408,10 @@ async function entiende(mensaje, opciones) {
   const o = opciones || {};
   const clave = o.clave || process.env.ANTHROPIC_API_KEY;
   const pide = o.pide || (typeof fetch === 'function' ? fetch : null);
-  const hoy = o.hoy || new Date().toISOString().slice(0, 10);
+  /* Hoy en hora de Guadalajara, no UTC (8-sep-2026). */
+  const hoy = o.hoy || (function () {
+    try { return require('../bot.js').hoyISO(); } catch (e) { return new Date().toISOString().slice(0, 10); }
+  })();
 
   /* Sin clave configurada NO se cae: simplemente no hay IA, y el bot
      sigue contestando como siempre. Es una mejora, no un requisito. */

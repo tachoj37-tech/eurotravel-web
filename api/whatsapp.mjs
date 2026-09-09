@@ -297,7 +297,7 @@ async function precioDe(envio, opciones) {
   const confirmado = !!(opciones && opciones.confirmado);
   const totalFijado = (opciones && typeof opciones.totalFijado === 'number') ? opciones.totalFijado : null;
   const res = envio.resumen || {};
-  const hoy = hoyDePrueba() || new Date().toISOString().slice(0, 10);
+  const hoy = hoyDePrueba() || conversacion.hoyISO();
 
   /* ---- la compuerta: todo pasa por el dueño ---- */
   if (!confirmado && encendido('CONFIRMAR_PRECIOS')) {
@@ -647,8 +647,9 @@ function hayCupoDeIA(hoy) {
 }
 
 async function loQueLaIAEntendio(envio) {
-  const hoy = hoyDePrueba() ||
-    new Date().toISOString().slice(0, 10);
+  /* Hoy en hora de Guadalajara, no UTC: a las 6 de la tarde ya es «mañana»
+     en Vercel y «pasado mañana» salía un día corrido (8-sep-2026). */
+  const hoy = hoyDePrueba() || conversacion.hoyISO();
   if (!process.env.ANTHROPIC_API_KEY) return null;
   if (!hayCupoDeIA(hoy)) {
     console.error('[whatsapp] tope diario de IA alcanzado, sigue el guion');
@@ -787,8 +788,7 @@ async function loQueLaIAEntendio(envio) {
    a pedir lo que falta— y el cliente no se queda en silencio.
    ------------------------------------------------------------ */
 async function datosDelContrato(envio) {
-  const hoy = hoyDePrueba() ||
-    new Date().toISOString().slice(0, 10);
+  const hoy = hoyDePrueba() || conversacion.hoyISO();
   if (!process.env.ANTHROPIC_API_KEY) return null;
   if (!hayCupoDeIA(hoy)) {
     console.error('[whatsapp] tope diario de IA alcanzado, sin extraer datos');
@@ -1242,6 +1242,35 @@ function sinAutobusesQueNoCaben(respuesta, estado) {
   return bienOrdenado ? respuesta : conversacion.mensajeDeAutobuses(gente);
 }
 
+/* ------------------------------------------------------------
+   «QUIERO UN CAMIÓN» / «¿QUÉ CAMIONES TIENEN?» · SE ENSEÑAN LAS OPCIONES
+   ------------------------------------------------------------
+   Prueba del dueño (8-sep-2026, 6:22 p.m.): «salimos pasado y quiero un
+   camión» → «¿cuántos van?»; «camion» → «¿cuántos van?»; «que camiones
+   tiene?» → «depende de cuántos van». Tres veces pidió ver autobuses y
+   tres veces se le negó por no decir cuántos son. Dictado: «si el
+   cliente quiere camiones ofrécele opciones, no hay problema».
+
+   Si el cliente pidió autobuses y la IA no nombró ninguno, sale la
+   lista del catálogo (todos, o los que le caben si ya se sabe cuántos
+   son). Lo decide el código: el prompt también lo dice, pero la IA ya
+   demostró que se aferra a la pregunta.
+   ------------------------------------------------------------ */
+const PIDE_AUTOBUSES = /\b(camion(es)?|autob[uú]s(es)?|bus(es)?|que unidades|qu[eé] unidades|qu[eé] camiones|opciones de (camion|autob[uú]s)|unidades tienen)\b/i;
+function pideAutobuses(textoDelCliente) {
+  return PIDE_AUTOBUSES.test(String(textoDelCliente || ''));
+}
+function conLosAutobusesQuePidio(respuesta, textoDelCliente, estado) {
+  if (!pideAutobuses(textoDelCliente)) return respuesta;
+  if (estado && estado.unidadNombre) return respuesta;
+  const texto = String(respuesta || '').toLowerCase();
+  const nombraUnAutobus = (conversacion.UNIDADES || []).some(function (u) {
+    return u.cat === 'autobus' && u.name && texto.indexOf(String(u.name).toLowerCase()) >= 0;
+  });
+  if (nombraUnAutobus) return respuesta;
+  return conversacion.mensajeDeTodosLosAutobuses(estado && estado.gente);
+}
+
 /* Qué viaje de la ficha ya está en precio: pedido (espera el «va» del
    dueño) o dado. En una línea, sin cifras: la IA no debe repetir montos. */
 /* ------------------------------------------------------------
@@ -1518,7 +1547,7 @@ function viajeConPrecio(ficha) {
 
 async function loQueDiceElAgente(envio) {
   if (!process.env.ANTHROPIC_API_KEY) return false;
-  const hoy = hoyDePrueba() || new Date().toISOString().slice(0, 10);
+  const hoy = hoyDePrueba() || conversacion.hoyISO();
   if (!hayCupoDeIA(hoy)) return false;
   const cliente = envio.para;
   const texto = envio.crudoDelCliente;
@@ -1893,7 +1922,9 @@ async function loQueDiceElAgente(envio) {
   /* Al elegir autobús, primero los que caben y hasta el final los que no
      (dictado del dueño, 7-sep-2026). Si la IA los mezcló, sale el mensaje
      del guion, y punto. Lo decide el código, no el prompt. */
-  const respuestaFinal = sinAutobusesQueNoCaben(dicho.respuesta, nuevo);
+  /* Y si pidió ver camiones y la IA no le enseñó ninguno, la lista
+     (dictado del dueño, 8-sep-2026). */
+  const respuestaFinal = conLosAutobusesQuePidio(sinAutobusesQueNoCaben(dicho.respuesta, nuevo), texto, nuevo);
   await manda({ numeroDeOrigen: envio.numeroDeOrigen, para: cliente, texto: respuestaFinal,
     pasaAPersona: false, escribio: respuestaFinal === dicho.respuesta ? '[agente]' : '[agente · lista corregida]' });
   agente.recuerda(cliente, 'bot', respuestaFinal);

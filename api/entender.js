@@ -122,9 +122,8 @@ module.exports = async function (req, res) {
     return res.status(200).json({ hayIA: false, sinClave: true });
   }
 
-  const datos = await ia.entiende(mensaje, {
-    hoy: new Date().toISOString().slice(0, 10)
-  });
+  /* Sin `hoy`: el lector lo calcula en hora de Guadalajara (8-sep-2026). */
+  const datos = await ia.entiende(mensaje, {});
 
   /* `entiende` ya devolvió todo limpio y validado: sin precios,
      sin datos inventados de la empresa y sin anunciar traspasos.

@@ -457,5 +457,36 @@ titulo('R8 · 30 turnos con cambios de opinión: mantiene el hilo, actualiza sin
   delete process.env.CLABE; delete process.env.AHORA_DE_PRUEBA;
 }
 
+/* ============================================================ */
+titulo('R11 · «quiero un camión» / «¿qué camiones tienen?»: se enseñan las opciones aunque no diga cuántos son');
+{
+  limpia();
+  const C = '5213366670412';
+  /* La IA de mentiras hace lo que la real hizo el 8-sep a las 6:22 p.m.:
+     se aferra a «¿cuántos van?» y nunca enseña un autobús. */
+  laIA = (t) => /camion|camiones/i.test(t)
+    ? { respuesta: 'Para Vallarta con ustedes depende de cuántos van. ¿Cuántos son en total?', datos: { destino: 'Puerto Vallarta', unidad: 'autobus' }, accion: 'seguir' }
+    : { respuesta: 'Va. ¿Cuántos van y qué día salen?', datos: {}, accion: 'seguir' };
+  await dice('hola, vamos a Vallarta', C);
+  let antes = textos(C).length;
+  await dice('que camiones tiene?', C);
+  const lista = textos(C).slice(antes).join('\n');
+  okQue('«¿qué camiones tiene?» sin saber cuántos son → la lista completa del catálogo', /Marcopolo Paradiso G8/.test(lista) && /Irizar Century/.test(lista) && /Irizar PB/.test(lista));
+  okQue('  de más a menos asientos', lista.indexOf('Paradiso G8') < lista.indexOf('Neobus') && lista.indexOf('Neobus') < lista.indexOf('Irizar PB'));
+  okQue('  y luego sí pregunta cuántos van, para recomendar', /¿Cuántos van\?/.test(lista));
+  okQue('  sin el «depende de cuántos van» de la IA', !/depende de cu[aá]ntos/.test(lista));
+  /* Con la IA que SÍ enseña autobuses no se toca su respuesta. */
+  laIA = () => ({ respuesta: 'Claro: tenemos Marcopolo Paradiso G8 (51), Irizar i6S (51) y Neobus (50), entre otros. ¿Cuántos van?', datos: {}, accion: 'seguir' });
+  antes = textos(C).length;
+  await dice('quiero un camion', C);
+  okQue('si la IA ya nombró autobuses, su respuesta se respeta', /entre otros/.test(textos(C).slice(antes).join('\n')));
+  /* Y si ya se sabe que son 30, la lista es la de los que les caben. */
+  laIA = () => ({ respuesta: '¿Cuántos son en total?', datos: { gente: 30 }, accion: 'seguir' });
+  webhook.guardaCharla(C, { destino: 'Puerto Vallarta', paso: 'salida', gente: 30, unidad: 'autobus' });
+  antes = textos(C).length;
+  await dice('a ver los autobuses', C);
+  okQue('con 30 personas ya sabidas, la lista dice «Para 30 se ajustan a la capacidad»', /Para 30 se ajustan/.test(textos(C).slice(antes).join('\n')));
+}
+
 console.log('\n' + buenas + ' buenas, ' + malas + ' malas');
 process.exit(malas ? 1 : 0);

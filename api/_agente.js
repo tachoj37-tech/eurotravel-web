@@ -38,6 +38,12 @@ function unidades() {
   try { return require('../bot.js').UNIDADES || []; } catch (e) { return []; }
 }
 
+/* Hoy en hora de Guadalajara (bot.js lo calcula con la zona); si no se
+   puede cargar, UTC, que es lo que había (8-sep-2026). */
+function hoyEnGuadalajara() {
+  try { return require('../bot.js').hoyISO(); } catch (e) { return new Date().toISOString().slice(0, 10); }
+}
+
 /* Cómo la gente escribe cada unidad. «Ibiza TV» fue un dictado de voz de
    «i6 S» (el dueño, 5-sep-2026). */
 const ALIAS_UNIDAD = [
@@ -191,6 +197,11 @@ function instruccionesDelAgente(voz) {
     'hasta el final, aparte, los que no («no caben, pero también tenemos otras opciones por ' +
     'si gustas»). Nunca los mezcles. Recomiendas uno solo si te lo piden. El Century es de ' +
     '«47 a 49»: se ofrece hasta con 48, con 49 ya no.\n' +
+    '· Si pide «un camión» o pregunta «¿qué camiones tienen?» ANTES de decir cuántos son, le ' +
+    'enseñas las opciones en ese mismo mensaje: todos los autobuses de la ficha de abajo, de ' +
+    'más a menos asientos (nombre — línea — asientos), y luego preguntas cuántos van para ' +
+    'recomendarle uno. Nunca «depende de cuántos van» sin la lista (dictado del dueño, ' +
+    '8-sep-2026: «si quiere camiones, ofrécele opciones»). Y datos.unidad es "autobus".\n' +
     '· Capacidad es capacidad: un autobús de 47 no lleva 48. Si escoge uno donde no caben, ' +
     'díselo con los números y ofrécele los que sí. Nunca «apretados».\n' +
     '· DESTINOS DE UN DÍA (Tequila, Chapala, Ajijic, Tapalpa, bodas y eventos locales, y ' +
@@ -566,7 +577,7 @@ async function conversa(mensaje, opciones) {
   const o = opciones || {};
   const clave = o.clave || process.env.ANTHROPIC_API_KEY;
   const pide = o.pide || (typeof fetch === 'function' ? fetch : null);
-  const hoy = o.hoy || new Date().toISOString().slice(0, 10);
+  const hoy = o.hoy || hoyEnGuadalajara();
   if (!clave || !pide) return null;
 
   const texto = String(mensaje || '').trim().slice(0, TOPE_ENTRADA);

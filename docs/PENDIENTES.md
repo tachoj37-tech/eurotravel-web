@@ -95,6 +95,15 @@ SOLO de las palabras del cliente, nunca del destino (`bot.js`, `_entender.js`,
 `_agente.js`). El audio ya funciona: Groq transcribió la nota de voz.
 Conversaciones de prueba borradas con `docs/LIMPIAR-PRUEBAS.sql` + redeploy.
 
+**«Si quiere camiones, ofrécele opciones»** (6:22 p.m.): a «quiero un
+camión» y «¿qué camiones tiene?» el bot contestaba «depende de cuántos
+van» tres veces seguidas. Ahora, si pide autobuses y la IA no nombra
+ninguno, sale la lista completa del catálogo (o los que le caben si ya se
+sabe cuántos son) y luego pregunta cuántos van (`mensajeDeTodosLosAutobuses`,
+candado `conLosAutobusesQuePidio`, prueba R11). En la misma prueba dijo
+«pasado mañana, 11 de septiembre» siendo día 8: «hoy» se calculaba en UTC
+(Vercel); ahora `hoyISO` es hora de Guadalajara en todos los caminos.
+
 **Seguimiento sin plantillas de Meta** («quitamos lo de Meta, es mucho»):
 el primer toque baja a 22 h y sale como texto libre gratis; los de 3 y 7
 días le llegan al dueño en un resumen para que escriba él desde su
