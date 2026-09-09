@@ -189,6 +189,24 @@ ya no confunde un viaje nuevo con un cambio: si lo dijo como otro viaje o
 el destino es distinto, es cotización nueva. Una segunda cotización tampoco
 vence el precio de la primera. Prueba R26.
 
+**Quinta tanda: la cotidiana completa** (escenario s, de «buenas tardes»
+hasta el contrato, con el dueño confirmando el precio, el cliente
+depositando y mandando comprobante). Salió lo peor de todo: **del mensaje
+13 en adelante el bot se quedaba MUDO**. El freno era de 12 mensajes por
+minuto y al pasarse descartaba en silencio; el cliente que ya había
+depositado dio su nombre, su dirección, su hora y preguntó «¿ya quedó
+todo?» sin recibir nada. Ahora el freno es de 20 y, al frenar, avisa UNA
+vez por minuto («voy leyendo tus mensajes»). Al dueño el freno nunca le
+aplica. Prueba R27. También: tras el comprobante ya no se repite la lista
+de cinco datos cuando el acuse acaba de pedirlos.
+
+**Y la duda del dueño («no me llegan mensajes para confirmar precios»):**
+no era una falla de envío. En el registro de producción no hay NI UN
+«Precio por confirmar» de sus pruebas, porque ninguna llegó a completar el
+viaje (siempre faltaba el regreso o el origen). Con el camino completo, al
+dueño le llegan tres cosas: el ticket del precio, el comprobante reenviado
+y la ficha de datos del contrato.
+
 **Seguimiento sin plantillas de Meta** («quitamos lo de Meta, es mucho»):
 el primer toque baja a 22 h y sale como texto libre gratis; los de 3 y 7
 días le llegan al dueño en un resumen para que escriba él desde su

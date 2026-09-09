@@ -238,12 +238,18 @@ titulo('el freno no aplica al dueño, y lo frenado no queda visto');
 
   limpia();
   const C = '5213366671003';
-  for (let i = 0; i < 13; i++) await manda(avisoDe([texto(C, 'hola ' + i, 'wamid.freno.' + i)]));
-  ok('13 mensajes de un cliente en un minuto → 12 respuestas', textos(C).length, 12);
-  /* Meta reintenta el 13.º dos minutos después: ahora sí entra. */
+  /* Cambió el 9-sep-2026: el tope pasó de 12 a 20 por minuto, y al frenado
+     ya no se le deja en silencio —se le avisa UNA vez— porque en la corrida
+     completa un cliente que ya había depositado dio sus datos del contrato
+     de uno en uno y del mensaje 13 en adelante el bot no contestó nada. */
+  for (let i = 0; i < 21; i++) await manda(avisoDe([texto(C, 'hola ' + i, 'wamid.freno.' + i)]));
+  ok('21 mensajes de un cliente en un minuto → 20 respuestas + 1 aviso', textos(C).length, 21);
+  ok('  y el aviso es «voy leyendo», una sola vez',
+    textos(C).filter((t) => /Voy leyendo tus mensajes/.test(t)).length, 1);
+  /* Meta reintenta el frenado dos minutos después: ahora sí entra. */
   process.env.AHORA_DE_PRUEBA = String(AHORA + 2 * 60000);
-  await manda(avisoDe([texto(C, 'hola 12', 'wamid.freno.12')]));
-  ok('  el reintento del frenado, pasado el minuto, sí se contesta', textos(C).length, 13);
+  await manda(avisoDe([texto(C, 'hola 20', 'wamid.freno.20')]));
+  ok('  el reintento del frenado, pasado el minuto, sí se contesta', textos(C).length, 22);
   process.env.AHORA_DE_PRUEBA = String(AHORA);
 }
 

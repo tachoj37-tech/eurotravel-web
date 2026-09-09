@@ -182,11 +182,24 @@ const escenarios = {
   q: ['a tequila el 17 de octubre, ida y vuelta, somos 18, de guadalajara, solo nos llevan y traen', va('5213366679017'),
     'oye y aparte quiero cotizar otro a san juan de los lagos el 24, somos 40', 'de guadalajara también, ida y vuelta, solo nos llevan y traen', 'el i6s'],
   /* r · mensajes basura: emoji solo, un número suelto, un link, una sola letra. */
-  r: ['👍', '3', 'https://www.google.com/maps/place/Tapalpa', 'k', 'ya mejor dime cuánto sale una sprinter a tapalpa el 20 de octubre para 15, de guadalajara, ida y vuelta']
+  r: ['👍', '3', 'https://www.google.com/maps/place/Tapalpa', 'k', 'ya mejor dime cuánto sale una sprinter a tapalpa el 20 de octubre para 15, de guadalajara, ida y vuelta'],
+  /* s · LA COTIDIANA COMPLETA, de «buenas tardes» hasta el contrato.
+     Es la que el dueño pidió: llega a que le pasen la cuenta, deposita,
+     manda el comprobante y da sus datos. Va despacio, como escribe la
+     gente: un dato por mensaje, con preguntas en medio. */
+  s: ['buenas tardes', 'quiero información para un viaje', 'a puerto vallarta',
+    'del 6 al 8 de noviembre', 'somos 16', 'sí, de guadalajara', 'solo nos llevan y traen',
+    'qué incluye?', 'me mandas fotos?',
+    va('5213366679019'),
+    'ok, y cómo le hago para apartar?', foto('5213366679019'),
+    'ya deposité, ahí te va el comprobante',
+    'me llamo Laura Beltrán Ríos', 'nos recogen en av. patria 2050, zapopan, a las 6 de la mañana',
+    'llegamos al hotel playa bonita en vallarta, y de regreso salimos a las 5 de la tarde',
+    'ya quedó todo?']
 };
 const pedidos = process.argv.slice(2).filter((x) => escenarios[x]);
 for (const k of (pedidos.length ? pedidos : Object.keys(escenarios))) {
-  const C = '52133666790' + { a: '01', b: '02', c: '03', d: '04', e: '05', f: '06', g: '07', h: '08', i: '09', j: '10', k: '11', l: '12', m: '13', n: '14', o: '15', p: '16', q: '17', r: '18' }[k];
+  const C = '52133666790' + { a: '01', b: '02', c: '03', d: '04', e: '05', f: '06', g: '07', h: '08', i: '09', j: '10', k: '11', l: '12', m: '13', n: '14', o: '15', p: '16', q: '17', r: '18', s: '19' }[k];
   const guion = escenarios[k].map((p) => (typeof p === 'function' && p.length === 0 && k === 'e') ? p : p);
   await corre('Escenario ' + k, C, guion);
   console.log('\n(gastado hasta aquí: $' + gastado.toFixed(3) + ' USD)');

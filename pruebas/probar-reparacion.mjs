@@ -943,5 +943,29 @@ titulo('R26 · «y APARTE quiero cotizar otro» no es apartar: es un segundo via
   delete process.env.CLABE; delete process.env.CUENTA; delete process.env.DATOS_BANCARIOS;
 }
 
+/* ============================================================ */
+titulo('R27 · el freno ya no deja mudo al cliente (escenario s real: dio sus datos y no le contestaron)');
+{
+  limpia();
+  const C = '5213366670436';
+  delete process.env.AHORA_DE_PRUEBA;   // reloj real: los mensajes van seguidos
+  laIA = () => ({ respuesta: 'Va 🙌', datos: {}, accion: 'seguir' });
+  /* Veinte pasan; del 21 en adelante se frena. */
+  for (let i = 1; i <= 20; i++) await dice('mensaje ' + i, C);
+  const alFrenar = textos(C).length;
+  await dice('mensaje 21', C);
+  await dice('mensaje 22', C);
+  await dice('mensaje 23', C);
+  const despues = textos(C).slice(alFrenar);
+  okQue('los primeros 20 sí se contestan', alFrenar >= 20);
+  okQue('  al frenado NO se le deja en silencio: se le avisa', despues.some((t) => /Voy leyendo tus mensajes/.test(t)));
+  ok('  y el aviso sale UNA sola vez, no por mensaje', despues.filter((t) => /Voy leyendo tus mensajes/.test(t)).length, 1);
+  /* Y el dueño nunca se frena: sus «va» no se pueden perder. */
+  limpia();
+  laIA = () => ({ respuesta: 'Va 🙌', datos: {}, accion: 'seguir' });
+  for (let i = 1; i <= 25; i++) await dice('total ' + (1000 + i), DUENO);
+  okQue('al dueño el freno no le aplica', textos(DUENO).length >= 20);
+}
+
 console.log('\n' + buenas + ' buenas, ' + malas + ' malas');
 process.exit(malas ? 1 : 0);

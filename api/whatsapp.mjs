@@ -794,7 +794,11 @@ function yaLePediDatos(cliente) {
   return agente.historialDe(cliente)
     .filter(function (t) { return t.de === 'bot'; })
     .slice(-3)
-    .some(function (t) { return /Me falta|me faltan estos datos|Me pasas/i.test(t.texto || ''); });
+    .some(function (t) {
+      /* «Son 4 datos: …» es el acuse del comprobante, que ya pidió los
+         datos: enseguida no se le repite la lista de cinco puntos. */
+      return /Me falta|me faltan estos datos|Me pasas|Son 4 datos|vamos armando tu contrato/i.test(t.texto || '');
+    });
 }
 
 /* Un campo del contrato, pedido como lo pediría una persona y no como una

@@ -147,9 +147,32 @@ function yaContestado(id) {
    se ataca. Un contador por destinatario dejaría que cualquiera
    silenciara al bot para los demás.
    ------------------------------------------------------------ */
-const TOPE_POR_MINUTO = 12;
+/* Subido de 12 a 20 el 9-sep-2026. Con 12, una conversación normal se
+   pasaba: en la corrida completa (escenario s) el cliente escribió sus
+   datos del contrato de uno en uno y del mensaje 13 en adelante el bot se
+   quedó MUDO, incluido «¿ya quedó todo?» de alguien que ya había
+   depositado. Veinte por minuto sigue frenando a quien abusa —nadie
+   escribe veinte mensajes de verdad en un minuto— y no alcanza a una
+   persona con prisa. */
+const TOPE_POR_MINUTO = 20;
 const TOPE_REMITENTES = 2000;
 const remitentes = new Map();
+
+/* Y al frenado se le avisa UNA vez por minuto, no en cada mensaje: el
+   silencio total parece que el bot se murió, y contestar cada mensaje
+   frenado sería regalarle al que abusa una respuesta por mensaje. */
+const AVISO_DEL_FRENO_MS = 60000;
+const avisadosDelFreno = new Map();
+function tocaAvisarDelFreno(numero, ahora) {
+  const t = ahora || Date.now();
+  const antes = avisadosDelFreno.get(numero);
+  if (antes && t - antes < AVISO_DEL_FRENO_MS) return false;
+  avisadosDelFreno.set(numero, t);
+  while (avisadosDelFreno.size > TOPE_REMITENTES) {
+    avisadosDelFreno.delete(avisadosDelFreno.keys().next().value);
+  }
+  return true;
+}
 
 function pasaElFreno(numero, ahora) {
   const t = ahora || Date.now();
@@ -936,7 +959,19 @@ function procesa(crudo, firma, entorno) {
            y el reintento de Meta sí entra. Con el reloj de la petición
            (`AHORA_DE_PRUEBA` en pruebas), para poder «esperar un minuto». */
         const loEscribeElDueno = tickets.esDelDueno(m.from, env);
-        if (!loEscribeElDueno && !pasaElFreno(m.from || 'desconocido', ahora)) continue;
+        if (!loEscribeElDueno && !pasaElFreno(m.from || 'desconocido', ahora)) {
+          /* Frenado, pero no en silencio: una sola vez por minuto se le dice
+             que se le está leyendo (9-sep-2026). */
+          if (m.from && tocaAvisarDelFreno(m.from, ahora)) {
+            console.error('[freno] ' + m.from + ' pasó los ' + TOPE_POR_MINUTO + ' por minuto; se le avisa una vez');
+            envios.push({
+              numeroDeOrigen: deQuien, para: m.from, pasaAPersona: false,
+              texto: 'Voy leyendo tus mensajes 🙌 Dame un momento y te contesto.',
+              escribio: '[freno · te estoy leyendo]'
+            });
+          }
+          continue;
+        }
         if (yaContestado(m.id)) continue;
         /* Y lo que el almacén ya vio desde OTRA instancia (el reintento de
            Meta cuando la primera vuelta tardó más de 30 s): se contestaba
