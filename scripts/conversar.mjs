@@ -14,12 +14,24 @@
    $0.30. No manda nada a WhatsApp ni escribe en Supabase.
    ============================================================ */
 import path from 'path';
+import fs from 'fs';
 import { fileURLToPath, pathToFileURL } from 'url';
 import { createHmac } from 'crypto';
 
 const AQUI = path.dirname(fileURLToPath(import.meta.url));
 const RAIZ = path.join(AQUI, '..');
-if (!process.env.ANTHROPIC_API_KEY) { console.error('Falta ANTHROPIC_API_KEY en el entorno.'); process.exit(2); }
+/* La llave también puede vivir en `.env.local` (está en .gitignore: nunca
+   sube al repositorio), una línea: ANTHROPIC_API_KEY=sk-ant-... Así las
+   conversaciones reales se pueden correr desde una terminal sin pegar la
+   llave en ningún chat (8-sep-2026). */
+if (!process.env.ANTHROPIC_API_KEY) {
+  try {
+    const local = fs.readFileSync(path.join(RAIZ, '.env.local'), 'utf8');
+    const m = local.match(/^\s*ANTHROPIC_API_KEY\s*=\s*["']?([^"'\r\n]+)["']?\s*$/m);
+    if (m) process.env.ANTHROPIC_API_KEY = m[1].trim();
+  } catch (e) { /* sin archivo: se avisa abajo */ }
+}
+if (!process.env.ANTHROPIC_API_KEY) { console.error('Falta ANTHROPIC_API_KEY en el entorno o en .env.local.'); process.exit(2); }
 
 process.env.WHATSAPP_APP_SECRET = 'secreto';
 process.env.WHATSAPP_TOKEN = 'tok';
