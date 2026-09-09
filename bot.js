@@ -3854,13 +3854,22 @@ function pegaDatos(estado, datos) {
        (o si ya no hace falta un autobús). Se vuelve a escoger. */
     if (e.unidad) {
       const n = Number(e.gente);
-      const bus = e.unidadId ? UNIDADES.find(function (u) { return u.id === e.unidadId; }) : null;
+      /* La unidad puede venir por id, por NOMBRE o por categoría: el viaje
+         que se guarda en la ficha trae «Sprinter» —el nombre— y con eso el
+         control de cupo no la reconocía. Un grupo de 22 pasaba como bueno
+         en una Sprinter de 20 y se cotizaba así (corrida real del
+         9-sep-2026, escenario k). Se busca en el catálogo de las tres
+         formas antes de decidir. */
+      const cat = String(e.unidad || '').toLowerCase();
+      const bus = (e.unidadId ? UNIDADES.find(function (u) { return u.id === e.unidadId; }) : null) ||
+        (e.unidadNombre ? porNombre(e.unidadNombre) : null) ||
+        (cat !== 'autobus' ? porNombre(e.unidad) : null);
       const noCabe = (bus && Number(bus.max) < n) ||
-        (e.unidad === 'sprinter' && n > 20) || (e.unidad === 'suburban' && n > 6) ||
-        (e.unidad === 'autobus' && n <= 20);
+        (cat === 'sprinter' && n > 20) || (cat === 'suburban' && n > 6) ||
+        (cat === 'autobus' && n <= 20);
       if (noCabe) {
-        /* Si era un camión concreto, que el agente se lo diga con nombre
-           y número («el i6 es de 47 y son 60») y ofrezca los que sí. */
+        /* Si era una unidad concreta, que el agente se lo diga con nombre
+           y número («el i6 es de 47 y son 60») y ofrezca las que sí. */
         if (bus && Number(bus.max) < n) e.noCabe = { nombre: bus.name, asientos: Number(bus.max), gente: n };
         else delete e.noCabe;
         delete e.unidad; delete e.unidadNombre; delete e.unidadId;

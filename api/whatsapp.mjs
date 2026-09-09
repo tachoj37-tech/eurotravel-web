@@ -1258,10 +1258,15 @@ function preguntaParaElCliente(estado) {
    8-sep (escenario b) «sí, ese mismo día regresamos» después del precio
    se leyó como destino «a Regresamos» y el siguiente «ok» mandó un segundo
    ticket. Se contesta algo neutro y cierto. */
-function esperaNeutraConPrecio(cliente) {
+function esperaNeutraConPrecio(cliente, estado) {
   const v = viajeConPrecio(tickets.fichaDe(cliente));
   if (!v || !v.estado) return null;
-  return v.estado === 'pedido' ? 'Va 🙌 En cuanto tenga tu precio te lo paso por aquí.' : 'Va 🙌 ¿Te la aparto?';
+  if (v.estado === 'pedido') return 'Va 🙌 En cuanto tenga tu precio te lo paso por aquí.';
+  /* Con el precio dado pero el viaje cambiado (creció el grupo, ya no cabe
+     la unidad), «¿te la aparto?» ofrece un precio que ya no es el suyo
+     (corrida real del 9-sep-2026, escenario k): se pregunta lo que falta. */
+  if (estado && conversacion.loQueFalta(estado)) return preguntaParaElCliente(estado);
+  return 'Va 🙌 ¿Te la aparto?';
 }
 
 /* El mismo viaje que ya está pedido: destino, fechas y (gente o unidad)
@@ -1441,6 +1446,19 @@ function repartoPorPersona(texto, cliente, ficha, antes) {
      (auditoría general del 8-sep, hallazgo 13). */
   const hablaDeGente = /persona|pax|gente|pasajero|somos|entre|fu[eé]ramos|cabeza|cada (uno|quien)|c\/u/i.test(t);
   if (!hablaDeGente) return null;
+  /* ------------------------------------------------------------
+     «YA SOMOS 22» NO ES UNA PREGUNTA POR PERSONA: ES UN CAMBIO
+     ------------------------------------------------------------
+     Corrida real del 9-sep-2026 (escenario k): el cliente creció el grupo y
+     el motor lo contestó como si preguntara cuánto sale entre 22, dejando
+     el viaje —y el precio— como estaban. Un cambio lo toma el agente, que
+     sí actualiza el viaje y marca el precio como vencido. Una pregunta
+     hipotética («¿y entre 30?», «¿si fuéramos 25?») sigue aquí.
+     ------------------------------------------------------------ */
+  const dicho = conversacion.normaliza(t);
+  const esCambio = /\b(ya|ahora|al final|finalmente)\s+(somos|vamos a ser|seremos)\b|\bseremos\b|\bvamos a ser\b/.test(dicho);
+  const pregunta = /\?|cuanto|cuánto|precio|sale|cuesta|queda|seria|ser[ií]a/.test(dicho);
+  if (esCambio && !pregunta) return null;
   if (/\b\d{1,3}\s*(d[ií]as?|paradas?|horas?|noches?|de\s+[a-záéíóú])\b/i.test(t)) return null;
   const v = ficha.viajeDatos;
   const unidad = unidadDelCatalogo(v.unidad);
@@ -1888,7 +1906,13 @@ async function loQueDiceElAgente(envio) {
      como destino el 7-sep) es basura, no otro viaje: manda el viaje de la
      ficha. */
   const platicaDebil = hayViaje && !(antes.salida || antes.gente) && !antes.otroViaje;
-  if (viajeDeLaFicha && viajeDeLaFicha.estado && (!hayViaje || platicaDebil) && (cambiaAlgo || platicaDebil) && !esOtroViaje) {
+  /* Con la plática VACÍA se siembra siempre, no solo cuando el mensaje trae
+     un dato nuevo: el guion borra la plática al contestar cosas como
+     «apartar» o una objeción, y el siguiente mensaje sin datos la dejaba en
+     `{}`. Así se perdió que el grupo había crecido a 22 y el bot volvió a
+     ofrecer el anticipo del viaje de 15 (corrida real del 9-sep-2026,
+     escenario k). Un viaje NUEVO sigue protegido por `esOtroViaje`. */
+  if (viajeDeLaFicha && viajeDeLaFicha.estado && (!hayViaje || platicaDebil) && (cambiaAlgo || platicaDebil || !hayViaje) && !esOtroViaje) {
     const base = viajeBaseDeLaFicha(tickets.fichaDe(cliente));
     if (base) {
       antes = Object.assign({}, base, antes.nombre ? { nombre: antes.nombre } : {});
@@ -2029,8 +2053,25 @@ async function loQueDiceElAgente(envio) {
   }
 
   const yaEstaTodo = !conversacion.loQueFalta(nuevo);
+  /* El viaje que ya tiene precio (pedido o dado) no se vuelve a cotizar solo
+     porque la plática esté completa: desde que la plática se siembra de la
+     ficha, un simple «ok» dejaba todo completo y pedía otro precio del mismo
+     viaje (9-sep-2026). Si el cliente cambia algo, `mismoViaje` da false y
+     sí se cotiza de nuevo. */
+  const yaTienePrecioEseViaje = !!(viajeDeLaFicha && viajeDeLaFicha.estado &&
+    mismoViaje(nuevo, viajeBaseDeLaFicha(tickets.fichaDe(cliente))));
+  /* Si la IA leyó un cambio que deja el viaje distinto del que tiene precio,
+     ese precio se marca vencido en la ficha: ni se aparta con él ni se
+     ofrece (9-sep-2026, escenario k). */
+  if (viajeDeLaFicha && viajeDeLaFicha.estado === 'dado' && !yaTienePrecioEseViaje && cambiaAlgo) {
+    const f = tickets.fichaDe(cliente);
+    if (f && !f.precioVencido) {
+      console.error('[agente] el viaje cambió después del precio: queda marcado como vencido');
+      tickets.anotaEtapa(cliente, f.etapa, { precioVencido: true }, Date.now());
+    }
+  }
   let accion = dicho.accion;
-  if (accion === 'seguir' && yaEstaTodo) accion = 'cotizar';
+  if (accion === 'seguir' && yaEstaTodo && !yaTienePrecioEseViaje) accion = 'cotizar';
   if (accion === 'cotizar' && !yaEstaTodo) accion = 'seguir';   // le falta algo: que lo pida
   if (accion === 'seguir' && !yaEstaTodo && dicho.respuesta && PROMETE_PRECIO.test(dicho.respuesta) &&
       !(viajeDeLaFicha && viajeDeLaFicha.estado)) {
@@ -2178,7 +2219,11 @@ async function loQueDiceElAgente(envio) {
       if (viajeDeLaFicha && viajeDeLaFicha.estado === 'pedido' && !esOtroViaje &&
           mismoViaje(nuevo, viajeBaseDeLaFicha(tickets.fichaDe(cliente)))) {
         console.error('[agente] precio ya pedido y nada cambió: no se repite el ticket');
-        const espera = 'Va 🙌 En cuanto tenga tu precio te lo paso por aquí.';
+        /* Con sus palabras si las tiene: el candado es para no repetir el
+           ticket, no para quitarle la voz a la IA. */
+        const espera = sinMuletillaRepetida(
+          dicho.respuesta || 'Va 🙌 En cuanto tenga tu precio te lo paso por aquí.',
+          ultimoDelBot && ultimoDelBot.texto);
         await manda({ numeroDeOrigen: envio.numeroDeOrigen, para: cliente, texto: espera, pasaAPersona: false, escribio: '[agente · precio en camino]' });
         agente.recuerda(cliente, 'bot', espera);
         webhook.guardaCharla(cliente, null);
@@ -2282,7 +2327,7 @@ async function loQueDiceElAgente(envio) {
     if (hecho) return true;
     /* El motor no pudo: que al menos salga lo que dijo la IA, o el guion. */
     if (dicho.respuesta) return true;
-    const neutra = esperaNeutraConPrecio(cliente);
+    const neutra = esperaNeutraConPrecio(cliente, nuevo);
     if (neutra) {
       await manda({ numeroDeOrigen: envio.numeroDeOrigen, para: cliente, texto: neutra, pasaAPersona: false, escribio: '[agente · neutra con precio]' });
       agente.recuerda(cliente, 'bot', neutra);
@@ -2297,7 +2342,7 @@ async function loQueDiceElAgente(envio) {
      y contesta el guion con lo que falta… salvo con un precio pedido o
      dado: ahí el guion viejo no debe leer el mensaje como viaje nuevo. */
   if (!dicho.respuesta) {
-    const neutra = esperaNeutraConPrecio(cliente);
+    const neutra = esperaNeutraConPrecio(cliente, nuevo);
     if (!neutra) return false;
     console.error('[agente] sin respuesta con precio en la ficha: contesta neutro, no el guion');
     await manda({ numeroDeOrigen: envio.numeroDeOrigen, para: cliente, texto: neutra, pasaAPersona: false, escribio: '[agente · neutra con precio]' });

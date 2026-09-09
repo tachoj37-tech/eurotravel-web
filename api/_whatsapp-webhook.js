@@ -584,6 +584,30 @@ function quiereApartarConPrecio(ficha, texto, charla) {
     const mismo = String(charla.destino).toLowerCase().trim() === String(v.destino || '').toLowerCase().trim();
     if (!mismo) return false;
   }
+  /* ------------------------------------------------------------
+     UN PRECIO VIEJO NO SE APARTA
+     ------------------------------------------------------------
+     Corrida real del 9-sep-2026 (escenario k): precio de Sprinter para 15;
+     el cliente dijo «ya somos 22» y luego «apártamelo», y el bot le pidió
+     el anticipo de $1,500 de una unidad donde ya no caben. Si la plática
+     dice que el grupo creció —o que la unidad ya no le queda— el precio
+     que hay en la ficha no es el suyo: pasa por el agente, que pide el
+     precio nuevo.
+     ------------------------------------------------------------ */
+  if (!precioSigueSiendoSuyo(ficha, charla)) return false;
+  return true;
+}
+
+/* El precio que hay en la ficha ¿sigue siendo el de este cliente? No lo es
+   si la plática dice que el grupo cambió o que la unidad ya no le queda. */
+function precioSigueSiendoSuyo(ficha, charla) {
+  if (!ficha) return true;
+  /* La marca de la ficha manda: sobrevive a que la plática se borre. */
+  if (ficha.precioVencido) return false;
+  if (!charla) return true;
+  if (charla.noCabe) return false;
+  const v = ficha.viajeDatos || {};
+  if (charla.gente && v.gente && Number(charla.gente) !== Number(v.gente)) return false;
   return true;
 }
 function respuestaDeApartar(ficha) {
@@ -1524,6 +1548,14 @@ function procesa(crudo, firma, entorno) {
               };
             })();
 
+        /* ¿El precio de la ficha sigue siendo el de este cliente? Se
+           decide AQUÍ, con la plática todavía viva: tres renglones más
+           abajo el guion la borra al contestar «apartar», y con ella se
+           perdía la señal de que el grupo había cambiado (corrida real del
+           9-sep-2026, escenario k: 15 → 22 y le llegó la CLABE del precio
+           de 15). */
+        const precioVigente = precioSigueSiendoSuyo(tickets.fichaDe(m.from), charlaDe(m.from));
+
         /* Lo que el bot recuerde queda guardado para el siguiente
            mensaje de esta misma persona. Si la respuesta no trae
            estado, la conversación terminó y se borra. */
@@ -1609,11 +1641,26 @@ function procesa(crudo, firma, entorno) {
            toque largo. La imagen de la ficha queda apagada por bandera
            (`FICHA_COMO_IMAGEN=1` la reactiva). */
         const numeroDeCuenta = String(env.CUENTA || '').replace(/\D+/g, '');
-        const mandaFicha = !!(r.pideDatosBancarios && clabe);
+        /* Y no se manda la cuenta si el precio de la ficha ya no es el suyo
+           (el grupo creció, la unidad no le queda): el guion contesta
+           «apartar» por su cuenta y le anexaba la CLABE de un viaje que ya
+           no existe (corrida real del 9-sep-2026, escenario k). */
+        if (r.pideDatosBancarios && !precioVigente) {
+          console.error('[apartado] el precio de la ficha es de otro grupo: no se manda la cuenta');
+        }
+        const pideDatosBancarios = !!r.pideDatosBancarios && precioVigente;
+        const mandaFicha = !!(pideDatosBancarios && clabe);
 
-        const texto2 = (r.pideDatosBancarios && !mandaFicha && cuenta)
-          ? r.texto + '\n\nY aquí están los datos para el depósito 👇\n\n' + cuenta
+        /* Y el texto tampoco puede decir «te la aparto» con un precio que
+           ya no es el suyo: primero el precio nuevo (9-sep-2026). */
+        const textoApartar = (r.pideDatosBancarios && !precioVigente)
+          ? 'Va 🙌 Con ese cambio el precio se mueve, así que primero te lo confirmo. ' +
+            'En cuanto lo tenga te paso el total y cómo apartar.'
           : r.texto;
+
+        const texto2 = (pideDatosBancarios && !mandaFicha && cuenta)
+          ? textoApartar + '\n\nY aquí están los datos para el depósito 👇\n\n' + cuenta
+          : textoApartar;
 
         /* Con la IA callada (el dueño está en ese chat) el texto al cliente
            no sale; el reenvío del medio al dueño y la etapa ya quedaron. */

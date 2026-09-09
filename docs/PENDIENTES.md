@@ -153,7 +153,16 @@ completa. «¿No me haces un descuento?» recibía un «no» seco: ahora lo
 decide el dueño. Y cuando el candado de fugas descartaba la respuesta se
 perdía **el viaje entero** que la IA había leído (una agencia con 45 pax a
 Mazatlán acabó con «¿a dónde van?»): los datos se conservan siempre.
-Pruebas R20–R23.
+Pruebas R20–R23. Y el peor, de dinero (escenario k): con precio dado para
+15, el cliente dijo «ya somos 22» y al pedir apartar le llegó la CLABE con
+el anticipo de la Sprinter donde ya no caben. Cuatro causas encadenadas:
+el control de cupo no reconocía la unidad por NOMBRE («Sprinter»), así que
+22 pasaba como bueno; «ya somos 22» se leía como pregunta por persona en
+vez de cambio; la plática se vaciaba al contestar «apartar» y se perdía el
+cambio; y el guion anexaba la cuenta por su lado. Ahora el precio se marca
+`precioVencido` en la ficha (sobrevive a que la plática se borre), no se
+manda cuenta ni anticipo con un precio que ya no es suyo, y el mismo viaje
+ya cotizado no se vuelve a cotizar solo. Prueba R24.
 
 **Seguimiento sin plantillas de Meta** («quitamos lo de Meta, es mucho»):
 el primer toque baja a 22 h y sale como texto libre gratis; los de 3 y 7

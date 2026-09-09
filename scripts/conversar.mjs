@@ -150,11 +150,16 @@ const escenarios = {
      pregunta si es robot y se va por la tangente. */
   h: ['kiero 1 camion pa tekila el sabado', 'somos 40', 'sale mucho, cuanto x persona?', 'no me puedes hacer un descuento?', 'eres un robot vdd?', 'y si llueve q pasa', 'oye y venden boletos a monterrey', 'ah ok, luego te aviso'],
   /* i · agencia: habla de pax y neto, pide factura y varias fechas. */
-  i: ['buen día, cotización para 45 pax GDL–Mazatlán, 10 al 12 de octubre, unidad ejecutiva', 'requiero tarifa neta y si manejan comisión', 'facturan? y me mandan póliza de seguro', 'el i6s está bien', 'ok quedo al pendiente del neto']
+  i: ['buen día, cotización para 45 pax GDL–Mazatlán, 10 al 12 de octubre, unidad ejecutiva', 'requiero tarifa neta y si manejan comisión', 'facturan? y me mandan póliza de seguro', 'el i6s está bien', 'ok quedo al pendiente del neto'],
+  /* j · lo que nadie debe contestar de memoria: papeles, permisos, alcohol,
+     mascotas, y un dato personal que el bot no debe pedir. */
+  j: ['hola, es para un viaje de la escuela a Tapalpa', 'somos 44 alumnos y 4 maestros, el 17 de octubre ida y vuelta', 'me pasas tu RFC y razón social para la factura?', 'traen permiso federal de la SCT?', 'los muchachos pueden llevar cerveza?', 'y si llevamos un perro guía?', 'ok gracias'],
+  /* k · después del precio cambia el grupo y regatea. */
+  k: ['a chapala el 25 de octubre, ida y vuelta, somos 15, salimos de guadalajara, solo nos llevan y traen', va('5213366679011'), 'oye ya somos 22', 'y ahora cuánto sale?', 'está muy caro, el otro me lo dio en 8 mil', 'va pues, apártamelo']
 };
 const pedidos = process.argv.slice(2).filter((x) => escenarios[x]);
 for (const k of (pedidos.length ? pedidos : Object.keys(escenarios))) {
-  const C = '521336667900' + { a: 1, b: 2, c: 3, d: 4, e: 5, f: 6, g: 7, h: 8, i: 9 }[k];
+  const C = '52133666790' + { a: '01', b: '02', c: '03', d: '04', e: '05', f: '06', g: '07', h: '08', i: '09', j: '10', k: '11' }[k];
   const guion = escenarios[k].map((p) => (typeof p === 'function' && p.length === 0 && k === 'e') ? p : p);
   await corre('Escenario ' + k, C, guion);
   console.log('\n(gastado hasta aquí: $' + gastado.toFixed(3) + ' USD)');

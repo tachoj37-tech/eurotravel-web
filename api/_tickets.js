@@ -469,6 +469,17 @@ function anotaEtapa(cliente, etapa, extra, ahora) {
     toques: (extra && typeof extra.toques === 'number') ? extra.toques
       : ((antes && antes.toques) || 0),
     clienteEn: (extra && extra.clienteEn) || (antes && antes.clienteEn) || null,
+    /* El precio que hay ya NO es el suyo: cambió el grupo, la fecha o la
+       unidad después de dárselo. Vive en la ficha y no en la plática porque
+       la plática se borra al contestar «apartar» y con ella se perdía el
+       cambio: el cliente pasó de 15 a 22 y el bot le ofreció el anticipo del
+       viaje de 15 (corrida real del 9-sep-2026). Se limpia solo cuando se
+       da un precio nuevo (`viajeDatos` nuevo). */
+    precioVencido: (extra && extra.viajeDatos)
+      ? !!(extra && extra.precioVencido)
+      : ((extra && Object.prototype.hasOwnProperty.call(extra, 'precioVencido'))
+        ? !!extra.precioVencido
+        : !!(antes && antes.precioVencido)),
     desde: (antes && antes.desde) || (ahora || Date.now()),
     visto: ahora || Date.now()
   };

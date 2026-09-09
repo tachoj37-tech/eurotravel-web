@@ -834,5 +834,44 @@ titulo('R23 · si el candado descarta la respuesta, el viaje leído NO se pierde
   ok('  y el ticket salió al dueño', textos(DUENO).filter((t) => /Precio por confirmar/.test(t)).length, 1);
 }
 
+/* ============================================================ */
+titulo('R24 · el grupo creció después del precio: no se aparta con el anticipo viejo (escenario k real)');
+{
+  limpia();
+  const C = '5213366670428';
+  const CLABE = '012320001927217407';
+  process.env.CLABE = CLABE; process.env.CUENTA = '0192721740'; process.env.DATOS_BANCARIOS = 'BBVA Bancomer';
+  /* Precio DADO para 15 en Sprinter. */
+  tk.anotaEtapa(C, 'con_precio', { total: 6500, anticipo: 1500,
+    viajeDatos: { origen: 'Guadalajara', destino: 'Chapala', salida: '2026-10-25', regreso: '2026-10-25', gente: 15, unidad: 'Sprinter' } }, Date.now());
+  /* «Ya somos 22»: la IA lo lee y el motor ve que ya no caben. */
+  laIA = () => ({ respuesta: 'Para 22 ya no caben en Sprinter. Va autobús y es otra cotización.', datos: { gente: 22 }, accion: 'seguir' });
+  await dice('oye ya somos 22', C);
+  const ch = webhook.charlaDe(C) || {};
+  ok('la plática sabe que ya no caben (' + JSON.stringify({ gente: ch.gente, paso: ch.paso, unidad: ch.unidad, noCabe: ch.noCabe }) +
+    ' · dijo: ' + JSON.stringify(textos(C).slice(-1)[0] || '').slice(0, 90) + ')',
+    ch.gente === 22 && (!!ch.noCabe || ch.paso === 'elegirBus' || !!ch.destino), true);
+  /* «Apártamelo»: NO debe salir el anticipo viejo ni la CLABE. */
+  laIA = () => ({ respuesta: null, datos: {}, accion: 'seguir' });
+  const antes = textos(C).length;
+  await dice('va pues, apártamelo', C);
+  const dicho = textos(C).slice(antes).join('\n');
+  ok('NO le manda la CLABE del precio viejo (dijo: ' + JSON.stringify(textos(C).slice(antes).map((t) => t.slice(0, 45))) + ')',
+    textos(C).slice(antes).filter((t) => t === CLABE).length, 0);
+  okQue('  ni el anticipo de $1,500', !/1,500/.test(dicho));
+  okQue('  le pregunta lo que falta para el precio nuevo', /autobus|autobús|se ajustan|Marcopolo|cu[aá]l/i.test(dicho));
+  okQue('  y la ficha quedó marcada con el precio vencido', (tk.fichaDe(C) || {}).precioVencido === true);
+  okQue('  sin prometerle que ya quedó apartado', !/te la aparto|ya qued[oó] apartad/i.test(dicho));
+  /* Y con el MISMO grupo, apartar sigue funcionando igual que siempre. */
+  limpia();
+  const D = '5213366670429';
+  tk.anotaEtapa(D, 'con_precio', { total: 6500, anticipo: 1500,
+    viajeDatos: { origen: 'Guadalajara', destino: 'Chapala', salida: '2026-10-25', regreso: '2026-10-25', gente: 15, unidad: 'Sprinter' } }, Date.now());
+  const a2 = textos(D).length;
+  await dice('apártamelo', D);
+  okQue('sin cambios, «apártamelo» sí manda la CLABE', textos(D).slice(a2).filter((t) => t === CLABE).length === 1);
+  delete process.env.CLABE; delete process.env.CUENTA; delete process.env.DATOS_BANCARIOS;
+}
+
 console.log('\n' + buenas + ' buenas, ' + malas + ' malas');
 process.exit(malas ? 1 : 0);
