@@ -1705,6 +1705,30 @@ async function loQueDiceElAgente(envio) {
     }
   }
 
+  /* ------------------------------------------------------------
+     «¿TE MANDO FOTOS DE ALGUNO?» → «i6» ES UN SÍ CON NOMBRE
+     ------------------------------------------------------------
+     Prueba del dueño (8-sep-2026, 6:46 p.m.): la lista de autobuses
+     cierra ofreciendo fotos; contestó «i6» y la IA, en vez de mandarlas,
+     describió la unidad. Si el último mensaje del bot ofreció fotos y el
+     cliente nombra una unidad, eso ES pedir sus fotos: la acción se vuelve
+     «fotos» de esa unidad y, si es autobús, queda escogido. Lo decide el
+     código, no el modelo.
+     ------------------------------------------------------------ */
+  const ultimoDelBot = agente.historialDe(cliente).filter(function (t) { return t.de === 'bot'; }).pop();
+  const ofrecioFotos = !!(ultimoDelBot && /te mando fotos|quieres fotos|te paso fotos/i.test(ultimoDelBot.texto || ''));
+  const unidadNombrada = agente.unidadPorTexto ? agente.unidadPorTexto(texto) : null;
+  if (ofrecioFotos && unidadNombrada && dicho.accion !== 'video' && !/\bno\b/i.test(String(texto || '').slice(0, 4))) {
+    console.error('[agente] ofreció fotos y el cliente nombró ' + unidadNombrada + ': se mandan sus fotos');
+    dicho.accion = 'fotos';
+    dicho.unidadPedida = unidadNombrada;
+    const esBus = (conversacion.UNIDADES || []).some(function (u) { return u.id === unidadNombrada && u.cat === 'autobus'; });
+    if (esBus && !nuevo.unidadNombre) {
+      const con = conversacion.pegaDatos(nuevo, { autobus: unidadNombrada });
+      Object.keys(con).forEach(function (k) { nuevo[k] = con[k]; });
+    }
+  }
+
   const yaEstaTodo = !conversacion.loQueFalta(nuevo);
   let accion = dicho.accion;
   if (accion === 'seguir' && yaEstaTodo) accion = 'cotizar';

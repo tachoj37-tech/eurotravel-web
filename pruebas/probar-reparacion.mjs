@@ -528,5 +528,32 @@ titulo('R12 · con el i6 ya escogido, «¿cuántos son?» no es requisito (dicta
   okQue('  y con Sprinter nombrada SÍ se sigue preguntando cuántos (ahí la cuenta decide la unidad)', /cu[aá]ntos/.test(String(bot.loQueFalta({ destino: 'Chapala', salida: '2026-09-11', regreso: '2026-09-13', unidad: 'sprinter', unidadNombre: 'Sprinter' }) || '')));
 }
 
+/* ============================================================ */
+titulo('R13 · «¿Te mando fotos de alguno?» → «i6»: van las fotos del i6, no una descripción');
+{
+  limpia();
+  const C = '5213366670414';
+  /* Turno 1: pide camiones; la IA no los nombra y el candado manda la lista
+     (que cierra con «¿Te mando fotos de alguno?»). Turno 2: «i6»; la IA
+     hace lo que hizo la real: describe la unidad con accion «seguir». */
+  laIA = (t) => /\bi6\b/i.test(t)
+    ? { respuesta: 'El i6 es premium, 47 lugares, aire, baño y pantallas: muy cómodo para viajes largos.', datos: { autobus: 'irizar-i6' }, accion: 'seguir' }
+    : { respuesta: 'Dale, te muestro qué tenemos.', datos: { destino: 'Sayulita', unidad: 'autobus' }, accion: 'seguir' };
+  webhook.guardaCharla(C, { destino: 'Sayulita', paso: 'salida', salida: '2026-09-11', nombre: 'Prueba' });
+  await dice('que camiones tienen?', C);
+  okQue('la lista cerró ofreciendo fotos', /Te mando fotos de alguno/.test(textos(C).join('\n')));
+  const antes = mandados.length;
+  await dice('i6', C);
+  const desde = mandados.slice(antes).filter((m) => mismo(m.to, C));
+  const fotos = desde.filter((m) => m.image && /irizar-i6\//.test(m.image.link || ''));
+  ok('llegaron las 3 fotos del Irizar i6', fotos.length, 3);
+  /* La descripción de la IA sí llega, pero DESPUÉS de las fotos, como remate. */
+  const iFoto = desde.findIndex((m) => m.image);
+  const iTexto = desde.findIndex((m) => /muy cómodo para viajes largos/.test((m.text && m.text.body) || ''));
+  okQue('  la descripción de la IA va después de las fotos, como remate', iFoto >= 0 && iTexto > iFoto);
+  ok('  el i6 quedó escogido', (webhook.charlaDe(C) || {}).unidadNombre, 'Irizar i6');
+  okQue('  y el remate no pregunta cuántos son', !/cu[aá]ntos (van|son)/i.test(desde.map((m) => (m.text && m.text.body) || '').join('\n')));
+}
+
 console.log('\n' + buenas + ' buenas, ' + malas + ' malas');
 process.exit(malas ? 1 : 0);

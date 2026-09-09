@@ -109,7 +109,11 @@ camión, no las personas; puedo rentar un i6 sin que responda cuántos
 somos»): el motor ya no lo pide (`alSiguienteHueco`), la IA se regenera si
 lo pregunta (`preguntaQueSobra`) y, si insiste, contesta el guion con lo
 que sí falta. Con Sprinter o Suburban sí se pregunta: ahí la cuenta decide
-la unidad. Prueba R12; la de fase 3 cambió de lado con su razón. En la misma prueba dijo
+la unidad. Prueba R12; la de fase 3 cambió de lado con su razón. Y si el
+bot ofreció fotos («¿Te mando fotos de alguno?») y el cliente contesta con
+el nombre de una unidad («i6»), eso es pedir sus fotos: van las fotos, la
+unidad queda escogida y la descripción de la IA sale después como remate
+(antes describía la unidad y no mandaba nada). Prueba R13. En la misma prueba dijo
 «pasado mañana, 11 de septiembre» siendo día 8: «hoy» se calculaba en UTC
 (Vercel); ahora `hoyISO` es hora de Guadalajara en todos los caminos.
 
