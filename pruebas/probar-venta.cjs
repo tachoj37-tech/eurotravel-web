@@ -74,6 +74,18 @@ okQue('el saldo ya no se dice: solo total y apartado',
   !/restantes/.test(cotiza({ gente: 16 })) && /lo puedes ir abonando o liquidarlo el d[ií]a del viaje/.test(cotiza({ gente: 16 })));
 
 /* ============================================================ */
+titulo('el precio de un autobús lleva el nombre del autobús, no «Sprinter»');
+/* Corrida con el modelo real (8-sep-2026, escenario f): el cliente escogió
+   el i6 sin decir cuántos son, el dueño contestó 28,000 y el precio le
+   llegó encabezado «Sprinter · hasta 20 pasajeros». El resumen del shell
+   trae el NOMBRE en `unidad`; hay que reconocerlo ahí también. */
+okQue('con unidad = «Irizar i6» (nombre) el encabezado es el i6',
+  /Irizar i6 · hasta 47 pasajeros/.test(cotiza({ unidad: 'Irizar i6' })) && !/Sprinter/.test(cotiza({ unidad: 'Irizar i6' }).split('\n')[0]));
+okQue('  con unidadNombre también', /Irizar i6 · hasta 47/.test(cotiza({ unidad: 'autobus', unidadNombre: 'Irizar i6' })));
+okQue('  y sin gente no pasa nada raro', /Neobus · hasta 50/.test(cotiza({ unidad: 'Neobus', gente: undefined })));
+okQue('  «autobus» sin modelo sigue diciendo Autobús a secas', /\*Autobús/.test(cotiza({ unidad: 'autobus' })));
+
+/* ============================================================ */
 titulo('la comparación cambia con la ocasión');
 
 okQue('fiesta: nadie maneja de regreso',

@@ -46,6 +46,30 @@ process.env.CUENTA = process.env.CUENTA || '0192721740';
 process.env.DATOS_BANCARIOS = process.env.DATOS_BANCARIOS || 'BBVA Bancomer · a nombre de Turismo ET, S.A. de C.V.';
 delete process.env.ALMACEN_URL; delete process.env.ALMACEN_CLAVE;
 
+/* Tope de gasto (dictado del dueño, 8-sep-2026: «solo usa 1 dólar para
+   pruebas»). El agente imprime `usd=` en cada llamada; aquí se suma y al
+   pasar el tope el script se detiene. Las líneas [ia] y [turno] no se
+   imprimen: la transcripción se lee mejor sin ellas. */
+const TOPE_USD = Number(process.env.TOPE_USD || 1);
+let gastado = 0;
+for (const k of ['log', 'error']) {
+  const original = console[k].bind(console);
+  console[k] = function () {
+    const s = Array.prototype.map.call(arguments, String).join(' ');
+    const m = s.match(/\busd=(\d+(?:\.\d+)?)/);
+    if (m) {
+      gastado += Number(m[1]);
+      if (gastado > TOPE_USD) {
+        original('\n⛔ Tope de $' + TOPE_USD + ' USD alcanzado (gastado $' + gastado.toFixed(3) + '). Me detengo.');
+        process.exit(3);
+      }
+      return;
+    }
+    if (/^\[turno\]/.test(s)) return;
+    original.apply(console, arguments);
+  };
+}
+
 const fetchReal = globalThis.fetch;
 let mandados = [];
 globalThis.fetch = async function (url, opciones) {
@@ -97,6 +121,13 @@ const va = (C) => async () => {
   console.log('\nDUEÑO contesta el ticket: va');
   await manda(DUENO, 'va', { context: { id: t } });
 };
+/* El dueño contesta el ticket de un autobús con el precio. */
+const precio = (monto) => async () => {
+  const t = ultimoTicket();
+  if (!t) { console.log('(sin ticket que contestar)'); return; }
+  console.log('\nDUEÑO contesta el ticket: ' + monto);
+  await manda(DUENO, String(monto), { context: { id: t } });
+};
 
 const escenarios = {
   a: ['hola buenas, ocupo cotisar un viaje a bta el 20 d octubre regresamos el 22 somos como 18 salimos d gdl, cuanto?', 'solo nos llevan y traen', 'ok'],
@@ -107,12 +138,18 @@ const escenarios = {
     tk.anotaEtapa('5213366679004', 'mando_comprobante', { total: 19000, anticipo: 4000,
       viajeDatos: { origen: 'Guadalajara', destino: 'Puerto Vallarta', salida: '2026-11-14', regreso: '2026-11-16', gente: 18, unidad: 'Sprinter', nombre: 'Mariana' } }, Date.now());
   }, 'hola, cómo va lo mío?', 'y mi contrato ya está?', 'oye, creo que vamos a cambiar la fecha al 21 de noviembre', 'ok gracias'],
-  e: ['a vallarta el 20 de octubre, regresamos el 22, somos 18, de guadalajara, solo nos llevan y traen', va('5213366679005'), 'lo voy a pensar', 'es que no sé, lo voy a pensar', 'bueno va, apártamelo']
+  e: ['a vallarta el 20 de octubre, regresamos el 22, somos 18, de guadalajara, solo nos llevan y traen', va('5213366679005'), 'lo voy a pensar', 'es que no sé, lo voy a pensar', 'bueno va, apártamelo'],
+  /* f · lo que el dueño probó el 8-sep a las 6 p.m.: organiza, no sabe
+     cuántos, quiere ver camiones, escoge el i6 y reserva. */
+  f: ['buenas tardes', 'quiero cotizar un viaje a Sayulita', 'salimos pasado y quiero un camión', 'que camiones tiene?', 'i6', 'quiero reservar', 'si', 'sí, de guadalajara', precio(28000), 'ok apártamelo'],
+  /* g · el que no sabe nada todavía y pregunta de todo antes de dar datos. */
+  g: ['hola', 'oigan qué camiones manejan?', 'el más nuevo cuál es?', 'y ese cuánto sale a puerto vallarta?', 'todavía no sé cuántos vamos, apenas estoy juntando gente', 'el 3 de octubre y regresamos el 5', 'mándame fotos', 'ok luego les digo']
 };
 const pedidos = process.argv.slice(2).filter((x) => escenarios[x]);
 for (const k of (pedidos.length ? pedidos : Object.keys(escenarios))) {
-  const C = '521336667900' + { a: 1, b: 2, c: 3, d: 4, e: 5 }[k];
+  const C = '521336667900' + { a: 1, b: 2, c: 3, d: 4, e: 5, f: 6, g: 7 }[k];
   const guion = escenarios[k].map((p) => (typeof p === 'function' && p.length === 0 && k === 'e') ? p : p);
   await corre('Escenario ' + k, C, guion);
+  console.log('\n(gastado hasta aquí: $' + gastado.toFixed(3) + ' USD)');
 }
-console.log('\nListo. Copia estas transcripciones y márcame dónde todavía suena a guion.');
+console.log('\nListo. Gasto total: $' + gastado.toFixed(3) + ' USD.');

@@ -1163,12 +1163,48 @@ async function reinyectaAlGuion(envio, textoCanonico) {
    paso, una neutra. */
 function preguntaParaElCliente(estado) {
   try {
+    /* Si lo que falta es escoger autobús, la lista es la del dueño
+       (nombre — línea — asientos), no la ficha larga del guion viejo. */
+    const falta = String(conversacion.loQueFalta(estado) || '');
+    if (/cu[aá]l autob[uú]s/.test(falta)) return conversacion.mensajeDeTodosLosAutobuses(estado && estado.gente);
     const p = conversacion.pregunta ? conversacion.pregunta(estado) : null;
     const t = p && p.texto ? String(p.texto).trim() : '';
     if (t && !esTextoInterno(t)) return t;
   } catch (e) { /* sin pregunta: la neutra */ }
   return '¿Me dices lo que falta y te lo armo?';
 }
+
+/* Cuando la IA no tiene nada que decir y el cliente YA tiene un precio
+   pedido o dado, no se le suelta al guion viejo: en la corrida real del
+   8-sep (escenario b) «sí, ese mismo día regresamos» después del precio
+   se leyó como destino «a Regresamos» y el siguiente «ok» mandó un segundo
+   ticket. Se contesta algo neutro y cierto. */
+function esperaNeutraConPrecio(cliente) {
+  const v = viajeConPrecio(tickets.fichaDe(cliente));
+  if (!v || !v.estado) return null;
+  return v.estado === 'pedido' ? 'Va 🙌 En cuanto tenga tu precio te lo paso por aquí.' : 'Va 🙌 ¿Te la aparto?';
+}
+
+/* El mismo viaje que ya está pedido: destino, fechas y (gente o unidad)
+   iguales. Un segundo viaje distinto (Mazamitla con Vallarta pendiente) sí
+   manda su propio ticket. */
+function mismoViaje(a, b) {
+  if (!a || !b) return false;
+  const n = function (x) { return conversacion.normaliza(String(x || '')); };
+  if (n(a.destino) !== n(b.destino)) return false;
+  if (String(a.salida || '') !== String(b.salida || '')) return false;
+  if (String(a.regreso || '') !== String(b.regreso || '')) return false;
+  if (a.gente && b.gente && Number(a.gente) !== Number(b.gente)) return false;
+  const ua = n(a.unidadNombre || a.unidad), ub = n(b.unidadNombre || b.unidad);
+  if (ua && ub && ua !== ub && ua !== 'autobus' && ub !== 'autobus') return false;
+  return true;
+}
+
+/* «Te paso el precio en un momento» con datos que faltan es un callejón:
+   nadie pregunta lo que falta y el ticket nunca sale (corrida real del
+   8-sep, escenario c: 30 a Mazatlán, tres veces «te paso el precio», cero
+   tickets). Si promete el precio y falta algo, sale la pregunta del guion. */
+const PROMETE_PRECIO = /te (paso|mando|doy|saco) (el|tu|la) (precio|cotizaci[oó]n)|en un momento te (paso|mando)|te lo (paso|mando|cotizo) en un momento|ahorita te (paso|mando|cotizo)/i;
 
 /* ------------------------------------------------------------
    NADA INTERNO LE LLEGA A UN CLIENTE
@@ -1220,12 +1256,22 @@ function esTextoInterno(texto) {
    sabe cuántos son, son más de 20 y todavía no escogieron camión. */
 function sinAutobusesQueNoCaben(respuesta, estado) {
   const gente = Number(estado && estado.gente) || 0;
-  if (!respuesta || gente <= 20 || (estado && estado.unidadNombre)) return respuesta;
+  if (!respuesta || (estado && estado.unidadNombre)) return respuesta;
   const texto = String(respuesta).toLowerCase();
   const nombraUnAutobus = (conversacion.UNIDADES || []).some(function (u) {
     return u.cat === 'autobus' && u.name && texto.indexOf(String(u.name).toLowerCase()) >= 0;
   });
   if (!nombraUnAutobus) return respuesta;
+  /* En el paso de escoger autobús, la lista es la del dueño (6-sep-2026:
+     «no le digas de baño, puerta ni nada; solo qué calidad es y cuántos
+     asientos»; 7-sep: primero los que caben). En la corrida real del 8-sep
+     (escenario c) la IA recomendó dos con «baño, dos puertas, reclinables».
+     Si toca escoger y la IA nombró camiones a su manera, sale la lista. */
+  const toca = /cu[aá]l autob[uú]s/.test(String(conversacion.loQueFalta(estado) || ''));
+  if (toca && !/se ajustan a la capacidad|Estos son los autobuses que tenemos/.test(String(respuesta))) {
+    return preguntaParaElCliente(estado);
+  }
+  if (gente <= 20) return respuesta;
   /* Dictado del dueño, 7-sep-2026: primero los que caben («se ajustan a la
      capacidad»), y hasta el final los que no, como otras opciones. Si la IA
      nombró autobuses en el paso de elegir, sale el mensaje del guion, con
@@ -1480,7 +1526,7 @@ const PREGUNTA_DE = {
   destino: /a d[oó]nde (van|va el plan|se van|quieren ir)|qu[eé] destino|para d[oó]nde/i,
   salida: /qu[eé] d[ií]a salen|cu[aá]ndo salen|fecha de salida|qu[eé] fecha (salen|ser[ií]a)|para qu[eé] d[ií]a/i,
   regreso: /cu[aá]ndo (regresan|vuelven)|qu[eé] d[ií]a (regresan|vuelven)|ida y vuelta el mismo d[ií]a/i,
-  gente: /cu[aá]ntos (van|son|ser[ií]an|viajan)|cu[aá]ntas personas/i,
+  gente: /cu[aá]ntos (van|son|ser[ií]an|viajan|crees|creen|calculas|piensas|m[aá]s o menos)|cu[aá]ntas personas|n[uú]mero (aproximado )?de (gente|personas|pasajeros)|el n[uú]mero de gente|cuando tengas (el|m[aá]s o menos el) n[uú]mero/i,
   origen: /de d[oó]nde salen|salen de la zona metropolitana/i,
   nombre: /c[oó]mo te llamas|cu[aá]l es tu nombre|me dices tu nombre/i
 };
@@ -1498,6 +1544,16 @@ function esUnSiSeco(texto) {
   const t = conversacion.normaliza(texto).replace(/[!.,;:¡¿?]/g, ' ').trim();
   if (!t || /\bno\b/.test(t) || t.length > 40) return false;
   return /^(si|sip|simon|claro( que si)?|asi es|exacto|correcto|ese mismo( dia)?|el mismo dia|mismo dia|ida y vuelta( el mismo dia)?|si el mismo dia|si mismo dia|si es ida y vuelta)$/.test(t);
+}
+/* «Sí, de guadalajara»: un sí con cola (corrida real del 8-sep-2026,
+   escenario f). Cuenta como sí mientras no traiga un «no» ni una fecha ni
+   hable del regreso: «sí, pero regresamos el 13» no es el mismo día. */
+function empiezaConSi(texto, hoy) {
+  const t = conversacion.normaliza(texto).replace(/[!.,;:¡¿?]/g, ' ').trim();
+  if (!t || /\bno\b/.test(t) || /regres|vuelv|nos quedamos|otro dia/.test(t)) return false;
+  if (!/^(si|sip|simon|claro|asi es|exacto)\b/.test(t)) return false;
+  try { if (conversacion.fechaDe(texto, hoy)) return false; } catch (e) { /* sin fecha */ }
+  return true;
 }
 
 /* Dos «Perfecto.» seguidos suenan a máquina (regla del prompt que la IA
@@ -1521,9 +1577,37 @@ function sinMuletillaRepetida(respuesta, ultimoTextoDelBot) {
    regenera una vez y, si insiste, contesta el guion con lo que falta. */
 function preguntaQueSobra(respuesta, estado) {
   const e = estado || {};
-  if (e.unidad === 'autobus' && e.unidadNombre && !e.gente && PREGUNTA_DE.gente.test(String(respuesta || ''))) return 'gente';
+  const busEscogido = e.unidad === 'autobus' && e.unidadNombre;
+  if ((busEscogido || e.sinCuenta) && !e.gente && PREGUNTA_DE.gente.test(String(respuesta || ''))) return 'gente';
   return null;
 }
+
+/* «Todavía no sé cuántos vamos», «apenas estoy juntando gente»: es un dato,
+   no una evasiva. Se marca en la plática y no se le vuelve a pedir
+   (corrida real del 8-sep-2026, escenario g). */
+const NO_SABE_CUANTOS = /\b(no s[eé]|no sabemos|no tengo|todav[ií]a no|a[uú]n no|ni idea)\b[^.?!]{0,30}\b(cu[aá]nt[oa]s|el n[uú]mero|la cantidad|cu[aá]nta gente)|\bapenas (estoy|estamos|ando|andamos) (juntando|armando|organizando|viendo)|\bno s[eé] cu[aá]ntos\b/;
+function diceQueNoSabeCuantos(texto) {
+  return NO_SABE_CUANTOS.test(conversacion.normaliza(texto));
+}
+const NO_SE_MUEVEN = /\b(solo|nomas|nada mas|unicamente|puro) (nos |que nos )?(lleven|llevan|llevar|traigan|traen|dejen|dejan)\b|\bllevar y traer\b|\bnos llevan y (nos )?traen\b|\bnos dejan y (nos )?recogen\b|\bno (nos vamos a|vamos a|nos) mover\b|\bsin recorridos\b|\bno ocupamos (la unidad|el camion|la camioneta) alla\b|\bida y vuelta nada mas\b/;
+function diceQueNoSeMueven(texto) {
+  return NO_SE_MUEVEN.test(conversacion.normaliza(texto));
+}
+
+/* «Ese», «ése», «el mismo», «el que dices» después de que el bot nombró UN
+   solo autobús (corrida real, escenario g: «el más nuevo cuál es?» → «el
+   Marcopolo G8…» → «y ese cuánto sale?»). Eso es escogerlo. */
+function unicoAutobusEnTexto(texto) {
+  /* Por alias («el G8», «i6S», «Neobus»), no por nombre completo: en la
+     corrida real el bot dijo «El G8, modelo 2026» y con el nombre completo
+     no enganchaba. */
+  const ids = agente.unidadesEnTexto ? agente.unidadesEnTexto(texto) : [];
+  const buses = ids.map(function (id) {
+    return (conversacion.UNIDADES || []).find(function (u) { return u.id === id && u.cat === 'autobus'; });
+  }).filter(Boolean);
+  return buses.length === 1 ? buses[0] : null;
+}
+const SENALA_ESE = /\b(ese|esa|[eé]se|[eé]sa|este|esta|el mismo|la misma|el que dices|el que me dices|el que mencionas)\b/;
 
 /* El viaje que ya está en precio (pedido o dado), como estado de plática:
    para sembrarlo cuando el cliente cambia UNA cosa después del precio. */
@@ -1621,12 +1705,39 @@ async function loQueDiceElAgente(envio) {
      ------------------------------------------------------------ */
   {
     const ultimoAntesDeHablar = agente.historialDe(cliente).filter(function (t) { return t.de === 'bot'; }).pop();
-    if (antes.salida && !antes.regreso && ultimoAntesDeHablar &&
-        /mismo d[ií]a/i.test(ultimoAntesDeHablar.texto || '') && esUnSiSeco(texto)) {
+    const ultimoTexto = (ultimoAntesDeHablar && ultimoAntesDeHablar.texto) || '';
+    let cambio = false;
+    if (antes.salida && !antes.regreso && /mismo d[ií]a/i.test(ultimoTexto) && (esUnSiSeco(texto) || empiezaConSi(texto, hoy))) {
       console.error('[agente] «sí» al mismo día: regreso = salida (' + antes.salida + ')');
-      antes = Object.assign({}, antes, { regreso: antes.salida });
-      webhook.guardaCharla(cliente, antes);
+      antes = Object.assign({}, antes, { regreso: antes.salida }); cambio = true;
     }
+    /* «Solo nos llevan y traen» es recorridos = 0, lo diga en el mensaje
+       que lo diga: en la corrida real del 8-sep (escenario c) la IA no lo
+       apuntó y el guion acabó preguntando «¿cuántos días quieren usar la
+       unidad?» a quien ya lo había dicho. */
+    if (typeof antes.recorridos !== 'number' && diceQueNoSeMueven(texto)) {
+      console.error('[agente] «solo nos llevan y traen»: recorridos = 0');
+      antes = Object.assign({}, antes, { recorridos: 0 }); cambio = true;
+    }
+    /* «Todavía no sé cuántos vamos» es un dato: no se le vuelve a pedir. */
+    if (!antes.gente && !antes.sinCuenta && diceQueNoSabeCuantos(texto)) {
+      console.error('[agente] no sabe cuántos son: se deja de pedir');
+      antes = Object.assign({}, antes, { sinCuenta: true }); cambio = true;
+    }
+    /* «Ese» / «el G8» con quiero/precio/reservar = lo escogió. */
+    if (!antes.unidadNombre) {
+      const t = conversacion.normaliza(texto);
+      const nombrado = agente.unidadPorTexto ? agente.unidadPorTexto(texto) : null;
+      const busNombrado = nombrado && (conversacion.UNIDADES || []).find(function (u) { return u.id === nombrado && u.cat === 'autobus'; });
+      const busSenalado = (!busNombrado && SENALA_ESE.test(t)) ? unicoAutobusEnTexto(ultimoTexto) : null;
+      const quiere = /\b(quiero|me late|me gusta|reserv|apart|cotiza|cuanto|precio|ese|esa|ese mismo|el mismo)\b/.test(t);
+      const bus = busNombrado || busSenalado;
+      if (bus && quiere) {
+        console.error('[agente] escogió el ' + bus.name + ' (' + (busNombrado ? 'por nombre' : 'por «ese»') + ')');
+        antes = conversacion.pegaDatos(antes, { autobus: bus.id }); cambio = true;
+      }
+    }
+    if (cambio) webhook.guardaCharla(cliente, antes);
   }
   const hayViaje = !!(antes.destino || antes.salida || antes.gente || antes.origen);
   const opcionesDeLaIA = {
@@ -1642,7 +1753,21 @@ async function loQueDiceElAgente(envio) {
     voz: { usted: /^(1|si|sí|usted)$/i.test(String(process.env.AGENTE_DE_USTED || '')) }
   };
   const dicho = await agente.conversa(texto, opcionesDeLaIA);
-  if (!dicho) return false;
+  if (!dicho) {
+    /* La IA no contestó (o contestó algo inválido). Con un precio pedido o
+       dado NO se le suelta al guion viejo, que leería el mensaje como un
+       viaje nuevo (escenario b real, 8-sep-2026). */
+    const neutra = esperaNeutraConPrecio(cliente);
+    if (!neutra) return false;
+    console.error('[agente] la IA no contestó y hay precio en la ficha: contesta neutro, no el guion');
+    await manda({ numeroDeOrigen: envio.numeroDeOrigen, para: cliente, texto: neutra, pasaAPersona: false, escribio: '[agente · neutra con precio]' });
+    agente.recuerda(cliente, 'cliente', texto);
+    agente.recuerda(cliente, 'bot', neutra);
+    /* Y la plática vuelve a como estaba ANTES de que el guion leyera el
+       mensaje: sin eso quedaba «a Regresamos» como destino. */
+    webhook.guardaCharla(cliente, (envio.estadoAntes && typeof envio.estadoAntes === 'object') ? envio.estadoAntes : null);
+    return true;
+  }
   if (dicho.turno && almacen.hayAlmacen()) almacen.anotaTurno(dicho.turno).catch(function () {});
 
   /* Lo que la IA leyó se pega al estado de ANTES; lo que el guion había
@@ -1774,6 +1899,11 @@ async function loQueDiceElAgente(envio) {
   let accion = dicho.accion;
   if (accion === 'seguir' && yaEstaTodo) accion = 'cotizar';
   if (accion === 'cotizar' && !yaEstaTodo) accion = 'seguir';   // le falta algo: que lo pida
+  if (accion === 'seguir' && !yaEstaTodo && dicho.respuesta && PROMETE_PRECIO.test(dicho.respuesta) &&
+      !(viajeDeLaFicha && viajeDeLaFicha.estado)) {
+    console.error('[agente] prometió el precio con datos que faltan (' + String(conversacion.loQueFalta(nuevo)).slice(0, 40) + '); pregunta el guion');
+    dicho.respuesta = preguntaParaElCliente(nuevo);
+  }
   /* «Quiero apartar» sin precio dado (A7): antes se reinyectaba al guion
      con la plática limpia y salía la CLABE sin viaje ni monto. Sin precio
      no hay qué apartar: se le dice, y si ya dio todo, se pide el precio. */
@@ -1909,6 +2039,18 @@ async function loQueDiceElAgente(envio) {
        dueño, 6-sep-2026).
        ------------------------------------------------------------ */
     if (accion === 'cotizar') {
+      /* Con el precio YA PEDIDO y sin cambiar nada del viaje, no se vuelve a
+         pedir: al dueño le llegaba un segundo ticket idéntico (corrida real
+         del 8-sep, escenario b). Se le dice al cliente que va en camino. */
+      if (viajeDeLaFicha && viajeDeLaFicha.estado === 'pedido' && !esOtroViaje &&
+          mismoViaje(nuevo, viajeBaseDeLaFicha(tickets.fichaDe(cliente)))) {
+        console.error('[agente] precio ya pedido y nada cambió: no se repite el ticket');
+        const espera = 'Va 🙌 En cuanto tenga tu precio te lo paso por aquí.';
+        await manda({ numeroDeOrigen: envio.numeroDeOrigen, para: cliente, texto: espera, pasaAPersona: false, escribio: '[agente · precio en camino]' });
+        agente.recuerda(cliente, 'bot', espera);
+        webhook.guardaCharla(cliente, null);
+        return true;
+      }
       /* Si el cliente preguntó algo en el mismo mensaje en que completó
          el viaje («…de Guadalajara, ¿traen aire?»), la respuesta de la IA
          sale ANTES de la espera; antes se tiraba (auditoría 7-sep-2026,
@@ -1923,7 +2065,10 @@ async function loQueDiceElAgente(envio) {
       try { r = conversacion.respuestaA('sí está bien', confirmar, hoy); } catch (e) { r = null; }
       const resumen = (r && (r.resumen || r.solicitud)) || {
         destino: nuevo.destino, origen: nuevo.origen, salida: nuevo.salida, regreso: nuevo.regreso,
-        gente: nuevo.gente, unidad: nuevo.unidadNombre || nuevo.unidad
+        gente: nuevo.gente, unidad: nuevo.unidadNombre || nuevo.unidad,
+        /* El nombre del camión también aquí: el precio lo encabeza con
+           `unidadNombre` (8-sep-2026: un i6 salía como «Sprinter»). */
+        unidadNombre: nuevo.unidadNombre || null, nombre: nuevo.nombre || null
       };
       /* El nombre de la unidad («Neobus»), no la categoría («autobus»): es lo
          que lee el dueño en el ticket y la llave del precio aprendido. */
@@ -1969,12 +2114,17 @@ async function loQueDiceElAgente(envio) {
          33 2400 2285» (A6). Igual que un dato del dueño: el cliente se queda
          aquí y al dueño le llega lo que pidió. */
       const esPersona = accion === 'persona';
-      const alCliente = dicho.respuesta || (esPersona
-        ? 'Va, en breve te contestan por aquí mismo 🙌'
-        : 'Va, en breve te paso ese dato 🙌');
-      await manda({ numeroDeOrigen: envio.numeroDeOrigen, para: cliente, texto: alCliente,
-        pasaAPersona: false, escribio: '[agente · dato del dueño]' });
-      agente.recuerda(cliente, 'bot', alCliente);
+      /* Si la IA trajo texto, ya salió arriba (el bloque general de
+         `accion !== 'seguir'`); mandarlo otra vez lo duplicaba (corrida
+         real del 8-sep, escenario c: «Eso lo ve el dueño…» dos veces). */
+      if (!dicho.respuesta) {
+        const alCliente = esPersona
+          ? 'Va, en breve te contestan por aquí mismo 🙌'
+          : 'Va, en breve te paso ese dato 🙌';
+        await manda({ numeroDeOrigen: envio.numeroDeOrigen, para: cliente, texto: alCliente,
+          pasaAPersona: false, escribio: '[agente · dato del dueño]' });
+        agente.recuerda(cliente, 'bot', alCliente);
+      }
       const dueno = tickets.numeroDelDueno(process.env);
       if (dueno) {
         await manda({
@@ -1999,14 +2149,28 @@ async function loQueDiceElAgente(envio) {
     if (hecho) return true;
     /* El motor no pudo: que al menos salga lo que dijo la IA, o el guion. */
     if (dicho.respuesta) return true;
+    const neutra = esperaNeutraConPrecio(cliente);
+    if (neutra) {
+      await manda({ numeroDeOrigen: envio.numeroDeOrigen, para: cliente, texto: neutra, pasaAPersona: false, escribio: '[agente · neutra con precio]' });
+      agente.recuerda(cliente, 'bot', neutra);
+      return true;
+    }
     return false;
   }
 
   /* Sin respuesta no hay qué mandar: antes salía un texto vacío, Meta lo
      rechazaba y el cliente se quedaba sin nada (auditoría 7-sep-2026, A1:
      «¿cuánto sale?» antes de tener todos los datos). Se devuelve `false`
-     y contesta el guion con lo que falta. */
-  if (!dicho.respuesta) return false;
+     y contesta el guion con lo que falta… salvo con un precio pedido o
+     dado: ahí el guion viejo no debe leer el mensaje como viaje nuevo. */
+  if (!dicho.respuesta) {
+    const neutra = esperaNeutraConPrecio(cliente);
+    if (!neutra) return false;
+    console.error('[agente] sin respuesta con precio en la ficha: contesta neutro, no el guion');
+    await manda({ numeroDeOrigen: envio.numeroDeOrigen, para: cliente, texto: neutra, pasaAPersona: false, escribio: '[agente · neutra con precio]' });
+    agente.recuerda(cliente, 'bot', neutra);
+    return true;
+  }
   /* Al elegir autobús, primero los que caben y hasta el final los que no
      (dictado del dueño, 7-sep-2026). Si la IA los mezcló, sale el mensaje
      del guion, y punto. Lo decide el código, no el prompt. */

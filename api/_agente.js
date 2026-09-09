@@ -64,6 +64,14 @@ function unidadPorTexto(t) {
   for (const par of ALIAS_UNIDAD) if (par[0].test(s)) return par[1];
   return null;
 }
+/* Todas las unidades nombradas en un texto (por alias: «G8», «i6S»,
+   «Neobus»…), sin repetir. Sirve para saber si el bot nombró UNA sola. */
+function unidadesEnTexto(t) {
+  const s = String(t || '');
+  const ids = [];
+  for (const par of ALIAS_UNIDAD) if (par[0].test(s) && ids.indexOf(par[1]) < 0) ids.push(par[1]);
+  return ids;
+}
 
 function fichaDeUnidades() {
   const lista = unidades();
@@ -206,6 +214,9 @@ function instruccionesDelAgente(voz) {
     '· Con un autobús ya escogido (datos.autobus), cuántos son NO es requisito: se renta el ' +
     'camión, no las personas (dictado del dueño, 8-sep-2026). No lo preguntes; sigue con lo ' +
     'que falte (fechas, origen) o pide el precio. Si él lo dice, úsalo para ver si le caben.\n' +
+    '· Si dice que todavía no sabe cuántos son («apenas estoy juntando gente»), NO insistas ni ' +
+    'condiciones el precio a eso: sigue sin ese dato. «Ese» o «el G8» con «cuánto sale» o ' +
+    '«quiero» es escogerlo: va en datos.autobus y se cotiza así.\n' +
     '· Capacidad es capacidad: un autobús de 47 no lleva 48. Si escoge uno donde no caben, ' +
     'díselo con los números y ofrécele los que sí. Nunca «apretados».\n' +
     '· DESTINOS DE UN DÍA (Tequila, Chapala, Ajijic, Tapalpa, bodas y eventos locales, y ' +
@@ -644,7 +655,7 @@ async function conversa(mensaje, opciones) {
 module.exports = {
   conversa, sanea, limpiaDatos, instruccionesDelAgente, textoDelContexto,
   recuerda, historialDe, siembraHistorial, olvidaTodo, PALABRAS_PROHIBIDAS,
-  unidadPorTexto, fichaDeUnidades,
+  unidadPorTexto, unidadesEnTexto, fichaDeUnidades,
   /* El candado, para que `manda` frene lo mismo que `sanea`. */
   esTextoInterno, pareceTextoDelPrompt, TEXTO_INTERNO, FRAGMENTOS_DEL_PROMPT, soloInstrucciones
 };

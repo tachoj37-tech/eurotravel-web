@@ -586,5 +586,148 @@ titulo('R14 · «¿…el mismo día, o se quedan?» → «si» = regreso el mism
   okQue('  y sí se le pregunta qué día regresan', /qu[eé] d[ií]a regresan/i.test(textos(D).slice(antesD).join('\n')));
 }
 
+/* ============================================================ */
+titulo('R15 · corrida real del 8-sep (escenario g): «no sé cuántos vamos» es un dato, y «ese» es el camión que el bot nombró');
+{
+  limpia();
+  const C = '5213366670417';
+  /* El bot acaba de nombrar UN autobús; el cliente pregunta por «ese». */
+  webhook.guardaCharla(C, { destino: null, paso: 'destino', nombre: 'Prueba' });
+  agente.recuerda(C, 'cliente', 'el más nuevo cuál es?');
+  /* Como lo dijo el modelo real: «El G8», por alias, no el nombre completo. */
+  agente.recuerda(C, 'bot', 'El G8, modelo 2026: es la unidad más nueva del parque. Línea premium, 51 lugares. ¿Es para un viaje grande?');
+  laIA = () => ({ respuesta: 'Para cotizar necesito saber cuántos van, qué día salen y si regresan el mismo día.', datos: { destino: 'Puerto Vallarta' }, accion: 'seguir' });
+  let antes = textos(C).length;
+  await dice('y ese cuánto sale a puerto vallarta?', C);
+  ok('«ese» escogió el G8', (webhook.charlaDe(C) || {}).unidadNombre, 'Marcopolo Paradiso G8');
+  okQue('  y al cliente no le llega «cuántos van»', !/cu[aá]ntos (van|son)/i.test(textos(C).slice(antes).join('\n')));
+  /* «Todavía no sé cuántos vamos»: la IA insiste; el motor no. */
+  laIA = () => ({ respuesta: 'Claro. ¿Más o menos cuántos crees que van a ser?', datos: {}, accion: 'seguir' });
+  antes = textos(C).length;
+  await dice('todavía no sé cuántos vamos, apenas estoy juntando gente', C);
+  okQue('la plática quedó marcada «sin cuenta»', (webhook.charlaDe(C) || {}).sinCuenta === true);
+  okQue('  y no se le pregunta «¿cuántos crees que van a ser?»', !/cu[aá]ntos/i.test(textos(C).slice(antes).join('\n')));
+  const bot = (await import(pathToFileURL(path.join(RAIZ, 'bot.js')).href)).default;
+  okQue('  lo que falta ya no es «cuántos»', !/cu[aá]ntos/i.test(String(bot.loQueFalta(webhook.charlaDe(C)) || '')));
+  /* Y sin unidad, «no sé cuántos» lleva a escoger autobús, no a la cuenta. */
+  const sinUnidad = bot.pegaDatos({ destino: 'Puerto Vallarta', salida: '2026-10-03', regreso: '2026-10-05', sinCuenta: true }, {});
+  ok('  sin unidad y sin cuenta, lo que sigue es escoger autobús', sinUnidad.paso, 'elegirBus');
+  /* Si después da el número, la marca se quita y se revisa el cupo. */
+  const conNumero = bot.pegaDatos({ destino: 'Puerto Vallarta', salida: '2026-10-03', regreso: '2026-10-05', sinCuenta: true, unidad: 'autobus', unidadNombre: 'Irizar i6', unidadId: 'irizar-i6' }, { gente: 60 });
+  okQue('  y si luego dice 60, se quita la marca y el i6 de 47 ya no cabe', !conNumero.sinCuenta && conNumero.noCabe && conNumero.noCabe.nombre === 'Irizar i6');
+}
+
+/* ============================================================ */
+titulo('R16 · «sí, de guadalajara» a «¿el mismo día?» también es sí (escenario f real)');
+{
+  limpia();
+  const C = '5213366670418';
+  webhook.guardaCharla(C, { destino: 'Sayulita', paso: 'regreso', salida: '2026-09-11', unidad: 'autobus', unidadNombre: 'Irizar i6', unidadId: 'irizar-i6', nombre: 'Prueba' });
+  agente.recuerda(C, 'bot', '¿El 11 de ida y vuelta el mismo día, o regresan otro día?');
+  laIA = () => ({ respuesta: 'Perfecto, salen de Guadalajara el 11. ¿Regresan el mismo día o se quedan más tiempo allá?', datos: { origen: 'Guadalajara' }, accion: 'seguir' });
+  const ticketsAntes = textos(DUENO).filter((t) => /Precio por confirmar/.test(t)).length;
+  await dice('sí, de guadalajara', C);
+  /* Con el regreso y el origen ya estaba todo: se pidió el precio, la
+     plática se cerró y el viaje vive en la ficha (porConfirmar). */
+  const viaje = ((tk.fichaDe(C) || {}).porConfirmar || {}).resumen || {};
+  ok('regreso = salida (ya en el viaje pedido)', viaje.regreso, '2026-09-11');
+  ok('  y el origen que traía la cola también quedó', viaje.origen, 'Guadalajara');
+  ok('  y se pidió el precio al dueño', textos(DUENO).filter((t) => /Precio por confirmar/.test(t)).length, ticketsAntes + 1);
+  okQue('  con el i6 en el ticket, no la Sprinter', /Irizar i6/.test(textos(DUENO).filter((t) => /Precio por confirmar/.test(t)).pop() || ''));
+  /* Pero «sí, pero regresamos el 13» no es el mismo día. */
+  limpia();
+  const D = '5213366670419';
+  webhook.guardaCharla(D, { destino: 'Sayulita', paso: 'regreso', salida: '2026-09-11', unidad: 'autobus', unidadNombre: 'Irizar i6', nombre: 'Prueba' });
+  agente.recuerda(D, 'bot', '¿Salen y regresan el mismo día?');
+  laIA = () => ({ respuesta: 'Va, del 11 al 13.', datos: { regreso: '2026-09-13' }, accion: 'seguir' });
+  await dice('sí, pero regresamos el 13', D);
+  ok('«sí, pero regresamos el 13» → regreso el 13, no el 11', (webhook.charlaDe(D) || {}).regreso, '2026-09-13');
+}
+
+/* ============================================================ */
+titulo('R17 · con el precio pedido, un mensaje sin respuesta de la IA no cae al guion ni repite el ticket (escenario b real)');
+{
+  limpia();
+  const C = '5213366670420';
+  /* Todo el viaje en un mensaje → ticket al dueño, plática cerrada. */
+  laIA = (t) => /despedida/i.test(t)
+    ? { respuesta: null, datos: { destino: 'Tequila', salida: '2026-10-18', regreso: '2026-10-18', gente: 14, origen: 'Guadalajara', recorridos: 0 }, accion: 'cotizar' }
+    : { respuesta: null, datos: {}, accion: 'seguir' };
+  await dice('vamos a tequila el 18 de octubre, somos 14 de guadalajara, ida y vuelta, es una despedida', C);
+  const tickets = () => textos(DUENO).filter((t) => /Precio por confirmar/.test(t)).length;
+  ok('salió UN ticket', tickets(), 1);
+  /* Lo que el cliente escribió después, y la IA sin nada que decir. */
+  let antes = textos(C).length;
+  await dice('sí, ese mismo día regresamos', C);
+  const dicho = textos(C).slice(antes).join('\n');
+  okQue('el guion viejo NO leyó «regresamos» como destino', !/Creo que entend|Regresamos|Qué día salen/i.test(dicho));
+  okQue('  recibió algo neutro y cierto («en cuanto tenga tu precio»)', /En cuanto tenga tu precio/i.test(dicho));
+  okQue('  y la plática no quedó envenenada', !(webhook.charlaDe(C) || {}).destino || /tequila/i.test((webhook.charlaDe(C) || {}).destino));
+  /* «ok» después: la IA cree que ya está todo y pide cotizar otra vez. */
+  laIA = () => ({ respuesta: 'Va.', datos: {}, accion: 'cotizar' });
+  antes = textos(C).length;
+  await dice('ok', C);
+  ok('«ok» NO manda un segundo ticket', tickets(), 1);
+  okQue('  y no cae al guion viejo («¿A dónde van?»)', !/d[oó]nde van|Creo que entend/i.test(textos(C).slice(antes).join('\n')));
+}
+
+/* ============================================================ */
+titulo('R18 · «te paso el precio en un momento» con datos que faltan: se pregunta lo que falta (escenario c real)');
+{
+  limpia();
+  const C = '5213366670421';
+  /* 30 a Mazatlán: falta escoger autobús, y la IA promete el precio. */
+  laIA = () => ({ respuesta: 'Mazatlán del 10 al 12 con 30 personas: va perfecto para un autobús. Te paso el precio en un momento.', datos: { destino: 'Mazatlán', salida: '2026-10-10', regreso: '2026-10-12', gente: 30, origen: 'Guadalajara', recorridos: 0 }, accion: 'seguir' });
+  const antes = textos(C).length;
+  await dice('a mazatlán del 10 al 12 de octubre, 30 personas, desde guadalajara, solo nos llevan y traen', C);
+  const dicho = textos(C).slice(antes).join('\n');
+  okQue('no promete el precio: enseña los autobuses que le caben', /Para 30 se ajustan a la capacidad/.test(dicho) && /Marcopolo Paradiso G8/.test(dicho));
+  okQue('  sin el «te paso el precio en un momento»', !/te paso el precio/i.test(dicho));
+  ok('  y sin ticket todavía (falta cuál autobús)', textos(DUENO).filter((t) => /Precio por confirmar/.test(t)).length, 0);
+  /* Escoge el Neobus → ahora sí, el ticket. */
+  laIA = () => ({ respuesta: 'Listo, Neobus. Te paso el precio en un momento.', datos: { autobus: 'neobus' }, accion: 'seguir' });
+  await dice('el neobus', C);
+  ok('con el Neobus escogido sale el ticket al dueño', textos(DUENO).filter((t) => /Precio por confirmar/.test(t)).length, 1);
+  okQue('  y dice Neobus', /Neobus/.test(textos(DUENO).filter((t) => /Precio por confirmar/.test(t)).pop() || ''));
+  /* Y si la IA recomienda dos a su manera («baño, dos puertas»), también
+     sale la lista del dueño, no su versión. */
+  limpia();
+  const C2 = '5213366670422';
+  laIA = () => ({ respuesta: 'Para ese viaje les recomiendo el Neobus — 50 asientos, con aire, baño y asientos reclinables — o el Irizar i6S — 51 asientos, con dos puertas. ¿Con cuál vamos?', datos: { destino: 'Mazatlán', salida: '2026-10-10', regreso: '2026-10-12', gente: 30, origen: 'Guadalajara', recorridos: 0 }, accion: 'seguir' });
+  const a2 = textos(C2).length;
+  await dice('a mazatlán del 10 al 12 de octubre, 30 personas, desde guadalajara, solo nos llevan y traen', C2);
+  const d2 = textos(C2).slice(a2).join('\n');
+  okQue('la IA recomendó dos con baño y puertas → sale la lista del dueño', /Para 30 se ajustan a la capacidad/.test(d2) && !/dos puertas|reclinables/.test(d2));
+}
+
+/* ============================================================ */
+titulo('R19 · «solo nos llevan y traen» es recorridos = 0 aunque la IA no lo apunte; y un dato del dueño no se manda dos veces (escenario c real)');
+{
+  limpia();
+  const C = '5213366670423';
+  /* La IA lee todo menos los recorridos (así pasó de verdad). */
+  laIA = (t) => /neobus/i.test(t)
+    ? { respuesta: 'Listo, Neobus. Te paso el precio en un momento.', datos: { autobus: 'neobus' }, accion: 'seguir' }
+    : { respuesta: 'Mazatlán del 10 al 12 con 30: va con autobús.', datos: { destino: 'Mazatlán', salida: '2026-10-10', regreso: '2026-10-12', gente: 30, origen: 'Guadalajara' }, accion: 'seguir' };
+  await dice('a mazatlán del 10 al 12 de octubre, 30 personas, desde guadalajara, solo nos llevan y traen', C);
+  ok('«solo nos llevan y traen» dejó recorridos = 0', (webhook.charlaDe(C) || {}).recorridos, 0);
+  const antes = textos(C).length;
+  await dice('el neobus', C);
+  const dicho = textos(C).slice(antes).join('\n');
+  okQue('con el Neobus escogido NO pregunta los recorridos: pide el precio', /En breve te paso tu cotizaci/i.test(dicho) && !/mover|pasear|recorrid/i.test(dicho));
+  ok('  y el ticket salió', textos(DUENO).filter((t) => /Precio por confirmar/.test(t)).length, 1);
+  /* Una pregunta para el dueño con texto de la IA: UNA vez al cliente. */
+  laIA = () => ({ respuesta: 'Eso lo ve el dueño y en breve te confirma cómo funciona.', datos: {}, accion: 'dueno' });
+  const a2 = textos(C).length;
+  await dice('y si se nos cancela?', C);
+  const d2 = textos(C).slice(a2);
+  ok('«¿y si se nos cancela?»: al cliente le llega UN mensaje, no dos', d2.length, 1);
+  okQue('  y al dueño la pregunta', /Un cliente pregunta/.test(textos(DUENO).pop() || ''));
+  /* La pregunta del guion, cuando toca, ya no vende al chofer como compañía. */
+  const bot = (await import(pathToFileURL(path.join(RAIZ, 'bot.js')).href)).default;
+  const p = bot.pregunta({ destino: 'Mazatlán', origen: 'Guadalajara', salida: '2026-10-10', regreso: '2026-10-12', gente: 30, unidad: 'autobus', unidadNombre: 'Neobus', unidadId: 'neobus', paso: 'recorridos' });
+  okQue('la pregunta de recorridos no dice «el operador se queda con ustedes»', p && /se van a mover|los llevamos/.test(p.texto) && !/operador se queda/.test(p.texto));
+}
+
 console.log('\n' + buenas + ' buenas, ' + malas + ' malas');
 process.exit(malas ? 1 : 0);

@@ -587,11 +587,11 @@ function cotiza(extra) {
   };
   const r = bot.respuestaA('x', e, HOY);
   ok('el paso de recorridos hace UNA pregunta', (r.texto.match(/\?/g) || []).length, 1);
-  /* Y dice el beneficio ANTES de preguntar, que es la otra regla: el
-     cliente no sabe que el operador se queda con ellos, y ése es el
-     dato que hace que quiera los recorridos. */
-  okQue('  y dice el beneficio antes de preguntar',
-    /operador se queda/i.test(r.texto));
+  /* Cambió de lado el 8-sep-2026: «el operador se queda con ustedes»
+     vende al chofer como compañía (prohibido en la psicología nueva) y
+     sonaba a guion. La pregunta va sola: se mueven o solo los llevamos. */
+  okQue('  sin vender al chofer como compañía, y con la pregunta clara',
+    !/operador se queda/i.test(r.texto) && /se van a mover|los llevamos/i.test(r.texto));
 }
 
 /* ============================================================ */

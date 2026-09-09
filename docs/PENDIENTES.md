@@ -121,6 +121,23 @@ se recortan (`sinMuletillaRepetida`). Prueba R14. En la misma prueba dijo
 «pasado mañana, 11 de septiembre» siendo día 8: «hoy» se calculaba en UTC
 (Vercel); ahora `hoyISO` es hora de Guadalajara en todos los caminos.
 
+**Pruebas con el modelo REAL desde la terminal** (noche): el dueño puso la
+llave en `.env.local` (fuera de Git) con tope de 1 USD; `scripts/conversar.mjs`
+la lee, suma el gasto (`usd=` de cada llamada) y se detiene al tope. Siete
+escenarios (a–g; f = Sayulita del dueño, g = el que no sabe cuántos). Lo que
+destaparon en cuatro rondas (≈ $0.20): el precio de un i6 salía encabezado
+«Sprinter» (`unidadDelResumen` no reconocía el nombre en `unidad`); «sí, de
+guadalajara» no contaba como sí al mismo día (`empiezaConSi`); «todavía no sé
+cuántos vamos» se pedía tres veces (`sinCuenta`); «ese cuánto sale» tras
+nombrar el G8 no lo escogía (`unicoAutobusEnTexto` por alias); con precio
+pedido, un mensaje sin respuesta de la IA caía al guion viejo («a Regresamos»
+como destino) y «ok» mandaba un segundo ticket (`esperaNeutraConPrecio`,
+`mismoViaje`); «te paso el precio en un momento» con datos que faltaban no
+mandaba ticket nunca (`PROMETE_PRECIO` → pregunta del guion); al escoger
+autobús la IA recomendaba dos con «baño y puertas» en vez de la lista
+dictada; «solo nos llevan y traen» no se apuntaba (`diceQueNoSeMueven`); un
+dato del dueño salía dos veces al cliente. Pruebas R15–R19.
+
 **Seguimiento sin plantillas de Meta** («quitamos lo de Meta, es mucho»):
 el primer toque baja a 22 h y sale como texto libre gratis; los de 3 y 7
 días le llegan al dueño en un resumen para que escriba él desde su

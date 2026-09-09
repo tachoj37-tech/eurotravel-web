@@ -1666,8 +1666,10 @@ function pregunta(estado) {
            con ellos sin costo extra, y ése es justo el dato que hace
            que quiera los recorridos.
            ------------------------------------------------------------ */
-        texto: 'El operador se queda con ustedes todo el viaje 🚐\n\n' +
-          '¿Cuántos días quieren usar la unidad para pasear allá?',
+        /* Sin «el operador se queda con ustedes»: el chofer no se vende
+           como compañía (psicología, 8-sep-2026) y la línea sonaba a guion.
+           La pregunta es la misma que la IA sabe hacer: se mueven o no. */
+        texto: '¿Allá se van a mover con la unidad, o solo los llevamos y los traemos?',
         opciones: ops
       };
     }
@@ -1857,11 +1859,14 @@ function alSiguienteHueco(e) {
        dice después, `pegaDatos` revisa si le caben (`noCabe`).
      Para la Sprinter y la Suburban sí se pregunta: ahí la cuenta decide
      la unidad. */
-  else if (e.unidad === 'autobus' && !e.unidadNombre &&
+  else if ((e.unidad === 'autobus' || (e.sinCuenta && !e.unidad)) && !e.unidadNombre &&
            UNIDADES.some(function (u) {
              return u.cat === 'autobus' && (e.gente || 0) <= Number(u.max);
            })) e.paso = 'elegirBus';
-  else if (!e.gente && !(e.unidad === 'autobus' && e.unidadNombre)) e.paso = 'cuantos';
+  /* `sinCuenta`: dijo «todavía no sé cuántos vamos» (corrida real del
+     8-sep-2026, escenario g: el bot insistió tres veces). No se le vuelve
+     a pedir; si después da el número, `pegaDatos` lo toma y revisa cupo. */
+  else if (!e.gente && !e.sinCuenta && !(e.unidad === 'autobus' && e.unidadNombre)) e.paso = 'cuantos';
   /* ------------------------------------------------------------
      Y SI ES AUTOBÚS, CUÁL AUTOBÚS
      ------------------------------------------------------------
@@ -2695,8 +2700,12 @@ function unidadDelResumen(r) {
   if (r && r.unidad === 'autobus' && !(r.unidadNombre && porNombre(r.unidadNombre))) {
     return 'Autobús' + (r.gente ? ' · ' + r.gente + ' pasajeros' : '');
   }
+  /* `unidad` puede traer la categoría («sprinter») o el NOMBRE del camión
+     («Irizar i6»): el resumen que arma el shell para un autobús pone el
+     nombre ahí. Sin esta línea, el 8-sep-2026 un i6 de $28,000 le llegó al
+     cliente encabezado «Sprinter · hasta 20 pasajeros». */
   const u = (r && r.unidadNombre && porNombre(r.unidadNombre)) ||
-    (r && r.unidad && porId(r.unidad));
+    (r && r.unidad && (porId(r.unidad) || porNombre(r.unidad)));
   return u ? u.name + ' · hasta ' + u.max + ' pasajeros' : null;
 }
 
@@ -3802,6 +3811,8 @@ function pegaDatos(estado, datos) {
   if (d.regreso) e.regreso = d.regreso;
   if (d.gente && Number(d.gente) !== Number(e.gente)) {
     e.gente = d.gente;
+    /* Ya dio el número: se quita la marca de «no sabe cuántos». */
+    delete e.sinCuenta;
     /* Cambió cuántos van: la unidad que había ya no cuenta si no caben
        (o si ya no hace falta un autobús). Se vuelve a escoger. */
     if (e.unidad) {
