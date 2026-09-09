@@ -787,6 +787,24 @@ async function loQueLaIAEntendio(envio) {
    Si falla, se manda lo que el webhook ya habia preparado —volver
    a pedir lo que falta— y el cliente no se queda en silencio.
    ------------------------------------------------------------ */
+/* ¿Ya le pedí los datos del contrato en esta plática? Se miran los tres
+   últimos mensajes míos, no solo el último: en cuanto sale la versión
+   corta («¿me pasas…?») la larga ya no debe volver. */
+function yaLePediDatos(cliente) {
+  return agente.historialDe(cliente)
+    .filter(function (t) { return t.de === 'bot'; })
+    .slice(-3)
+    .some(function (t) { return /Me falta|me faltan estos datos|Me pasas/i.test(t.texto || ''); });
+}
+
+/* Un campo del contrato, pedido como lo pediría una persona y no como una
+   casilla: «El *nombre completo* de quien firma el contrato» → «el nombre
+   completo de quien firma el contrato». */
+function unDato(campo) {
+  const t = String((campo && campo.pide) || '').replace(/\*/g, '').trim();
+  return t.charAt(0).toLowerCase() + t.slice(1);
+}
+
 async function datosDelContrato(envio) {
   const hoy = hoyDePrueba() || conversacion.hoyISO();
   if (!process.env.ANTHROPIC_API_KEY) return null;
@@ -819,6 +837,67 @@ async function datosDelContrato(envio) {
   const nuevos = contrato.limpia(leido);
   const juntos = contrato.junta(envio.contratoQueVa, nuevos);
   const completo = contrato.estaCompleto(juntos);
+  const trajoAlgo = contrato.CAMPOS.some(function (c) { return nuevos[c.id] != null && nuevos[c.id] !== ''; });
+
+  /* ------------------------------------------------------------
+     JUNTAR DATOS NO ES UN CALLEJÓN
+     ------------------------------------------------------------
+     Corrida real del 9-sep-2026 (escenario d): un cliente que YA depositó
+     escribió «¿cómo va lo mío?», «¿mi contrato ya está?», «vamos a cambiar
+     la fecha al 21 de noviembre» y «ok gracias», y recibió CUATRO VECES la
+     misma lista de datos que faltan. El cambio de fecha —que es dinero— no
+     llegó al dueño.
+
+     Si el mensaje no trae ningún dato del contrato, aquí se decide qué es:
+     un cambio (va al dueño), una pregunta de estado (se contesta con la
+     verdad) o un cierre (se acusa y ya). La lista solo vuelve a salir si
+     de verdad ayuda.
+     ------------------------------------------------------------ */
+  if (!trajoAlgo) {
+    const t = conversacion.normaliza(envio.crudoDelCliente);
+    const cambia = /\b(cambiar|cambiamos|cambio|mover|movemos|recorrer|adelantar|posponer|aplazar)\b[^.?!]{0,30}\b(fecha|dia|viaje|salida|horario)\b|\bcancelar\b|\bcancelamos\b|\bya no vamos\b|\bya no va\b|\bsomos mas\b|\bsomos menos\b|\bya no van\b/.test(t);
+    const pregunta = /\bcomo va\b|\bque onda con\b|\bya esta\b|\bya quedo\b|\bmi contrato\b|\bel contrato\b|\bya lo revisaron\b|\bconfirmaron\b|\bllego mi (pago|deposito|comprobante)\b|\bcuando me (mandan|llega)\b|\bnovedades\b/.test(t);
+    const dueno = tickets.numeroDelDueno(process.env);
+    if (cambia) {
+      const salidaCambio = [{
+        numeroDeOrigen: envio.numeroDeOrigen, para: envio.para,
+        texto: 'Va, lo checo 🙌 Eso lo confirma una persona del equipo y en breve te dicen por aquí.',
+        pasaAPersona: false, escribio: '[datos del contrato · cambio al dueño]'
+      }];
+      if (dueno) {
+        salidaCambio.push({
+          numeroDeOrigen: envio.numeroDeOrigen, para: dueno, esTicket: true, sobreCliente: envio.para, pasaAPersona: false,
+          texto: '⚠️ *Quiere cambiar algo de un viaje YA APARTADO*\n\n«' + String(envio.crudoDelCliente).slice(0, 300) + '»\n\n' +
+            'Ya depositó y se le estaban juntando los datos del contrato. Contéstame *este mensaje* y le llega tal cual.\n_cliente: ' + envio.para + '_',
+          escribio: '[ticket · cambio después de apartar]'
+        });
+      }
+      return salidaCambio;
+    }
+    if (pregunta || !completo) {
+      const f = tickets.fichaDe(envio.para) || {};
+      const estado = f.contratoSubido
+        ? 'Tu contrato ya está armado, folio *' + f.contratoSubido.folio + '* 📄'
+        : 'Tu comprobante ya lo tiene el equipo; en cuanto lo confirmen te llega tu contrato 🙌';
+      const faltan = contrato.faltantes(juntos);
+      /* La lista de cinco puntos se manda UNA vez. Si el cliente vuelve a
+         escribir sin traer datos, se le pide UNO solo, como lo pediría una
+         persona: la lista repetida es lo que hacía sentir formulario
+         (corrida real del 9-sep-2026). */
+      const yaLaVio = yaLePediDatos(envio.para);
+      const unoSolo = faltan.length ? '\n\n¿Me pasas ' + unDato(faltan[0]) + '?' : '';
+      const listaCompleta = faltan.length ? '\n\nMientras, me faltan estos datos:\n\n' + faltan.map(function (c) { return '· ' + c.pide; }).join('\n') : '';
+      const texto = pregunta
+        ? estado + (yaLaVio ? unoSolo : listaCompleta)
+        : (yaLaVio
+          ? 'Va 🙌' + (unoSolo || ' En cuanto se confirme tu pago te mando tu contrato.')
+          : contrato.pideLoQueFalta(juntos, nuevos));
+      return [{
+        numeroDeOrigen: envio.numeroDeOrigen, para: envio.para, texto: texto,
+        pasaAPersona: false, escribio: '[datos del contrato · estado]'
+      }];
+    }
+  }
 
   /* Queda guardado ANTES de contestar: si el envio falla, el dato ya
      no se pierde y el cliente no tiene que repetirlo. */
@@ -1895,6 +1974,60 @@ async function loQueDiceElAgente(envio) {
     }
   }
 
+  /* ------------------------------------------------------------
+     UN DESTINO DEL EXTRANJERO NO SE COTIZA
+     ------------------------------------------------------------
+     Corrida real del 9-sep-2026: «un viaje a bta» (dedazo de «vta») lo
+     leyó el modelo como Bogotá y el bot armó una Sprinter a Colombia.
+     Eurotravel no hace viajes al extranjero: el destino se descarta, el
+     cliente recibe una pregunta honesta y el dueño se entera.
+     ------------------------------------------------------------ */
+  if (nuevo.destino && conversacion.esDelExtranjero(nuevo.destino)) {
+    console.error('[agente] destino del extranjero («' + nuevo.destino + '»): no se cotiza');
+    const fuera = nuevo.destino;
+    delete nuevo.destino; delete nuevo.salida; delete nuevo.regreso;
+    nuevo.paso = 'destino';
+    webhook.guardaCharla(cliente, nuevo);
+    dicho.accion = 'seguir';
+    dicho.respuesta = 'Uy, hasta ' + fuera + ' no llegamos: los viajes son por carretera aquí en México 🚐 ' +
+      '¿A qué lugar de la República van?';
+    const duenoFuera = tickets.numeroDelDueno(process.env);
+    if (duenoFuera) {
+      await manda({ numeroDeOrigen: envio.numeroDeOrigen, para: duenoFuera, esTicket: true, sobreCliente: cliente, pasaAPersona: false,
+        texto: '🌎 *Te pidieron un viaje al extranjero*\n\n«' + String(texto).slice(0, 200) + '»\n\n' +
+          'Le dije que solo viajamos dentro de México y le pregunté a dónde van. Si sí lo quieres tomar, contéstame este mensaje.\n_cliente: ' + cliente + '_',
+        escribio: '[ticket · destino del extranjero]' });
+    }
+  }
+
+  /* ------------------------------------------------------------
+     NO SE VENDEN BOLETOS, Y UN DESCUENTO LO DECIDE EL DUEÑO
+     ------------------------------------------------------------
+     Corrida real del 9-sep-2026 (escenario h): «¿y venden boletos a
+     Monterrey?» → «Sí, claro. ¿Cuándo pensabas ir?». Eurotravel renta
+     unidades completas: prometer boletos es prometer un servicio que no
+     existe. Y «¿no me puedes hacer un descuento?» recibió un «No, los
+     precios son los que son»: el dueño es quien da descuentos, así que
+     la pregunta le llega a él en vez de morir en un no seco.
+     ------------------------------------------------------------ */
+  {
+    const t = conversacion.normaliza(texto);
+    const pideBoletos = /\b(boletos?|pasajes?|corridas?|asientos? sueltos?|lugares? sueltos?|un lugar|dos lugares)\b/.test(t) &&
+      !/\bboleto de avi[oó]n\b/.test(t);
+    const pideDescuento = /\b(descuento|rebaja|precio especial|promocion|me lo dejas en|me lo deja en|hacer un precio|mejor precio|mas barato)\b/.test(t);
+    if (pideBoletos) {
+      console.error('[agente] preguntó por boletos sueltos: se aclara que se renta la unidad completa');
+      dicho.accion = 'seguir';
+      dicho.respuesta = 'Boletos sueltos no manejamos 🙌 Lo que hacemos es rentarte la unidad completa con chofer ' +
+        'para tu grupo, del punto que nos digas y de regreso. ¿Para cuántos sería y a dónde van?';
+    } else if (pideDescuento && dicho.accion === 'seguir') {
+      console.error('[agente] pidió descuento: lo decide el dueño');
+      dicho.accion = 'dueno';
+      dicho.respuesta = 'El precio ya va cerrado con operador, combustible, casetas y seguro de viajero, ' +
+        'sin cobros después 🙌 Déjame consultarlo con el equipo y en breve te dicen por aquí.';
+    }
+  }
+
   const yaEstaTodo = !conversacion.loQueFalta(nuevo);
   let accion = dicho.accion;
   if (accion === 'seguir' && yaEstaTodo) accion = 'cotizar';
@@ -2287,7 +2420,17 @@ async function reparte(envio) {
      dictando su direccion no puede caer en el camino de siempre. */
   if (envio.datosDelContrato && envio.crudoDelCliente) {
     const hecho = await datosDelContrato(envio);
-    if (hecho) { for (const e of hecho) await manda(e); return; }
+    if (hecho) {
+      /* Lo que se le dice aquí también entra a la memoria corta: así el
+         siguiente mensaje sabe qué ya se le pidió y no repite la lista
+         (corrida real del 9-sep-2026). */
+      agente.recuerda(envio.para, 'cliente', envio.crudoDelCliente);
+      for (const e of hecho) {
+        await manda(e);
+        if (e.para === envio.para && e.texto) agente.recuerda(envio.para, 'bot', e.texto);
+      }
+      return;
+    }
   }
 
   if (envio.noEntendio && envio.crudoDelCliente) {

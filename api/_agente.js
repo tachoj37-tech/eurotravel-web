@@ -239,6 +239,12 @@ function instruccionesDelAgente(voz) {
     '"fotos" o "video" con "unidadPedida".\n' +
     '· La cancelación y cualquier cambio de fecha los ve el dueño: di que en breve le ' +
     'confirman eso y sigue.\n' +
+    '· NO se venden boletos ni asientos sueltos y no hay corridas: se renta la unidad ' +
+    'completa con chofer, para el grupo. Si preguntan por boletos, pasajes o corridas, dilo ' +
+    'claro y amable, y pregunta para cuántos van y a dónde. Nunca digas que sí los vendes.\n' +
+    '· Si piden descuento: el precio ya viene cerrado con todo incluido y tú no das ' +
+    'descuentos ni los niegas en seco. Di lo que incluye y que lo consultas con el equipo; ' +
+    'la acción es "dueno" para que él decida.\n' +
     '· Lo que YA SE SABE del viaje es sagrado: no lo vuelvas a preguntar ni lo cambies salvo ' +
     'que el cliente lo cambie.\n\n' +
 
@@ -635,9 +641,15 @@ async function conversa(mensaje, opciones) {
     const accion = ACCIONES.indexOf(json.accion) >= 0 ? json.accion : 'seguir';
     const respuesta = sanea(json.respuesta);
     if (accion === 'seguir' && !respuesta) {
-      /* Dijo algo que no puede salir (o nada). El guion contesta de respaldo. */
-      if (json.respuesta) console.error('[agente] respuesta descartada por el saneado');
-      return null;
+      /* Dijo algo que no puede salir (o nada). El guion contesta de
+         respaldo, PERO los datos que leyó se conservan: en la corrida real
+         del 9-sep-2026 una agencia mandó el viaje completo (45 pax,
+         GDL–Mazatlán, 10 al 12) en un mensaje, el candado se comió la
+         respuesta y con ella se fue el viaje entero; tres mensajes después
+         el bot preguntaba «¿a dónde van?». Los datos no son texto para el
+         cliente: no hay nada que filtrar en ellos. */
+      if (json.respuesta) console.error('[agente] respuesta descartada por el saneado (los datos leídos sí se conservan)');
+      return { respuesta: null, datos: limpiaDatos(json.datos, hoy), accion: 'seguir', unidadPedida: unidadPorTexto(texto), turno: turno };
     }
     /* La unidad pedida: lo que dijo la IA, o lo que se lee del texto del
        cliente («fotos del i6», «video de la sprinter»). Solo ids reales. */

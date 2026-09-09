@@ -138,6 +138,23 @@ autobús la IA recomendaba dos con «baño y puertas» en vez de la lista
 dictada; «solo nos llevan y traen» no se apuntaba (`diceQueNoSeMueven`); un
 dato del dueño salía dos veces al cliente. Pruebas R15–R19.
 
+**Segunda tanda con el modelo real** (9-sep, escenarios a, d, h, i; ≈ $0.12):
+cinco fallas más, todas de experiencia del cliente. «Un viaje a bta»
+(dedazo de «vta») se leyó como **Bogotá** y el bot cotizó una Sprinter a
+Colombia: ahora `bta` es Puerto Vallarta y `esDelExtranjero` frena
+cualquier destino de fuera (con ticket al dueño; San Antonio Tlayacapan y
+San Diego de Alejandría quedan fuera de la lista a propósito). Un cliente
+que YA depositó recibía **cuatro veces la misma lista de datos** y su
+«vamos a cambiar la fecha» se lo tragaba el formulario: ahora un cambio va
+al dueño con ticket, las preguntas se contestan con la verdad del
+comprobante y los datos se piden de uno en uno. «¿Venden boletos a
+Monterrey?» recibía «sí, claro»: se aclara que se renta la unidad
+completa. «¿No me haces un descuento?» recibía un «no» seco: ahora lo
+decide el dueño. Y cuando el candado de fugas descartaba la respuesta se
+perdía **el viaje entero** que la IA había leído (una agencia con 45 pax a
+Mazatlán acabó con «¿a dónde van?»): los datos se conservan siempre.
+Pruebas R20–R23.
+
 **Seguimiento sin plantillas de Meta** («quitamos lo de Meta, es mucho»):
 el primer toque baja a 22 h y sale como texto libre gratis; los de 3 y 7
 días le llegan al dueño en un resumen para que escriba él desde su

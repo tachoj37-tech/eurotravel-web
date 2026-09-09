@@ -729,5 +729,110 @@ titulo('R19 · «solo nos llevan y traen» es recorridos = 0 aunque la IA no lo 
   okQue('la pregunta de recorridos no dice «el operador se queda con ustedes»', p && /se van a mover|los llevamos/.test(p.texto) && !/operador se queda/.test(p.texto));
 }
 
+/* ============================================================ */
+titulo('R20 · juntar los datos del contrato no es un callejón: preguntas se contestan y un cambio de fecha llega al dueño (escenario d real)');
+{
+  limpia();
+  const C = '5213366670424';
+  /* Cliente que YA depositó: se le están juntando los datos del contrato. */
+  tk.anotaEtapa(C, 'mando_comprobante', { total: 19000, anticipo: 4000,
+    viajeDatos: { origen: 'Guadalajara', destino: 'Puerto Vallarta', salida: '2026-11-14', regreso: '2026-11-16', gente: 18, unidad: 'Sprinter', nombre: 'Mariana' } }, Date.now());
+  /* El lector de contrato no encuentra ningún dato en estos mensajes. */
+  laIA = () => ({});
+  let antes = textos(C).length;
+  await dice('hola, cómo va lo mío?', C);
+  const estado1 = textos(C).slice(antes).join('\n');
+  okQue('«¿cómo va lo mío?» se contesta con la verdad del comprobante', /comprobante ya lo tiene el equipo/i.test(estado1));
+  antes = textos(C).length;
+  await dice('y mi contrato ya está?', C);
+  const estado2 = textos(C).slice(antes).join('\n');
+  okQue('  y la segunda pregunta NO recibe el mismo texto de siempre', !/^Va 🙌 Me falta:/.test(estado2.trim()));
+  okQue('  la lista de cinco puntos NO se repite: pide UN dato', !/nombre completo[\s\S]*direcci[oó]n exacta/i.test(estado2) && /¿Me pasas/.test(estado2));
+  /* Y un «gracias» no recibe un formulario. */
+  antes = textos(C).length;
+  await dice('ok gracias', C);
+  const cierre = textos(C).slice(antes).join('\n');
+  okQue('«ok gracias» no recibe la lista completa', !/Me falta:/.test(cierre) && cierre.split('\n').filter(function (l) { return l.trim(); }).length <= 2);
+  /* El cambio de fecha: al dueño, no a la lista. */
+  const ticketsAntes = textos(DUENO).length;
+  antes = textos(C).length;
+  await dice('oye, creo que vamos a cambiar la fecha al 21 de noviembre', C);
+  const dicho = textos(C).slice(antes).join('\n');
+  okQue('el cambio de fecha NO recibe la lista de datos', !/Me falta|me faltan/i.test(dicho));
+  okQue('  al cliente se le dice que lo confirma una persona', /lo confirma una persona|en breve te dicen/i.test(dicho));
+  okQue('  y al dueño le llega el aviso con sus palabras', /Quiere cambiar algo de un viaje YA APARTADO/.test(textos(DUENO).slice(ticketsAntes).join('\n')) && /21 de noviembre/.test(textos(DUENO).slice(ticketsAntes).join('\n')));
+  /* Y un dato de verdad sí entra y se acusa. */
+  laIA = () => ({ nombre: 'Mariana Ruiz López' });
+  antes = textos(C).length;
+  await dice('me llamo Mariana Ruiz López', C);
+  okQue('un dato real sí se anota y se acusa', /Anotado/i.test(textos(C).slice(antes).join('\n')));
+  ok('  y quedó en la ficha', ((tk.fichaDe(C) || {}).contrato || {}).nombre, 'Mariana Ruiz López');
+}
+
+/* ============================================================ */
+titulo('R21 · un destino del extranjero no se cotiza (corrida real: «bta» leído como Bogotá)');
+{
+  limpia();
+  const C = '5213366670425';
+  laIA = () => ({ respuesta: 'Para 18 a Bogotá, ida el 20 y regreso el 22 desde Guadalajara, va perfecto con una Sprinter. ¿Se van a mover allá?', datos: { destino: 'Bogotá', salida: '2026-10-20', regreso: '2026-10-22', gente: 18, origen: 'Guadalajara' }, accion: 'seguir' });
+  const ticketsAntes = textos(DUENO).length;
+  const antes = textos(C).length;
+  await dice('hola buenas, ocupo cotisar un viaje a bta el 20 d octubre regresamos el 22 somos como 18 salimos d gdl, cuanto?', C);
+  const dicho = textos(C).slice(antes).join('\n');
+  okQue('al cliente NO le llega la cotización a Bogotá', !/Sprinter.*Bogot|perfecto con una Sprinter/i.test(dicho));
+  okQue('  se le dice que solo se viaja dentro de México', /no llegamos|dentro de M[eé]xico|por carretera aqu[ií] en M[eé]xico/i.test(dicho));
+  okQue('  y se le pregunta a dónde van de verdad', /qu[eé] lugar de la Rep[uú]blica|a d[oó]nde van/i.test(dicho));
+  ok('  el destino no se guardó', (webhook.charlaDe(C) || {}).destino, undefined);
+  ok('  y no salió ticket de precio', textos(DUENO).filter((t) => /Precio por confirmar/.test(t)).length, 0);
+  okQue('  al dueño le llega el aviso del viaje al extranjero', /Te pidieron un viaje al extranjero/.test(textos(DUENO).slice(ticketsAntes).join('\n')));
+  /* Y el motor, a secas: «bta» es Puerto Vallarta, no Bogotá. */
+  const bot = (await import(pathToFileURL(path.join(RAIZ, 'bot.js')).href)).default;
+  ok('«a bta» lo lee como Puerto Vallarta', bot.leeDeUnJalon('un viaje a bta el 20 de octubre somos 18').destino, 'Puerto Vallarta');
+  okQue('  y San Antonio (Tlayacapan) NO se toma por extranjero', !bot.esDelExtranjero('San Antonio Tlayacapan') && !bot.esDelExtranjero('San Diego de Alejandría'));
+}
+
+/* ============================================================ */
+titulo('R22 · no se venden boletos sueltos, y un descuento lo decide el dueño (escenario h real)');
+{
+  limpia();
+  const C = '5213366670426';
+  webhook.guardaCharla(C, { destino: 'Tequila', paso: 'salida', nombre: 'Prueba' });
+  /* Así contestó el modelo real: dijo que sí vendía boletos. */
+  laIA = () => ({ respuesta: 'Sí, claro. ¿Cuándo pensabas ir a Monterrey?', datos: {}, accion: 'seguir' });
+  let antes = textos(C).length;
+  await dice('oye y venden boletos a monterrey', C);
+  const boletos = textos(C).slice(antes).join('\n');
+  okQue('no promete boletos', !/S[ií], claro/.test(boletos) && /no manejamos|Boletos sueltos no/i.test(boletos));
+  okQue('  y explica que se renta la unidad completa', /unidad completa con chofer/i.test(boletos));
+  /* El descuento: ni «no» seco ni promesa; lo ve el dueño. */
+  laIA = () => ({ respuesta: 'No, los precios son los que son.', datos: {}, accion: 'seguir' });
+  const ticketsAntes = textos(DUENO).length;
+  antes = textos(C).length;
+  await dice('no me puedes hacer un descuento?', C);
+  const desc = textos(C).slice(antes).join('\n');
+  okQue('el descuento no se niega en seco', !/^No,/.test(desc.trim()) && /ya va cerrado|todo incluido|operador, combustible/i.test(desc));
+  okQue('  no se promete ningún descuento', !/te (lo )?dejo en|s[ií] se puede|te hago/i.test(desc));
+  okQue('  y el dueño se entera para decidir', /Un cliente pregunta/.test(textos(DUENO).slice(ticketsAntes).join('\n')));
+}
+
+/* ============================================================ */
+titulo('R23 · si el candado descarta la respuesta, el viaje leído NO se pierde (escenario i real: agencia)');
+{
+  limpia();
+  const C = '5213366670427';
+  /* La IA lee el viaje completo pero contesta algo que el candado tira
+     (aquí, texto interno del prompt). */
+  laIA = () => ({ respuesta: 'LO QUE YA SÉ DE ESTE CLIENTE: datos.destino = Mazatlán', datos: { destino: 'Mazatlán', origen: 'Guadalajara', salida: '2026-10-10', regreso: '2026-10-12', gente: 45, recorridos: 0, autobus: 'irizar-i6s' }, accion: 'seguir' });
+  const antes = textos(C).length;
+  await dice('buen día, cotización para 45 pax GDL–Mazatlán, 10 al 12 de octubre, unidad ejecutiva', C);
+  const dicho = textos(C).slice(antes).join('\n');
+  okQue('al cliente NO le llega el texto interno', !/LO QUE YA S[EÉ]|datos\.destino/.test(dicho));
+  const viaje = ((tk.fichaDe(C) || {}).porConfirmar || {}).resumen || {};
+  ok('  pero el viaje se guardó: destino', viaje.destino, 'Mazatlán');
+  ok('  las fechas', [viaje.salida, viaje.regreso], ['2026-10-10', '2026-10-12']);
+  ok('  y la gente', viaje.gente, 45);
+  ok('  y el ticket salió al dueño', textos(DUENO).filter((t) => /Precio por confirmar/.test(t)).length, 1);
+}
+
 console.log('\n' + buenas + ' buenas, ' + malas + ' malas');
 process.exit(malas ? 1 : 0);

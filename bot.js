@@ -890,7 +890,44 @@ function destinoFlojo(d) {
   return false;
 }
 
+/* ------------------------------------------------------------
+   NO SE VIAJA AL EXTRANJERO
+   ------------------------------------------------------------
+   Corrida real del 9-sep-2026 (escenario a): el cliente escribió «un
+   viaje a bta» —dedazo de «vta», que en español suena igual— y el
+   modelo lo leyó como **Bogotá**. El bot le armó una Sprinter de
+   Guadalajara a Colombia y le pidió el precio al dueño.
+
+   Dos defensas: el dedazo entra al catálogo de arriba, y cualquier
+   destino de fuera de México se frena aquí. `api/places.js` ya tenía
+   la misma regla para las sugerencias de Google («Eurotravel no hace
+   viajes al extranjero»); faltaba en el camino de la IA.
+   ------------------------------------------------------------ */
+const DEL_EXTRANJERO = new RegExp('\\b(' + [
+  /* Países y gentilicios que la gente escribe como destino. */
+  'estados unidos', 'ee ?uu', 'usa', 'canada', 'guatemala', 'belice', 'belize',
+  'honduras', 'el salvador', 'nicaragua', 'costa rica', 'panama', 'cuba',
+  'colombia', 'venezuela', 'ecuador', 'peru', 'bolivia', 'chile', 'argentina',
+  'uruguay', 'paraguay', 'brasil', 'espana', 'francia', 'italia', 'alemania',
+  'portugal', 'inglaterra', 'reino unido', 'japon', 'china', 'republica dominicana',
+  /* Y las ciudades de fuera que más se nombran. */
+  'bogota', 'medellin', 'cartagena', 'lima', 'santiago de chile', 'buenos aires',
+  'sao paulo', 'rio de janeiro', 'montevideo', 'la habana', 'san jose de costa rica',
+  'ciudad de guatemala', 'san salvador', 'tegucigalpa', 'madrid', 'barcelona',
+  'paris', 'roma', 'londres', 'nueva york', 'new york', 'los angeles',
+  'las vegas', 'chicago', 'miami', 'houston', 'dallas', 'phoenix',
+  'tokio', 'pekin', 'punta cana'
+  /* NO van «san antonio» ni «san diego»: en Jalisco hay San Antonio
+     Tlayacapan (junto a Chapala) y San Diego de Alejandría. Frenar esos
+     sería peor que el problema que se arregla. */
+].join('|') + ')\\b');
+function esDelExtranjero(destino) {
+  return DEL_EXTRANJERO.test(normaliza(String(destino || '')));
+}
+
 const ALIAS_DESTINO = {
+  /* «bta» es dedazo de «vta»: la b y la v suenan igual (9-sep-2026). */
+  'bta': 'Puerto Vallarta', 'bvta': 'Puerto Vallarta',
   'vta': 'Puerto Vallarta', 'pv': 'Puerto Vallarta', 'pto vallarta': 'Puerto Vallarta',
   'pto vta': 'Puerto Vallarta', 'puerto vta': 'Puerto Vallarta', 'vallarta': 'Puerto Vallarta',
   'gdl': 'Guadalajara', 'guadalajara jal': 'Guadalajara',
@@ -3996,6 +4033,7 @@ module.exports = {
   /* Para probar la tolerancia a faltas sin pasar por todo el bot. */
   esLaPalabra, fonetica, distancia,
   normaliza, cuantaGente, unidadPara, fechaDe, fechaEnPalabras, hoyISO, mensajeDeTodosLosAutobuses,
+  esDelExtranjero,
   /* `pregunta` y `diasEntre` se exportan para poder vigilarlos desde las
      pruebas: que ninguna opción se pase de los topes de WhatsApp —3
      botones de 20 caracteres o 10 filas de 24— y que los días se cuenten

@@ -65,7 +65,9 @@ for (const k of ['log', 'error']) {
       }
       return;
     }
-    if (/^\[turno\]/.test(s)) return;
+    /* Con VER_TURNOS=1 salen los turnos crudos: sirve para ver QUÉ dijo el
+       modelo cuando un candado descarta su respuesta. */
+    if (/^\[turno\]/.test(s) && process.env.VER_TURNOS !== '1') return;
     original.apply(console, arguments);
   };
 }
@@ -143,11 +145,16 @@ const escenarios = {
      cuántos, quiere ver camiones, escoge el i6 y reserva. */
   f: ['buenas tardes', 'quiero cotizar un viaje a Sayulita', 'salimos pasado y quiero un camión', 'que camiones tiene?', 'i6', 'quiero reservar', 'si', 'sí, de guadalajara', precio(28000), 'ok apártamelo'],
   /* g · el que no sabe nada todavía y pregunta de todo antes de dar datos. */
-  g: ['hola', 'oigan qué camiones manejan?', 'el más nuevo cuál es?', 'y ese cuánto sale a puerto vallarta?', 'todavía no sé cuántos vamos, apenas estoy juntando gente', 'el 3 de octubre y regresamos el 5', 'mándame fotos', 'ok luego les digo']
+  g: ['hola', 'oigan qué camiones manejan?', 'el más nuevo cuál es?', 'y ese cuánto sale a puerto vallarta?', 'todavía no sé cuántos vamos, apenas estoy juntando gente', 'el 3 de octubre y regresamos el 5', 'mándame fotos', 'ok luego les digo'],
+  /* h · el cliente difícil: escribe mal, pide por persona, pide descuento,
+     pregunta si es robot y se va por la tangente. */
+  h: ['kiero 1 camion pa tekila el sabado', 'somos 40', 'sale mucho, cuanto x persona?', 'no me puedes hacer un descuento?', 'eres un robot vdd?', 'y si llueve q pasa', 'oye y venden boletos a monterrey', 'ah ok, luego te aviso'],
+  /* i · agencia: habla de pax y neto, pide factura y varias fechas. */
+  i: ['buen día, cotización para 45 pax GDL–Mazatlán, 10 al 12 de octubre, unidad ejecutiva', 'requiero tarifa neta y si manejan comisión', 'facturan? y me mandan póliza de seguro', 'el i6s está bien', 'ok quedo al pendiente del neto']
 };
 const pedidos = process.argv.slice(2).filter((x) => escenarios[x]);
 for (const k of (pedidos.length ? pedidos : Object.keys(escenarios))) {
-  const C = '521336667900' + { a: 1, b: 2, c: 3, d: 4, e: 5, f: 6, g: 7 }[k];
+  const C = '521336667900' + { a: 1, b: 2, c: 3, d: 4, e: 5, f: 6, g: 7, h: 8, i: 9 }[k];
   const guion = escenarios[k].map((p) => (typeof p === 'function' && p.length === 0 && k === 'e') ? p : p);
   await corre('Escenario ' + k, C, guion);
   console.log('\n(gastado hasta aquí: $' + gastado.toFixed(3) + ' USD)');
