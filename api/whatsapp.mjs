@@ -1563,6 +1563,13 @@ function mensajesParaCopiar(numeroDeOrigen, para) {
 const depositoMandadoAhora = new Set();
 const MARCAS_DE_DEPOSITO = /\[(ficha bancaria|clabe para copiar|cuenta para copiar|datos de depósito)\]/;
 
+/* Nota del 9-sep-2026, para no volver a «arreglarlo»: en la corrida real,
+   el cliente recibió la ficha + CLABE + cuenta pegadas al precio y al
+   contestar «apártamelo» le llegaron otra vez, cuatro mensajes seguidos.
+   Se probó frenarlo y rompió diez pruebas: el dueño dictó el 8-sep que los
+   datos se repiten CADA VEZ que el cliente pida apartar o pregunte por la
+   cuenta. La regla manda; queda anotado por si él quiere cambiarla. */
+
 /* ------------------------------------------------------------
    «LO QUE YA HICE» · las acciones del bot, para que el modelo las vea
    ------------------------------------------------------------
@@ -1672,12 +1679,30 @@ function sinMuletillaRepetida(respuesta, ultimoTextoDelBot) {
    8-sep-2026: «puedo rentar un i6 sin que responda cuántos somos»). La IA
    lo preguntó igual después de «i6»; se trata como pregunta repetida: se
    regenera una vez y, si insiste, contesta el guion con lo que falta. */
-function preguntaQueSobra(respuesta, estado) {
+function preguntaQueSobra(respuesta, estado, ficha) {
   const e = estado || {};
   const busEscogido = e.unidad === 'autobus' && e.unidadNombre;
   if ((busEscogido || e.sinCuenta) && !e.gente && PREGUNTA_DE.gente.test(String(respuesta || ''))) return 'gente';
+  /* Antes del depósito no se pregunta hora, dirección ni nombre: eso son
+     datos del contrato y se piden con el comprobante en mano (dictado del
+     dueño, 8-sep-2026). En la corrida real del 9-sep la IA preguntó «¿a qué
+     hora les viene bien salir?» con el precio apenas pedido. */
+  const sinComprobante = !ficha || ['mando_comprobante', 'datos_del_contrato', 'contrato_listo'].indexOf(ficha.etapa) < 0;
+  if (sinComprobante && ANTES_DEL_DEPOSITO.test(String(respuesta || ''))) return 'datos del contrato';
   return null;
 }
+/* «¿Y para el sábado de mayo que viene tienen?» con un viaje ya cotizado no
+   es ese viaje: es otra fecha, otro viaje. En la corrida real del 9-sep-2026
+   se leyó como el mismo y el cliente recibió «¿Te saco el precio?». Se pide
+   una palabra de disponibilidad Y una fecha en el mismo mensaje. */
+const DIA_O_MES = '(enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|setiembre|octubre|noviembre|diciembre|lunes|martes|miercoles|jueves|viernes|sabado|domingo|\\d{1,2}\\s*(de|\\/|-))';
+const HAY_LUGAR = '(tienen|tendrian|tendran|hay|queda|quedan|alcanza|alcanzan|disponib\\w*|libre|libres)';
+const OTRA_FECHA_DISPONIBLE = new RegExp(
+  '\\b' + HAY_LUGAR + '\\b[^?]{0,40}\\b' + DIA_O_MES + '|\\b' + DIA_O_MES + '[^?]{0,40}\\b' + HAY_LUGAR + '\\b');
+
+/* Lo que NO se pregunta antes del comprobante. Se busca la PREGUNTA, no la
+   palabra: «salen a las 7» dicho por el cliente no es esto. */
+const ANTES_DEL_DEPOSITO = /¿[^?]*\b(a qu[eé] hora|qu[eé] hora|hora (les|te|de) (viene|acomoda|conviene|salida)|de d[oó]nde los recog|direcci[oó]n exacta|en qu[eé] direcci[oó]n|c[oó]mo te llamas|cu[aá]l es tu nombre|nombre completo)\b[^?]*\?/i;
 
 /* «Todavía no sé cuántos vamos», «apenas estoy juntando gente»: es un dato,
    no una evasiva. Se marca en la plática y no se le vuelve a pedir
@@ -1900,7 +1925,8 @@ async function loQueDiceElAgente(envio) {
      viaje» explícito sí arranca de cero (ése es otro viaje, no un cambio).
      ------------------------------------------------------------ */
   const cambiaAlgo = !!(dicho.datos && (dicho.datos.destino || dicho.datos.gente || dicho.datos.salida || dicho.datos.regreso || dicho.datos.unidad || dicho.datos.autobus));
-  const esOtroViaje = /\botro viaje\b|\botra cotizaci|\bun viaje m[aá]s\b|\baparte\b|\btambi[eé]n quiero\b|\badem[aá]s\b/i.test(String(texto || ''));
+  const esOtroViaje = /\botro viaje\b|\botra cotizaci|\bun viaje m[aá]s\b|\baparte\b|\btambi[eé]n quiero\b|\badem[aá]s\b/i.test(String(texto || '')) ||
+    OTRA_FECHA_DISPONIBLE.test(conversacion.normaliza(texto));
   /* Una plática «débil» con el viaje ya en precio (un destino suelto sin
      fecha ni gente, como el «Ernesto Jiménez» que el guion viejo guardó
      como destino el 7-sep) es basura, no otro viaje: manda el viaje de la
@@ -1949,20 +1975,22 @@ async function loQueDiceElAgente(envio) {
      el guion con lo que de verdad falta. Nunca sale la pregunta repetida. */
   if (dicho.accion === 'seguir' && dicho.respuesta) {
     const repetida = preguntaRepetida(dicho.respuesta, nuevo);
-    const sobra = repetida ? null : preguntaQueSobra(dicho.respuesta, nuevo);
+    const sobra = repetida ? null : preguntaQueSobra(dicho.respuesta, nuevo, tickets.fichaDe(cliente));
     if (repetida || sobra) {
       console.error(repetida
         ? '[agente] volvió a preguntar «' + repetida + '» (ya se sabe: ' + nuevo[repetida] + '); se regenera'
-        : '[agente] preguntó cuántos son con el ' + nuevo.unidadNombre + ' ya escogido; se regenera');
+        : '[agente] preguntó «' + sobra + '» cuando no tocaba; se regenera');
+      const aviso = repetida
+        ? 'Ese dato ya lo tienes: ' + repetida + ' = ' + nuevo[repetida] + '. No lo preguntes; sigue con lo que falta.'
+        : (sobra === 'gente'
+          ? 'Ya escogió el ' + nuevo.unidadNombre + '. NO preguntes cuántos son: para rentar un autobús no hace falta. Sigue con lo que falta o pásale el precio.'
+          : 'NO preguntes hora, dirección ni nombre: eso son datos del contrato y se piden hasta que mande el comprobante. Sigue con lo que falta o con el precio.');
       const otra = await agente.conversa(texto, Object.assign({}, opcionesDeLaIA, {
-        estado: nuevo, falta: conversacion.loQueFalta(nuevo) || null,
-        aviso: repetida
-          ? 'Ese dato ya lo tienes: ' + repetida + ' = ' + nuevo[repetida] + '. No lo preguntes; sigue con lo que falta.'
-          : 'Ya escogió el ' + nuevo.unidadNombre + '. NO preguntes cuántos son: para rentar un autobús no hace falta. Sigue con lo que falta o pásale el precio.'
+        estado: nuevo, falta: conversacion.loQueFalta(nuevo) || null, aviso: aviso
       }));
       const bien = function (r) {
         const despues = conversacion.pegaDatos(nuevo, r.datos);
-        return !preguntaRepetida(r.respuesta, despues) && !preguntaQueSobra(r.respuesta, despues);
+        return !preguntaRepetida(r.respuesta, despues) && !preguntaQueSobra(r.respuesta, despues, tickets.fichaDe(cliente));
       };
       if (otra && otra.accion === 'seguir' && otra.respuesta && bien(otra)) {
         dicho.respuesta = otra.respuesta;

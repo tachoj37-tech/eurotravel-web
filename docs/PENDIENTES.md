@@ -164,6 +164,19 @@ cambio; y el guion anexaba la cuenta por su lado. Ahora el precio se marca
 manda cuenta ni anticipo con un precio que ya no es suyo, y el mismo viaje
 ya cotizado no se vuelve a cotizar solo. Prueba R24.
 
+**Tercera tanda** (escenarios l, m, n, o: comprobante, ráfaga con cambio de
+destino, viaje largo con recorridos, fecha encima y temporada alta): al
+dueño le llegaban **tres tickets «Viaje para cotizar» del mismo viaje** que
+ya estaba esperando precio, uno por cada mensaje del cliente; la IA pedía
+**la hora antes del depósito** («¿a qué hora les viene bien salir?»), que
+está prohibido desde el 8-sep; y preguntar por **otra fecha** («¿y para el
+sábado de mayo que viene tienen?») con un viaje ya cotizado recibía «¿Te
+saco el precio?» en vez de tomarse como viaje nuevo. Prueba R25.
+**No se cambió**, a propósito: los datos de depósito siguen repitiéndose
+cuando el cliente pide apartar aunque acabe de recibirlos. Es la regla
+dictada el 8-sep («cada vez que la pida»); frenarlo rompía diez pruebas.
+Queda anotado en el código por si el dueño quiere cambiarla.
+
 **Seguimiento sin plantillas de Meta** («quitamos lo de Meta, es mucho»):
 el primer toque baja a 22 h y sale como texto libre gratis; los de 3 y 7
 días le llegan al dueño en un resumen para que escriba él desde su

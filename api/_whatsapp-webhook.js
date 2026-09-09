@@ -598,6 +598,22 @@ function quiereApartarConPrecio(ficha, texto, charla) {
   return true;
 }
 
+/* ¿La solicitud que armó el guion es el MISMO viaje que ya está esperando
+   precio (o que ya lo tiene)? Destino, fechas y gente iguales. */
+function mismoViajeQueElPendiente(ficha, solicitud) {
+  if (!ficha || !solicitud) return false;
+  const v = (ficha.porConfirmar && ficha.porConfirmar.resumen) || ficha.viajeDatos;
+  if (!v) return false;
+  const igual = function (a, b) {
+    return String(a == null ? '' : a).toLowerCase().trim() === String(b == null ? '' : b).toLowerCase().trim();
+  };
+  if (!igual(v.destino, solicitud.destino)) return false;
+  if (!igual(v.salida, solicitud.salida)) return false;
+  if (!igual(v.regreso, solicitud.regreso)) return false;
+  if (v.gente && solicitud.gente && Number(v.gente) !== Number(solicitud.gente)) return false;
+  return true;
+}
+
 /* El precio que hay en la ficha ¿sigue siendo el de este cliente? No lo es
    si la plática dice que el grupo cambió o que la unidad ya no le queda. */
 function precioSigueSiendoSuyo(ficha, charla) {
@@ -1856,7 +1872,16 @@ function procesa(crudo, firma, entorno) {
            ignorar los tickets — que es peor que no mandarlos.
            ------------------------------------------------------------ */
         const hayViaje = !!(r.solicitud && (r.solicitud.destino || r.solicitud.gente));
-        if (r.pasa && hayViaje && tickets.numeroDelDueno(env)) {
+        /* Y no se manda si ese MISMO viaje ya está esperando precio: en la
+           corrida real del 9-sep-2026 el dueño recibió el ticket de precio
+           y luego tres «🎫 Viaje para cotizar» del mismo viaje, uno por
+           cada mensaje que el cliente escribió después. El ruido entrena a
+           ignorar los tickets. */
+        const repetidoDelPendiente = hayViaje && mismoViajeQueElPendiente(tickets.fichaDe(m.from), r.solicitud);
+        if (repetidoDelPendiente) {
+          console.error('[ticket] ese viaje ya está esperando precio: no se manda otro «Viaje para cotizar»');
+        }
+        if (r.pasa && hayViaje && !repetidoDelPendiente && tickets.numeroDelDueno(env)) {
           const s = r.solicitud || {};
           envios.push({
             numeroDeOrigen: deQuien,

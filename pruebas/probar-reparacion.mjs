@@ -873,5 +873,41 @@ titulo('R24 · el grupo creció después del precio: no se aparta con el anticip
   delete process.env.CLABE; delete process.env.CUENTA; delete process.env.DATOS_BANCARIOS;
 }
 
+/* ============================================================ */
+titulo('R25 · ni la hora antes del depósito, ni tres tickets del mismo viaje al dueño (escenarios n y o reales)');
+{
+  limpia();
+  const C = '5213366670431';
+  webhook.guardaCharla(C, { destino: 'Chapala', salida: '2026-09-11', regreso: '2026-09-11', gente: 14, origen: 'Guadalajara', unidad: 'sprinter', unidadNombre: 'Sprinter', recorridos: 0, paso: 'confirmar', nombre: 'Prueba' });
+  /* La IA pregunta la hora, como en la corrida real; al insistir, el guion. */
+  laIA = () => ({ respuesta: 'Perfecto, Sprinter para 14 el jueves a Chapala. ¿A qué hora les viene bien salir?', datos: {}, accion: 'seguir' });
+  const antes = textos(C).length;
+  await dice('sí, es urgente', C);
+  const dicho = textos(C).slice(antes).join('\n');
+  okQue('el cliente NO recibe «¿a qué hora les viene bien salir?»', !/a qu[eé] hora/i.test(dicho));
+  /* Y el ticket del mismo viaje no se repite. */
+  limpia();
+  const D = '5213366670432';
+  tk.anotaEtapa(D, 'pidio_precio', { porConfirmar: { resumen: { origen: 'Guadalajara', destino: 'Ciudad de México', salida: '2026-12-05', regreso: '2026-12-08', gente: 40, unidad: 'Neobus' } } }, Date.now());
+  webhook.guardaCharla(D, { destino: 'Ciudad de México', origen: 'Guadalajara', salida: '2026-12-05', regreso: '2026-12-08', gente: 40, unidad: 'autobus', unidadNombre: 'Neobus', unidadId: 'neobus', recorridos: 2, paso: 'confirmar', nombre: 'Prueba' });
+  laIA = () => ({ respuesta: 'Listo, ya lo tengo. En breve te llega el precio.', datos: {}, accion: 'seguir' });
+  const ticketsAntes = textos(DUENO).filter((t) => /Viaje para cotizar/.test(t)).length;
+  for (const t of ['por la zona', 'hasta 10 horas', 'sí, cotiza']) await dice(t, D);
+  ok('con el precio ya pedido, cero tickets «Viaje para cotizar» de más',
+    textos(DUENO).filter((t) => /Viaje para cotizar/.test(t)).length, ticketsAntes);
+  /* Y preguntar por OTRA fecha con un viaje ya cotizado es otro viaje, no
+     el mismo: en la corrida real recibió «¿Te saco el precio?». */
+  limpia();
+  const E = '5213366670433';
+  tk.anotaEtapa(E, 'con_precio', { total: 6500, anticipo: 1500,
+    viajeDatos: { origen: 'Guadalajara', destino: 'Chapala', salida: '2026-09-11', regreso: '2026-09-11', gente: 14, unidad: 'Sprinter' } }, Date.now());
+  laIA = () => ({ respuesta: 'Claro, en mayo hay fechas. ¿A dónde sería ese viaje?', datos: {}, accion: 'seguir' });
+  const a3 = textos(E).length;
+  await dice('y para el sábado de mayo que viene tienen?', E);
+  const d3 = textos(E).slice(a3).join('\n');
+  okQue('preguntar por otra fecha NO recibe «¿Te saco el precio?»', !/Te saco el precio/i.test(d3));
+  okQue('  la IA puede contestarlo como viaje nuevo', /mayo|a d[oó]nde/i.test(d3));
+}
+
 console.log('\n' + buenas + ' buenas, ' + malas + ' malas');
 process.exit(malas ? 1 : 0);

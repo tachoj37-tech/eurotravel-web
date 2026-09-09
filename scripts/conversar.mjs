@@ -123,6 +123,11 @@ const va = (C) => async () => {
   console.log('\nDUEÑO contesta el ticket: va');
   await manda(DUENO, 'va', { context: { id: t } });
 };
+/* El cliente manda una foto (el comprobante del depósito). */
+const foto = (C) => async () => {
+  console.log('\nCLIENTE: [foto del comprobante]');
+  await manda(C, '', { type: 'image', image: { id: 'media-' + Date.now(), mime_type: 'image/jpeg' } });
+};
 /* El dueño contesta el ticket de un autobús con el precio. */
 const precio = (monto) => async () => {
   const t = ultimoTicket();
@@ -155,11 +160,20 @@ const escenarios = {
      mascotas, y un dato personal que el bot no debe pedir. */
   j: ['hola, es para un viaje de la escuela a Tapalpa', 'somos 44 alumnos y 4 maestros, el 17 de octubre ida y vuelta', 'me pasas tu RFC y razón social para la factura?', 'traen permiso federal de la SCT?', 'los muchachos pueden llevar cerveza?', 'y si llevamos un perro guía?', 'ok gracias'],
   /* k · después del precio cambia el grupo y regatea. */
-  k: ['a chapala el 25 de octubre, ida y vuelta, somos 15, salimos de guadalajara, solo nos llevan y traen', va('5213366679011'), 'oye ya somos 22', 'y ahora cuánto sale?', 'está muy caro, el otro me lo dio en 8 mil', 'va pues, apártamelo']
+  k: ['a chapala el 25 de octubre, ida y vuelta, somos 15, salimos de guadalajara, solo nos llevan y traen', va('5213366679011'), 'oye ya somos 22', 'y ahora cuánto sale?', 'está muy caro, el otro me lo dio en 8 mil', 'va pues, apártamelo'],
+  /* l · el comprobante: manda la foto y luego dicta sus datos del contrato. */
+  l: ['a tapalpa el 8 de noviembre, ida y vuelta, somos 16, de guadalajara, solo nos llevan y traen', va('5213366679012'), 'apártamelo', foto('5213366679012'),
+    'soy Ricardo Núñez Salas', 'nos recogen en av. vallarta 1234, col. americana, a las 7 de la mañana', 'llegamos al hotel casa serena en tapalpa y nos regresamos a las 6 de la tarde'],
+  /* m · ráfaga, cambio de destino a media cotización y pedir una persona. */
+  m: ['hola', 'quiero cotizar', 'para el 15 de noviembre', 'somos 12', 'oye mejor cambiemos a mazamitla', 'de guadalajara', 'mejor quiero hablar con una persona'],
+  /* n · viaje largo con recorridos: CDMX cuatro días. */
+  n: ['a la ciudad de méxico del 5 al 8 de diciembre, somos 40, salimos de guadalajara', 'el neobus', 'sí, allá nos vamos a mover', 'dos días', 'por la zona', 'hasta 10 horas', 'sí, cotiza'],
+  /* o · fecha encima y temporada alta. */
+  o: ['necesito una sprinter para pasado mañana a chapala, somos 14, de guadalajara, ida y vuelta', 'sí, es urgente', 'y para el sábado de mayo que viene tienen?']
 };
 const pedidos = process.argv.slice(2).filter((x) => escenarios[x]);
 for (const k of (pedidos.length ? pedidos : Object.keys(escenarios))) {
-  const C = '52133666790' + { a: '01', b: '02', c: '03', d: '04', e: '05', f: '06', g: '07', h: '08', i: '09', j: '10', k: '11' }[k];
+  const C = '52133666790' + { a: '01', b: '02', c: '03', d: '04', e: '05', f: '06', g: '07', h: '08', i: '09', j: '10', k: '11', l: '12', m: '13', n: '14', o: '15' }[k];
   const guion = escenarios[k].map((p) => (typeof p === 'function' && p.length === 0 && k === 'e') ? p : p);
   await corre('Escenario ' + k, C, guion);
   console.log('\n(gastado hasta aquí: $' + gastado.toFixed(3) + ' USD)');
