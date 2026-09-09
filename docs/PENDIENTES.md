@@ -99,8 +99,11 @@ Conversaciones de prueba borradas con `docs/LIMPIAR-PRUEBAS.sql` + redeploy.
 camión» y «¿qué camiones tiene?» el bot contestaba «depende de cuántos
 van» tres veces seguidas. Ahora, si pide autobuses y la IA no nombra
 ninguno, sale la lista completa del catálogo (o los que le caben si ya se
-sabe cuántos son) y luego pregunta cuántos van (`mensajeDeTodosLosAutobuses`,
-candado `conLosAutobusesQuePidio`, prueba R11). En la misma prueba dijo
+sabe cuántos son) **sin pedir cuántos son** («mucha gente quiere organizar
+un viaje solamente, no sabe cuántos ni cómo»): cierra ofreciendo fotos
+(`mensajeDeTodosLosAutobuses`, candado `conLosAutobusesQuePidio`, prueba
+R11). Se compara sin acentos y con dedazos: «camión» y «que camines tiene?»
+se le escaparon a la primera versión. En la misma prueba dijo
 «pasado mañana, 11 de septiembre» siendo día 8: «hoy» se calculaba en UTC
 (Vercel); ahora `hoyISO` es hora de Guadalajara en todos los caminos.
 

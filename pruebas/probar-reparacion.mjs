@@ -473,8 +473,19 @@ titulo('R11 · «quiero un camión» / «¿qué camiones tienen?»: se enseñan 
   const lista = textos(C).slice(antes).join('\n');
   okQue('«¿qué camiones tiene?» sin saber cuántos son → la lista completa del catálogo', /Marcopolo Paradiso G8/.test(lista) && /Irizar Century/.test(lista) && /Irizar PB/.test(lista));
   okQue('  de más a menos asientos', lista.indexOf('Paradiso G8') < lista.indexOf('Neobus') && lista.indexOf('Neobus') < lista.indexOf('Irizar PB'));
-  okQue('  y luego sí pregunta cuántos van, para recomendar', /¿Cuántos van\?/.test(lista));
+  /* Segundo dictado (6:40 p.m.): «quiero ver camiones sin que me pida la
+     capacidad de personas; mucha gente no sabe cuántos ni cómo». */
+  okQue('  y NO pregunta cuántos van: ofrece fotos', !/cu[aá]ntos (van|son)/i.test(lista) && /fotos/i.test(lista));
   okQue('  sin el «depende de cuántos van» de la IA', !/depende de cu[aá]ntos/.test(lista));
+  /* Lo que escribió el dueño de verdad: «camión» con acento (6:36 p.m.) y
+     «que camines tiene?» con dedazo (6:22). La primera versión del candado
+     no cachó ninguno de los dos. */
+  laIA = () => ({ respuesta: 'Dale, te muestro qué tenemos. ¿Cuántos van en total? Con eso te digo cuál te queda.', datos: {}, accion: 'seguir' });
+  for (const dicho of ['camión', 'que camines tiene?', 'Quiero un CAMIÓN']) {
+    antes = textos(C).length;
+    await dice(dicho, C);
+    okQue('  «' + dicho + '» también saca la lista', /Marcopolo Paradiso G8/.test(textos(C).slice(antes).join('\n')));
+  }
   /* Con la IA que SÍ enseña autobuses no se toca su respuesta. */
   laIA = () => ({ respuesta: 'Claro: tenemos Marcopolo Paradiso G8 (51), Irizar i6S (51) y Neobus (50), entre otros. ¿Cuántos van?', datos: {}, accion: 'seguir' });
   antes = textos(C).length;

@@ -3884,14 +3884,17 @@ function listaCortaDeAutobuses(gente) {
    pide «un camión» o pregunta «¿qué camiones tienen?» ANTES de decir
    cuántos son. Dictado del dueño (8-sep-2026): «si el cliente quiere
    camiones ofrécele opciones, no hay problema». Antes el bot se aferraba
-   a «depende de cuántos van» y no enseñaba nada. Si ya se sabe cuántos
-   son y son más de 20, va la lista ordenada por lo que les cabe. */
+   a «depende de cuántos van» y no enseñaba nada. Y SIN pedir cuántos son
+   (segundo dictado, 6:40 p.m.): «mucha gente quiere organizar un viaje
+   solamente, no sabe cuántos ni cómo». El número se pide después, cuando
+   haga falta para el precio. Si ya se sabe que son más de 20, va la lista
+   ordenada por lo que les cabe. */
 function mensajeDeTodosLosAutobuses(gente) {
   const n = Number(gente) || 0;
   if (n > 20) return mensajeDeAutobuses(n);
   const todos = autobusesPara(0).caben;
   return 'Estos son los autobuses que tenemos:\n' + todos.join('\n') +
-    '\n\n¿Cuántos van? Con eso te digo cuáles les caben y te recomiendo uno.';
+    '\n\n¿Te mando fotos de alguno?';
 }
 
 /* El mensaje completo que ve el cliente cuando toca elegir autobús. Lo

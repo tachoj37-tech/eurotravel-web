@@ -197,11 +197,12 @@ function instruccionesDelAgente(voz) {
     'hasta el final, aparte, los que no («no caben, pero también tenemos otras opciones por ' +
     'si gustas»). Nunca los mezcles. Recomiendas uno solo si te lo piden. El Century es de ' +
     '«47 a 49»: se ofrece hasta con 48, con 49 ya no.\n' +
-    '· Si pide «un camión» o pregunta «¿qué camiones tienen?» ANTES de decir cuántos son, le ' +
-    'enseñas las opciones en ese mismo mensaje: todos los autobuses de la ficha de abajo, de ' +
-    'más a menos asientos (nombre — línea — asientos), y luego preguntas cuántos van para ' +
-    'recomendarle uno. Nunca «depende de cuántos van» sin la lista (dictado del dueño, ' +
-    '8-sep-2026: «si quiere camiones, ofrécele opciones»). Y datos.unidad es "autobus".\n' +
+    '· Si pide «un camión» o pregunta «¿qué camiones tienen?», le enseñas las opciones en ese ' +
+    'mismo mensaje: todos los autobuses de la ficha de abajo, de más a menos asientos ' +
+    '(nombre — línea — asientos), SIN pedirle cuántos son: mucha gente apenas está organizando ' +
+    'y no sabe cuántos ni cómo (dictado del dueño, 8-sep-2026). Cierras ofreciendo fotos o ' +
+    'preguntando cuál le late. Nunca «depende de cuántos van» sin la lista. El número de ' +
+    'personas se pide después, cuando haga falta para el precio. Y datos.unidad es "autobus".\n' +
     '· Capacidad es capacidad: un autobús de 47 no lleva 48. Si escoge uno donde no caben, ' +
     'díselo con los números y ofrécele los que sí. Nunca «apretados».\n' +
     '· DESTINOS DE UN DÍA (Tequila, Chapala, Ajijic, Tapalpa, bodas y eventos locales, y ' +

@@ -1256,9 +1256,13 @@ function sinAutobusesQueNoCaben(respuesta, estado) {
    son). Lo decide el código: el prompt también lo dice, pero la IA ya
    demostró que se aferra a la pregunta.
    ------------------------------------------------------------ */
-const PIDE_AUTOBUSES = /\b(camion(es)?|autob[uú]s(es)?|bus(es)?|que unidades|qu[eé] unidades|qu[eé] camiones|opciones de (camion|autob[uú]s)|unidades tienen)\b/i;
+/* Se compara SIN acentos y con dedazos: la primera versión buscaba
+   «camion» y el dueño escribió «camión» (6:36 p.m.) y «que camines
+   tiene?» (6:22): ninguno entró. `normaliza` quita tildes y baja a
+   minúsculas; `camion\w*` cubre camiones/camioncito, `camines` el dedazo. */
+const PIDE_AUTOBUSES = /\b(camion\w*|camines|camio\b|autobus\w*|bus(es)?|que unidades|unidades tienen|opciones de (camion|autobus))\b/;
 function pideAutobuses(textoDelCliente) {
-  return PIDE_AUTOBUSES.test(String(textoDelCliente || ''));
+  return PIDE_AUTOBUSES.test(conversacion.normaliza(textoDelCliente));
 }
 function conLosAutobusesQuePidio(respuesta, textoDelCliente, estado) {
   if (!pideAutobuses(textoDelCliente)) return respuesta;
