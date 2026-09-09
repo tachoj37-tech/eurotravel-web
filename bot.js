@@ -524,11 +524,15 @@ function fichaDe(u) {
    precio. Un CLABE equivocado es el dinero de un cliente que se
    va a otra cuenta.
    ------------------------------------------------------------ */
-/* Las raíces van con comodín al final —`apart\w*`— porque la gente
+/* «Aparte» NO es apartar: en México quiere decir «además». Con `apart\w*`
+   entraba, y el 9-sep-2026 «oye y APARTE quiero cotizar otro a San Juan»
+   le mandó la ficha bancaria del viaje anterior. Se piden las formas que
+   sí son apartar: aparta, apártamela, apartar, apartado.
+   Las demás raíces van con comodín al final porque la gente
    les pega de todo: «apártamela», «apartándola», «reservármela». Con
    la palabra cerrada, «sí apártala» y «resérvamela» no entraban, que
    son justo las dos formas más comunes de decir que sí. */
-const QUIERE_APARTAR = /\b(apart\w*|reserv\w*|bloque(a|á)\w*|amarr\w*|le entramos|le entro|va que va|quedamos as[ií])\b/;
+const QUIERE_APARTAR = /\b(apart[aoá]\w*|apartar|reserv\w*|bloque(a|á)\w*|amarr\w*|le entramos|le entro|va que va|quedamos as[ií])\b/;
 
 /* ------------------------------------------------------------
    LO ÚNICO QUE EL BOT AFIRMA DE LA EMPRESA

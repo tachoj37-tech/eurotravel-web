@@ -177,6 +177,18 @@ cuando el cliente pide apartar aunque acabe de recibirlos. Es la regla
 dictada el 8-sep («cada vez que la pida»); frenarlo rompía diez pruebas.
 Queda anotado en el código por si el dueño quiere cambiarla.
 
+**Cuarta tanda** (escenarios p relevo del dueño, q dos viajes, r mensajes
+basura). El relevo y los mensajes basura salieron limpios. El de dos viajes
+destapó el peor de la noche: **«y APARTE quiero cotizar otro a San Juan»**
+se leyó como «apartar» —`apart\w*` cazaba «aparte», que aquí quiere decir
+«además»— y el cliente recibió la CLABE y el anticipo del viaje anterior;
+encima el segundo viaje se leyó como un **cambio de fecha** del primero
+(«déjame checar ese cambio») y se perdió entero. Arreglado en los dos
+detectores (`APARTAR_O_CUENTA` y `QUIERE_APARTAR`), y `cambioDeFechaConPrecio`
+ya no confunde un viaje nuevo con un cambio: si lo dijo como otro viaje o
+el destino es distinto, es cotización nueva. Una segunda cotización tampoco
+vence el precio de la primera. Prueba R26.
+
 **Seguimiento sin plantillas de Meta** («quitamos lo de Meta, es mucho»):
 el primer toque baja a 22 h y sale como texto libre gratis; los de 3 y 7
 días le llegan al dueño en un resumen para que escriba él desde su

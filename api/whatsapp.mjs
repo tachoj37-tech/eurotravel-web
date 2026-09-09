@@ -1750,12 +1750,25 @@ function viajeBaseDeLaFicha(ficha) {
 
 /* Un cambio de fecha (salida o regreso) sobre un viaje que YA tiene precio
    dado, dicho en una plática sin otro viaje a medias. */
-function cambioDeFechaConPrecio(ficha, datos, antes) {
+function cambioDeFechaConPrecio(ficha, datos, antes, otroViaje) {
   if (!ficha || !ficha.viajeDatos || typeof ficha.total !== 'number' || ficha.total <= 0) return null;
   if (ETAPAS_CON_PRECIO.indexOf(ficha.etapa) < 0) return null;
   if (antes && (antes.destino || antes.salida)) return null;
   const d = datos || {};
   const v = ficha.viajeDatos;
+  /* ------------------------------------------------------------
+     UN VIAJE NUEVO NO ES UN CAMBIO DE FECHA
+     ------------------------------------------------------------
+     Corrida real del 9-sep-2026 (escenario q): con el viaje a Tequila ya
+     cotizado, «y aparte quiero cotizar otro a San Juan de los Lagos el 24»
+     se leyó como que quería mover la fecha del de Tequila, y el cliente
+     recibió «déjame checar ese cambio». El segundo viaje se perdió.
+     Si lo dijo como otro viaje, o si el destino que trae es OTRO, no es
+     un cambio: es una cotización nueva.
+     ------------------------------------------------------------ */
+  if (otroViaje) return null;
+  if (d.destino && v.destino &&
+      conversacion.normaliza(d.destino) !== conversacion.normaliza(v.destino)) return null;
   const pide = [];
   if (d.salida && v.salida && d.salida !== v.salida) pide.push('salida ' + tickets.comoSeDice(d.salida));
   if (d.regreso && v.regreso && d.regreso !== v.regreso) pide.push('regreso ' + tickets.comoSeDice(d.regreso));
@@ -1892,13 +1905,18 @@ async function loQueDiceElAgente(envio) {
   }
   if (dicho.turno && almacen.hayAlmacen()) almacen.anotaTurno(dicho.turno).catch(function () {});
 
+  /* ¿Lo dijo como OTRO viaje? Se decide antes de todo lo demás: de ahí
+     depende que un segundo viaje no se lea como un cambio del primero. */
+  const esOtroViaje = /\botro viaje\b|\botra cotizaci|\bun viaje m[aá]s\b|\baparte\b|\btambi[eé]n quiero\b|\badem[aá]s\b/i.test(String(texto || '')) ||
+    OTRA_FECHA_DISPONIBLE.test(conversacion.normaliza(texto));
+
   /* Lo que la IA leyó se pega al estado de ANTES; lo que el guion había
      decidido de este mensaje se descarta. */
   /* Con el precio ya dado, un cambio de fecha no se «checa» ni se confirma:
      lo ve el dueño. Antes la fecha nueva se pegaba a la plática, la ficha
      seguía con la vieja y el contrato se subía con la vieja (auditoría
      general del 8-sep, hallazgo 9). */
-  const cambio = cambioDeFechaConPrecio(tickets.fichaDe(cliente), dicho.datos, antes);
+  const cambio = cambioDeFechaConPrecio(tickets.fichaDe(cliente), dicho.datos, antes, esOtroViaje);
   if (cambio) {
     const alCliente = 'Va, déjame checar ese cambio y en breve te confirmo 🙌';
     await manda({ numeroDeOrigen: envio.numeroDeOrigen, para: cliente, texto: alCliente, pasaAPersona: false, escribio: '[cambio de fecha]' });
@@ -1925,8 +1943,6 @@ async function loQueDiceElAgente(envio) {
      viaje» explícito sí arranca de cero (ése es otro viaje, no un cambio).
      ------------------------------------------------------------ */
   const cambiaAlgo = !!(dicho.datos && (dicho.datos.destino || dicho.datos.gente || dicho.datos.salida || dicho.datos.regreso || dicho.datos.unidad || dicho.datos.autobus));
-  const esOtroViaje = /\botro viaje\b|\botra cotizaci|\bun viaje m[aá]s\b|\baparte\b|\btambi[eé]n quiero\b|\badem[aá]s\b/i.test(String(texto || '')) ||
-    OTRA_FECHA_DISPONIBLE.test(conversacion.normaliza(texto));
   /* Una plática «débil» con el viaje ya en precio (un destino suelto sin
      fecha ni gente, como el «Ernesto Jiménez» que el guion viejo guardó
      como destino el 7-sep) es basura, no otro viaje: manda el viaje de la
@@ -2091,7 +2107,10 @@ async function loQueDiceElAgente(envio) {
   /* Si la IA leyó un cambio que deja el viaje distinto del que tiene precio,
      ese precio se marca vencido en la ficha: ni se aparta con él ni se
      ofrece (9-sep-2026, escenario k). */
-  if (viajeDeLaFicha && viajeDeLaFicha.estado === 'dado' && !yaTienePrecioEseViaje && cambiaAlgo) {
+  /* Y no si es OTRO viaje: pedir una segunda cotización no vence el precio
+     del primero (corrida real del 9-sep-2026, escenario q). */
+  if (viajeDeLaFicha && viajeDeLaFicha.estado === 'dado' && !yaTienePrecioEseViaje && cambiaAlgo &&
+      !esOtroViaje && !nuevo.otroViaje) {
     const f = tickets.fichaDe(cliente);
     if (f && !f.precioVencido) {
       console.error('[agente] el viaje cambió después del precio: queda marcado como vencido');

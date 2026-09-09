@@ -123,6 +123,11 @@ const va = (C) => async () => {
   console.log('\nDUEÑO contesta el ticket: va');
   await manda(DUENO, 'va', { context: { id: t } });
 };
+/* El dueño escribe una orden suya (relevo, total, etc.). */
+const dueno = (texto) => async () => {
+  console.log('\nDUEÑO: ' + texto);
+  await manda(DUENO, texto);
+};
 /* El cliente manda una foto (el comprobante del depósito). */
 const foto = (C) => async () => {
   console.log('\nCLIENTE: [foto del comprobante]');
@@ -169,11 +174,19 @@ const escenarios = {
   /* n · viaje largo con recorridos: CDMX cuatro días. */
   n: ['a la ciudad de méxico del 5 al 8 de diciembre, somos 40, salimos de guadalajara', 'el neobus', 'sí, allá nos vamos a mover', 'dos días', 'por la zona', 'hasta 10 horas', 'sí, cotiza'],
   /* o · fecha encima y temporada alta. */
-  o: ['necesito una sprinter para pasado mañana a chapala, somos 14, de guadalajara, ida y vuelta', 'sí, es urgente', 'y para el sábado de mayo que viene tienen?']
+  o: ['necesito una sprinter para pasado mañana a chapala, somos 14, de guadalajara, ida y vuelta', 'sí, es urgente', 'y para el sábado de mayo que viene tienen?'],
+  /* p · el relevo: el dueño toma el chat con «yo» y lo devuelve con «bot». */
+  p: ['hola, quiero cotizar a mazatlán', 'somos 30, del 12 al 14 de diciembre, de guadalajara', dueno('3366679016 yo'),
+    'oiga y me da un descuento si pago todo hoy?', dueno('3366679016 bot'), 'bueno, entonces el neobus'],
+  /* q · dos viajes: pide otro sin haber cerrado el primero. */
+  q: ['a tequila el 17 de octubre, ida y vuelta, somos 18, de guadalajara, solo nos llevan y traen', va('5213366679017'),
+    'oye y aparte quiero cotizar otro a san juan de los lagos el 24, somos 40', 'de guadalajara también, ida y vuelta, solo nos llevan y traen', 'el i6s'],
+  /* r · mensajes basura: emoji solo, un número suelto, un link, una sola letra. */
+  r: ['👍', '3', 'https://www.google.com/maps/place/Tapalpa', 'k', 'ya mejor dime cuánto sale una sprinter a tapalpa el 20 de octubre para 15, de guadalajara, ida y vuelta']
 };
 const pedidos = process.argv.slice(2).filter((x) => escenarios[x]);
 for (const k of (pedidos.length ? pedidos : Object.keys(escenarios))) {
-  const C = '52133666790' + { a: '01', b: '02', c: '03', d: '04', e: '05', f: '06', g: '07', h: '08', i: '09', j: '10', k: '11', l: '12', m: '13', n: '14', o: '15' }[k];
+  const C = '52133666790' + { a: '01', b: '02', c: '03', d: '04', e: '05', f: '06', g: '07', h: '08', i: '09', j: '10', k: '11', l: '12', m: '13', n: '14', o: '15', p: '16', q: '17', r: '18' }[k];
   const guion = escenarios[k].map((p) => (typeof p === 'function' && p.length === 0 && k === 'e') ? p : p);
   await corre('Escenario ' + k, C, guion);
   console.log('\n(gastado hasta aquí: $' + gastado.toFixed(3) + ' USD)');

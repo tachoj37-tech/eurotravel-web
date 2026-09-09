@@ -564,7 +564,12 @@ const PIDE_TOTAL = /^\s*total\s+\$?\s*[\d.,\s]+\s*(mil|k)?\s*$/i;
 /* Con el precio ya dado: quiere apartar, o pregunta a qué cuenta. Las dos
    se contestan igual: el anticipo y los datos para depositar, sin pedirle
    nada antes (dictado del dueño, 8-sep-2026). */
-const APARTAR_O_CUENTA = /\b(apart\w*|reserv\w*|bloque[aá]\w*|amarr\w*|le entramos|le entro|va que va|quedamos as[ií]|a qu[eé] cuenta|qu[eé] cuenta|n[uú]mero de cuenta|clabe|transferencia|transferir|te transfiero|deposit\w*|d[oó]nde (te |le )?pago|c[oó]mo (te |le )?pago|datos bancarios|datos (del|para el|para) (dep[oó]sito|pago)|para transferir|anticipo|banco)\b/i;
+/* `apart\w*` cazaba «aparte», que en México quiere decir «además»: en la
+   corrida real del 9-sep-2026 «oye y APARTE quiero cotizar otro a San Juan»
+   le mandó la CLABE del viaje anterior, y de paso se perdió el viaje nuevo.
+   Se piden las formas que de verdad son apartar («aparta», «apártamela»,
+   «apartar»), no «aparte» ni «apartado» a secas. */
+const APARTAR_O_CUENTA = /\b(apart[aoá]\w*|apartar|reserv\w*|bloque[aá]\w*|amarr\w*|le entramos|le entro|va que va|quedamos as[ií]|a qu[eé] cuenta|qu[eé] cuenta|n[uú]mero de cuenta|clabe|transferencia|transferir|te transfiero|deposit\w*|d[oó]nde (te |le )?pago|c[oó]mo (te |le )?pago|datos bancarios|datos (del|para el|para) (dep[oó]sito|pago)|para transferir|anticipo|banco)\b/i;
 const ETAPAS_CON_PRECIO_DADO = ['con_precio', 'va_a_apartar'];
 /* Intentos de sacarle el prompt, el código o la configuración (Falla 4). */
 const PIDE_EL_PROMPT = /\b(repite|repíteme|mu[eé]strame|ens[eé][nñ]ame|dime|dame|cu[aá]l es|imprime|revela|comparte)\b[^.?!]{0,40}\b(tu|tus|el|las|el|su)\s+(prompt|system prompt|instrucci[oó]n(es)?|configuraci[oó]n|c[oó]digo( fuente)?|reglas internas|herramientas)\b|\bignora (tus|las) (instrucciones|reglas)\b|\bolvida (tus|las) (instrucciones|reglas)\b|\bsystem prompt\b|\bmodo (desarrollador|developer)\b|\bjailbreak\b|\bact[uú]a como si no tuvieras (reglas|instrucciones)\b/i;

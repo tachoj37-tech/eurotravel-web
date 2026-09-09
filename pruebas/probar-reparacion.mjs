@@ -909,5 +909,39 @@ titulo('R25 · ni la hora antes del depósito, ni tres tickets del mismo viaje a
   okQue('  la IA puede contestarlo como viaje nuevo', /mayo|a d[oó]nde/i.test(d3));
 }
 
+/* ============================================================ */
+titulo('R26 · «y APARTE quiero cotizar otro» no es apartar: es un segundo viaje (escenario q real)');
+{
+  limpia();
+  const C = '5213366670434';
+  const CLABE = '012320001927217407';
+  process.env.CLABE = CLABE; process.env.CUENTA = '0192721740'; process.env.DATOS_BANCARIOS = 'BBVA Bancomer';
+  /* Primer viaje con precio dado. */
+  tk.anotaEtapa(C, 'con_precio', { total: 7000, anticipo: 1500,
+    viajeDatos: { origen: 'Guadalajara', destino: 'Tequila', salida: '2026-10-17', regreso: '2026-10-17', gente: 18, unidad: 'Sprinter' } }, Date.now());
+  laIA = () => ({ respuesta: 'Va, San Juan de los Lagos el 24 con 40. ¿Salen también de Guadalajara?', datos: { destino: 'San Juan de los Lagos', salida: '2026-10-24', gente: 40 }, accion: 'seguir' });
+  const antes = textos(C).length;
+  await dice('oye y aparte quiero cotizar otro a san juan de los lagos el 24, somos 40', C);
+  const dicho = textos(C).slice(antes);
+  ok('NO le manda la CLABE del viaje anterior', dicho.filter((t) => t === CLABE).length, 0);
+  okQue('  ni el anticipo del anterior', !/1,500/.test(dicho.join('\n')));
+  ok('  contesta del viaje nuevo (dijo: ' + JSON.stringify(dicho.map((t) => t.slice(0, 60))) + ')',
+    /San Juan/i.test(dicho.join('\n')), true);
+  const ch = webhook.charlaDe(C) || {};
+  ok('  y la plática es la del viaje NUEVO: destino', ch.destino, 'San Juan de los Lagos');
+  ok('  con la gente nueva', ch.gente, 40);
+  ok('  marcada como otro viaje (plática: ' + JSON.stringify(ch) + ')', ch.otroViaje === true, true);
+  okQue('  y el precio del PRIMER viaje sigue vigente (no se marcó vencido)', !(tk.fichaDe(C) || {}).precioVencido);
+  /* Y «apártamela» de verdad sigue mandando la cuenta. */
+  limpia();
+  const D = '5213366670435';
+  tk.anotaEtapa(D, 'con_precio', { total: 7000, anticipo: 1500,
+    viajeDatos: { origen: 'Guadalajara', destino: 'Tequila', salida: '2026-10-17', regreso: '2026-10-17', gente: 18, unidad: 'Sprinter' } }, Date.now());
+  const a2 = textos(D).length;
+  await dice('apártamela por favor', D);
+  ok('«apártamela» sí manda la CLABE', textos(D).slice(a2).filter((t) => t === CLABE).length, 1);
+  delete process.env.CLABE; delete process.env.CUENTA; delete process.env.DATOS_BANCARIOS;
+}
+
 console.log('\n' + buenas + ' buenas, ' + malas + ' malas');
 process.exit(malas ? 1 : 0);
