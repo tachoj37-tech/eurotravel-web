@@ -6,8 +6,9 @@
    1 · «¿cuánto sale?» sin todos los datos no deja al cliente sin nada.
    2 · El cliente puede corregir destino, fecha y cuántos son; al cambiar
        cuántos, se vuelve a ver en qué caben.
-   3 · Nunca se acepta un autobús sin saber cuántos son; 60 en un i6 de
-       47 se detecta cuando llega la cuenta.
+   3 · Cuántos son NO es requisito para escoger autobús (dictado del
+       8-sep-2026); pero 60 en un i6 de 47 se detecta cuando llega la
+       cuenta y se vuelve a escoger.
    4 · Una ráfaga de dos mensajes en un aviso: el segundo parte de lo
        que leyó la IA del primero, no de lo que entendió el guion.
    5 · Fechas imposibles o pasadas no entran.
@@ -129,10 +130,16 @@ titulo('el cliente puede corregir');
 }
 
 /* ============================================================ */
-titulo('nunca se acepta un autobús sin saber cuántos son');
+titulo('un autobús donde no caben no se acepta; pero cuántos son ya no es requisito para escogerlo');
 {
+  /* Cambió de lado el 8-sep-2026 (dictado del dueño: «lo que importa es la
+     renta de camión, no las personas; puedo rentar un i6 sin que responda
+     cuántos somos»). Con autobús y sin gente, lo primero es enseñar los
+     autobuses; la cuenta se usa después, si la da, para ver si caben. */
   const a = bot.pegaDatos({ destino: 'Cancún', salida: '2026-11-10', regreso: '2026-11-15', unidad: 'autobus' }, {});
-  ok('con unidad pero sin gente, lo que sigue es cuántos son', a.paso, 'cuantos');
+  ok('con autobús pero sin gente, lo que sigue es escoger cuál (no «cuántos»)', a.paso, 'elegirBus');
+  const a2 = bot.pegaDatos({ destino: 'Cancún', salida: '2026-11-10', regreso: '2026-11-15', unidad: 'autobus' }, { autobus: 'irizar-i6' });
+  ok('  y con el i6 escogido y sin gente, sigue el origen', [a2.unidadNombre, a2.paso], ['Irizar i6', 'origen']);
   const b = bot.pegaDatos({ destino: 'Cancún', salida: '2026-11-10', regreso: '2026-11-15', gente: 40, unidad: 'autobus', unidadNombre: 'Irizar i6', unidadId: 'irizar-i6', paso: 'origen' }, { gente: 50 });
   ok('50 en un i6 de 47: no cabe', b.noCabe && b.noCabe.nombre, 'Irizar i6');
   okQue('  se quita el camión y toca escoger otra vez (hay de 50 y 51)', !b.unidadNombre && b.paso === 'elegirBus');

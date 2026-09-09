@@ -499,5 +499,34 @@ titulo('R11 · «quiero un camión» / «¿qué camiones tienen?»: se enseñan 
   okQue('con 30 personas ya sabidas, la lista dice «Para 30 se ajustan a la capacidad»', /Para 30 se ajustan/.test(textos(C).slice(antes).join('\n')));
 }
 
+/* ============================================================ */
+titulo('R12 · con el i6 ya escogido, «¿cuántos son?» no es requisito (dictado del dueño, 8-sep-2026, 6:46 p.m.)');
+{
+  limpia();
+  const C = '5213366670413';
+  /* La IA de mentiras hace lo que la real hizo: guarda el autobús y AUN ASÍ
+     pregunta cuántos van. Y al regenerar, insiste. */
+  laIA = (t, dinamico) => /\bi6\b/i.test(t)
+    ? { respuesta: 'El i6 es premium, 47 lugares, aire, baño y pantallas. ¿Cuántos van en total? Con eso te confirmo si te queda bien.', datos: { autobus: 'irizar-i6' }, accion: 'seguir' }
+    : { respuesta: 'Va. ¿Qué día salen?', datos: { destino: 'Sayulita' }, accion: 'seguir' };
+  webhook.guardaCharla(C, { destino: 'Sayulita', paso: 'salida', salida: '2026-09-11', unidad: 'autobus', nombre: 'Prueba' });
+  const antes = textos(C).length; const llamadas = llamadasALaIA;
+  await dice('i6', C);
+  const dicho = textos(C).slice(antes).join('\n');
+  okQue('el cliente NO recibe «¿cuántos van?»', !/cu[aá]ntos (van|son)/i.test(dicho));
+  okQue('  la IA se regeneró una vez con el aviso «ya escogió el Irizar i6»', llamadasALaIA === llamadas + 2 && /Ya escogió el Irizar i6/.test((payloads[payloads.length - 1] || {}).dinamico || ''));
+  okQue('  y como insistió, contestó el guion con lo que sí falta (el regreso)', /regres|mismo d[ií]a|vuelven/i.test(dicho));
+  const ch = webhook.charlaDe(C) || {};
+  ok('  el autobús quedó guardado', ch.unidadNombre, 'Irizar i6');
+  const bot = (await import(pathToFileURL(path.join(RAIZ, 'bot.js')).href)).default;
+  okQue('  y «cuántos» ya no está entre lo que falta', !/cu[aá]ntos/i.test(String(bot.loQueFalta(ch) || '')));
+  /* El motor, a secas: con autobús sin escoger, lo primero es la lista (sin
+     «Para 0»); con el i6 escogido y sin gente, lo que falta es el origen. */
+  const sinBus = String(bot.loQueFalta({ destino: 'Sayulita', salida: '2026-09-11', regreso: '2026-09-13', unidad: 'autobus' }) || '');
+  okQue('  autobús sin escoger y sin gente → la lista completa, sin «Para 0»', /Marcopolo Paradiso G8/.test(sinBus) && !/Para 0/.test(sinBus) && /NO preguntes cu[aá]ntos/.test(sinBus));
+  okQue('  con el i6 escogido y sin gente → sigue el origen, no «cuántos»', /zona metropolitana/.test(String(bot.loQueFalta({ destino: 'Sayulita', salida: '2026-09-11', regreso: '2026-09-13', unidad: 'autobus', unidadNombre: 'Irizar i6' }) || '')));
+  okQue('  y con Sprinter nombrada SÍ se sigue preguntando cuántos (ahí la cuenta decide la unidad)', /cu[aá]ntos/.test(String(bot.loQueFalta({ destino: 'Chapala', salida: '2026-09-11', regreso: '2026-09-13', unidad: 'sprinter', unidadNombre: 'Sprinter' }) || '')));
+}
+
 console.log('\n' + buenas + ' buenas, ' + malas + ' malas');
 process.exit(malas ? 1 : 0);

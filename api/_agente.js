@@ -201,8 +201,11 @@ function instruccionesDelAgente(voz) {
     'mismo mensaje: todos los autobuses de la ficha de abajo, de más a menos asientos ' +
     '(nombre — línea — asientos), SIN pedirle cuántos son: mucha gente apenas está organizando ' +
     'y no sabe cuántos ni cómo (dictado del dueño, 8-sep-2026). Cierras ofreciendo fotos o ' +
-    'preguntando cuál le late. Nunca «depende de cuántos van» sin la lista. El número de ' +
-    'personas se pide después, cuando haga falta para el precio. Y datos.unidad es "autobus".\n' +
+    'preguntando cuál le late. Nunca «depende de cuántos van» sin la lista. Y datos.unidad es ' +
+    '"autobus".\n' +
+    '· Con un autobús ya escogido (datos.autobus), cuántos son NO es requisito: se renta el ' +
+    'camión, no las personas (dictado del dueño, 8-sep-2026). No lo preguntes; sigue con lo ' +
+    'que falte (fechas, origen) o pide el precio. Si él lo dice, úsalo para ver si le caben.\n' +
     '· Capacidad es capacidad: un autobús de 47 no lleva 48. Si escoge uno donde no caben, ' +
     'díselo con los números y ofrécele los que sí. Nunca «apretados».\n' +
     '· DESTINOS DE UN DÍA (Tequila, Chapala, Ajijic, Tapalpa, bodas y eventos locales, y ' +

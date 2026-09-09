@@ -1843,10 +1843,25 @@ function alSiguienteHueco(e) {
   if (!e.destino) e.paso = 'destino';
   else if (!e.salida) e.paso = 'salida';
   else if (!e.regreso) e.paso = 'regreso';
-  /* SIEMPRE se pregunta cuántos son, aunque el cliente ya haya nombrado la
-     unidad: sin la cuenta no se sabe si caben, y un autobús se aceptaba
-     con la gente desconocida (auditoría 7-sep-2026, A5). */
-  else if (!e.gente) e.paso = 'cuantos';
+  /* ------------------------------------------------------------
+     CON AUTOBÚS, CUÁNTOS SON NO ES REQUISITO (dictado del dueño, 8-sep-2026)
+     ------------------------------------------------------------
+     La auditoría del 7-sep (A5) había puesto «SIEMPRE se pregunta cuántos
+     son, aunque ya haya nombrado la unidad». El dueño lo tumbó viendo al
+     bot aferrarse: «lo que importa es la renta de camión, no las
+     personas; puedo rentar un i6 sin que responda cuántos somos». Así que:
+     · si quiere autobús y no ha escogido cuál, se le enseñan los
+       autobuses ANTES de preguntar cuántos (mucha gente apenas está
+       organizando y no sabe cuántos ni cómo);
+     · con un autobús ya escogido, no se pregunta cuántos son; si lo
+       dice después, `pegaDatos` revisa si le caben (`noCabe`).
+     Para la Sprinter y la Suburban sí se pregunta: ahí la cuenta decide
+     la unidad. */
+  else if (e.unidad === 'autobus' && !e.unidadNombre &&
+           UNIDADES.some(function (u) {
+             return u.cat === 'autobus' && (e.gente || 0) <= Number(u.max);
+           })) e.paso = 'elegirBus';
+  else if (!e.gente && !(e.unidad === 'autobus' && e.unidadNombre)) e.paso = 'cuantos';
   /* ------------------------------------------------------------
      Y SI ES AUTOBÚS, CUÁL AUTOBÚS
      ------------------------------------------------------------
@@ -3937,9 +3952,10 @@ function loQueFalta(estado) {
         'luego el mensaje de abajo. '
       : '';
     return aviso + 'cuál autobús. Manda este mensaje TAL CUAL, sin agregar baño, puertas ni aire ' +
-      '(primero los que caben; los que no caben van hasta el final, como otras opciones):\n' +
-      mensajeDeAutobuses(e.gente) +
-      '\nSOLO si pide recomendación, recomienda uno de los que caben con una razón. Cuando ' +
+      (e.gente ? '(primero los que caben; los que no caben van hasta el final, como otras opciones):\n'
+        : '(todos, de más a menos asientos; NO preguntes cuántos son):\n') +
+      (e.gente ? mensajeDeAutobuses(e.gente) : mensajeDeTodosLosAutobuses()) +
+      '\nSOLO si pide recomendación, recomienda uno' + (e.gente ? ' de los que caben' : '') + ' con una razón. Cuando ' +
       'elija (o diga «el que tú digas» y tú recomiendes uno), ponlo en datos.autobus';
   }
   return {

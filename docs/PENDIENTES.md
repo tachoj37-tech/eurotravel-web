@@ -103,7 +103,13 @@ sabe cuántos son) **sin pedir cuántos son** («mucha gente quiere organizar
 un viaje solamente, no sabe cuántos ni cómo»): cierra ofreciendo fotos
 (`mensajeDeTodosLosAutobuses`, candado `conLosAutobusesQuePidio`, prueba
 R11). Se compara sin acentos y con dedazos: «camión» y «que camines tiene?»
-se le escaparon a la primera versión. En la misma prueba dijo
+se le escaparon a la primera versión. Y **con un autobús ya escogido,
+cuántos son no es requisito** (6:46 p.m.: «lo que importa es la renta de
+camión, no las personas; puedo rentar un i6 sin que responda cuántos
+somos»): el motor ya no lo pide (`alSiguienteHueco`), la IA se regenera si
+lo pregunta (`preguntaQueSobra`) y, si insiste, contesta el guion con lo
+que sí falta. Con Sprinter o Suburban sí se pregunta: ahí la cuenta decide
+la unidad. Prueba R12; la de fase 3 cambió de lado con su razón. En la misma prueba dijo
 «pasado mañana, 11 de septiembre» siendo día 8: «hoy» se calculaba en UTC
 (Vercel); ahora `hoyISO` es hora de Guadalajara en todos los caminos.
 

@@ -1492,6 +1492,16 @@ function preguntaRepetida(respuesta, estado) {
   }) || null;
 }
 
+/* Con un autobús ya escogido, «¿cuántos van?» sobra (dictado del dueño,
+   8-sep-2026: «puedo rentar un i6 sin que responda cuántos somos»). La IA
+   lo preguntó igual después de «i6»; se trata como pregunta repetida: se
+   regenera una vez y, si insiste, contesta el guion con lo que falta. */
+function preguntaQueSobra(respuesta, estado) {
+  const e = estado || {};
+  if (e.unidad === 'autobus' && e.unidadNombre && !e.gente && PREGUNTA_DE.gente.test(String(respuesta || ''))) return 'gente';
+  return null;
+}
+
 /* El viaje que ya está en precio (pedido o dado), como estado de plática:
    para sembrarlo cuando el cliente cambia UNA cosa después del precio. */
 function viajeBaseDeLaFicha(ficha) {
@@ -1670,13 +1680,22 @@ async function loQueDiceElAgente(envio) {
      el guion con lo que de verdad falta. Nunca sale la pregunta repetida. */
   if (dicho.accion === 'seguir' && dicho.respuesta) {
     const repetida = preguntaRepetida(dicho.respuesta, nuevo);
-    if (repetida) {
-      console.error('[agente] volvió a preguntar «' + repetida + '» (ya se sabe: ' + nuevo[repetida] + '); se regenera');
+    const sobra = repetida ? null : preguntaQueSobra(dicho.respuesta, nuevo);
+    if (repetida || sobra) {
+      console.error(repetida
+        ? '[agente] volvió a preguntar «' + repetida + '» (ya se sabe: ' + nuevo[repetida] + '); se regenera'
+        : '[agente] preguntó cuántos son con el ' + nuevo.unidadNombre + ' ya escogido; se regenera');
       const otra = await agente.conversa(texto, Object.assign({}, opcionesDeLaIA, {
         estado: nuevo, falta: conversacion.loQueFalta(nuevo) || null,
-        aviso: 'Ese dato ya lo tienes: ' + repetida + ' = ' + nuevo[repetida] + '. No lo preguntes; sigue con lo que falta.'
+        aviso: repetida
+          ? 'Ese dato ya lo tienes: ' + repetida + ' = ' + nuevo[repetida] + '. No lo preguntes; sigue con lo que falta.'
+          : 'Ya escogió el ' + nuevo.unidadNombre + '. NO preguntes cuántos son: para rentar un autobús no hace falta. Sigue con lo que falta o pásale el precio.'
       }));
-      if (otra && otra.accion === 'seguir' && otra.respuesta && !preguntaRepetida(otra.respuesta, conversacion.pegaDatos(nuevo, otra.datos))) {
+      const bien = function (r) {
+        const despues = conversacion.pegaDatos(nuevo, r.datos);
+        return !preguntaRepetida(r.respuesta, despues) && !preguntaQueSobra(r.respuesta, despues);
+      };
+      if (otra && otra.accion === 'seguir' && otra.respuesta && bien(otra)) {
         dicho.respuesta = otra.respuesta;
       } else {
         console.error('[agente] insistió; contesta el guion con lo que falta');
