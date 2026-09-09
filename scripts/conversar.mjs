@@ -113,7 +113,12 @@ async function corre(nombre, C, guion) {
     else { console.log('\nCLIENTE: ' + paso); await manda(C, paso); }
     for (const m of mandados.slice(antes)) {
       if (mismo(m.to, C)) console.log('BOT:     ' + ((m.text && m.text.body) || (m.image ? '[foto ' + (m.image.link || m.image.id) + '] ' + (m.image.caption || '') : JSON.stringify(m))).replace(/\n/g, '\n         '));
-      else if (mismo(m.to, DUENO)) console.log('→ DUEÑO: ' + ((m.text && m.text.body) || '[medio]').split('\n')[0]);
+      /* El mensaje al dueño COMPLETO: es lo que él va a leer en su
+         teléfono, y con una sola línea no se puede revisar. */
+      else if (mismo(m.to, DUENO)) {
+        console.log('→ DUEÑO:  ' + ((m.text && m.text.body) ||
+          (m.image ? '[reenvío de una foto del cliente]' : '[medio]')).replace(/\n/g, '\n          '));
+      }
     }
   }
 }
@@ -195,11 +200,22 @@ const escenarios = {
     'ya deposité, ahí te va el comprobante',
     'me llamo Laura Beltrán Ríos', 'nos recogen en av. patria 2050, zapopan, a las 6 de la mañana',
     'llegamos al hotel playa bonita en vallarta, y de regreso salimos a las 5 de la tarde',
-    'ya quedó todo?']
+    'ya quedó todo?'],
+  /* t · LA MISMA, pero con AUTOBÚS: el precio no lo calcula el motor, lo
+     pone el dueño escribiendo un número al ticket. Es el caso que el dueño
+     quiere ver: que le llegue el precio a él, que lo confirme, y que le
+     llegue bien al cliente. Sigue hasta el contrato. */
+  t: ['buenas tardes, ocupo un camión', 'a mazatlán', 'del 20 al 22 de noviembre', 'somos 38',
+    'sí, de guadalajara', 'solo nos llevan y traen', 'el i6s',
+    precio(46500),
+    '¿a qué cuenta les deposito?', foto('5213366679020'),
+    'ya está el depósito', 'soy Óscar Medina Tapia',
+    'nos recogen en calle hidalgo 45, tlaquepaque, a las 5 de la mañana',
+    'llegamos al hotel las palmas en mazatlán y de regreso salimos a la 1 de la tarde']
 };
 const pedidos = process.argv.slice(2).filter((x) => escenarios[x]);
 for (const k of (pedidos.length ? pedidos : Object.keys(escenarios))) {
-  const C = '52133666790' + { a: '01', b: '02', c: '03', d: '04', e: '05', f: '06', g: '07', h: '08', i: '09', j: '10', k: '11', l: '12', m: '13', n: '14', o: '15', p: '16', q: '17', r: '18', s: '19' }[k];
+  const C = '52133666790' + { a: '01', b: '02', c: '03', d: '04', e: '05', f: '06', g: '07', h: '08', i: '09', j: '10', k: '11', l: '12', m: '13', n: '14', o: '15', p: '16', q: '17', r: '18', s: '19', t: '20' }[k];
   const guion = escenarios[k].map((p) => (typeof p === 'function' && p.length === 0 && k === 'e') ? p : p);
   await corre('Escenario ' + k, C, guion);
   console.log('\n(gastado hasta aquí: $' + gastado.toFixed(3) + ' USD)');

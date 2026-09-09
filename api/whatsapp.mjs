@@ -275,7 +275,13 @@ function ticketDePrecio(res, precio, cal, cliente, unidad, historial) {
     lineas.push('📅 ' + tickets.comoSeDice(res.salida) +
       (res.regreso ? ' al ' + tickets.comoSeDice(res.regreso) : ''));
   }
-  if (unidad || res.unidad) lineas.push('🚌 ' + (unidad || res.unidad) + (pax ? ' · ' + pax + ' pax' : ''));
+  /* El NOMBRE del catálogo, no la categoría: el ticket decía «🚌 sprinter»
+     en minúscula mientras el de autobús decía «Irizar i6S» (9-sep-2026). */
+  const comoSeLlama = unidad || res.unidadNombre || res.unidad;
+  const delCatalogo = unidadDelCatalogo(comoSeLlama);
+  if (comoSeLlama) {
+    lineas.push('🚌 ' + ((delCatalogo && delCatalogo.name) || comoSeLlama) + (pax ? ' · ' + pax + ' pax' : ''));
+  }
   lineas.push('');
   if (precio && typeof precio.total === 'number') {
     lineas.push('Calculado: *$' + precio.total.toLocaleString('es-MX') + '*' +
