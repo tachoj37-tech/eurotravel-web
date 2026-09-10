@@ -11,12 +11,17 @@
    criterio, cuando haya suficientes, se resume a mano en
    docs/CRITERIO-DE-PRECIOS.md (el dueño manda; esto solo recuerda).
 
-   «El mismo viaje» = mismo origen, mismo destino, misma unidad y
-   mismos días de servicio. Los pasajeros y la fecha se guardan
+   «El mismo viaje» = misma ZONA de salida, mismo destino, misma unidad
+   y mismos días de servicio. Los pasajeros y la fecha se guardan
    —importan para leerlo— pero no separan viajes: doce o catorce
    personas en la misma Sprinter a Chapala son el mismo viaje.
+
+   La ZONA y no el texto del origen (10-sep-2026): ver la nota larga
+   dentro de `claveDe`.
    ------------------------------------------------------------ */
 'use strict';
+
+const origenes = require('./_origenes.js');
 
 function limpia(texto) {
   return String(texto || '')
@@ -39,7 +44,24 @@ function diasEntre(a, b) {
 function claveDe(resumen, unidad) {
   const r = resumen || {};
   const u = limpia(unidad || r.unidad || '');
-  const clave = [limpia(r.origen), limpia(r.destino), u || 'sin unidad', String(diasEntre(r.salida, r.regreso))].join('|');
+  /* ------------------------------------------------------------
+     EL ORIGEN ENTRA POR ZONA, NO POR CÓMO LO TECLEÓ EL CLIENTE
+     ------------------------------------------------------------
+     Iba `limpia(r.origen)`, o sea el texto crudo. Así «Guadalajara»,
+     «gdl», «Zapopan» y «Tlaquepaque» eran CUATRO viajes distintos: el
+     dueño ponía el precio de Chapala una vez y la siguiente no se le
+     sugería, porque el cliente escribió el nombre de su municipio en
+     vez del de la ciudad. El aprendizaje casi no acumulaba.
+
+     Por zona sí junta, y sin mezclar lo que no se debe: Ocotlán y
+     Yurécuaro tienen recargo dictado y conservan su propia llave.
+
+     Ojo al cambiar esto: los precios que ya estén guardados con la
+     llave vieja dejan de empatar. No se pierden ni estorban, solo
+     dejan de sugerirse; de ahí en adelante se junta bien.
+     ------------------------------------------------------------ */
+  const zona = limpia(origenes.claveDeZona(r.origen)) || limpia(r.origen);
+  const clave = [zona, limpia(r.destino), u || 'sin unidad', String(diasEntre(r.salida, r.regreso))].join('|');
   /* Un precio neto de agencia (5 % abajo) no se le sugiere a un
      particular ni al revés (auditoría 7-sep-2026, C11). El particular
      conserva la clave de siempre. */

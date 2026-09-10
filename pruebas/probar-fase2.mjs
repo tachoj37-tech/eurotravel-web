@@ -286,8 +286,11 @@ titulo('«total 48000» actualiza la ficha sin escribirle al cliente');
 titulo('la clave del precio aprendido distingue agencia');
 {
   const base = { origen: 'Guadalajara', destino: 'Chapala', salida: '2026-11-20', regreso: '2026-11-22' };
-  ok('particular: la clave de siempre', aprendidos.claveDe(base, 'Sprinter'), 'guadalajara|chapala|sprinter|3');
-  ok('agencia: otra clave', aprendidos.claveDe(Object.assign({}, base, { agencia: true }), 'Sprinter'), 'guadalajara|chapala|sprinter|3|agencia');
+  /* El origen entra por ZONA desde el 10-sep-2026 —«zmg» y no
+     «guadalajara»—; ver la nota en `claveDe`. Lo que esta prueba vigila
+     no cambió: que la agencia no comparta llave con el particular. */
+  ok('particular: la clave de siempre', aprendidos.claveDe(base, 'Sprinter'), 'zmg|chapala|sprinter|3');
+  ok('agencia: otra clave', aprendidos.claveDe(Object.assign({}, base, { agencia: true }), 'Sprinter'), 'zmg|chapala|sprinter|3|agencia');
 }
 
 console.log('\n' + buenas + ' buenas, ' + malas + ' malas');

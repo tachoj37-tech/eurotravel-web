@@ -445,4 +445,85 @@ function recargoDictado(origen, nombreDestino, dias) {
   return null;
 }
 
-module.exports = { ORIGENES, buscaOrigen, recargoDictado, lejosEnKm };
+/* ------------------------------------------------------------
+   DE QUÉ ZONA SALEN — PARA DECÍRSELO AL DUEÑO, NO PARA COBRAR
+   ------------------------------------------------------------
+   Dictado del dueño (10-sep-2026): «lo único que quiero que reconozca
+   el chatbot es si sale de la ZMG de Guadalajara o de Ocotlán,
+   Yurécuaro, etc., para que yo pueda determinar el precio, sin IA».
+
+   Por eso esto es una función APARTE de `buscaOrigen` y no la toca.
+   `buscaOrigen` decide DINERO, y por eso exige el estado escrito: hay
+   otro Ocotlán en Oaxaca y otro Zapotlán que no es éste, y cobrarle a
+   un pueblo el recargo de otro es un error que se paga.
+
+   Ésta solo decide QUÉ LE DICE EL TICKET AL DUEÑO. Ahí la ambigüedad
+   no cuesta nada —él la ve y decide— y en cambio callarla sí cuesta:
+   el cliente que contesta «Ocotlán» a secas, que es como contesta
+   cualquiera por WhatsApp, hoy se ve idéntico a uno de Guadalajara.
+
+   Aun así no se adivina a lo tonto: si el texto nombra OTRO estado, no
+   se clasifica. «Ocotlán, Oaxaca» no es el de Jalisco.
+   ------------------------------------------------------------ */
+
+/* Los estados, para saber cuándo el cliente nombró uno que contradice.
+   Solo hacen falta los que se escriben; no es un catálogo oficial. */
+const OTROS_ESTADOS = new RegExp(
+  '(?<![' + LETRA + '])(oaxaca|puebla|veracruz|chiapas|guerrero|sonora|sinaloa|' +
+  'chihuahua|coahuila|durango|zacatecas|nayarit|colima|guanajuato|quer[eé]taro|' +
+  'hidalgo|tlaxcala|morelos|tabasco|campeche|yucat[aá]n|quintana\\s+roo|' +
+  'tamaulipas|nuevo\\s+le[oó]n|san\\s+luis|baja\\s+california|m[eé]xico\\s*,|edomex)' +
+  '(?![' + LETRA + '])', 'i');
+
+/* Los estados donde SÍ viven los orígenes con recargo. */
+const SU_ESTADO_ESTA_BIEN = { 'Ocotlán': /jalisco|\bjal\b/i, 'Yurécuaro': /michoac[aá]n|\bmich\b/i };
+
+function zonaDeSalida(texto) {
+  const t = String(texto || '').trim();
+  if (!t) return null;
+
+  /* Las abreviaturas van aquí y NO en `AREA_METROPOLITANA`: esa expresión
+     también decide dinero en `buscaOrigen`, y ahí no se toca nada. */
+  if (AREA_METROPOLITANA.test(t) || /(?<![a-z])(gdl|zmg|gdj)(?![a-z])/i.test(t)) {
+    return { tipo: 'zmg', nombre: 'zona metropolitana de Guadalajara' };
+  }
+
+  for (let i = 0; i < ORIGENES.length; i++) {
+    const o = ORIGENES[i];
+    for (let j = 0; j < o.pueblos.length; j++) {
+      if (!o.pueblos[j].busca.test(t)) continue;
+      /* Nombró otro estado y no el suyo: no es éste. */
+      const elSuyo = SU_ESTADO_ESTA_BIEN[o.nombre];
+      if (OTROS_ESTADOS.test(t) && !(elSuyo && elSuyo.test(t))) return { tipo: 'otra', nombre: t.slice(0, 60) };
+      return { tipo: 'recargo', nombre: o.nombre, pueblo: o.pueblos[j].n, fila: o.fila };
+    }
+  }
+
+  return { tipo: 'otra', nombre: t.slice(0, 60) };
+}
+
+/* Cómo se le dice al dueño en su ticket, en un renglón. */
+function comoSeDiceLaZona(texto) {
+  const z = zonaDeSalida(texto);
+  if (!z) return null;
+  if (z.tipo === 'zmg') return '🚏 Salen de la *ZMG* (sin recargo)';
+  if (z.tipo === 'recargo') {
+    return '🚏 Salen de *' + (z.pueblo || z.nombre) + '* — zona *' + z.nombre +
+      '*, LLEVA RECARGO (fila ' + z.fila + ' del Excel)';
+  }
+  return '🚏 Salen de *' + z.nombre + '* — ni ZMG ni zona con recargo, revísalo';
+}
+
+/* La zona como llave, para que lo aprendido se junte. Sin esto, «gdl»,
+   «Guadalajara» y «Zapopan» son tres viajes distintos y el precio que el
+   dueño dio una vez no se le vuelve a sugerir nunca. */
+function claveDeZona(texto) {
+  const z = zonaDeSalida(texto);
+  if (!z) return '';
+  if (z.tipo === 'zmg') return 'zmg';
+  if (z.tipo === 'recargo') return 'zona:' + z.nombre.toLowerCase();
+  return String(texto || '').toLowerCase().replace(/[^a-z0-9ñáéíóú]+/gi, ' ').trim();
+}
+
+module.exports = { ORIGENES, buscaOrigen, recargoDictado, lejosEnKm,
+  zonaDeSalida, comoSeDiceLaZona, claveDeZona };

@@ -126,7 +126,11 @@ const DUENO = process.env.DUENO_WHATSAPP;
   ok('se guardó UN precio', preciosGuardados.length, 1);
   const g = preciosGuardados[0] || {};
   ok('  con el total que él fijó, marcado como fijado', [g.total, g.fijado], [48000, true]);
-  okQue('  con la clave del viaje (origen, destino, unidad, días)', /^guadalajara\|chapala\|sprinter\|3$/.test(g.clave));
+  /* «zmg» y no «guadalajara»: el origen entra por ZONA desde el
+     10-sep-2026, para que toda la zona metropolitana sea el mismo viaje y
+     el precio que él dio una vez se le vuelva a sugerir aunque el
+     siguiente cliente escriba «Zapopan». Ver la nota en `claveDe`. */
+  okQue('  con la clave del viaje (zona, destino, unidad, días)', /^zmg\|chapala\|sprinter\|3$/.test(g.clave));
   ok('  con pasajeros y salida', [g.pasajeros, g.salida], [12, '2026-11-20']);
 }
 

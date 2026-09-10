@@ -36,6 +36,7 @@ import tarifa from './_tarifa.js';
 import logica from './_webhook-logica.js';
 import aprendidos from './_precios-aprendidos.js';
 import agente from './_agente.js';
+import origenes from './_origenes.js';
 import seguimiento from './_seguimiento.js';
 import recordatorios from './_recordatorios.js';
 import crypto from 'crypto';
@@ -367,10 +368,44 @@ function ticketDePrecio(res, precio, cal, cliente, unidad, historial, yaDado) {
   if (comoSeLlama) {
     lineas.push('🚌 ' + ((delCatalogo && delCatalogo.name) || comoSeLlama) + (pax ? ' · ' + pax + ' pax' : ''));
   }
+  /* ------------------------------------------------------------
+     DE QUÉ ZONA SALEN, DICHO CON TODAS SUS LETRAS
+     ------------------------------------------------------------
+     Dictado del dueño (10-sep-2026): «lo único que quiero que reconozca
+     el chatbot es si sale de la ZMG de Guadalajara o de Ocotlán,
+     Yurécuaro, etc., para que yo pueda determinar el precio».
+
+     Antes el ticket decía «📍 Ocotlán → Chapala» y ya: el origen iba
+     como texto suelto, y un «Ocotlán» —que lleva $4,500 de recargo— se
+     leía igual que un «Guadalajara». El renglón lo dice ahora aparte y
+     en negritas, porque es lo que cambia el número que él va a poner.
+     ------------------------------------------------------------ */
+  if (res.origen) {
+    const zona = origenes.comoSeDiceLaZona(res.origen);
+    if (zona) lineas.push(zona);
+  }
   lineas.push('');
   if (precio && typeof precio.total === 'number') {
     lineas.push('Calculado: *$' + precio.total.toLocaleString('es-MX') + '*' +
       (typeof precio.anticipo === 'number' ? ' (anticipo $' + precio.anticipo.toLocaleString('es-MX') + ')' : ''));
+    /* ------------------------------------------------------------
+       CUANDO EL CALCULADO NO TRAE EL RECARGO, SE DICE
+       ------------------------------------------------------------
+       El motor solo aplica el recargo de salida cuando el origen viene
+       con su estado escrito —hay otro Ocotlán en Oaxaca y cobrarle a
+       uno el recargo del otro es un error que se paga—. Por WhatsApp el
+       cliente teclea «Ocotlán» a secas, así que el número calculado es
+       el de Guadalajara.
+
+       Sin este renglón el ticket enseñaba $6,500 para un viaje que lleva
+       $4,500 encima, y un «va» de reflejo regalaba la diferencia. El bot
+       no lo cobra solo —eso lo decide el dueño, 10-sep-2026— pero
+       callarlo sería peor que no reconocer la zona.
+       ------------------------------------------------------------ */
+    const zonaDe = res.origen ? origenes.zonaDeSalida(res.origen) : null;
+    if (zonaDe && zonaDe.tipo === 'recargo' && !origenes.buscaOrigen({ direccion: String(res.origen) })) {
+      lineas.push('⚠️ *Ese calculado NO trae el recargo de ' + zonaDe.nombre + '*: súmaselo tú.');
+    }
   } else {
     lineas.push('No pude calcularlo: escríbeme el precio.');
   }
