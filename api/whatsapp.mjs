@@ -2297,6 +2297,41 @@ async function loQueDiceElAgente(envio) {
   }
 
   /* ------------------------------------------------------------
+     NO SE INVENTAN DATOS DE LA EMPRESA
+     ------------------------------------------------------------
+     Corrida real del 9-sep-2026 (escenario ab): a «¿cómo sé que no me van
+     a estafar?» el modelo contestó «llevamos 14 años operando… el dueño
+     valida cada anticipo en persona». Nadie le dijo esos números. Un
+     cliente que los repite y luego los ve desmentidos es peor que un
+     cliente sin respuesta, y una antigüedad falsa en un chat de venta es
+     una promesa que la empresa no hizo.
+
+     Lo que sí es cierto —contrato a su nombre con folio, seguro de
+     viajero, depósito a una cuenta de empresa— se dice completo, y la
+     pregunta le llega al dueño por si quiere contestar él.
+     ------------------------------------------------------------ */
+  {
+    const r = String(dicho.respuesta || '');
+    const INVENTA = /\bllevamos\s+\d+\s+a[ñn]os|\b\d+\s+a[ñn]os\s+(?:operando|de\s+experiencia|en\s+el\s+mercado|en\s+el\s+giro)|\bdesde\s+(?:19|20)\d{2}\b|\bm[aá]s\s+de\s+\d+\s+(?:unidades|camiones|clientes|viajes|grupos)\b|\bvalida\s+cada\s+anticipo\s+en\s+persona/i;
+    if (INVENTA.test(r)) {
+      console.error('[agente] se inventó un dato de la empresa: se corrige');
+      dicho.accion = 'seguir';
+      dicho.respuesta = 'Te entiendo, es lo primero que uno piensa 🙌 Lo que te puedo decir con seguridad: ' +
+        'el viaje va con *contrato a tu nombre y folio*, el depósito es a una *cuenta de la empresa* ' +
+        '(no a una persona), y el precio ya incluye operador, combustible, casetas y seguro de viajero. ' +
+        'Si quieres, le digo al dueño que te conteste por aquí mismo.';
+      const duenoAqui = tickets.numeroDelDueno(process.env);
+      if (duenoAqui) {
+        await manda({ numeroDeOrigen: envio.numeroDeOrigen, para: duenoAqui, esTicket: true, sobreCliente: cliente,
+          pasaAPersona: false, escribio: '[ticket · desconfía]',
+          texto: '🤔 *Un cliente desconfía*\n\n«' + String(texto).slice(0, 200) + '»\n\n' +
+            'Le contesté con lo cierto (contrato con folio, cuenta de empresa, seguro) y le ofrecí que le ' +
+            'contestaras tú. Contéstame *este mensaje* y le llega tal cual.\n_cliente: ' + cliente + '_' });
+      }
+    }
+  }
+
+  /* ------------------------------------------------------------
      NO SE INVENTA LO QUE LLEGÓ Y LO QUE NO
      ------------------------------------------------------------
      Corridas reales del 9-sep-2026:

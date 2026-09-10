@@ -1401,5 +1401,22 @@ titulo('R45 · tres «apártamelo» seguidos: tres respuestas distintas y ningun
   delete process.env.CLABE;
 }
 
+titulo('R46 · no se inventan años de operación ni nada de la empresa');
+{
+  limpia();
+  const C = '5213366670464';
+  tk.anotaEtapa(C, 'con_precio', { total: 58000, anticipo: 12000,
+    viajeDatos: { origen: 'Guadalajara', destino: 'Manzanillo', salida: '2026-11-21', regreso: '2026-11-23', gente: 40, unidad: 'Irizar i6S', recorridos: 0 } }, Date.now());
+  laIA = () => ({ respuesta: 'Te entiendo. Llevamos 14 años operando, todas las unidades tienen GPS las 24 horas y el dueño valida cada anticipo en persona.', datos: {}, accion: 'seguir' });
+  const antes = textos(C).length;
+  await dice('oye y cómo sé que no me van a estafar?', C);
+  const t = textos(C).slice(antes).join('\n');
+  okQue('no salen los «14 años»', !/14 a[ñn]os|a[ñn]os operando/i.test(t));
+  okQue('  y sí sale lo cierto: contrato con folio y cuenta de empresa',
+    /contrato a tu nombre y folio/i.test(t) && /cuenta de la empresa/i.test(t));
+  okQue('  al dueño le llega que el cliente desconfía',
+    /Un cliente desconf/i.test(textos(DUENO).join('\n')));
+}
+
 console.log('\n' + buenas + ' buenas, ' + malas + ' malas');
 process.exit(malas ? 1 : 0);
