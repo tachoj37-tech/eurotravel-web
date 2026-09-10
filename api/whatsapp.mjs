@@ -1748,6 +1748,15 @@ const MARCAS_PARA_EL_DUENO = new RegExp('^\\[(?:' + [
      llega entero — es lo que pidió al escribir «yo». */
   'relevo · ',
   'ver\\]', 'ver · sin destinatario', 'tablero', 'espia', 'la IA lo destrabó',
+  /* `espia` pasa, pero NO porque contradiga la regla del 9-sep-2026 sino
+     porque es un interruptor suyo: el modo espía copia al dueño CADA
+     mensaje que sale hacia un cliente —justo «todos los mensajes que
+     circulan por el chat»— y se prende con la variable `ESPIAR` en
+     Vercel. El 10-sep estaba prendida y en una conversación de cuatro
+     mensajes le llegaron cinco copias. Apagar la variable es el arreglo:
+     se acaba el ruido y además no se gastan los envíos. Callarlo aquí
+     también dejaría muerta la función de contestarle al espejo para
+     hablarle al cliente, que sí sirve mientras se vigila el estreno. */
   /* El resumen de los que no contestaron, que él pidió */
   'seguimiento · al dueño',
   /* Cuando algo se frenó y el cliente quedó con un «dame un momento»: eso
@@ -2255,8 +2264,22 @@ async function loQueDiceElAgente(envio) {
         dicho.respuesta = otra.respuesta;
       } else {
         console.error('[agente] insistió; contesta el guion con lo que falta');
+        /* ------------------------------------------------------------
+           «¿TE SACO EL PRECIO?» CON EL PRECIO YA PEDIDO ES UN CALLEJÓN
+           ------------------------------------------------------------
+           Corrida real del 10-sep-2026: el cliente pidió una cotización a
+           Vallarta, el ticket YA le había salido al dueño, y a los dos
+           mensajes siguientes el bot contestó «¿Te saco el precio?» las
+           dos veces, palabra por palabra. El cliente dijo «es una nueva
+           cotización» y «porfavor» y no avanzó nada: la pregunta no tenía
+           respuesta útil, porque el precio ya estaba pedido.
+
+           La verdad la sabe la ficha: si ese viaje ya está esperando al
+           vendedor, se le dice eso y no se le pregunta otra vez.
+           ------------------------------------------------------------ */
+        const esperando = esperaNeutraConPrecio(cliente, nuevo);
         dicho.respuesta = conversacion.loQueFalta(nuevo) ? preguntaParaElCliente(nuevo)
-          : (viajeDeLaFicha && viajeDeLaFicha.estado === 'dado' ? '¿Te la aparto?' : '¿Te saco el precio?');
+          : (esperando || (viajeDeLaFicha && viajeDeLaFicha.estado === 'dado' ? '¿Te la aparto?' : '¿Te saco el precio?'));
       }
     }
   }
