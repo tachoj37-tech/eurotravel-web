@@ -337,11 +337,52 @@ const escenarios = {
     va('5213366679025'),
     'está caro', 'no me lo dejas en 6 mil?', 'y si somos 10?',
     'bueno va', 'oye ya te dije que sí, dónde deposito', 'perdón, otra vez la cuenta?',
-    'ya deposité pero nomás mandé la mitad', 'ok gracias']
+    'ya deposité pero nomás mandé la mitad', 'ok gracias'],
+
+  /* ============================================================
+     LA TANDA DEL 9-SEP-2026, SEGUNDA VUELTA (aa–ae)
+     ============================================================
+     Con la regla nueva de la cuenta: sale una vez, y un «apártamelo»
+     después recibe la petición del depósito, no la CLABE otra vez.
+     ============================================================ */
+
+  /* aa · el insistente: pide apartar cuatro veces sin depositar. */
+  aa: ['hola, quiero cotizar a tequila el 18 de octubre, ida y vuelta el mismo día, somos 14, de guadalajara, solo nos llevan y traen',
+    va('5213366679027'),
+    'apártamelo', 'sí apártamelo porfa', 'oye ya te dije que lo apartes',
+    'bueno y a qué cuenta deposito?', 'ah ok, ya la vi', 'apártamelo ya'],
+
+  /* ab · el desconfiado: pregunta si es seguro, pide comprobante de la
+     empresa, quiere hablar con alguien, y al final deposita. */
+  ab: ['buenas, ando viendo para un viaje a manzanillo el 21 de noviembre, regresamos el 23, somos 40, de guadalajara',
+    'el i6s', 'solo nos llevan y traen',
+    precio(58000),
+    'oye y cómo sé que no me van a estafar?', 'tienen oficina?', 'me pasas tu RFC?',
+    'quiero hablar con una persona', 'bueno va, ahí les deposito', foto('5213366679028'),
+    'listo ya deposité'],
+
+  /* ac · el que se equivoca de todo: fecha pasada, destino inexistente,
+     grupo imposible, y un audio. */
+  ac: ['quiero un camión para el 5 de enero', 'no, del año pasado no, de este',
+    'vamos a nueva york', 'ah no verdad, entonces a mazatlán', 'somos 120',
+    'ah no, somos 12', 'de guadalajara, ida y vuelta el 5 y 7 de enero, solo nos llevan y traen'],
+
+  /* ad · el que ya apartó y quiere cambiar todo: fecha, unidad y destino. */
+  ad: ['a chapala el 30 de octubre, ida y vuelta el mismo día, somos 15, de guadalajara, solo nos llevan y traen',
+    va('5213366679030'),
+    'apártamelo', foto('5213366679030'), apruebaPago(),
+    'oye, podemos cambiar la fecha al 6 de noviembre?', 'y si mejor vamos a tequila?',
+    'me llamo Sofía Carrillo Rangel'],
+
+  /* ae · el de pocas palabras: contesta con monosílabos todo el camino. */
+  ae: ['hola', 'viaje', 'vallarta', 'nov 20', 'nov 22', '16', 'gdl', 'no',
+    va('5213366679031'),
+    'ok', 'sí', 'apartar', 'ya']
 };
 const pedidos = process.argv.slice(2).filter((x) => escenarios[x]);
 for (const k of (pedidos.length ? pedidos : Object.keys(escenarios))) {
-  const C = '52133666790' + { a: '01', b: '02', c: '03', d: '04', e: '05', f: '06', g: '07', h: '08', i: '09', j: '10', k: '11', l: '12', m: '13', n: '14', o: '15', p: '16', q: '17', r: '18', s: '19', t: '20', u: '21', v: '26', w: '22', x: '23', y: '24', z: '25' }[k];
+  const C = '52133666790' + { a: '01', b: '02', c: '03', d: '04', e: '05', f: '06', g: '07', h: '08', i: '09', j: '10', k: '11', l: '12', m: '13', n: '14', o: '15', p: '16', q: '17', r: '18', s: '19', t: '20', u: '21', v: '26', w: '22', x: '23', y: '24', z: '25',
+    aa: '27', ab: '28', ac: '29', ad: '30', ae: '31' }[k];
   const guion = escenarios[k].map((p) => (typeof p === 'function' && p.length === 0 && k === 'e') ? p : p);
   await corre('Escenario ' + k, C, guion);
   console.log('\n(gastado hasta aquí: $' + gastado.toFixed(3) + ' USD)');

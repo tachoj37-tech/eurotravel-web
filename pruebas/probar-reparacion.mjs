@@ -1355,5 +1355,51 @@ titulo('R43 · a quien ya depositó no se le ofrece apartar, y con el pago aprob
   okQue('  y le dice que su pago está confirmado', /pago ya est[aá] confirmado/i.test(t));
 }
 
+titulo('R44 · cambiar el destino de un viaje YA PAGADO va al dueño, no a la ficha del contrato');
+{
+  limpia();
+  const C = '5213366670462';
+  process.env.CLABE = '012345678901234567';
+  tk.anotaEtapa(C, 'mando_comprobante', { total: 7000, anticipo: 1500, pagoAprobado: true, cuentaMandadaEn: Date.now(),
+    contrato: { nombre: 'Sofía Carrillo Rangel' },
+    viajeDatos: { origen: 'Guadalajara', destino: 'Chapala', salida: '2026-10-30', regreso: '2026-10-30', gente: 15, unidad: 'Sprinter', recorridos: 0 } }, Date.now());
+  laIA = () => ({ respuesta: null, datos: {}, accion: 'seguir' });
+  const antes = textos(C).length;
+  await dice('y si mejor vamos a tequila?', C);
+  const t = textos(C).slice(antes).join('\n');
+  okQue('al cliente se le dice que lo checa una persona', /lo checo|una persona del equipo/i.test(t));
+  okQue('  y NO se le acusa como dato del contrato', !/^Anotado/m.test(t));
+  okQue('  al dueño le llega el aviso del cambio',
+    /Quiere cambiar algo de un viaje YA APARTADO/.test(textos(DUENO).slice(-1)[0] || ''));
+  okQue('  y «tequila» no se guardó como dirección de llegada',
+    !/tequila/i.test(((tk.fichaDe(C) || {}).contrato || {}).direccionDestino || ''));
+  delete process.env.CLABE;
+}
+
+titulo('R45 · tres «apártamelo» seguidos: tres respuestas distintas y ninguna repite la cuenta');
+{
+  limpia();
+  const C = '5213366670463';
+  const CLABE = '012345678901234567';
+  process.env.CLABE = CLABE;
+  tk.anotaEtapa(C, 'con_precio', { total: 7000, anticipo: 1500, cuentaMandadaEn: Date.now(),
+    viajeDatos: { origen: 'Guadalajara', destino: 'Tequila', salida: '2026-10-18', regreso: '2026-10-18', gente: 14, unidad: 'Sprinter', recorridos: 0 } }, Date.now());
+  laIA = () => ({ respuesta: null, datos: {}, accion: 'seguir' });
+  const dichos = [];
+  for (const pide of ['apártamelo', 'sí apártamelo porfa', 'oye ya te dije que lo apartes']) {
+    const antes = textos(C).length;
+    await dice(pide, C);
+    dichos.push(textos(C).slice(antes).join('\n'));
+  }
+  okQue('ninguna de las tres trae la CLABE', dichos.every((t) => t.indexOf(CLABE) < 0));
+  okQue('  las tres piden el depósito', dichos.every((t) => /anticipo|dep[oó]sito/i.test(t)));
+  okQue('  y no son la misma frase tres veces', new Set(dichos).size === 3);
+  /* Y si la pide por su nombre, sí se la mandan. */
+  const antes = textos(C).length;
+  await dice('bueno y a qué cuenta deposito?', C);
+  okQue('  pedirla por su nombre sí la trae', textos(C).slice(antes).join('\n').indexOf(CLABE) >= 0);
+  delete process.env.CLABE;
+}
+
 console.log('\n' + buenas + ' buenas, ' + malas + ' malas');
 process.exit(malas ? 1 : 0);

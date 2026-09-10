@@ -447,6 +447,12 @@ function anotaEtapa(cliente, etapa, extra, ahora) {
        contraria —se repetía cada vez— y por eso esto tiene que sobrevivir
        a que la plática se vacíe: vive en la ficha, no en la charla. */
     cuentaMandadaEn: (extra && extra.cuentaMandadaEn) || (antes && antes.cuentaMandadaEn) || null,
+    /* Cuántas veces se le ha dicho «primero el depósito» sin que llegue.
+       Sirve para no contestarle tres veces con la misma frase palabra por
+       palabra, que es lo que hace sonar a máquina. */
+    vecesQuePidioApartar: (extra && typeof extra.vecesQuePidioApartar === 'number')
+      ? extra.vecesQuePidioApartar
+      : ((antes && antes.vecesQuePidioApartar) || 0),
     /* El precio que el bot calculó y que espera el «va» del dueño. Se
        reemplaza si viene uno nuevo, se borra si viene `null` explícito
        (ya se mandó), y si no viene nada se conserva el que había. */

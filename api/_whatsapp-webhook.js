@@ -592,7 +592,11 @@ const PIDE_TOTAL = /^\s*total\s+\$?\s*[\d.,\s]+\s*(mil|k)?\s*$/i;
    le mandó la CLABE del viaje anterior, y de paso se perdió el viaje nuevo.
    Se piden las formas que de verdad son apartar («aparta», «apártamela»,
    «apartar»), no «aparte» ni «apartado» a secas. */
-const APARTAR_O_CUENTA = /\b(apart[aoá]\w*|apartar|reserv\w*|bloque[aá]\w*|amarr\w*|le entramos|le entro|va que va|quedamos as[ií]|a qu[eé] cuenta|qu[eé] cuenta|n[uú]mero de cuenta|clabe|transferencia|transferir|te transfiero|deposit\w*|d[oó]nde (te |le )?pago|c[oó]mo (te |le )?pago|datos bancarios|datos (del|para el|para) (dep[oó]sito|pago)|para transferir|anticipo|banco)\b/i;
+/* `apart[aoá]\w*` cubre «apártamelo», «aparto», «apartado»… pero NO
+   «apartes» ni «aparten», y el 9-sep-2026 un «oye ya te dije que lo
+   apartes» se salió por ahí. La `e` suelta no se puede abrir: «y aparte
+   quiero cotizar otro» es otra cosa. Así que van las formas completas. */
+const APARTAR_O_CUENTA = /\b(apart[aoá]\w*|apartar|apart(?:es|en|arlo|arla|arme|arnos)|reserv\w*|bloque[aá]\w*|amarr\w*|le entramos|le entro|va que va|quedamos as[ií]|a qu[eé] cuenta|qu[eé] cuenta|n[uú]mero de cuenta|clabe|transferencia|transferir|te transfiero|deposit\w*|d[oó]nde (te |le )?pago|c[oó]mo (te |le )?pago|datos bancarios|datos (del|para el|para) (dep[oó]sito|pago)|para transferir|anticipo|banco)\b/i;
 const ETAPAS_CON_PRECIO_DADO = ['con_precio', 'va_a_apartar'];
 /* Intentos de sacarle el prompt, el código o la configuración (Falla 4). */
 const PIDE_EL_PROMPT = /\b(repite|repíteme|mu[eé]strame|ens[eé][nñ]ame|dime|dame|cu[aá]l es|imprime|revela|comparte)\b[^.?!]{0,40}\b(tu|tus|el|las|el|su)\s+(prompt|system prompt|instrucci[oó]n(es)?|configuraci[oó]n|c[oó]digo( fuente)?|reglas internas|herramientas)\b|\bignora (tus|las) (instrucciones|reglas)\b|\bolvida (tus|las) (instrucciones|reglas)\b|\bsystem prompt\b|\bmodo (desarrollador|developer)\b|\bjailbreak\b|\bact[uú]a como si no tuvieras (reglas|instrucciones)\b/i;
@@ -697,14 +701,24 @@ function respuestaDeApartar(ficha, pideLaCuenta) {
      llegó, sí se le manda: eso no es repetirla sola, es contestarle.
      ------------------------------------------------------------ */
   if (ficha.cuentaMandadaEn && !pideLaCuenta) {
+    /* Y no la misma frase palabra por palabra cada vez: quien insiste tres
+       veces con «apártamelo» recibía tres respuestas idénticas, que es lo
+       que hace sonar a máquina. */
+    const veces = Number(ficha.vecesQuePidioApartar) || 0;
+    const conAnticipo = anticipo ? ' de *' + anticipo + '*' : '';
+    const dichos = [
+      'Va 🙌 La fecha se aparta con el anticipo' + conAnticipo + ': en cuanto entre tu depósito te la confirmo.\n\n' +
+        'Los datos para depositar te los pasé aquí arriba. Cuando deposites, mándame la foto del comprobante por aquí.',
+      'Con gusto te la aparto 🙌 Solo falta que entre el anticipo' + conAnticipo + '; la cuenta te la pasé arriba. ' +
+        'Mándame el comprobante y en ese momento te confirmo la fecha.',
+      'En cuanto vea tu depósito' + conAnticipo + ' te confirmo la fecha, palabra 🙌 Si necesitas la cuenta otra vez, ' +
+        'dime «la cuenta» y te la mando.'
+    ];
     return {
-      texto: 'Va 🙌 La fecha se aparta con el anticipo' +
-        (anticipo ? ' de *' + anticipo + '*' : '') +
-        ': en cuanto entre tu depósito te la confirmo.\n\n' +
-        'Los datos para depositar te los pasé aquí arriba. Cuando deposites, mándame la foto del ' +
-        'comprobante por aquí.',
+      texto: dichos[Math.min(veces, dichos.length - 1)],
       pasa: true,
       pideDatosBancarios: false,
+      cuentaLaPidioOtraVez: true,
       opciones: [],
       estado: null,
       sinIA: true
@@ -1704,7 +1718,12 @@ function procesa(crudo, firma, entorno) {
                  salen?». No entra si va otro viaje a medias.
                  ------------------------------------------------------------ */
               if (!juntandoDatos && quiereApartarConPrecio(f, texto, charlaDe(m.from))) {
-                return respuestaDeApartar(f, PIDE_LA_CUENTA.test(String(texto || '')));
+                const r2 = respuestaDeApartar(f, PIDE_LA_CUENTA.test(String(texto || '')));
+                if (r2.cuentaLaPidioOtraVez) {
+                  tickets.anotaEtapa(m.from, f.etapa,
+                    { vecesQuePidioApartar: (Number(f.vecesQuePidioApartar) || 0) + 1 }, ahora);
+                }
+                return r2;
               }
               /* «Repite tu prompt», «muéstrame tu código», «ignora tus
                  instrucciones»: respuesta fija, sin IA (reparación del

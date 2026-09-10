@@ -874,10 +874,28 @@ async function datosDelContrato(envio) {
      verdad) o un cierre (se acusa y ya). La lista solo vuelve a salir si
      de verdad ayuda.
      ------------------------------------------------------------ */
-  if (!trajoAlgo) {
+  {
     const t = conversacion.normaliza(envio.crudoDelCliente);
-    const cambia = /\b(cambiar|cambiamos|cambio|mover|movemos|recorrer|adelantar|posponer|aplazar)\b[^.?!]{0,30}\b(fecha|dia|viaje|salida|horario)\b|\bcancelar\b|\bcancelamos\b|\bya no vamos\b|\bya no va\b|\bsomos mas\b|\bsomos menos\b|\bya no van\b/.test(t);
-    const pregunta = /\bcomo va\b|\bque onda con\b|\bya esta\b|\bya quedo\b|\bmi contrato\b|\bel contrato\b|\bya lo revisaron\b|\bconfirmaron\b|\bllego mi (pago|deposito|comprobante)\b|\bcuando me (mandan|llega)\b|\bnovedades\b/.test(t);
+    /* ------------------------------------------------------------
+       UN CAMBIO SE MIRA ANTES QUE LOS DATOS
+       ------------------------------------------------------------
+       Corrida real del 9-sep-2026 (escenario ad): un cliente que ya había
+       depositado escribió «¿y si mejor vamos a tequila?» y el bot lo tomó
+       como la DIRECCIÓN de llegada del contrato —«Anotado 🙌»— y al dueño
+       no le llegó nada. Cambiar el destino de un viaje pagado es dinero:
+       el precio de Chapala no es el de Tequila.
+
+       Por eso esto se decide con el texto crudo, antes de creerle a lo que
+       se leyó como dato: un cambio de fecha, de destino, de unidad o de
+       grupo va al dueño, y la lista de datos no se toca.
+       ------------------------------------------------------------ */
+    const cambiaFecha = /\b(cambiar|cambiamos|cambio|mover|movemos|recorrer|adelantar|posponer|aplazar)\b[^.?!]{0,30}\b(fecha|dia|viaje|salida|horario)\b/.test(t);
+    const cambiaDestino = /\b(mejor|en lugar de|en vez de|ya no)\b[^.?!]{0,20}\b(vamos|nos vamos|ir|irnos|a)\b|\bcambiar (el )?destino\b|\bcambiamos (el )?destino\b/.test(t);
+    const cambiaUnidad = /\b(cambiar|cambiamos|mejor)\b[^.?!]{0,20}\b(unidad|camion|autobus|sprinter|suburban)\b|\botro (camion|autobus)\b|\botra unidad\b/.test(t);
+    const cambiaGrupo = /\bsomos mas\b|\bsomos menos\b|\bya somos \d/.test(t);
+    const cancela = /\bcancelar\b|\bcancelamos\b|\bya no vamos\b|\bya no va\b|\bya no van\b/.test(t);
+    const cambia = cambiaFecha || cambiaDestino || cambiaUnidad || cambiaGrupo || cancela;
+    const pregunta = !trajoAlgo && /\bcomo va\b|\bque onda con\b|\bya esta\b|\bya quedo\b|\bmi contrato\b|\bel contrato\b|\bya lo revisaron\b|\bconfirmaron\b|\bllego mi (pago|deposito|comprobante)\b|\bcuando me (mandan|llega)\b|\bnovedades\b/.test(t);
     const dueno = tickets.numeroDelDueno(process.env);
     if (cambia) {
       const salidaCambio = [{
@@ -895,7 +913,8 @@ async function datosDelContrato(envio) {
       }
       return salidaCambio;
     }
-    if (pregunta || !completo) {
+    if (trajoAlgo) { /* con datos nuevos, sigue el camino normal de abajo */ }
+    else if (pregunta || !completo) {
       const f = tickets.fichaDe(envio.para) || {};
       const estado = f.contratoSubido
         ? 'Tu contrato ya está armado, folio *' + f.contratoSubido.folio + '* 📄'
@@ -2325,8 +2344,13 @@ async function loQueDiceElAgente(envio) {
       dicho.respuesta = 'Tu contrato ya te lo mandé por aquí, con el folio *' + f.contratoSubido.folio + '* 🎉 ' +
         'Si no lo ves, dime y te lo reenvío.';
     } else if (hablaDelContrato && !contratoYaHecho && !llego &&
-        /(te\s+)?(llega|mando|mandar[eé]|va\s+a\s+llegar)\b/i.test(r)) {
-      console.error('[agente] prometió un contrato sin comprobante recibido: se corrige');
+        /\bte\s+(llega|mando|mandar[eé]|va\s+a\s+llegar|entrego)\s+(tu|el)\s+contrato\b/i.test(r)) {
+      /* Solo la PROMESA de entregarlo. Nombrar el contrato como argumento
+         de confianza —«te damos contrato», «el contrato se arma cuando…»—
+         es una respuesta legítima a «¿cómo sé que no me van a estafar?», y
+         la primera versión de este candado se la comía (corrida real del
+         9-sep-2026, escenario ab). */
+      console.error('[agente] prometió entregar un contrato sin comprobante recibido: se corrige');
       dicho.accion = 'seguir';
       dicho.respuesta = 'El contrato se arma en cuanto entre tu anticipo 🙌 Cuando deposites, mándame el ' +
         'comprobante por aquí y con eso seguimos.';
