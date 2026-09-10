@@ -82,6 +82,27 @@ const CAMPOS = [
      que aclara de quién se trata cuando el que escribe no es el
      que viaja — la agencia, la secretaria, el hijo.
      ------------------------------------------------------------ */
+  /* ------------------------------------------------------------
+     `sePuedeConfirmarDespués`: LO QUE EL CLIENTE PUEDE NO SABER
+     ------------------------------------------------------------
+     Dictado del dueño (10-sep-2026): «acuérdate de que la hora de
+     llegada puede quedar sin confirmar; el cliente no sabe a dónde va a
+     llegar, no sabe a qué hora. El destino exacto, la dirección de
+     salida, la hora: pueden quedar como POR CONFIRMAR».
+
+     Y tiene razón de sobra: quien acaba de depositar para un viaje
+     dentro de dos meses muchas veces no ha reservado hotel ni ha
+     cuadrado a qué hora sale su grupo. Perseguirlo por un dato que no
+     tiene es trabarle el contrato por algo que no depende de él.
+
+     EuroSystem tampoco los exige: de estos cuatro, ninguno es campo
+     obligatorio de la puerta de contratos. Los únicos que sí lo son son
+     el nombre y el teléfono, y el teléfono ya lo tenemos.
+
+     Así que cuando el cliente dice que no sabe, el campo se marca «por
+     confirmar», deja de preguntarse, el contrato se genera igual y en
+     sus observaciones queda escrito cuáles faltan por cuadrar.
+     ------------------------------------------------------------ */
   { id: 'nombre', pide: 'El *nombre completo* de quien firma el contrato' },
   /* ------------------------------------------------------------
      EL TELÉFONO YA LO TENEMOS
@@ -97,11 +118,80 @@ const CAMPOS = [
      por algo que el cliente ya dio por sabido.
      ------------------------------------------------------------ */
   { id: 'telefono', pide: 'Un *teléfono* de contacto', opcional: true },
-  { id: 'direccionSalida', pide: 'La *dirección exacta* de dónde los recogemos' },
-  { id: 'horaSalida', pide: 'La *hora* a la que pasamos por ustedes' },
-  { id: 'direccionDestino', pide: 'La *dirección* a la que llegan' },
-  { id: 'horaRegreso', pide: 'La *hora* a la que quieren salir de regreso' }
+  { id: 'direccionSalida', pide: 'La *dirección exacta* de dónde los recogemos', sePuedeConfirmarDespues: true },
+  { id: 'horaSalida', pide: 'La *hora* a la que pasamos por ustedes', sePuedeConfirmarDespues: true },
+  { id: 'direccionDestino', pide: 'La *dirección* a la que llegan', sePuedeConfirmarDespues: true },
+  { id: 'horaRegreso', pide: 'La *hora* a la que quieren salir de regreso', sePuedeConfirmarDespues: true }
 ];
+
+/* La marca que se guarda en el campo cuando el cliente dice que no sabe.
+   Es un valor, no una bandera aparte, para que viaje solo por todo el
+   sistema: la ficha, el almacén, la ficha que ve el dueño y el contrato. */
+const POR_CONFIRMAR = 'por confirmar';
+
+/* «No sé», «todavía no», «luego te digo», «no me acuerdo», «ahí te aviso».
+   Se pide el mensaje CORTO: en uno largo esas palabras pueden estar
+   hablando de otra cosa («no sé si nos dejan entrar, la dirección es
+   Hidalgo 45»). */
+/* Lo que la gente contesta cuando todavía no tiene el dato. Se busca en
+   cualquier parte del mensaje corto —no solo al principio— porque casi
+   siempre viene con una explicación pegada: «todavía no sé la dirección
+   exacta, es por la zona centro». */
+const NO_LO_SABE = new RegExp([
+  '\\bno\\s+(?:lo\\s+|la\\s+|las\\s+|los\\s+)?(?:s[eé]|sabemos|sabr[ií]a|s[eé]\\s+bien|tengo|tenemos|me\\s+acuerdo|hemos\\s+decidido|hemos\\s+visto|hemos\\s+reservado)',
+  '\\btampoco\\s+(?:s[eé]|lo\\s+s[eé]|la\\s+s[eé]|tengo|tenemos)',
+  '\\bni\\s+idea\\b',
+  '\\bsin\\s+definir\\b', '\\bpor\\s+confirmar\\b', '\\bfalta\\s+confirmar\\b',
+  '\\best[aá]\\s+por\\s+(?:definir|confirmar)\\b',
+  '\\b(?:luego|despu[eé]s|al\\s+rato|ah[ií])\\s+te\\s+(?:digo|aviso|paso|confirmo)',
+  '\\bte\\s+(?:digo|aviso|confirmo)\\s+(?:despu[eé]s|luego|al\\s+rato|m[aá]s\\s+tarde)',
+  '\\b(?:todav[ií]a|a[uú]n)\\s+no\\b',
+  '\\bno\\s+hemos\\s+(?:decidido|visto|reservado|escogido)'
+].join('|'), 'i');
+
+function diceQueNoSabe(texto) {
+  const t = String(texto || '').trim();
+  /* Un mensaje largo con «no sé» adentro suele estar hablando de otra
+     cosa: «av. lópez mateos 3000, no sé si es el 3000 o el 3002». */
+  if (!t || t.length > 120) return false;
+  return NO_LO_SABE.test(t);
+}
+
+/* ------------------------------------------------------------
+   Y CUÁL DE LOS CUATRO ES EL QUE NO SABE
+   ------------------------------------------------------------
+   Marcar «el primero que falte» es lo que parece obvio y está mal: el
+   cliente contesta la pregunta que se le acaba de hacer, y esa no tiene
+   por qué ser la primera de la lista. En la corrida del 10-sep-2026 dijo
+   «no sé a qué hora» y se marcó la DIRECCIÓN de recogida, porque era la
+   que seguía pendiente. Dos mensajes después el contrato tenía dos datos
+   marcados al revés.
+
+   Así que primero mandan sus palabras —hora o dirección, salida o
+   llegada— y solo si no dicen cuál, el que se le preguntó.
+   ------------------------------------------------------------ */
+function cualNoSabe(texto, faltan, ultimoPreguntado) {
+  const posibles = (faltan || []).filter(function (c) { return c.sePuedeConfirmarDespues; });
+  if (!posibles.length) return null;
+  const tiene = function (id) { return posibles.filter(function (c) { return c.id === id; })[0] || null; };
+  const t = String(texto || '').toLowerCase();
+  const deRegreso = /regres|de\s+vuelta|de\s+salida\s+de\s+all[aá]/.test(t);
+  const deLlegada = /lleg|hotel|destino|hosped|donde\s+nos\s+quedamos|sal[oó]n|quinta/.test(t);
+  const deRecogida = /recog|pasan\s+por|de\s+d[oó]nde\s+salimos|punto\s+de\s+salida|nos\s+ven/.test(t);
+  if (/\bhora\b|\ba\s+qu[eé]\s+hora\b|\btemprano\b|\btarde\b/.test(t)) {
+    const h = deRegreso ? tiene('horaRegreso') : (deRecogida ? tiene('horaSalida') : null);
+    if (h) return h;
+    return tiene('horaSalida') || tiene('horaRegreso');
+  }
+  if (/direcci|calle|domicilio|d[oó]nde/.test(t) || deLlegada || deRecogida) {
+    const d = deLlegada ? tiene('direccionDestino') : (deRecogida ? tiene('direccionSalida') : null);
+    if (d) return d;
+    return tiene('direccionSalida') || tiene('direccionDestino');
+  }
+  /* Sin pistas: el que se le acababa de preguntar. */
+  const preguntado = ultimoPreguntado ? tiene(ultimoPreguntado) : null;
+  return preguntado || posibles[0];
+}
 
 const OBLIGATORIOS = CAMPOS.filter(function (c) { return !c.opcional; });
 
@@ -227,8 +317,18 @@ function faltantes(datos, soloIda) {
   const d = datos || {};
   return OBLIGATORIOS.filter(function (c) {
     if (soloIda && c.id === 'horaRegreso') return false;
+    /* Un campo marcado «por confirmar» NO falta: el cliente ya contestó,
+       y su respuesta fue que todavía no lo sabe. */
+    if (d[c.id] === POR_CONFIRMAR) return false;
     return !d[c.id];
   });
+}
+
+/* Los que quedaron pendientes de cuadrar, para decirlo en el contrato y
+   en la ficha del dueño en vez de que aparezcan como huecos. */
+function porConfirmar(datos) {
+  const d = datos || {};
+  return CAMPOS.filter(function (c) { return d[c.id] === POR_CONFIRMAR; });
 }
 
 function estaCompleto(datos, soloIda) { return faltantes(datos, soloIda).length === 0; }
@@ -323,10 +423,21 @@ function fichaParaElDueno(datos, cliente) {
      nadie lo lea como un dato que falta. */
   l.push('📞 ' + (d.telefono || (cliente ? cliente + ' (su WhatsApp)' : '?')));
   l.push('');
-  l.push('🚐 Salida: ' + (d.direccionSalida || '?') +
-    (d.horaSalida ? '\n   a las ' + d.horaSalida : ''));
-  l.push('🏁 Llegada: ' + (d.direccionDestino || '?') +
-    (d.horaRegreso ? '\n   regresan a las ' + d.horaRegreso : ''));
+  /* Lo que el cliente dijo que todavía no sabe se muestra como lo que
+     es: una respuesta pendiente, no un hueco. Con «?» el dueño no puede
+     distinguir «no se lo preguntamos» de «no lo sabía» (dictado del
+     10-sep-2026). */
+  const puesto = function (v) { return v === POR_CONFIRMAR ? '⏳ por confirmar' : (v || '?'); };
+  l.push('🚐 Salida: ' + puesto(d.direccionSalida) +
+    (d.horaSalida ? '\n   a las ' + puesto(d.horaSalida) : ''));
+  l.push('🏁 Llegada: ' + puesto(d.direccionDestino) +
+    (d.horaRegreso ? '\n   regresan a las ' + puesto(d.horaRegreso) : ''));
+  const pendientes = porConfirmar(d);
+  if (pendientes.length) {
+    l.push('');
+    l.push('⏳ El cliente todavía no sabía ' + pendientes.length +
+      (pendientes.length === 1 ? ' dato' : ' datos') + '. Hay que cuadrarlos antes de la salida.');
+  }
   l.push('');
   l.push('_cliente: ' + (cliente || '?') + '_');
   return l.join('\n');
@@ -336,5 +447,6 @@ module.exports = {
   CAMPOS, OBLIGATORIOS,
   instrucciones, limpia, junta, faltantes, estaCompleto,
   pideLosDatos, pideLoQueFalta, fichaParaElDueno,
-  limpiaTelefono, limpiaHora, limpiaTexto
+  limpiaTelefono, limpiaHora, limpiaTexto,
+  POR_CONFIRMAR, diceQueNoSabe, cualNoSabe, porConfirmar
 };

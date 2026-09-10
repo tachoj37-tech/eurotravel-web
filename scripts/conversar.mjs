@@ -441,13 +441,95 @@ const escenarios = {
     va('5213366679037'),
     'y otra más a mazamitla el 31 de octubre, igual',
     va('5213366679037'),
-    'me quedo con la de tapalpa', 'cuánto era?', 'apártamelo']
+    'me quedo con la de tapalpa', 'cuánto era?', 'apártamelo'],
+
+  /* ============================================================
+     AUDITORÍA EXTENSA DEL 10-SEP-2026 (al–az)
+     ============================================================
+     «Funge como cliente de verdad, actúa como cliente, pruébalo, haz de
+     todo». Y el defecto que la disparó: el cliente NO sabe la dirección
+     de llegada ni la hora, y eso puede quedar por confirmar.
+     ============================================================ */
+
+  /* al · EL QUE NO SABE NADA DEL DESTINO: la venta completa con las
+     cuatro respuestas «no sé». Es la que dictó el dueño. */
+  al: ['buenas, quiero una sprinter de guadalajara a vallarta del 22 al 25 de septiembre',
+    'solo nos llevan y traen',
+    va('5213366679038'),
+    'va, apártamelo', foto('5213366679038'), apruebaPago(),
+    'soy Gerardo Mendoza Ruiz',
+    'todavía no sé la dirección exacta, es por la zona centro',
+    'no sé a qué hora, como temprano',
+    'no hemos reservado hotel todavía',
+    'tampoco sé a qué hora nos regresamos',
+    autorizaDatos(),
+    'ya quedó?'],
+
+  /* am · el que sabe unas y otras no, mezclado. */
+  am: ['sprinter a chapala el 18 de octubre ida y vuelta el mismo día, de guadalajara, solo llevar y traer',
+    va('5213366679039'),
+    'apártamelo', foto('5213366679039'), apruebaPago(),
+    'a nombre de Claudia Ríos Manzano, nos recogen en av. méxico 2500 a las 8',
+    'la dirección de llegada todavía no la tengo',
+    'como a las 6 de la tarde nos regresamos',
+    autorizaDatos()],
+
+  /* an · el impaciente que pregunta por su contrato antes de dar datos. */
+  an: ['quiero cotizar a tequila el 25 de octubre, ida y vuelta el mismo día, somos 15, de guadalajara, solo llevar y traer',
+    va('5213366679040'),
+    'apártamelo', foto('5213366679040'),
+    'y mi contrato?', 'cuándo me llega?', 'ya lo revisaron?',
+    apruebaPago(), 'soy Hugo Ramírez Solís', 'no sé lo demás, luego te digo',
+    autorizaDatos()],
+
+  /* ao · el que escribe todo en un párrafo, con dos teléfonos y dos horas. */
+  ao: ['sprinter a mazamitla el 7 de noviembre, ida y vuelta el mismo día, de guadalajara, solo llevar y traer',
+    va('5213366679041'),
+    'apártamelo', foto('5213366679041'), apruebaPago(),
+    'Va a nombre de María Fernanda Ortiz Lugo, mi cel es el 3312345678 pero mi whats es este, nos recogen en Av. Vallarta 1234 col. Americana a las 6 de la mañana y vamos al Hotel Riu, regresamos como a las 4',
+    autorizaDatos()],
+
+  /* ap · el grosero y desconfiado, que además pide descuento y factura. */
+  ap: ['a ver, cuánto por un camión a puerto vallarta',
+    'del 20 al 22 de noviembre', 'somos 45', 'de guadalajara', 'solo llevar y traer', 'el i6s',
+    precio(52000),
+    'no mames está carísimo', 'me lo dejas en 40?', 'y facturas?',
+    'quién me garantiza que no me van a dejar botado?', 'ok déjame lo pienso'],
+
+  /* aq · la agencia que revende: pide neto, comisión y varias unidades. */
+  aq: ['buen día, soy agencia, necesito 2 unidades para 90 pax GDL–Manzanillo del 12 al 14 de diciembre',
+    'ejecutivas las dos', 'manejan tarifa neta para agencias?', 'y comisión?',
+    'necesito factura y póliza', 'mándame la cotización por escrito'],
+
+  /* ar · el que cambia todo tres veces antes de cerrar. */
+  ar: ['a tequila el 17 de octubre, ida y vuelta el mismo día, somos 18, de guadalajara, solo llevar y traer',
+    va('5213366679043'),
+    'oye mejor el 24', 'y mejor somos 25', 'y mejor a tapalpa',
+    'ya no, déjalo como estaba: tequila el 17 con 18'],
+
+  /* as · el que manda audio, foto que no es comprobante, y sticker. */
+  as: ['hola', foto('5213366679044'), 'esa es la foto del grupo jaja',
+    'quiero cotizar a sayulita el 30 de octubre, ida y vuelta, somos 16, de guadalajara, solo llevar y traer',
+    va('5213366679044'), 'apártamelo'],
+
+  /* at · el que quiere cancelar después de depositar. */
+  at: ['a chapala el 12 de octubre ida y vuelta el mismo día, somos 14, de guadalajara, solo llevar y traer',
+    va('5213366679045'),
+    'apártamelo', foto('5213366679045'), apruebaPago(),
+    'oye ya no vamos a poder ir, se canceló el viaje', 'me devuelven mi dinero?'],
+
+  /* au · el que pregunta cosas que el bot no puede saber. */
+  au: ['hola, tienen unidades con baño?', 'y cuántos años tienen las unidades?',
+    'sus choferes tienen licencia federal?', 'están asegurados?',
+    'cuál es su dirección física?', 'ok, quiero cotizar a colima el 5 de noviembre para 20, de guadalajara, ida y vuelta']
 };
 const pedidos = process.argv.slice(2).filter((x) => escenarios[x]);
 for (const k of (pedidos.length ? pedidos : Object.keys(escenarios))) {
   const C = '52133666790' + { a: '01', b: '02', c: '03', d: '04', e: '05', f: '06', g: '07', h: '08', i: '09', j: '10', k: '11', l: '12', m: '13', n: '14', o: '15', p: '16', q: '17', r: '18', s: '19', t: '20', u: '21', v: '26', w: '22', x: '23', y: '24', z: '25',
     aa: '27', ab: '28', ac: '29', ad: '30', ae: '31',
-    af: '32', ag: '33', ah: '34', ai: '35', aj: '36', ak: '37' }[k];
+    af: '32', ag: '33', ah: '34', ai: '35', aj: '36', ak: '37',
+    al: '38', am: '39', an: '40', ao: '41', ap: '42', aq: '43',
+    ar: '44', as: '45', at: '46', au: '47' }[k];
   const guion = escenarios[k].map((p) => (typeof p === 'function' && p.length === 0 && k === 'e') ? p : p);
   await corre('Escenario ' + k, C, guion);
   console.log('\n(gastado hasta aquí: $' + gastado.toFixed(3) + ' USD)');

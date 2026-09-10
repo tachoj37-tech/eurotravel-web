@@ -1603,5 +1603,68 @@ titulo('R53 · lo que el motor se reinyecta no le llega al dueño como duda');
   delete process.env.CLABE;
 }
 
+titulo('R54 · «no sé» deja el dato POR CONFIRMAR y el contrato se genera igual (10-sep-2026)');
+{
+  const contrato = (await import(pathToFileURL(path.join(RAIZ, 'api', '_datos-contrato.js')).href)).default;
+  /* Lo que cuenta como «no lo sé». */
+  for (const dicho of ['no sé', 'todavía no sé', 'aún no lo sabemos', 'no tengo la dirección',
+    'ni idea', 'por confirmar', 'luego te digo', 'ahí te aviso', 'todavía no', 'no me acuerdo',
+    'no hemos reservado']) {
+    okQue('«' + dicho + '» es no saberlo', contrato.diceQueNoSabe(dicho) === true);
+  }
+  /* Y lo que NO. Ojo: «av. lópez mateos 3000, no sé si es el 3000 o el
+     3002» SÍ trae las palabras, y por eso el candado de verdad no está
+     aquí sino en el motor: si del mensaje salió un dato, no es un «no
+     sé». Eso se prueba en R55b. */
+  for (const dicho of ['hidalgo 45', 'a las 7 de la mañana', 'hotel casa tequila',
+    'nos recogen en av. patria 2050 a las 6']) {
+    okQue('«' + dicho.slice(0, 30) + '…» NO es no saberlo', contrato.diceQueNoSabe(dicho) === false);
+  }
+  /* Cuál de los cuatro, por las palabras del cliente. */
+  const faltanTodos = contrato.OBLIGATORIOS.filter((c) => c.sePuedeConfirmarDespues);
+  ok('«no sé a qué hora» con todo pendiente → la hora de recogida',
+    (contrato.cualNoSabe('no sé a qué hora, como temprano', faltanTodos, null) || {}).id, 'horaSalida');
+  ok('«tampoco sé a qué hora nos regresamos» → la hora de regreso',
+    (contrato.cualNoSabe('tampoco sé a qué hora nos regresamos', faltanTodos, null) || {}).id, 'horaRegreso');
+  ok('«no hemos reservado hotel» → la dirección de llegada',
+    (contrato.cualNoSabe('no hemos reservado hotel todavía', faltanTodos, null) || {}).id, 'direccionDestino');
+  ok('«no sé» a secas → el que se le acababa de preguntar',
+    (contrato.cualNoSabe('no sé', faltanTodos, 'horaRegreso') || {}).id, 'horaRegreso');
+  /* Un campo marcado ya no falta, y el contrato queda completo. */
+  const datos = {
+    nombre: 'Norma Aguilar Ceja', telefono: '3312345678',
+    direccionSalida: 'morelos 210, ocotlán', horaSalida: '07:00',
+    direccionDestino: contrato.POR_CONFIRMAR, horaRegreso: contrato.POR_CONFIRMAR
+  };
+  ok('con dos campos por confirmar no falta ninguno', contrato.faltantes(datos).length, 0);
+  okQue('  y el contrato está completo', contrato.estaCompleto(datos) === true);
+  ok('  y se sabe cuáles quedaron pendientes', contrato.porConfirmar(datos).map((c) => c.id),
+    ['direccionDestino', 'horaRegreso']);
+  const ficha = contrato.fichaParaElDueno(datos, '5213312345678');
+  okQue('  la ficha del dueño los muestra como pendientes, no como huecos',
+    /⏳ por confirmar/.test(ficha) && !/Llegada: \?/.test(ficha));
+  okQue('  y le dice cuántos hay que cuadrar', /todavía no sabía 2 datos/.test(ficha));
+}
+
+titulo('R55 · «no sé» en la plática real: se marca ese campo y se sigue');
+{
+  limpia();
+  const C = '5213366670472';
+  tk.anotaEtapa(C, 'mando_comprobante', { total: 19000, anticipo: 4000, pagoAprobado: true,
+    contrato: { nombre: 'Laura Beltrán', telefono: '3312345678', direccionSalida: 'av. patria 2050', horaSalida: '06:00' },
+    viajeDatos: { origen: 'Guadalajara', destino: 'Puerto Vallarta', salida: '2026-12-04', regreso: '2026-12-06',
+      gente: 17, unidad: 'Sprinter', recorridos: 0 } }, Date.now());
+  /* Le toca la dirección de llegada y contesta que no sabe. */
+  laIA = () => ({ nombre: null, telefono: null, direccionSalida: null, horaSalida: null,
+    direccionDestino: null, horaRegreso: null });
+  const antes = textos(C).length;
+  await dice('todavía no sé, no hemos reservado hotel', C);
+  const t = textos(C).slice(antes).join('\n');
+  const f = tk.fichaDe(C) || {};
+  ok('la dirección de llegada queda por confirmar', (f.contrato || {}).direccionDestino, 'por confirmar');
+  okQue('  y al cliente se le dice que no pasa nada', /por confirmar|sin problema/i.test(t));
+  okQue('  y NO se le vuelve a pedir esa dirección', !/direcci[oó]n.*a la que llegan/i.test(t));
+}
+
 console.log('\n' + buenas + ' buenas, ' + malas + ' malas');
 process.exit(malas ? 1 : 0);

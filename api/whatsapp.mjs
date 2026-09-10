@@ -870,6 +870,24 @@ function yaLePediDatos(cliente) {
     });
 }
 
+/* ------------------------------------------------------------
+   QUÉ DATO FUE EL ÚLTIMO QUE SE LE PIDIÓ
+   ------------------------------------------------------------
+   Cuando el cliente contesta «no sé» a secas, el campo que hay que dar
+   por confirmar es el que se le acababa de preguntar, no el primero de
+   la lista. Se lee del último mensaje del bot, que es donde está.
+   ------------------------------------------------------------ */
+function ultimoDatoPedido(cliente) {
+  const ultimo = agente.historialDe(cliente).filter(function (t) { return t.de === 'bot'; }).pop();
+  const t = String((ultimo && ultimo.texto) || '');
+  if (!t) return null;
+  if (/hora.*(?:salir\s+de\s+regreso|regres)/i.test(t)) return 'horaRegreso';
+  if (/direcci[oó]n.*(?:a\s+la\s+que\s+llegan|llegada)/i.test(t)) return 'direccionDestino';
+  if (/hora.*(?:pasamos\s+por|recog)/i.test(t)) return 'horaSalida';
+  if (/direcci[oó]n\s+exacta|d[oó]nde\s+los\s+recogemos/i.test(t)) return 'direccionSalida';
+  return null;
+}
+
 /* Un campo del contrato, pedido como lo pediría una persona y no como una
    casilla: «El *nombre completo* de quien firma el contrato» → «el nombre
    completo de quien firma el contrato». */
@@ -908,6 +926,37 @@ async function datosDelContrato(envio) {
   if (!leido) return null;
 
   const nuevos = contrato.limpia(leido);
+  /* ------------------------------------------------------------
+     «NO SÉ» ES UNA RESPUESTA, NO UN SILENCIO
+     ------------------------------------------------------------
+     Dictado del dueño (10-sep-2026): «la hora de llegada puede quedar sin
+     confirmar; el cliente no sabe a dónde va a llegar, no sabe a qué
+     hora». Quien acaba de depositar para un viaje de dentro de dos meses
+     muchas veces no tiene hotel ni sabe a qué hora sale su grupo.
+
+     Si contesta que no sabe, se marca ESE campo —el que se le acababa de
+     preguntar— como «por confirmar» y se sigue. El contrato se genera
+     igual: ninguno de estos cuatro es obligatorio para EuroSystem.
+     ------------------------------------------------------------ */
+  let quedoPorConfirmar = null;
+  /* Si del mensaje SÍ salió un dato, no es un «no sé» aunque traiga las
+     palabras: «av. lópez mateos 3000, no sé si es el 3000 o el 3002» es
+     una dirección con una duda adentro, no una respuesta en blanco. */
+  const trajoDato = contrato.CAMPOS.some(function (c) {
+    return nuevos[c.id] != null && nuevos[c.id] !== '';
+  });
+  if (!trajoDato && contrato.diceQueNoSabe(envio.crudoDelCliente)) {
+    const yaTiene = contrato.junta(envio.contratoQueVa, nuevos);
+    const soloIdaAqui = !!((tickets.fichaDe(envio.para) || {}).viajeDatos || {}).soloIda;
+    const pendiente = contrato.cualNoSabe(envio.crudoDelCliente,
+      contrato.faltantes(yaTiene, soloIdaAqui), ultimoDatoPedido(envio.para));
+    if (pendiente) {
+      console.log('[contrato] «' + String(envio.crudoDelCliente).slice(0, 40) +
+        '»: ' + pendiente.id + ' queda por confirmar');
+      nuevos[pendiente.id] = contrato.POR_CONFIRMAR;
+      quedoPorConfirmar = pendiente.id;
+    }
+  }
   const juntos = contrato.junta(envio.contratoQueVa, nuevos);
   /* Al viaje sencillo no se le pide la hora de regreso: no la tiene. */
   const soloIdaDelViaje = !!((tickets.fichaDe(envio.para) || {}).viajeDatos || {}).soloIda;
@@ -983,11 +1032,11 @@ async function datosDelContrato(envio) {
       const listaCompleta = faltan.length ? '\n\nMientras, me faltan estos datos:\n\n' + faltan.map(function (c) { return '· ' + c.pide; }).join('\n') : '';
       const texto = pregunta
         ? estado + (yaLaVio ? unoSolo : listaCompleta)
-        : (yaLaVio
+        : ((yaLaVio
           ? 'Va 🙌' + (unoSolo || (f.pagoAprobado
             ? ' En cuanto el dueño dé el visto bueno a estos datos te mando tu contrato.'
             : ' En cuanto se confirme tu pago te mando tu contrato.'))
-          : contrato.pideLoQueFalta(juntos, nuevos, f.pagoAprobado, soloIdaDelViaje));
+          : contrato.pideLoQueFalta(juntos, nuevos, f.pagoAprobado, soloIdaDelViaje)));
       return [{
         numeroDeOrigen: envio.numeroDeOrigen, para: envio.para, texto: texto,
         pasaAPersona: false, escribio: '[datos del contrato · estado]'
@@ -1004,8 +1053,14 @@ async function datosDelContrato(envio) {
   const salida = [{
     numeroDeOrigen: envio.numeroDeOrigen,
     para: envio.para,
-    texto: contrato.pideLoQueFalta(juntos, nuevos,
-      !!(tickets.fichaDe(envio.para) || {}).pagoAprobado, soloIdaDelViaje),
+    /* Si acaba de decir que no sabe uno, primero se le dice que no pasa
+       nada: contestar un «no sé» con otra pregunta a secas parece que no
+       lo escucharon (dictado del dueño, 10-sep-2026). */
+    texto: (quedoPorConfirmar
+      ? 'Sin problema, eso lo dejamos *por confirmar* y lo cuadramos antes del viaje 🙌\n\n'
+      : '') +
+      contrato.pideLoQueFalta(juntos, nuevos,
+        !!(tickets.fichaDe(envio.para) || {}).pagoAprobado, soloIdaDelViaje),
     pasaAPersona: false,
     escribio: '[datos del contrato]'
   }];
@@ -1190,6 +1245,11 @@ function armaContrato(ficha, cliente) {
   const regreso = (v.regreso || v.salida)
     ? (v.regreso || v.salida) + (hora(d.horaRegreso) ? 'T' + hora(d.horaRegreso) : '')
     : '';
+  /* Lo que quedó «por confirmar» no viaja como texto al contrato: un
+     «por confirmar» impreso en la dirección de recogida es peor que un
+     renglón vacío, porque parece un dato. Se omite del campo y se dice
+     en las observaciones, que es donde la oficina lo va a leer. */
+  const dicho = function (x) { return (x && x !== contrato.POR_CONFIRMAR) ? x : ''; };
   const m = {
     nombre: d.nombre || '',
     telefono: d.telefono || String(cliente || ''),
@@ -1197,7 +1257,7 @@ function armaContrato(ficha, cliente) {
     regreso: regreso,
     origen: v.origen || '',
     destino: v.destino || '',
-    puntoSalida: d.direccionSalida || '',
+    puntoSalida: dicho(d.direccionSalida),
     unidad: v.unidad || '',
     total: ficha.total || 0,
     anticipo: ficha.anticipo || 0
@@ -1216,12 +1276,22 @@ function armaContrato(ficha, cliente) {
      oficina se lo cree. */
   const pax = Number(v.pasajeros || v.gente) || 0;
   cuerpo.servicio.pasajeros = pax > 0 ? Math.min(pax, 90) : 1;
+  /* Lo que el cliente todavía no sabía, dicho con todas sus letras: la
+     oficina tiene que saber qué le falta cuadrar antes de la salida
+     (dictado del dueño, 10-sep-2026). */
+  const pendientes = contrato.porConfirmar(d).map(function (c) {
+    return ({ direccionSalida: 'dirección de recogida', horaSalida: 'hora de recogida',
+      direccionDestino: 'dirección de llegada', horaRegreso: 'hora de regreso' })[c.id] || c.id;
+  });
   cuerpo.observaciones = 'Vendido por WhatsApp (Eurobot), autorizado por el dueño. ' +
     'Anticipo por transferencia; confirmar que entró antes de dar por apartado.' +
     (pax > 0 ? '' : ' PASAJEROS: no se le preguntaron al cliente, confirmar con él.') +
-    (d.direccionDestino ? ' Llegada: ' + d.direccionDestino + '.' : '');
-  cuerpo.servicio.itinerario = d.direccionDestino
-    ? 'Llegada: ' + d.direccionDestino + (d.horaRegreso ? '. Regresan a las ' + d.horaRegreso : '')
+    (pendientes.length
+      ? ' POR CONFIRMAR CON EL CLIENTE: ' + pendientes.join(', ') + '.'
+      : '') +
+    (dicho(d.direccionDestino) ? ' Llegada: ' + d.direccionDestino + '.' : '');
+  cuerpo.servicio.itinerario = dicho(d.direccionDestino)
+    ? 'Llegada: ' + d.direccionDestino + (dicho(d.horaRegreso) ? '. Regresan a las ' + d.horaRegreso : '')
     : undefined;
   /* REDONDO por omisión —lo pone `contratoDesde`— y SENCILLO solo cuando el
      cliente lo pidió él mismo. El bot no ofrece el sencillo (dictado del
