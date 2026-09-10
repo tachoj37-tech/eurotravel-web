@@ -226,9 +226,9 @@ function textoDeContexto(c) {
   const sabido = c.sabido || {};
   const partes = ['destino', 'origen', 'salida', 'regreso', 'gente', 'unidad']
     .filter(function (k) { return sabido[k]; })
-    .map(function (k) { return k + '=' + String(sabido[k]).slice(0, 60); });
+    .map(function (k) { return k + '=' + recorta(sabido[k], 60); });
   return '\n\nCONTEXTO DE LA PLÁTICA: ' +
-    (c.pregunta ? 'el cliente está contestando a la pregunta «' + String(c.pregunta).slice(0, 160) + '». ' : '') +
+    (c.pregunta ? 'el cliente está contestando a la pregunta «' + recorta(c.pregunta, 160) + '». ' : '') +
     (partes.length ? 'Ya se sabe: ' + partes.join(', ') + '. ' : '') +
     'Una palabra suelta o una abreviatura es la RESPUESTA a esa pregunta, no algo fuera de tema: ' +
     '«vta» o «pv» es Puerto Vallarta, «gdl» es Guadalajara, «pasado» es pasado mañana, ' +
@@ -376,9 +376,41 @@ const AFIRMA_DE_MAS = /\b\d+\s*(?:a[nñ]os|unidades|autobuses|camiones|grupos|vi
    del vendedor, no hay a quién pasar. */
 const ANUNCIA_PASE = /te paso con|paso con (?:una persona|alguien)|un (?:vendedor|asesor|agente) te|te contactar[aá]|transfer/i;
 
+/* ------------------------------------------------------------
+   RECORTAR SIN PARTIR UN EMOJI — 10-sep-2026
+   ------------------------------------------------------------
+   `slice` corta por unidades de UTF-16, y un emoji ocupa DOS. Cortar
+   justo en medio deja media pareja suelta, y con eso el cuerpo de la
+   petición deja de ser JSON válido. La API contesta:
+
+     400 · "The request body is not valid JSON: no low surrogate in
+     string: line 1 column 31678"
+
+   …y el bot se queda mudo con ese cliente: cada mensaje suyo vuelve a
+   fallar, porque el emoji partido vive en el HISTORIAL y el historial
+   se manda otra vez en cada turno. El cliente recibe la misma frase
+   enlatada una y otra vez conteste lo que conteste.
+
+   Se cazó en la corrida real del 10-sep-2026 (escenario b): empezó
+   justo después del resumen del viaje, que es el mensaje del bot con
+   más emojis (📋 📍 📅 🚌 🚐 🙌). Es el mismo síntoma que el dueño
+   reportó como «se trabó horrible» y «se vuelve muy loco».
+
+   Esta función es la única forma de recortar texto que vaya a la API.
+   ------------------------------------------------------------ */
+function recorta(texto, cuantos) {
+  const s = String(texto == null ? '' : texto);
+  if (s.length <= cuantos) return s;
+  let corte = cuantos;
+  const c = s.charCodeAt(corte - 1);
+  /* Media pareja alta (D800-DBFF) al final: su otra mitad quedó fuera. */
+  if (c >= 0xD800 && c <= 0xDBFF) corte--;
+  return s.slice(0, corte);
+}
+
 function respuestaSegura(v) {
   if (typeof v !== 'string') return null;
-  const s = v.trim().slice(0, 240);
+  const s = recorta(v.trim(), 240);
   if (s.length < 8) return null;
   if (HUELE_A_PRECIO.test(s)) return null;
   if (AFIRMA_DE_MAS.test(s)) return null;
@@ -417,7 +449,7 @@ async function entiende(mensaje, opciones) {
      sigue contestando como siempre. Es una mejora, no un requisito. */
   if (!clave || !pide) return null;
 
-  const texto = String(mensaje || '').trim().slice(0, TOPE_ENTRADA);
+  const texto = recorta(String(mensaje || '').trim(), TOPE_ENTRADA);
   if (texto.length < 2) return null;
 
   try {
@@ -475,7 +507,7 @@ async function entiende(mensaje, opciones) {
 }
 
 module.exports = {
-  entiende, limpia, sacaJSON, instrucciones, respuestaSegura, MODELO,
+  entiende, limpia, sacaJSON, instrucciones, respuestaSegura, MODELO, recorta,
   /* Para probar la forma de la llamada y el costo sin red. */
   instruccionesEstaticas, instruccionesDelDia, bloquesDelSistema,
   costoDeUso, costoDe, TARIFA,

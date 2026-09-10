@@ -83,7 +83,7 @@ function fichaDeUnidades() {
       return '· ' + u.name + ' (' + u.id + ') · ' + u.cap + ' · ' + u.tag +
         (u.modelo ? ' · modelo ' + u.modelo : '') +
         (u.amen && u.amen.length ? ' · ' + u.amen.join(', ') : '') +
-        (u.desc ? ' · ' + String(u.desc).replace(/\s+/g, ' ').slice(0, 200) : '');
+        (u.desc ? ' · ' + entendedor.recorta(String(u.desc).replace(/\s+/g, ' '), 200) : '');
     }).join('\n') +
     '\nHay fotos de todas y video de todas menos Suburban y G8. Cuando pidan fotos o video ' +
     'de una unidad en particular, pon su id en "unidadPedida".';
@@ -393,7 +393,7 @@ function textoDelContexto(c) {
   const e = (c && c.estado) || {};
   const sabido = ['destino', 'origen', 'salida', 'regreso', 'gente', 'unidad', 'recorridos']
     .filter(function (k) { return e[k] !== undefined && e[k] !== null && e[k] !== ''; })
-    .map(function (k) { return k + '=' + String(k === 'unidad' ? (e.unidadNombre || e[k]) : e[k]).slice(0, 60); });
+    .map(function (k) { return k + '=' + entendedor.recorta(k === 'unidad' ? (e.unidadNombre || e[k]) : e[k], 60); });
   const falta = c && c.falta ? c.falta : null;
   /* El viaje que ya está en precio (pedido o dado). Sin esto, después de
      «en breve te paso tu cotización» un «ok» hacía que la IA volviera a
@@ -411,7 +411,7 @@ function textoDelContexto(c) {
       : 'PRECIO YA DADO: ' + v.resumen + '. No repitas cifras ni preguntes datos de ese viaje; sigue con ' +
         'apartar o resuelve dudas. Si quiere OTRO viaje, tómalo como nuevo.\n');
   const turnos = ((c && c.historial) || []).slice(-TURNOS_QUE_RECUERDA)
-    .map(function (t) { return (t.de === 'cliente' ? 'Cliente: ' : 'Tú: ') + String(t.texto || '').replace(/\s+/g, ' ').slice(0, 220); });
+    .map(function (t) { return (t.de === 'cliente' ? 'Cliente: ' : 'Tú: ') + entendedor.recorta(String(t.texto || '').replace(/\s+/g, ' '), 220); });
   /* ------------------------------------------------------------
      EL BLOQUE DE ESTADO VA PRIMERO (reparación del 8-sep-2026, Falla 1)
      ------------------------------------------------------------
@@ -425,7 +425,7 @@ function textoDelContexto(c) {
     .filter(function (k) { return e[k] !== undefined && e[k] !== null && e[k] !== ''; })
     .map(function (k) {
       const val = k === 'unidad' ? (e.unidadNombre || e[k]) : (k === 'recorridos' ? (e[k] === 0 ? 'solo los llevamos y traemos' : e[k] + ' días') : e[k]);
-      return etiquetas[k] + ': ' + String(val).slice(0, 60);
+      return etiquetas[k] + ': ' + entendedor.recorta(val, 60);
     });
   const precio = v ? (v.estado === 'pedido' ? 'pedido, esperando al vendedor' : 'YA ENTREGADO') : 'todavía no';
   /* El comprobante: el sistema SABE si llegó. La IA nunca lo pregunta. */
@@ -462,7 +462,7 @@ function recuerda(cliente, de, texto) {
   const k = llave(cliente);
   if (!k || !texto) return;
   const lista = historiales.get(k) || [];
-  lista.push({ de: de, texto: String(texto).slice(0, 400) });
+  lista.push({ de: de, texto: entendedor.recorta(texto, 400) });
   while (lista.length > TURNOS_QUE_RECUERDA) lista.shift();
   historiales.delete(k);
   historiales.set(k, lista);
@@ -473,7 +473,7 @@ function siembraHistorial(cliente, turnos) {
   const k = llave(cliente);
   if (!k || historiales.has(k) || !Array.isArray(turnos)) return;
   historiales.set(k, turnos.slice(-TURNOS_QUE_RECUERDA).map(function (t) {
-    return { de: t.de === 'cliente' ? 'cliente' : 'bot', texto: String(t.texto || '').slice(0, 400) };
+    return { de: t.de === 'cliente' ? 'cliente' : 'bot', texto: entendedor.recorta(t.texto, 400) };
   }));
 }
 function olvidaTodo() { historiales.clear(); }
@@ -619,7 +619,7 @@ async function conversa(mensaje, opciones) {
   const hoy = o.hoy || hoyEnGuadalajara();
   if (!clave || !pide) return null;
 
-  const texto = String(mensaje || '').trim().slice(0, TOPE_ENTRADA);
+  const texto = entendedor.recorta(String(mensaje || '').trim(), TOPE_ENTRADA);
   if (!texto) return null;
 
   const bloques = [
@@ -639,7 +639,20 @@ async function conversa(mensaje, opciones) {
       body: JSON.stringify({ model: MODELO, max_tokens: TOPE_SALIDA, temperature: 0.4, system: bloques,
         messages: [{ role: 'user', content: texto }] })
     });
-    if (!r || !r.ok) { console.error('[agente] la IA contesto ' + (r && r.status)); return null; }
+    /* ------------------------------------------------------------
+       CON EL MOTIVO, NO SOLO EL NÚMERO — 10-sep-2026
+       ------------------------------------------------------------
+       Esto decía nada más «la IA contesto 400» y tiraba el cuerpo, que
+       es donde viene la causa. Costó un día entero de adivinanzas: el
+       400 de verdad era un emoji partido en el historial, y el registro
+       no daba ni una pista. El cuerpo del error no trae datos del
+       cliente, solo el reclamo de la API. */
+    if (!r || !r.ok) {
+      const motivo = r ? await r.text().catch(function () { return ''; }) : '';
+      console.error('[agente] la IA contesto ' + (r && r.status) +
+        (motivo ? ' · ' + String(motivo).replace(/\s+/g, ' ').slice(0, 300) : ''));
+      return null;
+    }
     const cuerpo = await r.json();
     entendedor.apuntaElCosto(cuerpo && cuerpo.usage, o.cliente);
     /* Solo los bloques de texto; nunca `content[0]` a ciegas (Falla 4). */
