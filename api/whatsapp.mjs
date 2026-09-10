@@ -586,6 +586,38 @@ async function precioDe(envio, opciones) {
             (r.regreso ? ' al ' + tickets.comoSeDice(r.regreso) : '') : '')
         : null
     });
+    /* ------------------------------------------------------------
+       EL BOT LLEGA HASTA LA COTIZACIÓN, Y AHÍ ENTRA UNA PERSONA
+       ------------------------------------------------------------
+       Dictado del dueño (10-sep-2026): «que el bot solamente llegue hasta
+       generar cotizaciones; una vez que la cotización se dé, ya ahí que
+       sea persona».
+
+       No se borró nada de lo que sigue —apartado, comprobante, datos del
+       contrato, las dos autorizaciones—: el chat se pasa a manos del dueño
+       con el MISMO relevo que ya existía. Desde aquí cada mensaje del
+       cliente se le reenvía y el bot no contesta; con «bot» se lo devuelve
+       y todo lo de después vuelve a funcionar igual.
+
+       Va en su propia llamada y no en la de arriba porque la ficha
+       distingue «no mandé el dato» de «mándalo en null»: metido en el
+       mismo objeto, un `undefined` le borraría al dueño un relevo que él
+       hubiera puesto a mano.
+
+       Y va DENTRO de `marcaQueYaTienePrecio`, que solo corre cuando el
+       precio de verdad salió hacia el cliente: si Meta lo rechaza, el chat
+       no se le entrega a nadie.
+       ------------------------------------------------------------ */
+    /* Viene APAGADO a propósito. Encenderlo apaga de golpe todo lo que el
+       bot hace después del precio —el apartado con la CLABE, el acuse del
+       comprobante, las preguntas del contrato y las dos autorizaciones—,
+       que es justo lo que se construyó y se probó estos días. El dueño lo
+       pidió el 10-sep-2026; queda listo detrás de la variable para que lo
+       encienda cuando confirme que eso es lo que quiere apagar. */
+    if (String(process.env.BOT_HASTA_COTIZACION || '0').trim() === '1') {
+      tickets.anotaEtapa(envio.para, 'con_precio', { enManosDe: 'dueno' });
+      console.log('[relevo] cotización entregada: el chat pasa a una persona');
+    }
   };
 
   /* El bloque de apartado va PEGADO al precio (dictado del dueño, 8-sep-2026,
