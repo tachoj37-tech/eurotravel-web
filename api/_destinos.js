@@ -202,7 +202,14 @@ const DESTINOS = [
     busca: /tepic/i,
     precio: { sprinter: 16900 } },
   { nombre: "León", km: 444,
-    busca: /le[oó]n, guanajuato|^le[oó]n/i,
+    /* Google abrevia el estado, y con «León, Guanajuato» escrito completo
+       la dirección exacta se caía de la lista: «Blvd. Adolfo López Mateos
+       1927, San Miguel, 37380 León, Gto., México» se iba por fórmula y
+       cobraba $16,300 en vez de los $17,600 que el dueño corrigió a mano
+       (R46). O sea que el cliente que afina su dirección paga menos.
+       Se acepta la abreviatura. No se confunde con Nuevo León: ahí el
+       estado que sigue es «N.L.», nunca «Gto.» (auditoría 10-sep-2026). */
+    busca: /le[oó]n, *(?:guanajuato|gto)\b|^le[oó]n\b/i,
     precio: { sprinter: 17600 } },
   { nombre: "Rincón de Guayabitos", km: 474,
     busca: /guayabitos/i,
@@ -420,7 +427,11 @@ const DESTINOS = [
      esta 450 km ANTES de las Barrancas. Cobrarle el precio de Barrancas es
      cobrarle de mas. Quien escriba «Chihuahua» va con un asesor. */
   { nombre: "Barrancas del Cobre", km: 2882,
-    busca: /barranca|creel/i,
+    /* «barranca» a secas cobraba las Barrancas del Cobre —2,882 km, en
+       Chihuahua— a quien pedía la Barranca de Huentitán, que está DENTRO
+       de Guadalajara: $57,000 por un paseo de 24 km (auditoría del
+       10-sep-2026). El nombre del destino es el completo. */
+    busca: /barrancas del cobre|\bcreel\b/i,
     /* «3,000 el día, con o sin movimientos» (dueño, 26-ago-2026). El día
        corre en los dos sentidos, como todo día dictado (R14), y la banda de
        horas va apagada en `DESTINOS_CON_REGLA` para que moverse no sume
@@ -434,7 +445,11 @@ const DESTINOS = [
     diasIncluidos: 7,
     diaExtra: 3000 },
   { nombre: "Cancún", km: 4282,
-    busca: /canc|riviera maya|playa del carmen|tulum/i,
+    /* «canc» a secas cobraba Cancún —$145,000 en Sprinter— a quien
+       escribía «una cancha en Zapopan». Lo mismo con «cancelar» y
+       «Cancino». Se pide el nombre completo (auditoría del
+       10-sep-2026). */
+    busca: /canc[uú]n|riviera maya|playa del carmen|tulum/i,
     /* «CANCUN 17 DIAS»: el precio YA incluye los diecisiete días. Antes se
        le sumaban $13,000 de noches encima (criterio R2).
 
@@ -481,9 +496,43 @@ function buscaDestino(destino) {
   });
 
   for (let i = 0; i < orden.length; i++) {
-    if (orden[i].busca.test(texto)) return orden[i];
+    const m = texto.match(orden[i].busca);
+    if (!m) continue;
+    /* El nombre de una CALLE no es el nombre de un destino. */
+    if (esNombreDeCalle(texto, m.index)) continue;
+    return orden[i];
   }
   return null;
+}
+
+/* ------------------------------------------------------------
+   «AV. VALLARTA» NO ES PUERTO VALLARTA — 10-sep-2026
+   ------------------------------------------------------------
+   Los `busca` son subcadenas, y en Guadalajara hay calles que se
+   llaman como medio país. Salidas reales de la auditoría:
+
+     «Av. Vallarta 1234, Guadalajara»  -> Puerto Vallarta  $19,000
+     «Calle Puebla 55, Guadalajara»    -> Puebla           $36,500
+     «Av. Morelia 200, Guadalajara»    -> Morelia          $19,000
+
+   Todos son cobros de MÁS por un viaje dentro de la ciudad, y de
+   los que se ven en el primer mensaje: el cliente lee el precio y
+   se va. Ninguna prueba los cazaba porque todas usan nombres de
+   ciudad, que es como se escribe un destino, no como se escribe
+   una dirección — y el cliente que afina su dirección en Google es
+   justo el que va en serio.
+
+   Va como guardia general y no parche por parche: la lista tiene 51
+   renglones y la ciudad no se va a quedar sin calles.
+
+   NO entran aquí «carretera a» ni «camino a»: ésas sí nombran el
+   destino («carretera a Chapala» es Chapala).
+   ------------------------------------------------------------ */
+const PALABRA_DE_CALLE = /(?:av|avda|avenida|calle|calz|calzada|blvd|bulevar|boulevard|privada|priv|andador|prolongaci[oó]n|prol|circuito|glorieta|cerrada|retorno|col|colonia|fracc|fraccionamiento|plaza|centro comercial)\.?\s+$/i;
+
+function esNombreDeCalle(texto, donde) {
+  if (!(donde > 0)) return false;
+  return PALABRA_DE_CALLE.test(texto.slice(0, donde));
 }
 
 /* El precio cerrado de un destino para una unidad. Si la lista no trae esa
