@@ -403,6 +403,14 @@ function fechaEnPalabras(iso) {
    fecha, no quince pasajeros, y recomendarle una Sprinter a un
    grupo de cincuenta por confundir eso es perder la venta.
    ------------------------------------------------------------ */
+/* «somos aprox 48», «somos como unos 40»: las palabras de aproximación
+   entre el verbo y el número no son otro número, son el mismo dicho con
+   modestia. Un cliente real escribió «somos aprox 48» (5-sep-2026) y el
+   bot no lo leyó. */
+const APROX = '(?:como|aprox\\w*|unos|unas|casi|cerca de|alrededor de|mas o menos|m[aá]s o menos|por ahi de|por ahí de|tipo)?\\s*(?:unos|unas)?\\s*';
+/* Un día con mes, o una fecha con diagonal: ahí los números son fechas. */
+const TRAE_FECHA = /\d{1,2}\s*[\/-]\s*\d{1,2}|\b\d{1,2}\s*(?:de\s*)?(?:ene|feb|mar|abr|may|jun|jul|ago|sep|set|oct|nov|dic)/;
+
 function cuantaGente(t) {
   /* Los botones que ofrece el propio bot. Si no se leyeran aquí, el bot
      se atoraría con su propia opción — que fue lo que pasó al probarlo.
@@ -414,6 +422,34 @@ function cuantaGente(t) {
      cuántos son. */
   if (/entre \d{1,3} y (\d{1,3})/.test(t)) return Number(t.match(/entre \d{1,3} y (\d{1,3})/)[1]);
   if (/(\d{1,3}) o menos/.test(t)) return Number(t.match(/(\d{1,3}) o menos/)[1]);
+
+  /* ------------------------------------------------------------
+     UN RANGO SIN LA PALABRA «ENTRE» MANDA EL NÚMERO MAYOR
+     ------------------------------------------------------------
+     «entre 20 y 30» ya se leía bien aquí arriba. «somos 20 o 30» y
+     «somos 20 a 30» —que es como habla la gente cuando todavía anda
+     juntando al grupo— caían hasta `alReves`, que se quedaba con el
+     PRIMER número: 20. O sea Sprinter de 20 pasajeros, precio de
+     Sprinter, y el día del viaje se presentan 30.
+
+     De las tres formas de equivocarse con la cuenta, ésta es la cara:
+     no es un turno perdido, es la unidad equivocada en la puerta. Con
+     un rango se toma el tope; si sobra lugar no pasa nada, y si falta
+     se cae el viaje. Sale de la auditoría del 10-sep-2026.
+
+     Pide una señal de que se habla de GENTE —el verbo antes o el
+     sustantivo después—, porque un rango a secas suele ser de días:
+     «salimos el 20 o 30 de octubre» son fechas, no pasajeros.
+     ------------------------------------------------------------ */
+  const rango = t.match(new RegExp(
+    '(somos|para|seriamos|serian|seremos|van|vamos|iriamos)?\\s*' + APROX +
+    '(\\d{1,3})\\s*(?:o|a|-|hasta)\\s*(\\d{1,3})\\s*' +
+    '(personas|pasajeros|pax|gente|alumnos|ninos|adultos|alumnas)?'));
+  if (rango && (rango[1] || rango[4]) && !TRAE_FECHA.test(t)) {
+    const menor = Number(rango[2]);
+    const mayor = Number(rango[3]);
+    if (mayor > menor && mayor >= 1 && mayor <= 120) return mayor;
+  }
 
   /* `somos` NO va en esta lista, y por eso: aquí las palabras van DESPUÉS
      del número —«16 personas»—, y «somos» va antes —«somos 16»—, que es
@@ -428,8 +464,7 @@ function cuantaGente(t) {
      palabras de aproximación entre el verbo y el número no son un
      número distinto, son el mismo número dicho con modestia. Un cliente
      real escribió «somos aprox 48» (5-sep-2026) y el bot no lo leyó. */
-  const aprox = '(?:como|aprox\\w*|unos|unas|casi|cerca de|alrededor de|mas o menos|m[aá]s o menos|por ahi de|por ahí de|tipo)?\\s*(?:unos|unas)?\\s*';
-  const alReves = new RegExp('(somos|para|seriamos|van|vamos|iriamos|serian|seremos|somos como)\\s*' + aprox + '(\\d{1,3})');
+  const alReves = new RegExp('(somos|para|seriamos|van|vamos|iriamos|serian|seremos|somos como)\\s*' + APROX + '(\\d{1,3})');
   let m = t.match(pistas);
   if (m) return parseInt(m[1], 10);
   m = t.match(alReves);
@@ -446,7 +481,14 @@ function cuantaGente(t) {
    toma si la frase trae una fecha (día/mes) — ahí el número es el día — ni
    si es absurdo para un grupo. */
 function numeroSuelto(t) {
-  if (/\d{1,2}\s*[\/-]\s*\d{1,2}|\b\d{1,2}\s*(?:de\s*)?(?:ene|feb|mar|abr|may|jun|jul|ago|sep|set|oct|nov|dic)/.test(t)) return null;
+  if (TRAE_FECHA.test(t)) return null;
+  /* Contestando «¿cuántos son?», «20 o 30» es un rango y manda el tope,
+     por lo mismo que arriba: la unidad se escoge con el número grande. */
+  const rango = t.match(/\b(\d{1,3})\s*(?:o|a|-|hasta)\s*(\d{1,3})\b/);
+  if (rango) {
+    const mayor = Number(rango[2]);
+    if (mayor > Number(rango[1]) && mayor >= 1 && mayor <= 120) return mayor;
+  }
   const m = t.match(/\b(\d{1,3})\b/);
   if (!m) return null;
   const n = Number(m[1]);
@@ -876,6 +918,35 @@ function limpiaDestino(texto) {
   return conMayuscula(d.length >= 3 ? d : original);
 }
 
+/* ------------------------------------------------------------
+   EL ORIGEN SE LIMPIA CON SU PROPIA REGLA — 10-sep-2026
+   ------------------------------------------------------------
+   `limpiaDestino` no le quita el «de» ni el «desde», y con razón: para
+   un DESTINO esas palabras no son preposición de arranque («Barra de
+   Navidad»). Para un ORIGEN sí lo son, y son justo como contesta la
+   gente. Se guardaba «De Guadalajara» y así salía impreso, así le
+   llegaba al vendedor y así iba al contrato.
+
+   También se le quita el «sí» de cortesía del principio: «sí, de
+   Guadalajara» es una ciudad con un asentimiento delante.
+   ------------------------------------------------------------ */
+const ARRANQUE_DE_ORIGEN = /^(?:s[ií]|claro|va|ok|bien|correcto|as[ií] es)[,;.]?\s+|^(?:nos\s+)?(?:salimos|partimos|venimos|vamos)\s+(?:de|desde)\s+|^(?:de|desde)\s+/i;
+
+function limpiaOrigen(texto) {
+  let d = String(texto || '').trim();
+  /* Dos vueltas: «sí, de Guadalajara» trae asentimiento Y preposición. */
+  for (let i = 0; i < 2; i++) {
+    const m = d.match(ARRANQUE_DE_ORIGEN);
+    if (!m) break;
+    const recortado = d.slice(m[0].length).trim();
+    /* Si el recorte deja menos de tres letras, no se recorta: vale más
+       un origen feo que uno mutilado. Misma regla que el destino. */
+    if (recortado.length < 3) break;
+    d = recortado;
+  }
+  return limpiaDestino(d);
+}
+
 function claveDeAlias(texto) {
   return normaliza(texto || '').replace(/^(?:a|al|para|hacia|de|desde)\s+/, '').replace(/[.\s]+/g, ' ').trim();
 }
@@ -886,6 +957,10 @@ function esAliasDeDestino(texto) {
 /* Un destino «flojo» es el que el guion guardó sin reconocerlo: muy corto
    (una abreviatura) o un pedazo de frase. Solo esos se dejan corregir por
    la IA; un destino de verdad no se pisa. */
+/* Lo que la gente contesta cuando asiente, no cuando nombra un lugar.
+   Anclado: «Sí, de Guadalajara» sí trae ciudad y tiene que pasar. */
+const NO_ES_CIUDAD = /^(?:si|s[ií]|sip|sale|va|vale|ok|okey|oki|dale|claro|correcto|exacto|asi es|as[ií] es|perfecto|aja|ajá|bien|esta bien|est[aá] bien|si esta bien|s[ií] est[aá] bien|no|nop|gracias|listo|de acuerdo)$/;
+
 function destinoFlojo(d) {
   const n = normaliza(d || '');
   if (!n) return true;
@@ -1180,6 +1255,13 @@ const NO_SABE_CUANTOS = /\b(no s[eé]|no sabemos|no tengo|todav[ií]a no|a[uú]n
 /* «No nos movemos allá», dicho al guion. Misma expresión que usa
    `whatsapp.mjs`, escrita aquí para que el motor la entienda sin IA. */
 const NO_SE_MUEVEN = /\b(solo|nomas|nada mas|unicamente|puro) (nos |que nos )?(lleven|llevan|llevar|traigan|traen|dejen|dejan)\b|\bllevar y traer\b|\bnos llevan y (nos )?traen\b|\bnos dejan y (nos )?recogen\b|\bno (nos vamos a|vamos a|nos) mover\b|\bsin recorridos\b|\bida y vuelta nada mas\b/;
+
+/* «Ida y vuelta el mismo día», dicho en el renglón de la SALIDA. A
+   propósito más apretada que la del paso de regreso: aquí no entra
+   «ida y vuelta» a secas, porque eso también lo dice quien va y vuelve
+   en otra fecha —«salimos el 20 y volvemos el 22, ida y vuelta»— y
+   darle el mismo día sería inventarle el regreso. */
+const MISMO_DIA = /\bmismo dia\b|\bese mismo dia\b|\bsolo un dia\b|\bun solo dia\b|\bde ida y vuelta el mismo\b/;
 
 const SOLO_IDA = /\b(solo|nada mas|nomas|unicamente) (de |la )?ida\b|\bviaje sencillo\b|\bsencillo (de )?ida\b|\bida sencilla\b|\bsin regreso\b/;
 /* ¿El cliente pidió un viaje de una sola ida? Vive aparte de `leeDeUnJalon`
@@ -2320,8 +2402,33 @@ function pasoDeCotizacion(t, crudo, estado, hoy) {
         opciones: e.paso === 'origen' ? pregunta(e).opciones : []
       };
     }
-    /* «gdl», «cdmx»: las mismas abreviaturas que en el destino. */
-    e.origen = esAliasDeDestino(dicho) ? ALIAS_DESTINO[claveDeAlias(dicho)] : dicho.slice(0, 120);
+    /* ------------------------------------------------------------
+       UN «SÍ» NO ES UNA CIUDAD — 10-sep-2026
+       ------------------------------------------------------------
+       Este paso se tragaba cualquier cosa como origen. Salida real de
+       la auditoría: «si esta bien» → «Salen de *si esta bien* 👍», y
+       ese texto viajaba tal cual a la solicitud del vendedor y de ahí
+       al contrato. Lo mismo con «ok», «va» o «claro».
+
+       No se adivina que quiso decir Guadalajara —adivinar el origen es
+       adivinar el precio, porque de Ocotlán o Yurécuaro se cobra
+       recargo—: se vuelve a preguntar, nombrando la opción más común
+       para que conteste con una palabra.
+       ------------------------------------------------------------ */
+    if (NO_ES_CIUDAD.test(dicho)) {
+      return {
+        texto: '¿De qué ciudad salen? Si es de aquí, dime *Guadalajara*.',
+        pasa: false, estado: e,
+        opciones: e.paso === 'origen' ? pregunta(e).opciones : []
+      };
+    }
+    /* «gdl», «cdmx»: las mismas abreviaturas que en el destino. Y se le
+       quita la preposición: «de guadalajara» se guardaba con el «de»
+       pegado y así salía impreso —«Salen de *de guadalajara*»— y así
+       llegaba al vendedor. */
+    e.origen = esAliasDeDestino(dicho)
+      ? ALIAS_DESTINO[claveDeAlias(dicho)]
+      : limpiaOrigen(dicho).slice(0, 120);
     /* Antes decía `e.salida ? 'confirmar' : 'salida'` y se saltaba el
        regreso. Ver la nota de `alSiguienteHueco`. */
     alSiguienteHueco(e);
@@ -2340,6 +2447,32 @@ function pasoDeCotizacion(t, crudo, estado, hoy) {
     e.salida = f;
     /* Si ya había regreso y quedó antes, se vuelve a preguntar. */
     if (e.regreso && e.regreso < f) e.regreso = null;
+    /* ------------------------------------------------------------
+       EL REGRESO PUEDE VENIR EN EL MISMO RENGLÓN QUE LA SALIDA
+       ------------------------------------------------------------
+       «el 11 de octubre, ida y vuelta el mismo día» y «el 15, solo de
+       ida» son dos datos en una frase. El guion se quedaba con el
+       primero y enseguida preguntaba «¿y qué día regresan?» a quien
+       ACABABA de contestarlo — la fricción que hace que el cliente
+       deje de contestar.
+
+       En la cáscara esto se leía en cualquier mensaje (`DICE_MISMO_DIA`
+       y `esSoloIda` en `whatsapp.mjs`); aquí vivía encerrado en el paso
+       del regreso. Auditoría del 10-sep-2026.
+       ------------------------------------------------------------ */
+    if (!e.regreso && MISMO_DIA.test(normaliza(crudo))) {
+      e.regreso = f;
+      alSiguienteHueco(e);
+      return siguiente(e, 'Salen y regresan el *' + fechaEnPalabras(f) + '*, el mismo día 📅');
+    }
+    if (!e.regreso && esSoloIda(crudo)) {
+      /* Sencillo: se cotiza como ir y volver el mismo día —la unidad se
+         regresa vacía igual— pero la marca se guarda porque el CONTRATO
+         tiene que decir SENCILLO (dictado del dueño, 9-sep-2026). */
+      e.regreso = f; e.soloIda = true;
+      alSiguienteHueco(e);
+      return siguiente(e, 'Va, *sencillo* — solo de ida el *' + fechaEnPalabras(f) + '* 📅');
+    }
     alSiguienteHueco(e);
     return siguiente(e, 'Salen el *' + fechaEnPalabras(f) + '* 📅');
   }
@@ -2382,6 +2515,31 @@ function pasoDeCotizacion(t, crudo, estado, hoy) {
        frena el autobús en domingo. Un atajo que la brincara vendería
        un servicio que no existe, y eso no se corrige después.
        ------------------------------------------------------------ */
+    /* ------------------------------------------------------------
+       «SOLO DE IDA» ES UNA RESPUESTA A ESTA PREGUNTA, NO UN ESTORBO
+       ------------------------------------------------------------
+       El bot pregunta «¿y qué día regresan?» y el cliente contesta
+       «solo de ida». Eso no es una fecha, así que caía en «esa fecha no
+       la entendí» y se le repreguntaba DOS veces con las mismas
+       palabras; a la tercera `noSeAtore` entregaba el chat a una
+       persona. Y si el cliente se rendía y daba una fecha con tal de
+       avanzar, el viaje quedaba REDONDO y el contrato salía mal.
+
+       La marca vivía solo en el primer mensaje (`leeDeUnJalon`) y en la
+       cáscara de la IA (`esSoloIda` en `whatsapp.mjs`, aplicada a cada
+       mensaje). Faltaba justo en el paso donde se pregunta. Auditoría
+       del 10-sep-2026.
+
+       El precio no cambia —la unidad se regresa vacía igual— pero la
+       marca se guarda: el contrato tiene que decir SENCILLO (dictado
+       del dueño, 9-sep-2026).
+       ------------------------------------------------------------ */
+    if (esSoloIda(crudo) && e.salida) {
+      e.regreso = e.salida; e.soloIda = true;
+      alSiguienteHueco(e);
+      return siguiente(e, 'Va, *sencillo* — solo de ida 👍');
+    }
+
     const esElMismoDia = /\bmismo dia\b|\bese dia\b|\bel mismo\b|\bida y vuelta\b|\bvamos y (nos )?ven|\bsolo un dia\b|\bun solo dia\b/.test(t);
 
     /* EL REGRESO SE ANCLA A LA SALIDA, NO A HOY — 5-sep-2026
