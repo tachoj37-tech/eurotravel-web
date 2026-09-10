@@ -556,7 +556,25 @@ titulo('R12 · con el i6 ya escogido, «¿cuántos son?» no es requisito (dicta
   const sinBus = String(bot.loQueFalta({ destino: 'Sayulita', salida: '2026-09-11', regreso: '2026-09-13', unidad: 'autobus' }) || '');
   okQue('  autobús sin escoger y sin gente → la lista completa, sin «Para 0»', /Marcopolo Paradiso G8/.test(sinBus) && !/Para 0/.test(sinBus) && /NO preguntes cu[aá]ntos/.test(sinBus));
   okQue('  con el i6 escogido y sin gente → sigue el origen, no «cuántos»', /zona metropolitana/.test(String(bot.loQueFalta({ destino: 'Sayulita', salida: '2026-09-11', regreso: '2026-09-13', unidad: 'autobus', unidadNombre: 'Irizar i6' }) || '')));
-  okQue('  y con Sprinter nombrada SÍ se sigue preguntando cuántos (ahí la cuenta decide la unidad)', /cu[aá]ntos/.test(String(bot.loQueFalta({ destino: 'Chapala', salida: '2026-09-11', regreso: '2026-09-13', unidad: 'sprinter', unidadNombre: 'Sprinter' }) || '')));
+  /* ------------------------------------------------------------
+     CAMBIÓ EL 10-SEP-2026, Y ESTA LÍNEA ERA EL ERROR
+     ------------------------------------------------------------
+     Antes decía «y con Sprinter nombrada SÍ se sigue preguntando cuántos
+     (ahí la cuenta decide la unidad)». Ese razonamiento era mío, no del
+     dueño: él dictó la regla el 8-sep con un i6 de ejemplo —«lo que
+     importa es la renta de camión, no las personas; parece requisito»— y
+     yo la até al ejemplo en vez de a la regla, dejando fuera a la
+     Sprinter.
+
+     Se lo cobró él mismo: pidió «una cotización de una Sprinter de
+     Guadalajara a Vallarta» y el bot le preguntó cuántos van TRES veces,
+     una de ellas contestando a «quiero sprinter». Con la unidad ya
+     escogida el número no decide nada.
+     ------------------------------------------------------------ */
+  okQue('  y con Sprinter nombrada TAMPOCO se pregunta cuántos: la unidad ya está escogida',
+    !/cu[aá]ntos/.test(String(bot.loQueFalta({ destino: 'Chapala', salida: '2026-09-11', regreso: '2026-09-13', unidad: 'sprinter', unidadNombre: 'Sprinter' }) || '')));
+  okQue('  pero sin unidad escogida sí se pregunta, que ahí la cuenta la decide',
+    /cu[aá]ntos/.test(String(bot.loQueFalta({ destino: 'Chapala', salida: '2026-09-11', regreso: '2026-09-13' }) || '')));
 }
 
 /* ============================================================ */

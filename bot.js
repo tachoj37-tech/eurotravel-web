@@ -1927,7 +1927,26 @@ function alSiguienteHueco(e) {
   /* `sinCuenta`: dijo «todavía no sé cuántos vamos» (corrida real del
      8-sep-2026, escenario g: el bot insistió tres veces). No se le vuelve
      a pedir; si después da el número, `pegaDatos` lo toma y revisa cupo. */
-  else if (!e.gente && !e.sinCuenta && !(e.unidad === 'autobus' && e.unidadNombre)) e.paso = 'cuantos';
+  /* ------------------------------------------------------------
+     CON LA UNIDAD YA ESCOGIDA, CUÁNTOS SON NO ES REQUISITO
+     ------------------------------------------------------------
+     Esto decía `e.unidad === 'autobus' && e.unidadNombre`, o sea que la
+     exención valía SOLO para autobuses. Fue un error mío al escribirla:
+     el dueño la dictó el 8-sep-2026 con un i6 de ejemplo —«lo que importa
+     es la renta de camión, no las personas; puedo rentar un i6 sin que
+     responda cuántos somos, parece requisito»— y yo la até al ejemplo en
+     vez de a la regla.
+
+     Se lo cobró él mismo el 10-sep: pidió «una cotización de una Sprinter
+     de Guadalajara a Vallarta» y el bot le preguntó cuántos van TRES
+     veces seguidas, incluida una a «quiero sprinter». La unidad ya estaba
+     escogida; el número no decidía nada.
+
+     Ahora: si el cliente ya nombró la unidad —la que sea— no se le
+     pregunta cuántos son. Si después lo dice, `pegaDatos` revisa el cupo
+     y, si no caben, se le ofrece autobús con esos números.
+     ------------------------------------------------------------ */
+  else if (!e.gente && !e.sinCuenta && !e.unidadNombre) e.paso = 'cuantos';
   /* ------------------------------------------------------------
      Y SI ES AUTOBÚS, CUÁL AUTOBÚS
      ------------------------------------------------------------
