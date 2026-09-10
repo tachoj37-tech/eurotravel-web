@@ -57,9 +57,33 @@
    Si no está configurado, no hay tickets: el bot sigue
    contestando solo, como hasta hoy. Nada truena.
    ------------------------------------------------------------ */
+/* ------------------------------------------------------------
+   SIN ESTE NÚMERO, NADIE SE ENTERA DE NADA
+   ------------------------------------------------------------
+   `DUENO_WHATSAPP` es la variable de la que cuelgan TODOS los tickets: el
+   precio por confirmar, el comprobante, la ficha del contrato, las dudas.
+   Cada uno de esos bloques está detrás de un `if (numeroDelDueno(env))`,
+   así que con la variable vacía el bot le dice al cliente «en breve te
+   paso tu cotización» y no le avisa a nadie. No truena, no deja rastro:
+   simplemente no pasa nada.
+
+   Eso ocurrió el 10-sep-2026: una cotización real de autobús para 51
+   personas del 22 al 25 de septiembre a Puerto Vallarta llegó completa
+   hasta el momento del ticket y ahí murió, sin una sola línea en el
+   registro. Por eso ahora, cuando falta, se grita —una vez por
+   instancia, para no llenar el log—. */
+let yaAviseDelDueno = false;
 function numeroDelDueno(entorno) {
   const env = entorno || process.env;
-  return soloDigitos(env.DUENO_WHATSAPP || '');
+  const n = soloDigitos(env.DUENO_WHATSAPP || '');
+  if (!n && !yaAviseDelDueno) {
+    yaAviseDelDueno = true;
+    console.error('[SIN-DUEÑO] CRÍTICO: DUENO_WHATSAPP está vacía. ' +
+      'Ningún ticket sale: ni el precio por confirmar, ni el comprobante, ni la ficha del ' +
+      'contrato, ni las dudas. Los clientes reciben «en breve te paso tu cotización» y nadie ' +
+      'se entera. Ponla en Vercel (Settings → Environment Variables) y vuelve a desplegar.');
+  }
+  return n;
 }
 
 function soloDigitos(s) {

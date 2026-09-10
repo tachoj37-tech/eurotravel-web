@@ -438,7 +438,13 @@ function textoDelContexto(c) {
     'Precio: ' + precio + (v && v.resumen ? ' · ' + v.resumen : '') + '\n' +
     'Depósito: ' + dep + '\n' +
     '══ LO QUE YA HICE ══\n' + (hechos.length ? hechos.map(function (h) { return '- ' + h; }).join('\n') : '- nada aún') + '\n' +
-    '══ LO QUE FALTA ══\n' + (falta ? '- ' + falta : (v ? '- nada del viaje: sigue con apartar o resuelve dudas' : '- todo')) + '\n' +
+    /* Sin precio y sin nada que falte, decir «todo» es mentirle al modelo:
+       el viaje está completo y lo que sigue es cotizarlo. En la corrida
+       real del 10-sep-2026 el bloque decía «- todo» con destino, fechas,
+       gente, unidad, origen y recorridos ya sabidos. */
+    '══ LO QUE FALTA ══\n' + (falta ? '- ' + falta
+      : (v ? '- nada del viaje: sigue con apartar o resuelve dudas'
+        : (se.length ? '- nada: el viaje está completo, pide accion "cotizar"' : '- todo'))) + '\n' +
     '════════════════════════════════════════\n';
   return aviso + estadoBloque +
     'Hoy es ' + (c && c.hoy) + '. Si dice un día sin año, es el más cercano que no haya pasado.\n' +

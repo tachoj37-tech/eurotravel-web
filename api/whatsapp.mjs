@@ -3607,7 +3607,18 @@ async function manda(envio) {
          número no registrado, plantilla requerida). Sin esto, depurar
          es adivinar. */
       const detalle = await r.text().catch(function () { return ''; });
-      console.error('[whatsapp] Meta contesto ' + r.status + ': ' + detalle.slice(0, 500));
+      console.error('[whatsapp] Meta contesto ' + r.status + ' a ' + (envio.escribio || 'sin marca') +
+        ': ' + detalle.slice(0, 500));
+      /* Un ticket que no llega es una venta que se cae: el cliente ya
+         recibió «en breve te paso tu cotización» y del otro lado no hay
+         nadie. Se marca aparte para poder buscarlo en el registro. */
+      if (esParaElDueno) {
+        console.error('[TICKET-PERDIDO] CRÍTICO: no le llegó al dueño ' + (envio.escribio || 'sin marca') +
+          ' sobre el cliente ' + (envio.sobreCliente || '?') + '. ' +
+          (/131047|24 hour|re-?engagement/i.test(detalle)
+            ? 'Meta lo rechazó por la ventana de 24 horas: el dueño tiene que escribirle al número del bot para reabrirla.'
+            : 'Revisa el detalle de arriba.'));
+      }
       /* El contrato no se pierde porque Meta no haya podido bajar el PDF
          (liga caída, archivo muy grande, tipo que no le gustó): va la liga
          en texto, que es lo que se mandaba antes de que hubiera archivo. */

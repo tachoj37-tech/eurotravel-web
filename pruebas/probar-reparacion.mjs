@@ -1459,5 +1459,25 @@ titulo('R48 · al teléfono del dueño solo llega lo que él pidió (9-sep-2026)
   }
 }
 
+titulo('R49 · sin DUENO_WHATSAPP nadie recibe los tickets, y eso se grita en el registro');
+{
+  /* Lo que pasó el 10-sep-2026: una cotización de autobús para 51 personas
+     llegó completa hasta el ticket y ahí murió, sin una sola línea en el
+     registro, porque `DUENO_WHATSAPP` estaba vacía en producción. */
+  const antes = process.env.DUENO_WHATSAPP;
+  const gritos = [];
+  const err = console.error;
+  console.error = function () { gritos.push(Array.prototype.map.call(arguments, String).join(' ')); };
+  delete process.env.DUENO_WHATSAPP;
+  /* Módulo nuevo: el aviso es una vez por instancia. */
+  const tkFresco = (await import(pathToFileURL(path.join(RAIZ, 'api', '_tickets.js')).href + '?sin-dueno')).default;
+  const n = tkFresco.numeroDelDueno(process.env);
+  console.error = err;
+  process.env.DUENO_WHATSAPP = antes;
+  ok('sin la variable, no hay número de dueño', n, '');
+  okQue('  y queda el grito en el registro', gritos.some((g) => /\[SIN-DUEÑO\] CRÍTICO/.test(g)));
+  okQue('  diciendo qué se pierde', gritos.some((g) => /precio por confirmar/i.test(g) && /Vercel/i.test(g)));
+}
+
 console.log('\n' + buenas + ' buenas, ' + malas + ' malas');
 process.exit(malas ? 1 : 0);
