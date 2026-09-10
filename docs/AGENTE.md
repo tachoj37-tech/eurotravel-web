@@ -63,7 +63,11 @@ Hay que decirlo antes del plan, porque cambia lo que se escribe.
    30/15/5, salida 15 d/72 h/24 h, post-viaje, aniversario) cae fuera de la
    ventana → **todos son plantillas** aprobadas por Meta. Son unas nueve.
    Sin ellas, esos avisos no salen; el código lo dice en el registro.
-8. **Kommo** se descarta, como dices. Dualhook se queda como puerta.
+8. ~~**Kommo** se descarta, como dices. Dualhook se queda como puerta.~~
+   **REVOCADO el 10-sep-2026 por el dueño**: «ya no usaremos HubSpot,
+   olvídalo completamente, usaremos Kommo ahora». Dualhook sigue siendo la
+   puerta hasta el día de la mudanza; los pasos están en
+   `docs/PASAR-EL-BOT-A-KOMMO.md` y faltan su subdominio y su token.
 
 ---
 
