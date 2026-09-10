@@ -34,6 +34,7 @@ Y encima de todo: [[quien-manda|los precios los dicta el dueño]] (R12).
 | ¿Por qué CDMX cobra por día? | [[el-dia-con-movimiento]] |
 | ¿Por qué este viaje no da precio en línea? | [[cuando-no-se-cotiza-solo]] |
 | ¿Quién decide un precio nuevo? | [[quien-manda]] |
+| ¿Qué precios ya di yo por WhatsApp? | [[precios-que-he-dado]] |
 | ¿Qué NO sabemos todavía? | [[lo-que-no-se]] |
 | ¿Qué ya salió caro aprender? | [[errores-que-ya-pague]] |
 | ¿Cómo usa todo esto el bot? | [[el-bot]] |

@@ -2309,7 +2309,10 @@ function procesa(crudo, firma, entorno) {
                  busca aquí y no dentro del ticket para que `_tickets.js`
                  siga decidiendo cómo se ve un ticket y no cuánto cuesta
                  un viaje (10-sep-2026). */
-              delExcel: destinos.preciosDeListaDeUnidad(s.destino, idDeUnidad(s.unidadNombre))
+              delExcel: destinos.preciosDeListaDeUnidad(s.destino, idDeUnidad(s.unidadNombre)),
+              /* Se mira el entorno QUE LLEGÓ, no `process.env`: es la regla
+                 de este archivo, y las pruebas dependen de ella. */
+              aprendizajeApagado: !(env && env.ALMACEN_URL && env.ALMACEN_CLAVE)
             }),
             /* Este ticket también pasa por la compuerta (C6): con su
                viaje a cuestas, el número que conteste el dueño le llega

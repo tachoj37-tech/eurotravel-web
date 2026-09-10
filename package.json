@@ -6,6 +6,8 @@
   "scripts": {
     "probar": "node pruebas/correr-todas.cjs",
     "reparacion": "node pruebas/probar-reparacion.mjs",
+    "precios:cerebro": "node scripts/precios-al-cerebro.mjs",
+    "conversar": "node scripts/conversar.mjs",
     "start": "node servidor-local.cjs"
   }
 }

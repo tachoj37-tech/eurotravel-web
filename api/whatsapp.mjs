@@ -460,6 +460,21 @@ function ticketDePrecio(res, precio, cal, cliente, unidad, historial, yaDado) {
   aprendidos.lineasDeHistorial(historial).forEach(function (l) { lineas.push(l); });
   if (cal) lineas.push('Calendario: ' + cal.libres + ' de ' + cal.total + ' libres');
   else if (cal === null) lineas.push('Calendario: EuroSystem no contestó');
+  /* ------------------------------------------------------------
+     UN APRENDIZAJE APAGADO EN SILENCIO ES PEOR QUE NO TENERLO
+     ------------------------------------------------------------
+     `guardaPrecio` solo corre si hay almacén configurado, y si no lo hay
+     —o si la tabla `precios` nunca se creó en Supabase— la escritura
+     falla sin decir palabra. El dueño podría llevar semanas dando
+     precios creyendo que el bot los está aprendiendo, y no.
+
+     No es ruido recurrente: es un estado roto que se arregla una vez y
+     el renglón desaparece solo (10-sep-2026).
+     ------------------------------------------------------------ */
+  if (!almacen.hayAlmacen()) {
+    lineas.push('');
+    lineas.push('⚠️ *Este precio no se va a guardar*: el almacén está apagado y no estoy aprendiendo nada.');
+  }
   lineas.push('');
   lineas.push('Contéstame *este mensaje*: *va* y se lo mando tal cual, un *número* y va con ese precio, o escríbeme y se lo paso.');
   lineas.push('_cliente: ' + cliente + '_');

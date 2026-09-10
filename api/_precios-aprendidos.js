@@ -7,9 +7,21 @@
    que te vaya diciendo».
 
    Aquí solo se decide QUÉ es «el mismo viaje» y CÓMO se le enseña
-   al dueño lo que ya dio. Guardar y leer vive en `_almacen.js`; el
-   criterio, cuando haya suficientes, se resume a mano en
-   docs/CRITERIO-DE-PRECIOS.md (el dueño manda; esto solo recuerda).
+   al dueño lo que ya dio. Guardar y leer vive en `_almacen.js`.
+
+   Y de ahí AL CEREBRO: `npm run precios:cerebro` vuelca la tabla a
+   `cerebro/precios-que-he-dado.md` y a `docs/PRECIOS-QUE-HE-DADO.md`
+   (dictado del dueño, 10-sep-2026: «guárdalo en el cerebro de
+   criterio»). Es un paso a mano porque el bot corre en Vercel, con el
+   disco en solo lectura y sin poder hacer commits: la máquina recuerda
+   y el dueño manda. El criterio en sí se sigue resumiendo a mano en
+   docs/CRITERIO-DE-PRECIOS.md.
+
+   OJO SI SE TOCA `lineasDeHistorial`: la regla de cuál precio se
+   sugiere —el último FIJADO, y si no hay, el más reciente— está
+   copiada en el volcado. Hay una prueba que exige que los dos digan el
+   mismo número (`pruebas/probar-precios-al-cerebro.mjs`), porque un
+   cerebro que contradiga al ticket es peor que no tenerlo.
 
    «El mismo viaje» = misma ZONA de salida, mismo destino, misma unidad
    y mismos días de servicio. Los pasajeros y la fecha se guardan

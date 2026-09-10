@@ -204,6 +204,14 @@ function armaTicket(datos) {
     }
   }
 
+  /* Mismo aviso que en el ticket de precio: si el almacén está apagado, el
+     número que él ponga no se guarda y el bot no aprende nada. Se dice, en
+     vez de dejarlo pasar en silencio (10-sep-2026). */
+  if (d.aprendizajeApagado) {
+    lineas.push('');
+    lineas.push('⚠️ *Este precio no se va a guardar*: el almacén está apagado y no estoy aprendiendo nada.');
+  }
+
   lineas.push('');
   lineas.push('Contéstame *este mensaje* con el precio y yo se lo paso.');
   /* El número va escrito para que la respuesta funcione aunque la
