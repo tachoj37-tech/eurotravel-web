@@ -2056,7 +2056,10 @@ function procesa(crudo, firma, entorno) {
               cotiza: null,
               resumen: {
                 origen: s.origen, destino: s.destino, salida: s.salida, regreso: s.regreso,
-                gente: s.gente, unidad: s.unidad, recorridos: s.recorridos, paseo: s.paseo, agencia: !!s.agencia
+                gente: s.gente, unidad: s.unidad, recorridos: s.recorridos, paseo: s.paseo, agencia: !!s.agencia,
+                /* Para el contrato de después: REDONDO salvo que el cliente
+                   haya pedido sencillo con todas sus letras (9-sep-2026). */
+                soloIda: !!s.soloIda
               },
               total: null, anticipo: null, calendario: null, desde: ahora
             },

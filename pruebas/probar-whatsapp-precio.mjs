@@ -711,6 +711,9 @@ function siembraFichaCompleta(C) {
   ok('  por transferencia', b.cobro && b.cobro.formaPago, 'TRANSFERENCIA');
   ok('  nombre y apellidos', [b.cliente && b.cliente.nombre, b.cliente && b.cliente.apellidos], ['Laura', 'Pérez']);
   okQue('  no se manda el estado (lo fija EuroSystem)', !('estado' in b));
+  /* 9-sep-2026: «el redondo es por defecto; si la persona quiere sencillo,
+     que lo diga, no lo ofrezcas». Este viaje nadie lo pidió sencillo. */
+  ok('  redondo por omisión', b.servicio && b.servicio.tipoViaje, 'REDONDO');
 
   /* 2 · Un segundo «va» no lo sube dos veces. Ya subido, no hay nada
      pendiente, así que el «va» es texto normal del dueño y se pasa literal
@@ -740,6 +743,20 @@ function siembraFichaCompleta(C) {
   okQue('con el PDF caído, al cliente le llega la liga en texto',
     /folio \*43801\*/.test(alCliente) && /eurosystem\/pdf\/43801/.test(alCliente));
   okQue('  y al dueño también', /eurosystem\/pdf\/43801/.test(textos(DUENO).join('\n')));
+}
+
+/* 2c · Y SENCILLO cuando el cliente lo pidió él mismo. */
+{
+  webhook.olvidaTodo(); mandados = []; contratosMandados = [];
+  const C = '5213366670024';
+  siembraFichaCompleta(C);
+  const f = tickets.fichaDe(C);
+  tickets.anotaEtapa(C, 'contrato_listo', {
+    viajeDatos: Object.assign({}, f.viajeDatos, { soloIda: true })
+  });
+  await contesta('va', 'wamid.ficha-' + C);
+  const b = contratosMandados[0] || {};
+  ok('el que pidió sencillo va como SENCILLO', b.servicio && b.servicio.tipoViaje, 'SENCILLO');
 }
 
 /* 3 · EuroSystem lo rechaza: se le dice al dueño con las palabras del error. */

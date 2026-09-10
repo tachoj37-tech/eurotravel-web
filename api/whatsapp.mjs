@@ -1136,6 +1136,10 @@ function armaContrato(ficha, cliente) {
   cuerpo.servicio.itinerario = d.direccionDestino
     ? 'Llegada: ' + d.direccionDestino + (d.horaRegreso ? '. Regresan a las ' + d.horaRegreso : '')
     : undefined;
+  /* REDONDO por omisión —lo pone `contratoDesde`— y SENCILLO solo cuando el
+     cliente lo pidió él mismo. El bot no ofrece el sencillo (dictado del
+     dueño, 9-sep-2026); si nadie dijo nada, el viaje es redondo. */
+  if (v.soloIda) cuerpo.servicio.tipoViaje = 'SENCILLO';
   cuerpo.cobro.formaPago = 'TRANSFERENCIA';
   cuerpo.cobro.condicionesPago = 'Anticipo por transferencia. Saldo por cubrir antes de la salida.';
   return cuerpo;

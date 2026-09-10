@@ -1098,5 +1098,29 @@ titulo('R30 · dos vistos buenos y el contrato se genera solo, en cualquier orde
   okQue('  y ahí sí se le confirma el pago al cliente', /pago qued[oó] confirmado/i.test(textos(B).join('\n')));
 }
 
+/* ============================================================ */
+titulo('R31 · el viaje redondo es lo de siempre; el sencillo solo si el cliente lo pide (9-sep-2026)');
+{
+  const bot = (await import(pathToFileURL(path.join(RAIZ, 'bot.js')).href)).default;
+  const lee = (t) => bot.leeDeUnJalon(t, '2026-09-09');
+  /* Lo que SÍ es pedir un sencillo. */
+  for (const dicho of [
+    'quiero solo ida a vallarta',
+    'nada mas de ida a mazatlan',
+    'nomas la ida',
+    'es un viaje sencillo a tequila',
+    'de guadalajara a colima sin regreso'
+  ]) okQue('«' + dicho + '» → solo ida', lee(dicho).soloIda === true);
+  /* Y lo que NO. «Algo sencillo» es barato y sin complicaciones; marcarlo
+     saca un contrato que dice que la unidad no regresa. */
+  for (const dicho of [
+    'quiero algo sencillo para el fin',
+    'busco algo sencillo, nada complicado',
+    'es un plan sencillo con la familia',
+    'somos 20 y queremos ir a vallarta',
+    'nos vamos el 20 y regresamos el 22'
+  ]) okQue('«' + dicho + '» → NO es solo ida', lee(dicho).soloIda === false);
+}
+
 console.log('\n' + buenas + ' buenas, ' + malas + ' malas');
 process.exit(malas ? 1 : 0);

@@ -1181,7 +1181,18 @@ function leeDeUnJalon(crudo, hoy) {
     origen: origenDeLaFrase(original),
     salida: salida,
     regreso: regreso,
-    soloIda: /\bsolo ida\b|\bsencillo\b|\bnada mas de ida\b/.test(t),
+    /* ------------------------------------------------------------
+       SOLO IDA
+
+       El viaje redondo es lo de siempre y NO se ofrece el sencillo: el
+       cliente tiene que pedirlo (dictado del dueño, 9-sep-2026). Y por
+       eso mismo esto tiene que pedir la palabra completa: «quiero algo
+       sencillo» es «algo barato y sin complicaciones», no un viaje de
+       una sola ida, y marcarlo saca un contrato que dice que la unidad
+       no regresa. Así que `sencillo` solo cuenta pegado a «viaje» o a
+       «ida», nunca suelto.
+       ------------------------------------------------------------ */
+    soloIda: /\b(solo|nada mas|nomas|unicamente) (de |la )?ida\b|\bviaje sencillo\b|\bsencillo (de )?ida\b|\bida sencilla\b|\bsin regreso\b|\bnada mas de ida\b/.test(t),
     ocasion: ocasionDe(original),
     respuesta: null
   };
@@ -2462,6 +2473,7 @@ function pasoDeCotizacion(t, crudo, estado, hoy) {
           unidad: e.unidad, gente: e.gente || null,
           origen: e.origen, destino: e.destino,
           salida: e.salida, regreso: e.regreso,
+          soloIda: !!e.soloIda,
           recorridos: e.recorridos || 0,
           horas: e.recorridos ? HORAS_MOV[e.banda || 0].etiqueta : null,
           /* Para el ticket de WhatsApp: los días ya calculados —para no
@@ -2507,7 +2519,10 @@ function pasoDeCotizacion(t, crudo, estado, hoy) {
            precio: «ésta es la que les tocaría». */
         unidadNombre: e.unidadNombre || null,
         unidad: e.unidad || null,
-        agencia: !!e.agencia
+        agencia: !!e.agencia,
+        /* Para el contrato: REDONDO es lo de siempre, SENCILLO solo si el
+           cliente lo pidió con esas palabras (9-sep-2026). */
+        soloIda: !!e.soloIda
       }
     };
   }
@@ -3779,7 +3794,14 @@ function aplicaEntendido(datos, hoy) {
   if (datos.regreso) e.regreso = datos.regreso;
 
   /* Solo ida: se cotiza como salir y volver el mismo día, que es lo que
-     el motor sabe cobrar. Y así R22 le quita los movimientos solo. */
+     el motor sabe cobrar. Y así R22 le quita los movimientos solo.
+
+     La marca se GUARDA (9-sep-2026, dictado del dueño: «el redondo es por
+     defecto; si la persona quiere sencillo, que lo diga, no lo ofrezcas»).
+     El precio no cambia —la unidad se regresa vacía igual— pero el
+     contrato tiene que decir SENCILLO, y para eso el dato tiene que
+     sobrevivir hasta `armaContrato`. */
+  if (datos.soloIda) e.soloIda = true;
   if (datos.soloIda && e.salida && !e.regreso) e.regreso = e.salida;
 
   alSiguienteHueco(e);
