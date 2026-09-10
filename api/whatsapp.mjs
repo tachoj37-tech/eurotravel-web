@@ -1891,6 +1891,9 @@ const MARCAS_PARA_EL_DUENO = new RegExp('^\\[(?:' + [
   'contrato · (?:sin ficha|rechazado|sin llave|sin respuesta|sin viaje|ya subido)',
   /* 4 · el primer mensaje de un número nuevo */
   'ticket · primer mensaje',
+  /* Los acuses de sus botones: le mandó la cuenta, el contrato o el
+     recibido a un cliente y necesita saber que salió (10-sep-2026). */
+  'boton · ',
   /* 5 · las dudas: lo que el bot no contesta porque no está seguro */
   'ticket · duda', 'ticket · pregunta al dueño', 'ticket · quiere hablar contigo',
   'ticket · destino del extranjero', 'ticket · desconfía',

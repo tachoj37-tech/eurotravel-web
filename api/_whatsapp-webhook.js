@@ -579,6 +579,31 @@ const PIDE_VER =
 const PIDE_TOMO = /^\s*(yo|tomo|lo tomo|me lo quedo|lo atiendo yo)\s*[.!]*\s*$/i;
 const PIDE_SUELTA = /^\s*(bot|ia|suelta|su[eé]ltalo|libera|lib[eé]ralo|retoma)\s*[.!]*\s*$/i;
 
+/* ------------------------------------------------------------
+   LOS BOTONES DEL DUEÑO (dictado del 10-sep-2026)
+   ------------------------------------------------------------
+   «Me gustaría que la persona tenga acceso sencillo a esto, pero que el
+   cliente lo reciba, como un botón en el que él se lo manda al cliente,
+   sencillamente, copy paste».
+
+   Con el chat en manos de una persona, el bot deja de conversar pero
+   sigue siendo el que mejor escribe los bloques que no admiten errores:
+   la CLABE tiene 18 dígitos y un dedazo manda el dinero a otro lado, y
+   las preguntas del contrato son las que EuroSystem necesita, ni una
+   más. Así que la persona no los teclea: los dispara.
+
+   Se contesta el mensaje del cliente (o se escribe su número delante) con
+   UNA palabra, igual que «yo» y «bot», que es lo que él ya tiene en los
+   dedos:
+
+     cuenta    → le llegan el anticipo, la ficha, la CLABE y la cuenta
+     contrato  → le llegan las preguntas para armar el contrato
+     recibido  → se le acusa el comprobante y se le dice qué sigue
+   ------------------------------------------------------------ */
+const PIDE_CUENTA = /^\s*(cuenta|clabe|datos|dep[oó]sito|deposito|cobro)\s*[.!]*\s*$/i;
+const PIDE_CONTRATO = /^\s*(contrato|datos del contrato|papeles)\s*[.!]*\s*$/i;
+const PIDE_RECIBIDO = /^\s*(recibido|recib[ií]|ya cay[oó]|confirmado|lleg[oó])\s*[.!]*\s*$/i;
+
 /* «total 48000» y «3312345678 yo» también son comandos: no se le dijeron
    a ningún cliente y no deben quedar en su plática (auditoría 7-sep-2026,
    hallazgo 9). El número al frente se quita antes de comparar. */
@@ -1186,8 +1211,102 @@ function procesa(crudo, firma, entorno) {
 
           const dirigido = tickets.clienteDeLaRespuesta(m, tickets.tickets);
 
-          /* ---- el relevo: «yo» / «bot» ---- */
           const textoDelDueno = (dirigido && dirigido.texto) || String((m.text && m.text.body) || '');
+
+          /* ---- los botones: «cuenta» / «contrato» / «recibido» ---- */
+          {
+            const cual = PIDE_CUENTA.test(textoDelDueno) ? 'cuenta'
+              : (PIDE_CONTRATO.test(textoDelDueno) ? 'contrato'
+                : (PIDE_RECIBIDO.test(textoDelDueno) ? 'recibido' : null));
+            if (cual) {
+              const aQuien = dirigido && dirigido.cliente;
+              if (!aQuien) {
+                envios.push({
+                  numeroDeOrigen: deQuien, para: m.from,
+                  texto: '¿A quién se lo mando? Responde un mensaje de ese cliente con «' + cual +
+                    '», o escríbeme su número y luego la palabra: «33 1234 5678 ' + cual + '».',
+                  pasaAPersona: false, escribio: '[boton · sin cliente]'
+                });
+                continue;
+              }
+              const f = tickets.fichaDe(aQuien) || {};
+              if (cual === 'cuenta') {
+                const anticipo = (typeof f.anticipo === 'number' && f.anticipo > 0)
+                  ? '*$' + f.anticipo.toLocaleString('en-US') + '*' : 'el anticipo';
+                envios.push({
+                  numeroDeOrigen: deQuien, para: aQuien,
+                  texto: 'Va 🙌 Para apartar tu fecha son ' + anticipo + ' de anticipo; el resto lo puedes ' +
+                    'ir abonando o liquidarlo el día del viaje.\n\nEn cuanto deposites, mándame aquí la foto ' +
+                    'del comprobante y te confirmo tu fecha.',
+                  pasaAPersona: false, escribio: '[datos de depósito]'
+                });
+                /* Y detrás, lo que no se puede teclear a mano: la ficha, la
+                   CLABE y la cuenta, cada una en su mensaje y pelonas, para
+                   que el cliente las copie con un toque largo. Salen de las
+                   variables de Vercel, así que un dedazo es imposible. */
+                const laClabe = String(env.CLABE || '').replace(/\D+/g, '');
+                const elBanco = String(env.DATOS_BANCARIOS || '').trim();
+                const elSitio = String(env.SITIO_URL || '').replace(/\/+$/, '');
+                const laCuenta = String(env.CUENTA || '').replace(/\D+/g, '');
+                if (laClabe) {
+                  if (env.FICHA_COMO_IMAGEN !== '0' && elSitio) {
+                    envios.push({
+                      numeroDeOrigen: deQuien, para: aQuien,
+                      ligaDeFoto: elSitio + '/img/ficha-bancaria.png',
+                      texto: 'Aquí están los datos 👆 Abajo te van la CLABE' + (laCuenta ? ' y la cuenta' : '') +
+                        ', cada una en su mensaje: déjala apretada para copiarla.',
+                      pasaAPersona: false, escribio: '[ficha bancaria]'
+                    });
+                  } else if (elBanco) {
+                    envios.push({
+                      numeroDeOrigen: deQuien, para: aQuien,
+                      texto: elBanco, pasaAPersona: false, escribio: '[datos de depósito]'
+                    });
+                  }
+                  envios.push({
+                    numeroDeOrigen: deQuien, para: aQuien,
+                    texto: laClabe, pasaAPersona: false, escribio: '[clabe para copiar]'
+                  });
+                  if (laCuenta) {
+                    envios.push({
+                      numeroDeOrigen: deQuien, para: aQuien,
+                      texto: laCuenta, pasaAPersona: false, escribio: '[cuenta para copiar]'
+                    });
+                  }
+                } else {
+                  console.error('[boton] «cuenta» sin CLABE en Vercel: al cliente le salió el anticipo sin los datos');
+                }
+                tickets.anotaEtapa(aQuien, 'va_a_apartar', { cuentaMandadaEn: ahora }, ahora);
+              } else if (cual === 'contrato') {
+                envios.push({
+                  numeroDeOrigen: deQuien, para: aQuien,
+                  texto: contrato.pideLosDatos(!!f.agencia),
+                  pasaAPersona: false, escribio: '[datos del contrato]'
+                });
+                tickets.anotaEtapa(aQuien, 'datos_del_contrato', {}, ahora);
+              } else {
+                envios.push({
+                  numeroDeOrigen: deQuien, para: aQuien,
+                  texto: '¡Listo! Tu pago quedó confirmado ✅ Tu fecha ya está apartada.\n\n' +
+                    'En un momento te paso los datos para armar tu contrato.',
+                  pasaAPersona: false, escribio: '[pago · autorizado]'
+                });
+                tickets.anotaEtapa(aQuien, f.etapa || 'mando_comprobante', { pagoAprobado: true }, ahora);
+              }
+              envios.push({
+                numeroDeOrigen: deQuien, para: m.from,
+                esTicket: true, sobreCliente: aQuien,
+                texto: (cual === 'cuenta' ? '💳 Le mandé los datos para depositar a *' + aQuien + '*.'
+                  : cual === 'contrato' ? '📄 Le pedí los datos del contrato a *' + aQuien + '*.'
+                    : '✅ Le confirmé el pago a *' + aQuien + '*.') +
+                  '\n\nOtros: *cuenta* · *contrato* · *recibido* · *bot* para devolvérselo al bot.',
+                pasaAPersona: false, escribio: '[boton · ' + cual + ']'
+              });
+              continue;
+            }
+          }
+
+          /* ---- el relevo: «yo» / «bot» ---- */
           const orden = PIDE_TOMO.test(textoDelDueno) ? 'tomo' : (PIDE_SUELTA.test(textoDelDueno) ? 'suelta' : null);
           if (orden) {
             const aQuien = dirigido && dirigido.cliente;

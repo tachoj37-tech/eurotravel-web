@@ -1666,5 +1666,49 @@ titulo('R55 · «no sé» en la plática real: se marca ese campo y se sigue');
   okQue('  y NO se le vuelve a pedir esa dirección', !/direcci[oó]n.*a la que llegan/i.test(t));
 }
 
+titulo('R54 · los botones del dueño: «cuenta», «contrato» y «recibido» (10-sep-2026)');
+{
+  limpia();
+  const C = '5213366670472';
+  const CLABE = '012345678901234567';
+  process.env.CLABE = CLABE;
+  process.env.CUENTA = '0192721740';
+  tk.anotaEtapa(C, 'con_precio', { total: 19000, anticipo: 4000,
+    viajeDatos: { origen: 'Guadalajara', destino: 'Puerto Vallarta', salida: '2026-12-04',
+      regreso: '2026-12-06', gente: 17, unidad: 'Sprinter', recorridos: 0 } }, Date.now());
+  tk.recuerdaTicket('wamid.boton-' + C, C);
+
+  /* «cuenta»: le llega el anticipo y los datos, escritos por el motor. */
+  let antes = textos(C).length;
+  await contestaTicket('cuenta', 'wamid.boton-' + C);
+  const t1 = textos(C).slice(antes).join('\n');
+  okQue('«cuenta» le manda el anticipo al cliente', /\$4,000/.test(t1));
+  okQue('  con la CLABE de verdad', textos(C).indexOf(CLABE) >= 0);
+  okQue('  y le pide el comprobante', /comprobante/i.test(t1));
+  okQue('  al dueño se le acusa y se le recuerdan los otros botones',
+    /Le mandé los datos para depositar/.test(textos(DUENO).slice(-1)[0] || '') &&
+    /contrato/.test(textos(DUENO).slice(-1)[0] || ''));
+  okQue('  y la ficha anota que la cuenta ya salió', !!(tk.fichaDe(C) || {}).cuentaMandadaEn);
+
+  /* «recibido»: se le confirma el pago y queda aprobado en la ficha. */
+  antes = textos(C).length;
+  await contestaTicket('recibido', 'wamid.boton-' + C);
+  okQue('«recibido» le confirma el pago', /pago qued[oó] confirmado/i.test(textos(C).slice(antes).join('\n')));
+  ok('  y la ficha lo marca aprobado', (tk.fichaDe(C) || {}).pagoAprobado, true);
+
+  /* «contrato»: le llegan las preguntas, las de EuroSystem y nada más. */
+  antes = textos(C).length;
+  await contestaTicket('contrato', 'wamid.boton-' + C);
+  const t3 = textos(C).slice(antes).join('\n');
+  okQue('«contrato» le pide los datos', /nombre completo/i.test(t3) && /recogemos/i.test(t3));
+
+  /* Sin saber de quién, no se manda nada a nadie. */
+  limpia();
+  const antesDueno = textos(DUENO).length;
+  await dice('cuenta', DUENO);
+  okQue('«cuenta» suelto pregunta de quién', /¿A qui[eé]n se lo mando\?/.test(textos(DUENO).slice(antesDueno).join('\n')));
+  delete process.env.CLABE; delete process.env.CUENTA;
+}
+
 console.log('\n' + buenas + ' buenas, ' + malas + ' malas');
 process.exit(malas ? 1 : 0);
