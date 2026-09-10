@@ -778,7 +778,7 @@ titulo('R19 · «solo nos llevan y traen» es recorridos = 0 aunque la IA no lo 
   const antes = textos(C).length;
   await dice('el neobus', C);
   const dicho = textos(C).slice(antes).join('\n');
-  okQue('con el Neobus escogido NO pregunta los recorridos: pide el precio', /En breve te paso tu cotizaci/i.test(dicho) && !/mover|pasear|recorrid/i.test(dicho));
+  okQue('con el Neobus escogido NO pregunta los recorridos: pide el precio', /En un momento te paso tu precio/i.test(dicho) && !/mover|pasear|recorrid/i.test(dicho));
   ok('  y el ticket salió', textos(DUENO).filter((t) => /Precio por confirmar/.test(t)).length, 1);
   /* Una pregunta para el dueño con texto de la IA: UNA vez al cliente. */
   laIA = () => ({ respuesta: 'Eso lo ve el dueño y en breve te confirma cómo funciona.', datos: {}, accion: 'dueno' });
@@ -1189,7 +1189,7 @@ titulo('R32 · con el precio ya dado, la IA no vuelve a cotizar el mismo viaje')
   const alDueno = mandados.slice(antes).filter((m) => mismo(m.to, DUENO)).map((m) => (m.text && m.text.body) || '');
   okQue('NO se manda un segundo «Precio por confirmar»', !alDueno.some((t) => /Precio por confirmar/.test(t)));
   const alCliente = mandados.slice(antes).filter((m) => mismo(m.to, C)).map((m) => (m.text && m.text.body) || '').join('\n');
-  okQue('  y al cliente no se le promete una cotización que ya tiene', !/en breve te paso tu cotizaci/i.test(alCliente));
+  okQue('  y al cliente no se le promete una cotización que ya tiene', !/en un momento te paso tu precio/i.test(alCliente));
   /* Se le contesta la espera neutra, que cierra ofreciendo apartar. La
      CLABE NO se manda sola: la regla del dueño es que se repite cuando la
      PIDE, y aquí no la pidió (escenario z, 9-sep-2026). */
@@ -1723,6 +1723,43 @@ titulo('R54 · los botones del dueño: «cuenta», «contrato» y «recibido» (
   await dice('cuenta', DUENO);
   okQue('«cuenta» suelto pregunta de quién', /¿A qui[eé]n se lo mando\?/.test(textos(DUENO).slice(antesDueno).join('\n')));
   delete process.env.CLABE; delete process.env.CUENTA;
+}
+
+titulo('R55 · si el cliente dice qué unidad quiere, el número de personas NO aplica');
+{
+  /* Dictado del dueño, palabra por palabra (10-sep-2026): «cuando el
+     cliente te dice que quiere directamente camión, ahí ofreces los
+     camiones que tienes e IGNORAS COMPLETAMENTE el número de personas. Lo
+     mismo con Sprinter. El factor de personas solo aplica cuando el
+     cliente NO dice que quiere camión o Sprinter». */
+  const bot = (await import(pathToFileURL(path.join(RAIZ, 'bot.js')).href)).default;
+  const viaje = { destino: 'Puerto Vallarta', salida: '2026-11-20', regreso: '2026-11-22' };
+
+  /* 1 · Dijo «camión» y no ha escogido cuál: la lista, sin preguntar cuántos. */
+  const conCamion = String(bot.loQueFalta(Object.assign({ unidad: 'autobus' }, viaje)) || '');
+  okQue('dijo camión: sale la lista de camiones', /Marcopolo Paradiso G8/.test(conCamion));
+  /* Ojo con lo que se mide: el texto que va al modelo TRAE la frase «NO
+     preguntes cuántos son», que es la instrucción, no la pregunta. Lo que
+     hay que vigilar es el mensaje que ve el CLIENTE. */
+  okQue('  y la instrucción le prohíbe preguntar cuántos', /NO preguntes cu[aá]ntos son/.test(conCamion));
+  okQue('  y el mensaje al cliente no le pregunta cuántos',
+    !/cu[aá]ntos (son|van)\?/i.test(bot.mensajeDeTodosLosAutobuses()));
+
+  /* 2 · Ya escogió cuál camión: tampoco. */
+  const conI6 = String(bot.loQueFalta(Object.assign({ unidad: 'autobus', unidadNombre: 'Irizar i6' }, viaje)) || '');
+  okQue('escogió el i6: tampoco se le pregunta cuántos', !/cu[aá]ntos/i.test(conI6));
+
+  /* 3 · Dijo «sprinter»: igual, la unidad ya está dicha. */
+  const conSprinter = String(bot.loQueFalta(Object.assign({ unidad: 'sprinter', unidadNombre: 'Sprinter' }, viaje)) || '');
+  okQue('dijo sprinter: tampoco se le pregunta cuántos', !/cu[aá]ntos/i.test(conSprinter));
+
+  /* 4 · Y una suburban dicha por su nombre, que es el tercer caso. */
+  const conSub = String(bot.loQueFalta(Object.assign({ unidad: 'suburban', unidadNombre: 'Suburban' }, viaje)) || '');
+  okQue('dijo suburban: tampoco', !/cu[aá]ntos/i.test(conSub));
+
+  /* 5 · NO dijo unidad: AHÍ SÍ se pregunta, porque la cuenta la decide. */
+  const sinUnidad = String(bot.loQueFalta(Object.assign({}, viaje)) || '');
+  okQue('sin decir unidad: ahí sí se pregunta cuántos', /cu[aá]ntos/i.test(sinUnidad));
 }
 
 console.log('\n' + buenas + ' buenas, ' + malas + ' malas');

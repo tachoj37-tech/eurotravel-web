@@ -199,7 +199,7 @@ titulo('la respuesta sale antes de la espera');
   await dice('sí, de guadalajara, solo nos llevan y traen. ¿traen aire?', C);
   const nuevos = textos(C).slice(antes);
   ok('primero la respuesta a su pregunta', nuevos[0], 'Sí, todas traen aire 🙌');
-  okQue('  y luego la espera del precio', /en breve te paso tu cotizaci/i.test(nuevos.slice(1).join('\n')));
+  okQue('  y luego la espera del precio', /en un momento te paso tu precio/i.test(nuevos.slice(1).join('\n')));
   okQue('  y el ticket al dueño', /^💰/.test(textos(DUENO).slice(-2).join('\n')) || /Precio por confirmar/.test(textos(DUENO).join('\n')));
 }
 

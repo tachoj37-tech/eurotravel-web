@@ -204,6 +204,43 @@ function encendido(nombre) {
 const TEXTO_ESPERA_PRECIO =
   'Va. En breve te paso tu cotización y la disponibilidad de tu viaje 🙌';
 const TEXTO_ESPERA_CON_CALENDARIO = TEXTO_ESPERA_PRECIO;
+
+/* ------------------------------------------------------------
+   EL RESUMEN QUE DEJA EL BOT ANTES DEL PRECIO
+   ------------------------------------------------------------
+   Dictado del dueño (10-sep-2026): «en lugar de pasarle al cliente la
+   cotización, dile que en un momento se la pasamos, pero recopila TODO en
+   ese mensaje para que el vendedor no tenga que regresarse a toda la
+   conversación ni ejecutar comandos. Y suelta una pregunta: si algo está
+   mal, que avise para corregirlo».
+
+   Es el mismo mensaje para los dos: el cliente ve que se le entendió
+   completo —que es lo que lo tranquiliza— y el vendedor lee ese único
+   mensaje y cotiza sin subir por el chat. Por eso va todo: de dónde, a
+   dónde, en qué unidad, cuántos, qué días, cuántos días y si se mueven.
+
+   Y cierra invitando a corregir. Un dato mal entendido que nadie corrige
+   se convierte en un precio mal dado, y ése ya cuesta dinero.
+   ------------------------------------------------------------ */
+function resumenAntesDelPrecio(res, nombreUnidad) {
+  if (!res || !res.destino || !res.salida) return null;
+  const dias = conversacion.diasEntre(res.salida, res.regreso || res.salida);
+  const lineas = ['Perfecto, ya tengo todo tu viaje 📋', ''];
+  lineas.push('📍 ' + (res.origen ? res.origen + ' → ' : '') + res.destino);
+  lineas.push('📅 ' + conversacion.fechaEnPalabras(res.salida) +
+    (res.regreso && res.regreso !== res.salida ? ' al ' + conversacion.fechaEnPalabras(res.regreso) : '') +
+    ' · ' + dias + (dias === 1 ? ' día' : ' días'));
+  if (nombreUnidad) lineas.push('🚌 ' + nombreUnidad + (res.gente ? ' · ' + res.gente + ' personas' : ''));
+  else if (res.gente) lineas.push('👥 ' + res.gente + ' personas');
+  lineas.push('🚐 ' + (res.recorridos
+    ? res.recorridos + (res.recorridos === 1 ? ' día' : ' días') + ' con movimientos allá'
+    : 'Sin movimientos: los llevamos y los traemos'));
+  lineas.push('');
+  lineas.push('En un momento te paso tu precio y la disponibilidad 🙌');
+  lineas.push('');
+  lineas.push('Si algo de arriba está mal, dímelo y lo corrijo antes de cotizarte.');
+  return lineas.join('\n');
+}
 /* «sprinter» → «Sprinter»; un nombre de camión («Neobus», «Irizar i6S») se
    queda como está; «autobus» a secas no se nombra (todavía no escogió). */
 /* La primera foto de la unidad que le tocaría, por su dirección pública.
@@ -407,10 +444,7 @@ async function precioDe(envio, opciones) {
        sabe en qué lo llevan» (dictado del dueño, 7-sep-2026). */
     const cerca = conversacion.hayQueRevisarDisponibilidad(res.salida, hoy);
     const nombreUnidad = nombreBonitoDeUnidad(res.unidadNombre || res.unidad || unidad);
-    const conUnidad = nombreUnidad
-      ? 'Va. Serían en ' + nombreUnidad + (res.gente ? ' para ' + res.gente : '') +
-        '. En breve te paso tu cotización y la disponibilidad de tu viaje 🙌'
-      : null;
+    const conUnidad = resumenAntesDelPrecio(res, nombreUnidad);
     const mios = [{
       numeroDeOrigen: envio.numeroDeOrigen,
       para: envio.para,

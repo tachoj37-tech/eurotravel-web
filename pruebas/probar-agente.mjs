@@ -142,9 +142,18 @@ titulo('la plática de un cliente real, ahora con el agente');
   await dice('solo nos llevan y traen', C);
   const alCliente = textos(C).slice(antesDelPrecio).join('\n');
   const alDueno = textos(DUENO).join('\n');
-  okQue('con todo junto, el motor cotiza: el cliente recibe la espera (compuerta)', /en breve te paso tu cotizaci/i.test(alCliente));
+  okQue('con todo junto, el motor cotiza: el cliente recibe la espera (compuerta)', /en un momento te paso tu precio/i.test(alCliente));
   /* «No me pidió unidad, el cliente no sabe en qué lo llevan» (7-sep-2026). */
-  okQue('  y la espera le dice en qué lo llevan (Sprinter para 12)', /Ser[ií]an en Sprinter para 12/.test(alCliente));
+  /* Cambió el 10-sep-2026: la espera pasó de una línea a un resumen del
+     viaje completo, para que el vendedor cotice leyendo solo ese mensaje.
+     La unidad sigue ahí —que es lo que esta línea vigila—, ahora en su
+     renglón: «🚌 Sprinter · 12 personas». */
+  okQue('  y la espera le dice en qué lo llevan (Sprinter para 12)',
+    /Sprinter · 12 personas/.test(alCliente));
+  okQue('  y trae el viaje completo, para no releer la conversación',
+    /Guadalajara → Puerto Vallarta/.test(alCliente) && /Sin movimientos/.test(alCliente));
+  okQue('  y le ofrece corregir si algo está mal',
+    /algo de arriba está mal/i.test(alCliente));
   /* Reparación Falla 6 (8-sep-2026): la foto va con el PRECIO, no con la
      espera (esa queda apagada por bandera FOTO_CON_LA_ESPERA). */
   const fotosAlCliente = mandados.filter((m) => mismo(m.to, C) && m.image && m.image.link);
@@ -183,7 +192,7 @@ titulo('autobús: por la compuerta del dueño, nunca a otro número (6-sep-2026)
   await dice('solo nos llevan y traen', C);
   const alCliente = textos(C).slice(antes).join('\n');
   const alDueno = textos(DUENO).join('\n');
-  okQue('el cliente recibe la espera: «en breve te paso tu cotización y la disponibilidad»', /en breve te paso tu cotizaci[oó]n y la disponibilidad/i.test(alCliente));
+  okQue('el cliente recibe la espera: «en breve te paso tu cotización y la disponibilidad»', /en un momento te paso tu precio y la disponibilidad/i.test(alCliente));
   okQue('  y NUNCA «mándale esto por WhatsApp al…»', !/M[aá]ndale esto|33 2400/.test(alCliente));
   /* El calendario se pregunta por CATEGORÍA (AUTOBUS), no por el nombre
      del camión: con «NEOBUS» EuroSystem contestaba 422 y el ticket iba sin
@@ -233,7 +242,7 @@ titulo('después de la espera no se vuelve a pedir el precio (7-sep-2026)');
   await dice('somos 12', C);
   await dice('sí', C);
   await dice('solo nos llevan y traen', C);
-  const esperas = () => textos(C).filter((t) => /en breve te paso tu cotizaci/i.test(t)).length;
+  const esperas = () => textos(C).filter((t) => /en un momento te paso tu precio/i.test(t)).length;
   ok('la espera salió una vez', esperas(), 1);
   const tickets = () => textos(DUENO).filter((t) => /Precio por confirmar/.test(t)).length;
   ok('  y un ticket al dueño', tickets(), 1);
@@ -241,10 +250,12 @@ titulo('después de la espera no se vuelve a pedir el precio (7-sep-2026)');
   await dice('ok', C);
   ok('«ok» después de la espera: NO se repite la espera', esperas(), 1);
   ok('  ni llega otro ticket', tickets(), 1);
-  /* Cambió el 8-sep-2026 (R14): la espera anterior ya abría con «Va,», y
-     dos «Va» seguidos suenan a máquina, así que la muletilla repetida se
-     recorta. El contenido es el de la IA. */
-  ok('  contesta la IA (sin repetir el «Va,» de la espera)', textos(C).slice(-1)[0], 'En cuanto lo tenga te aviso 🙌');
+  /* Cambió el 8-sep-2026 (R14): dos «Va» seguidos suenan a máquina, así que
+     la muletilla repetida se recorta. Y cambió otra vez el 10-sep-2026: la
+     espera ya no abre con «Va.» sino con «Perfecto, ya tengo todo tu
+     viaje», así que no hay muletilla que repetir y el «Va,» de la IA se
+     queda. El candado sigue vivo; lo que cambió es que ya no aplica aquí. */
+  ok('  contesta la IA, y ya no hay «Va» repetido que recortar', textos(C).slice(-1)[0], 'Va, en cuanto lo tenga te aviso 🙌');
   const s1 = JSON.stringify(sistemasVistos[sistemasVistos.length - 1] || []);
   okQue('  y la IA supo que el precio ya estaba pedido', s1.includes('PRECIO YA PEDIDO'));
 
@@ -569,7 +580,7 @@ titulo('si ya pidió fotos de la unidad, con el precio no se le repite la foto (
   const antesDelPrecio = mandados.length;
   await dice('sí', C);
   const alCliente = textos(C).slice(-2).join('\n');
-  okQue('con todo, llega la espera del precio', /en breve te paso tu cotizaci/i.test(alCliente));
+  okQue('con todo, llega la espera del precio', /en un momento te paso tu precio/i.test(alCliente));
   const fotosConElPrecio = mandados.slice(antesDelPrecio).filter((m) => mismo(m.to, C) && m.image && m.image.link).length;
   ok('  y con el precio NO va otra vez la foto', fotosConElPrecio, 0);
   okQue('  y ningún mensaje dice «ésta es la que les tocaría»', !/les tocar[ií]a/.test(textos(C).join('\n')));
