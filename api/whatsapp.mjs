@@ -267,7 +267,26 @@ function conTotalFijado(precio, total, resumen) {
   });
 }
 
-function ticketDePrecio(res, precio, cal, cliente, unidad, historial) {
+/* ------------------------------------------------------------
+   ESTE VIAJE YA SE LO COTIZASTE HACE RATO
+   ------------------------------------------------------------
+   Corrida real del 10-sep-2026: con dos viajes en la misma plática, el
+   cliente se regresó al primero («mejor déjame el de tapalpa») y al dueño
+   le llegó un ticket idéntico al que ya había contestado minutos antes.
+   La ficha guarda un solo viaje, así que el anterior se veía nuevo. El
+   archivo de viajes sí lo recuerda: se le dice en el ticket, con lo que
+   él mismo puso, para que no vuelva a sacar la cuenta.
+   ------------------------------------------------------------ */
+function yaLoCotizaste(ficha, res) {
+  if (!ficha || !Array.isArray(ficha.viajes) || !res || !res.destino) return null;
+  const n = function (x) { return conversacion.normaliza(String(x || '')); };
+  return ficha.viajes.filter(function (v) {
+    return n(v.destino) === n(res.destino) && String(v.salida || '') === String(res.salida || '') &&
+      typeof v.total === 'number' && v.total > 0;
+  })[0] || null;
+}
+
+function ticketDePrecio(res, precio, cal, cliente, unidad, historial, yaDado) {
   const lineas = ['💰 *Precio por confirmar*', ''];
   const pax = res.gente || res.pasajeros;
   if (res.destino) lineas.push('📍 ' + (res.origen ? res.origen + ' → ' : '') + res.destino);
@@ -288,6 +307,11 @@ function ticketDePrecio(res, precio, cal, cliente, unidad, historial) {
       (typeof precio.anticipo === 'number' ? ' (anticipo $' + precio.anticipo.toLocaleString('es-MX') + ')' : ''));
   } else {
     lineas.push('No pude calcularlo: escríbeme el precio.');
+  }
+  /* Este mismo viaje ya pasó por su mano en esta plática. */
+  if (yaDado && typeof yaDado.total === 'number') {
+    lineas.push('↩️ *Ya se lo cotizaste*: $' + yaDado.total.toLocaleString('es-MX') +
+      '. Es el mismo viaje, se regresó a él.');
   }
   /* Lo que él mismo dio antes para este viaje, y lo que se le sugiere. */
   aprendidos.lineasDeHistorial(historial).forEach(function (l) { lineas.push(l); });
@@ -417,7 +441,8 @@ async function precioDe(envio, opciones) {
           calendario: cal === undefined ? null : cal,
           desde: Date.now()
         },
-        texto: ticketDePrecio(res, precio, cal, envio.para, unidad, historial),
+        texto: ticketDePrecio(res, precio, cal, envio.para, unidad, historial,
+          yaLoCotizaste(tickets.fichaDe(envio.para), res)),
         pasaAPersona: false,
         escribio: '[ticket precio]'
       });
@@ -2148,8 +2173,34 @@ async function loQueDiceElAgente(envio) {
 
   /* ¿Lo dijo como OTRO viaje? Se decide antes de todo lo demás: de ahí
      depende que un segundo viaje no se lea como un cambio del primero. */
-  const esOtroViaje = /\botro viaje\b|\botra cotizaci|\bun viaje m[aá]s\b|\baparte\b|\btambi[eé]n quiero\b|\badem[aá]s\b/i.test(String(texto || '')) ||
-    OTRA_FECHA_DISPONIBLE.test(conversacion.normaliza(texto));
+  /* ------------------------------------------------------------
+     UNA SEGUNDA COTIZACIÓN NO HEREDA LA PRIMERA
+     ------------------------------------------------------------
+     Corrida real del 10-sep-2026 (dictado del dueño: «le cuesta mucho las
+     dobles cotizaciones; cotizó ya un viaje y luego le quieren sacar una
+     nueva y se vuelve muy loco»).
+
+     Con el viaje a Sayulita ya cotizado —Irizar i6, 40 personas— el
+     cliente escribió «quiero hacer una cotización a Vallarta del 15 de
+     septiembre al 20». Esa frase no trae «otra cotización» ni «aparte»,
+     así que se leyó como un CAMBIO: el viaje nuevo heredó las 40 personas
+     y el i6, y al dueño le llegó un ticket que decía «Irizar i6 · 40 pax»
+     para un viaje donde el cliente no había dicho ni cuántos ni cuál.
+
+     Las palabras no alcanzan, así que también se mira la forma: si trae un
+     destino DISTINTO del que ya tiene precio y además una fecha, es otro
+     viaje. Salvo que lo diga como corrección —«mejor», «en vez de»,
+     «perdón»—, que ahí sí está cambiando el mismo.
+     ------------------------------------------------------------ */
+  const CORRIGE_EL_MISMO = /\b(mejor|en vez de|en lugar de|cambia|cambiar|cambiamos|perd[oó]n|me equivoqu|no es|era)\b/i;
+  const baseConPrecio = viajeBaseDeLaFicha(tickets.fichaDe(cliente));
+  const otroDestino = !!(dicho.datos && dicho.datos.destino && viajeDeLaFicha && viajeDeLaFicha.estado &&
+    baseConPrecio && baseConPrecio.destino &&
+    conversacion.normaliza(dicho.datos.destino) !== conversacion.normaliza(baseConPrecio.destino));
+  const conFecha = !!(dicho.datos && (dicho.datos.salida || dicho.datos.regreso));
+  const esOtroViaje = /\botro viaje\b|\botra cotizaci|\bun viaje m[aá]s\b|\baparte\b|\btambi[eé]n quiero\b|\badem[aá]s\b|\b(hacer|sacar|pedir) una cotizaci/i.test(String(texto || '')) ||
+    OTRA_FECHA_DISPONIBLE.test(conversacion.normaliza(texto)) ||
+    (otroDestino && conFecha && !CORRIGE_EL_MISMO.test(String(texto || '')));
 
   /* Lo que la IA leyó se pega al estado de ANTES; lo que el guion había
      decidido de este mensaje se descarta. */

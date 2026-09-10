@@ -1479,5 +1479,58 @@ titulo('R49 · sin DUENO_WHATSAPP nadie recibe los tickets, y eso se grita en el
   okQue('  diciendo qué se pierde', gritos.some((g) => /precio por confirmar/i.test(g) && /Vercel/i.test(g)));
 }
 
+titulo('R50 · una segunda cotización no hereda los datos de la primera (10-sep-2026)');
+{
+  limpia();
+  const C = '5213366670467';
+  /* Sayulita ya cotizado: Irizar i6 para 40. */
+  tk.anotaEtapa(C, 'con_precio', { total: 25000, anticipo: 5000, cuentaMandadaEn: Date.now(),
+    viajeDatos: { origen: 'Guadalajara', destino: 'Sayulita', salida: '2026-09-11', regreso: '2026-09-11',
+      gente: 40, unidad: 'Irizar i6', recorridos: 0 } }, Date.now());
+  /* El cliente pide otra, con destino y fechas nuevos, sin decir cuántos
+     ni cuál unidad. La frase no trae «otra cotización». */
+  laIA = () => ({ respuesta: 'Vallarta del 15 al 20, perfecto. ¿Cuántos van?',
+    datos: { destino: 'Puerto Vallarta', salida: '2026-09-15', regreso: '2026-09-20' }, accion: 'seguir' });
+  const antes = mandados.length;
+  await dice('Buenas noches, quiero hacer una cotización a Vallarta del 15 de septiembre al 20', C);
+  const alDueno = mandados.slice(antes).filter((m) => mismo(m.to, DUENO)).map((m) => (m.text && m.text.body) || '').join('\n');
+  okQue('NO se manda un ticket con los 40 y el i6 heredados',
+    !/Irizar i6 · 40 pax/.test(alDueno));
+  const ch = webhook.charlaDe(C) || {};
+  okQue('  la plática nueva no hereda la gente', !ch.gente || ch.gente !== 40);
+  okQue('  ni la unidad', !ch.unidadNombre || !/i6/i.test(ch.unidadNombre));
+  okQue('  y sí trae el destino nuevo', /vallarta/i.test(ch.destino || ''));
+  /* Y una corrección del MISMO viaje sigue siendo un cambio, no otro viaje. */
+  limpia();
+  const D = '5213366670468';
+  tk.anotaEtapa(D, 'con_precio', { total: 25000, anticipo: 5000,
+    viajeDatos: { origen: 'Guadalajara', destino: 'Sayulita', salida: '2026-09-11', regreso: '2026-09-11',
+      gente: 40, unidad: 'Irizar i6', recorridos: 0 } }, Date.now());
+  laIA = () => ({ respuesta: 'Va, Mazatlán entonces.', datos: { destino: 'Mazatlán', salida: '2026-09-12' }, accion: 'seguir' });
+  await dice('no, mejor a mazatlán el 12', D);
+  okQue('«mejor a mazatlán» sigue siendo el mismo viaje corregido',
+    (webhook.charlaDe(D) || {}).gente === 40);
+}
+
+titulo('R51 · si el cliente se regresa a un viaje ya cotizado, el ticket se lo dice al dueño');
+{
+  limpia();
+  const C = '5213366670469';
+  tk.anotaEtapa(C, 'con_precio', { total: 14500, anticipo: 3000,
+    viajeDatos: { origen: 'Guadalajara', destino: 'Mazamitla', salida: '2026-11-15', regreso: '2026-11-15',
+      gente: 16, unidad: 'Sprinter', recorridos: 0 } }, Date.now());
+  /* Y en el archivo, el de Tapalpa que ya se cotizó en $12,000. */
+  const f = tk.fichaDe(C);
+  f.viajes = [{ destino: 'Tapalpa', origen: 'Guadalajara', salida: '2026-11-08', regreso: '2026-11-08',
+    gente: 16, unidad: 'Sprinter', total: 12000, estado: 'precio dado' }];
+  laIA = () => ({ respuesta: null, datos: { destino: 'Tapalpa', salida: '2026-11-08', regreso: '2026-11-08' }, accion: 'cotizar' });
+  const antes = mandados.length;
+  await dice('mejor déjame el de tapalpa', C);
+  const ticket = mandados.slice(antes).filter((m) => mismo(m.to, DUENO))
+    .map((m) => (m.text && m.text.body) || '').filter((t) => /Precio por confirmar/.test(t))[0] || '';
+  okQue('el ticket avisa que ese viaje ya se lo cotizó', /Ya se lo cotizaste/.test(ticket));
+  okQue('  con el monto que él mismo puso', /12,000/.test(ticket));
+}
+
 console.log('\n' + buenas + ' buenas, ' + malas + ' malas');
 process.exit(malas ? 1 : 0);

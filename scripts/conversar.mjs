@@ -377,12 +377,50 @@ const escenarios = {
   /* ae · el de pocas palabras: contesta con monosílabos todo el camino. */
   ae: ['hola', 'viaje', 'vallarta', 'nov 20', 'nov 22', '16', 'gdl', 'no',
     va('5213366679031'),
-    'ok', 'sí', 'apartar', 'ya']
+    'ok', 'sí', 'apartar', 'ya'],
+
+  /* ============================================================
+     LA SEGUNDA COTIZACIÓN (af–ai)
+     ============================================================
+     Dictado del dueño (10-sep-2026): «le cuesta mucho las dobles
+     cotizaciones; cotizó ya un viaje y luego le quieren sacar una nueva
+     cotización y se vuelve muy loco».
+     ============================================================ */
+
+  /* af · el caso de su corrida: viaje 1 con precio YA dado y la cuenta
+     mandada; pide otro y lo anuncia sin dar datos nuevos. */
+  af: ['quiero cotizar a sayulita el 11 de septiembre, ida y vuelta el mismo día, somos 40, de guadalajara, solo nos llevan y traen',
+    'el i6',
+    precio(25000),
+    'Buenas noches, quiero hacer una cotización a Vallarta del 15 de septiembre al 20',
+    'es una nueva cotización', 'porfavor', 'si'],
+
+  /* ag · el segundo viaje dicho completo de un jalón, sin avisar. */
+  ag: ['a chapala el 20 de octubre, ida y vuelta el mismo día, somos 14, de guadalajara, solo nos llevan y traen',
+    va('5213366679033'),
+    'oye ahora quiero otra cotización: a mazatlán del 5 al 7 de diciembre, somos 45, de guadalajara, solo nos llevan y traen',
+    'el paradiso'],
+
+  /* ah · dos precios pendientes a la vez: el dueño contesta los dos y
+     cada uno tiene que llegarle al cliente con SU viaje. */
+  ah: ['cotización 1: a tequila el 17 de octubre, ida y vuelta el mismo día, somos 18, de guadalajara, solo nos llevan y traen',
+    'y otra aparte: a san juan de los lagos el 24 de octubre, ida y vuelta, somos 45, de guadalajara, solo nos llevan y traen',
+    'el i6s',
+    precio(9500), precio(31000),
+    '¿cuál precio es de cuál viaje?'],
+
+  /* ai · cambia de opinión: pide el segundo y luego se regresa al
+     primero, que ya tenía precio. */
+  ai: ['a tapalpa el 8 de noviembre, ida y vuelta el mismo día, somos 16, de guadalajara, solo nos llevan y traen',
+    va('5213366679035'),
+    'oye y cuánto sale a mazamitla el 15 de noviembre igual de ida y vuelta con los mismos 16?',
+    'mejor déjame el de tapalpa', 'apártamelo']
 };
 const pedidos = process.argv.slice(2).filter((x) => escenarios[x]);
 for (const k of (pedidos.length ? pedidos : Object.keys(escenarios))) {
   const C = '52133666790' + { a: '01', b: '02', c: '03', d: '04', e: '05', f: '06', g: '07', h: '08', i: '09', j: '10', k: '11', l: '12', m: '13', n: '14', o: '15', p: '16', q: '17', r: '18', s: '19', t: '20', u: '21', v: '26', w: '22', x: '23', y: '24', z: '25',
-    aa: '27', ab: '28', ac: '29', ad: '30', ae: '31' }[k];
+    aa: '27', ab: '28', ac: '29', ad: '30', ae: '31',
+    af: '32', ag: '33', ah: '34', ai: '35' }[k];
   const guion = escenarios[k].map((p) => (typeof p === 'function' && p.length === 0 && k === 'e') ? p : p);
   await corre('Escenario ' + k, C, guion);
   console.log('\n(gastado hasta aquí: $' + gastado.toFixed(3) + ' USD)');
