@@ -162,7 +162,10 @@ function armaTicket(datos) {
   lineas.push('📍 ' + (d.origen || '?') + ' → ' + (d.destino || '?'));
   lineas.push('📅 ' + comoSeDice(d.salida) + (d.regreso ? ' al ' + comoSeDice(d.regreso) : ''));
   lineas.push('🗓️ ' + dias + (dias === 1 ? ' día' : ' días'));
-  lineas.push('🚐 ' + (NOMBRE_UNIDAD[d.unidad] || d.unidad || '?') +
+  /* El nombre del camión que escogió, no la categoría: decía «Autobús» a
+     secas y con eso el dueño no sabía si armar el i6S de 51 o el Century
+     de 47 (10-sep-2026). Si no escogió ninguno, la categoría de siempre. */
+  lineas.push('🚐 ' + (d.unidadNombre || NOMBRE_UNIDAD[d.unidad] || d.unidad || '?') +
     (d.gente ? ' · ' + d.gente + ' pasajeros' : ''));
   lineas.push('🔁 ' + (d.movimientos
     ? d.movimientos + (d.movimientos === 1 ? ' día con movimiento' : ' días con movimiento')
@@ -170,6 +173,36 @@ function armaTicket(datos) {
 
   if (d.paseo) lineas.push('⭐ ' + d.paseo);
   if (d.agencia) lineas.push('🏢 *Es agencia*');
+
+  /* ------------------------------------------------------------
+     EL RENGLÓN DEL EXCEL PARA ESE CAMIÓN — 10-sep-2026
+     ------------------------------------------------------------
+     Este ticket es el que el dueño ve cuando alguien pide un camión, y
+     hasta hoy llegaba pelón: «contéstame con el precio», sin un número.
+     Pero el número estaba escrito en `api/_destinos.js` desde siempre —
+     las siete columnas del Excel por destino— y nadie lo leía, porque
+     el motor de tarifas solo sabe de Sprinter.
+
+     Aquí se le enseña. Se dice «Del Excel» y NO «calculado», y se
+     nombra la columna: si la correspondencia entre una columna y un
+     camión estuviera mal, se ve al primer viaje en vez de cobrarse
+     callado. El Century enseña sus dos columnas (47 y 49) porque el
+     catálogo tiene una unidad para las dos del Excel.
+
+     Las líneas se calculan afuera y llegan hechas: este archivo decide
+     cómo se ve un ticket, no cuánto cuesta un viaje.
+     ------------------------------------------------------------ */
+  if (Array.isArray(d.delExcel) && d.delExcel.length) {
+    lineas.push('');
+    d.delExcel.forEach(function (p) {
+      lineas.push('💵 Del Excel: *$' + Number(p.total).toLocaleString('es-MX') + '*  (columna «' +
+        p.comoSeLlama + '»' + (p.diasIncluidos ? ', cubre ' + p.diasIncluidos + ' días' : '') + ')');
+    });
+    const cubre = d.delExcel[0].diasIncluidos;
+    if (dias && cubre && dias !== cubre) {
+      lineas.push('⚠️ Este viaje es de *' + dias + ' días* y ese precio cubre *' + cubre + '*.');
+    }
+  }
 
   lineas.push('');
   lineas.push('Contéstame *este mensaje* con el precio y yo se lo paso.');

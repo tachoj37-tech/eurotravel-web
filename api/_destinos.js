@@ -617,4 +617,94 @@ function precioDominical(destino, desdeOcotlan) {
   return desdeOcotlan ? p.ocotlan : p.gdl;
 }
 
-module.exports = { DESTINOS, buscaDestino, precioDeLista, DOMINICAL, precioDominical };
+/* ============================================================
+   LAS COLUMNAS DE CAMIÓN DEL EXCEL, QUE NADIE LEÍA (10-sep-2026)
+   ============================================================
+   Cada renglón de arriba trae SIETE precios —uno por columna del Excel—
+   pero hasta hoy solo se pedía `sprinter`: `claveDeUnidad` en
+   `api/_tarifa.js` conoce una sola unidad, y las dos llamadas a
+   `precioDeLista` acaban en `|| 'sprinter'`. O sea que Chapala en
+   Century de 47 ($10,500) y Vallarta en Marcopolo ($38,000) estaban
+   escritos, guardados y muertos: cuando un cliente pedía camión por
+   WhatsApp, el ticket del dueño decía «No pude calcularlo».
+
+   Esta tabla los despierta, y SOLO para el ticket del dueño. El
+   cotizador de la página no se toca: `UNIDADES_QUE_COTIZAN` sigue con
+   la Sprinter sola, porque la fórmula de respaldo —la de los destinos
+   que no están en la lista— da el mismo número para una van que para
+   un autobús de 51, y abrir la página con eso sería cobrar mal de
+   verdad. Dictado del dueño ese día: «solo en tu ticket, por ahora».
+
+   LA CORRESPONDENCIA, y de dónde sale cada renglón:
+
+     busNC47   → Irizar Century de 47   ← dictado del dueño, 10-sep-2026
+     bus4849   → Irizar Century de 49   ← dictado del dueño, 10-sep-2026
+     neobusI6  → Neobus                 ← por nombre
+     pbI6      → Irizar PB              ← por nombre
+     marcopolo → Marcopolo Paradiso G8  ← por nombre
+     irizar    → Irizar i6 e i6S        ← POR ELIMINACIÓN, sin confirmar
+     sprinter  → Sprinter               ← ya vivía
+
+   La Suburban NO tiene columna en el Excel: se queda pidiendo precio.
+
+   El renglón `irizar` es el único que nadie confirmó — se dedujo porque
+   las otras seis ya tienen dueño. Por eso el ticket SIEMPRE nombra la
+   columna que usó: si estuviera mal, se ve al primer viaje en vez de
+   cobrarse en silencio durante meses.
+
+   El Century es el caso raro: el catálogo tiene UNA unidad («47 a 49
+   pasajeros») y el Excel tiene DOS columnas. No se escoge por él; se le
+   enseñan las dos al dueño y él decide, que es justo lo que pidió.
+   ============================================================ */
+const COLUMNA_DE_UNIDAD = {
+  'sprinter': ['sprinter'],
+  'g8': ['marcopolo'],
+  'neobus': ['neobusI6'],
+  'irizar-pb': ['pbI6'],
+  'irizar-i6': ['irizar'],
+  'irizar-i6s': ['irizar'],
+  'irizar': ['busNC47', 'bus4849'],
+  'suburban': []
+};
+
+/* Cómo se llama cada columna cuando se le enseña al dueño. */
+const NOMBRE_DE_COLUMNA = {
+  sprinter: 'Sprinter', marcopolo: 'Marcopolo', neobusI6: 'Neobus i6',
+  pbI6: 'PB i6', irizar: 'Irizar', busNC47: 'NC47', bus4849: '48/49'
+};
+
+/* Lo que el Excel dice de este destino para esta unidad. Devuelve un
+   arreglo —el Century trae dos— o vacío si no hay columna.
+
+   Se apoya en `buscaDestino`, la misma búsqueda que usa todo lo demás,
+   para que un destino se reconozca igual aquí que al cobrar. */
+function preciosDeListaDeUnidad(destino, idDeUnidad) {
+  const columnas = COLUMNA_DE_UNIDAD[String(idDeUnidad || '').toLowerCase()];
+  if (!columnas || !columnas.length) return [];
+  /* `buscaDestino` pide un objeto —así lo llama el cotizador, que trae la
+     dirección de Google—. Por WhatsApp el destino es una cadena pelona, y
+     pasársela devolvía null en silencio: todo salía «sin columna». Se
+     acepta de las dos formas. */
+  const d = buscaDestino(typeof destino === 'string' ? { direccion: destino } : destino);
+  if (!d || !d.precio) return [];
+  const salida = [];
+  for (const c of columnas) {
+    const p = d.precio[c];
+    if (typeof p !== 'number' || !(p > 0)) continue;
+    salida.push({
+      total: p,
+      columna: c,
+      comoSeLlama: NOMBRE_DE_COLUMNA[c] || c,
+      destino: d.nombre,
+      /* Los días que ese paquete ya trae. `porDias` NO se usa aquí: es
+         solo de Sprinter, así que para camión el número es el paquete
+         del destino y no se ajusta por duración. Quien lo enseñe tiene
+         que decirlo. */
+      diasIncluidos: typeof d.diasIncluidos === 'number' ? d.diasIncluidos : null
+    });
+  }
+  return salida;
+}
+
+module.exports = { DESTINOS, buscaDestino, precioDeLista, DOMINICAL, precioDominical,
+  COLUMNA_DE_UNIDAD, NOMBRE_DE_COLUMNA, preciosDeListaDeUnidad };

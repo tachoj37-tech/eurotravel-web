@@ -33,6 +33,18 @@ const etapas = require('./_etapas.js');
 const contrato = require('./_datos-contrato.js');
 const confirmacion = require('./_confirmacion.js');
 const tarifa = require('./_tarifa.js');
+const destinos = require('./_destinos.js');
+
+/* Del nombre que ve el cliente («Marcopolo Paradiso G8») al `id` del
+   catálogo («g8»), que es con lo que se busca su columna del Excel. */
+function idDeUnidad(nombre) {
+  const n = String(nombre || '').trim().toLowerCase();
+  if (!n) return null;
+  const u = (conversacion.UNIDADES || []).find(function (x) {
+    return String(x.name || '').toLowerCase() === n || String(x.id).toLowerCase() === n;
+  });
+  return u ? u.id : null;
+}
 
 /* ------------------------------------------------------------
    POR WHATSAPP NADIE SE MANDA A OTRO NÚMERO
@@ -2290,9 +2302,14 @@ function procesa(crudo, firma, entorno) {
               cliente: m.from,
               origen: s.origen, destino: s.destino,
               salida: s.salida, regreso: s.regreso,
-              dias: s.dias, unidad: s.unidad, gente: s.gente,
+              dias: s.dias, unidad: s.unidad, unidadNombre: s.unidadNombre, gente: s.gente,
               movimientos: s.recorridos, paseo: s.paseo,
-              agencia: s.agencia
+              agencia: s.agencia,
+              /* Lo que dice su Excel para ESE camión en ESE destino. Se
+                 busca aquí y no dentro del ticket para que `_tickets.js`
+                 siga decidiendo cómo se ve un ticket y no cuánto cuesta
+                 un viaje (10-sep-2026). */
+              delExcel: destinos.preciosDeListaDeUnidad(s.destino, idDeUnidad(s.unidadNombre))
             }),
             /* Este ticket también pasa por la compuerta (C6): con su
                viaje a cuestas, el número que conteste el dueño le llega

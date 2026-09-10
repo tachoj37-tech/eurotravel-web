@@ -961,6 +961,55 @@ function esAliasDeDestino(texto) {
    Anclado: «Sí, de Guadalajara» sí trae ciudad y tiene que pasar. */
 const NO_ES_CIUDAD = /^(?:si|s[ií]|sip|sale|va|vale|ok|okey|oki|dale|claro|correcto|exacto|asi es|as[ií] es|perfecto|aja|ajá|bien|esta bien|est[aá] bien|si esta bien|s[ií] est[aá] bien|no|nop|gracias|listo|de acuerdo)$/;
 
+/* ------------------------------------------------------------
+   CÓMO NOMBRA LA GENTE UN CAMIÓN — 10-sep-2026
+   ------------------------------------------------------------
+   El bot enseña la lista y pregunta «¿en cuál los acomodo?». Antes,
+   para dar por elegido un camión hacía falta su nombre COMPLETO o el
+   nombre sin el «Irizar» de adelante. Con eso:
+
+     «el neobus»   ✓     «el century» ✓     «el i6s» ✓
+     «marcopolo»   ✗     «el g8»      ✗
+
+   O sea que el Marcopolo Paradiso G8 —el más nuevo y el más caro— solo
+   se podía escoger escribiendo sus tres palabras exactas. Quien decía
+   «el marcopolo» se quedaba en un bucle: «¿Cuál de esos te late? 🚌»,
+   una y otra vez. Cazado en seco el 10-sep-2026.
+
+   Ahora vale cualquier palabra que sea SUYA Y DE NADIE MÁS. La lista de
+   palabras ambiguas no se escribe a mano: se cuenta cuántos camiones
+   usan cada palabra y se descartan las repetidas. Así «irizar» —que
+   tienen cuatro— nunca escoge, y el día que entre otro Marcopolo la
+   palabra «marcopolo» se descarta sola sin que nadie se acuerde.
+   ------------------------------------------------------------ */
+function nombraEsteBus(texto, bus, todos) {
+  const t = normaliza(texto);
+  const suyo = normaliza(bus.name);
+  /* El nombre entero, tal cual. Es lo que manda el botón del propio bot. */
+  if (t.indexOf(suyo) !== -1) return true;
+
+  /* Cuántos camiones usan cada palabra. La que usa más de uno no escoge. */
+  const cuantos = {};
+  (todos || []).forEach(function (u) {
+    const vistas = {};
+    normaliza(u.name).split(/\s+/).forEach(function (p) {
+      if (!p || vistas[p]) return;
+      vistas[p] = true;
+      cuantos[p] = (cuantos[p] || 0) + 1;
+    });
+  });
+
+  const suyas = suyo.split(/\s+/).filter(function (p) { return p && cuantos[p] === 1; });
+  /* Y el nombre sin el «Irizar» de adelante, que es como se pide de
+     viva voz: «el i6S», «el PB». Se conserva porque son dos palabras. */
+  const sinMarca = suyo.replace(/^irizar\s*/, '');
+  if (sinMarca && sinMarca !== suyo) suyas.push(sinMarca);
+
+  return suyas.some(function (p) {
+    return new RegExp('\\b' + p.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b').test(t);
+  });
+}
+
 function destinoFlojo(d) {
   const n = normaliza(d || '');
   if (!n) return true;
@@ -2191,13 +2240,7 @@ function pasoDeCotizacion(t, crudo, estado, hoy) {
 
     let elegido = null;
     for (let i = 0; i < porNombre.length && !elegido; i++) {
-      const suyo = normaliza(porNombre[i].name);
-      /* Sin la palabra «irizar», que la tienen tres y no distingue. */
-      const clave = suyo.replace(/^irizar\s*/, '');
-      if (t.indexOf(suyo) !== -1) elegido = porNombre[i];
-      else if (new RegExp('\\b' + clave.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b').test(t)) {
-        elegido = porNombre[i];
-      }
+      if (nombraEsteBus(t, porNombre[i], buses)) elegido = porNombre[i];
     }
 
     if (!elegido) {
@@ -2742,6 +2785,13 @@ function pasoDeCotizacion(t, crudo, estado, hoy) {
         opciones: ['Enviar por WhatsApp', 'Cotizar otro'],
         solicitud: {
           unidad: e.unidad, gente: e.gente || null,
+          /* CUÁL camión escogió, no solo que es un camión. El ticket del
+             dueño decía «🚐 Autobús · 45 pasajeros» y con eso él no sabía
+             si armar el i6S de 51 o el Century de 47 — y sin saber la
+             unidad tampoco hay renglón del Excel que enseñarle
+             (10-sep-2026). `textoDeSolicitud` ya lo usaba desde arriba;
+             al ticket nunca llegó. */
+          unidadNombre: e.unidadNombre || null,
           origen: e.origen, destino: e.destino,
           salida: e.salida, regreso: e.regreso,
           soloIda: !!e.soloIda,

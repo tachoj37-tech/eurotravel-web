@@ -37,6 +37,7 @@ import logica from './_webhook-logica.js';
 import aprendidos from './_precios-aprendidos.js';
 import agente from './_agente.js';
 import origenes from './_origenes.js';
+import destinos from './_destinos.js';
 import seguimiento from './_seguimiento.js';
 import recordatorios from './_recordatorios.js';
 import crypto from 'crypto';
@@ -407,7 +408,48 @@ function ticketDePrecio(res, precio, cal, cliente, unidad, historial, yaDado) {
       lineas.push('⚠️ *Ese calculado NO trae el recargo de ' + zonaDe.nombre + '*: súmaselo tú.');
     }
   } else {
-    lineas.push('No pude calcularlo: escríbeme el precio.');
+    /* ------------------------------------------------------------
+       EL RENGLÓN DEL EXCEL PARA ESE CAMIÓN — 10-sep-2026
+       ------------------------------------------------------------
+       El motor solo cotiza Sprinter, así que para un camión esto decía
+       «No pude calcularlo» — aunque el número estuviera escrito en el
+       catálogo desde siempre. `api/_destinos.js` guarda las siete
+       columnas del Excel por destino y hasta hoy solo se leía la de la
+       van; las otras seis eran datos muertos.
+
+       Se enseña el renglón, NO se cotiza. Tres reglas, y las tres son
+       para que el dueño no se confíe de un número que no pasó por el
+       motor de tarifas:
+
+         · dice «Del Excel», no «Calculado»;
+         · nombra la columna, para que un mapeo equivocado se vea al
+           primer viaje en vez de cobrarse callado durante meses;
+         · avisa si los días del viaje no son los del paquete, porque
+           `porDias` es solo de Sprinter y para camión no hay ajuste
+           por duración que valga.
+
+       El Century enseña sus DOS columnas (47 y 49): el catálogo tiene
+       una sola unidad para las dos del Excel, y escoger por él sería
+       inventar. Dictado del dueño ese día: «solo en tu ticket, por
+       ahora» — la página pública no se tocó.
+       ------------------------------------------------------------ */
+    const delExcel = (delCatalogo && res.destino)
+      ? destinos.preciosDeListaDeUnidad(res.destino, delCatalogo.id)
+      : [];
+    if (delExcel.length) {
+      const dias = (res.salida && res.regreso) ? conversacion.diasEntre(res.salida, res.regreso) : null;
+      delExcel.forEach(function (p) {
+        lineas.push('Del Excel: *$' + p.total.toLocaleString('es-MX') + '*  (columna «' + p.comoSeLlama + '»' +
+          (p.diasIncluidos ? ', cubre ' + p.diasIncluidos + ' días' : '') + ')');
+      });
+      const cubre = delExcel[0].diasIncluidos;
+      if (dias && cubre && dias !== cubre) {
+        lineas.push('⚠️ Tu viaje es de *' + dias + ' días* y ese precio cubre *' + cubre + '*: ajústalo tú.');
+      }
+      lineas.push('_Ese número sale de tu lista, no del cotizador. Contéstame con el bueno._');
+    } else {
+      lineas.push('No pude calcularlo: escríbeme el precio.');
+    }
   }
   /* Este mismo viaje ya pasó por su mano en esta plática. */
   if (yaDado && typeof yaDado.total === 'number') {

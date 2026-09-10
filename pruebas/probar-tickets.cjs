@@ -285,7 +285,20 @@ hook.olvidaTodo(); tk.olvidaTodo();
   okQue('  con el destino', /Puerto Vallarta/.test(t.texto));
   okQue('  con los 45', /45 pasajeros/.test(t.texto));
   okQue('  con los movimientos', /2 días con movimiento/.test(t.texto));
-  okQue('  y SIN precio', !/\$/.test(t.texto));
+  /* CAMBIÓ DE LADO EL 10-sep-2026. Decía «y SIN precio» —`!/\$/`— y con eso
+     daba por bueno que el ticket de un camión llegara pelón. Lo que esa
+     aserción cuidaba de verdad era que el bot NO se inventara un número, y
+     eso sigue igual de cuidado: lo que ahora aparece sale de la lista del
+     dueño (`api/_destinos.js`, las siete columnas de su Excel), se anuncia
+     como «Del Excel» y nombra la columna. Un precio calculado por el motor
+     ahí seguiría estando mal, y por eso se comprueba que no lo haya.
+
+     Dictado del dueño ese día: «que reconozca... para que el usuario pueda
+     determinar el precio él». El número es una referencia suya, no una
+     cotización del bot. */
+  okQue('  sin precio calculado por el motor', !/Calculado:/.test(t.texto));
+  okQue('  y si trae un número, es del Excel y con su columna',
+    !/\$/.test(t.texto) || (/Del Excel/.test(t.texto) && /columna «/.test(t.texto)));
 
   /* Y al cliente NO se le dice que se mandó ningún ticket: por dentro
      se avisa al equipo, por fuera se lee como si el mismo vendedor
