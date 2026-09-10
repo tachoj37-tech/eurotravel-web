@@ -3882,7 +3882,36 @@ function aplicaEntendido(datos, hoy) {
   /* Qué unidad. Si dijo cuántos son, manda el número —es más confiable
      que el nombre que haya alcanzado a escribir—. */
   let unidad = datos.unidad;
-  if (datos.gente) {
+  /* ------------------------------------------------------------
+     SI EL CLIENTE DIJO QUÉ UNIDAD QUIERE, ÉSA ES — 10-sep-2026
+     ------------------------------------------------------------
+     Dictado del dueño, palabra por palabra: «cuando el cliente te dice
+     que quiere directamente camión, ahí ofreces los camiones que tienes
+     e IGNORAS COMPLETAMENTE el número de personas. Lo mismo con
+     Sprinter. El factor de personas solo aplica cuando el cliente NO
+     dice que quiere camión o Sprinter».
+
+     R55 lo probó sobre `loQueFalta`, que es la instrucción que va al
+     modelo. Aquí, en el guion, la cuenta seguía mandando: «somos 30 y
+     queremos la sprinter» contestaba «Creo que entendí: *autobús*», y
+     «una sprinter a Vallarta para 40» también. Es el mismo defecto que
+     el dueño ya había cazado dos veces, escondido en el otro camino.
+
+     La única excepción es la física: si en la unidad que nombró NO
+     caben, se le dice con los dos números —sin regaño— y se le ofrece
+     la que sí. Callarlo sería venderle un servicio que no existe.
+     ------------------------------------------------------------ */
+  const NO_CABEN = { sprinter: Number(SPRINTER.max), suburban: Number(SUBURBAN.max) };
+  if (unidad && datos.gente && NO_CABEN[unidad] && datos.gente > NO_CABEN[unidad]) {
+    const cabe = recomienda(datos.gente);
+    const nombre = unidad === 'sprinter' ? SPRINTER.name : SUBURBAN.name;
+    return {
+      texto: 'En la *' + nombre + '* caben ' + NO_CABEN[unidad] + ' y ustedes son ' +
+        datos.gente + ' 🤔\n\n' + cabe.texto,
+      pasa: false, estado: cabe.estado, opciones: cabe.opciones
+    };
+  }
+  if (datos.gente && !unidad) {
     if (datos.gente <= Number(SPRINTER.max)) unidad = 'sprinter';
     else if (datos.gente > CASI_SPRINTER) unidad = 'autobus';
     else unidad = null;                      // en la orilla: mejor preguntarle

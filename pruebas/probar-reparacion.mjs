@@ -1868,5 +1868,42 @@ titulo('R58 · el guion tampoco vende boletos sueltos');
   }
 }
 
+titulo('R59 · la unidad que el cliente nombra le gana al número de personas');
+{
+  /* R55 probó esto sobre `loQueFalta`, o sea sobre la instrucción que va
+     al modelo. En el guion la cuenta seguía mandando: «somos 30 y
+     queremos la sprinter» contestaba «Creo que entendí: *autobús*».
+     Es el mismo defecto que el dueño ya había cazado dos veces,
+     escondido en el otro camino (auditoría del 10-sep-2026). */
+  const bot = (await import(pathToFileURL(path.join(RAIZ, 'bot.js')).href)).default;
+  const HOY = '2026-09-10';
+
+  /* 1 · Nombró la unidad y sí caben: ésa es, aunque la cuenta diga otra. */
+  {
+    const r = bot.respuestaA('quiero un camion para 12 a chapala', null, HOY);
+    okQue('«un camión para 12»: es camión, no Sprinter', r.estado.unidad === 'autobus');
+    const s = bot.respuestaA('una sprinter a vallarta somos 12', null, HOY);
+    okQue('«una sprinter, somos 12»: es Sprinter', s.estado.unidad === 'sprinter');
+  }
+
+  /* 2 · Nombró la unidad y NO caben: se le dice con los dos números.
+     Callarlo sería venderle un servicio que no existe. */
+  {
+    const r = bot.respuestaA('somos 30 y queremos la sprinter', null, HOY);
+    okQue('30 en Sprinter: se le dice que caben 20', /caben 20 y ustedes son 30/.test(r.texto));
+    okQue('  y se le ofrece la que sí les sirve', /autob[uú]s/i.test(r.texto));
+    const s = bot.respuestaA('quiero la suburban somos 10', null, HOY);
+    okQue('10 en Suburban: también se le dice', /caben \d+ y ustedes son 10/.test(s.texto));
+  }
+
+  /* 3 · Sin unidad dicha, la cuenta manda — que es como estaba. */
+  {
+    okQue('«somos 40»: autobús', bot.respuestaA('somos 40 a vallarta', null, HOY).estado.unidad === 'autobus');
+    okQue('«somos 12»: Sprinter', bot.respuestaA('somos 12 a vallarta', null, HOY).estado.unidad === 'sprinter');
+    okQue('«somos 22»: la orilla, se le pregunta',
+      bot.respuestaA('somos 22 a vallarta', null, HOY).estado.paso === 'ajustar');
+  }
+}
+
 console.log('\n' + buenas + ' buenas, ' + malas + ' malas');
 process.exit(malas ? 1 : 0);
