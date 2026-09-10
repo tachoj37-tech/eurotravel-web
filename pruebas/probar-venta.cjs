@@ -1050,11 +1050,24 @@ titulo('«somos aprox 48» (un cliente real, 5-sep-2026)');
 
   /* Cuando de verdad no hay número: se repregunta distinto, sin «perdón»,
      y se despierta a la IA para que lea el mensaje entero. */
+  /* ------------------------------------------------------------
+     CAMBIÓ EL 10-SEP-2026, Y ESTAS LÍNEAS ERAN EL BUCLE
+     ------------------------------------------------------------
+     Antes exigían que «todavía no sé, depende de quiénes se apunten»
+     dejara al cliente en el paso de «cuántos» y le volviera a preguntar.
+     El dueño ya había tumbado eso el 8-sep viendo al bot insistir tres
+     veces: no saber cuántos son es un DATO, no un silencio, y a quien no
+     lo sabe se le enseñan las unidades en vez de perseguirlo.
+
+     Esa regla se había implementado SOLO en el camino de la IA. Mientras
+     la IA contesta no se nota; el día que no contesta —se cayó, se acabó
+     el crédito— el guion volvía al bucle, y estas tres líneas lo
+     protegían. Ahora el guion también lo entiende.
+     ------------------------------------------------------------ */
   const r = bot.respuestaA('todavia no se, depende de quienes se apunten', enCuantos, HOY);
-  ok('sin número: se queda en el paso', r.estado && r.estado.paso, 'cuantos');
-  ok('  y despierta a la IA', !!r.noEntendio, true);
+  okQue('sin número: NO se queda pidiendo cuántos', r.estado && r.estado.paso !== 'cuantos');
   okQue('  sin «perdón, no me quedó claro»', !/no me qued[oó] claro|perd[oó]n/i.test(r.texto));
-  okQue('  y sí vuelve a preguntar cuántos', /cu[aá]nt/i.test(r.texto));
+  okQue('  y NO le vuelve a preguntar cuántos son', !/cu[aá]ntos (van|son)/i.test(r.texto));
 
   /* Una fecha en el paso de «cuántos» NO es la cantidad de gente. */
   const f = bot.respuestaA('el 12 de octubre', enCuantos, HOY);

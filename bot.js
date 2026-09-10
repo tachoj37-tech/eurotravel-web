@@ -1152,6 +1152,12 @@ function origenDeLaFrase(crudo) {
   return o.length >= 3 ? o : null;
 }
 
+/* «Todavía no sé cuántos vamos» dicho al guion, sin IA de por medio. Es la
+   misma expresión que usa `whatsapp.mjs`, escrita aquí para que el motor
+   la entienda solo: si vive únicamente allá, el día que la IA no conteste
+   el cliente se queda en un bucle (auditoría del 10-sep-2026). */
+const NO_SABE_CUANTOS = /\b(no s[eé]|no sabemos|no tengo|todav[ií]a no|a[uú]n no|ni idea)\b[^.?!]{0,30}\b(cu[aá]nt[oa]s|el n[uú]mero|la cantidad|cu[aá]nta gente)|\bapenas (estoy|estamos|ando|andamos) (juntando|armando|organizando|viendo)|\bno s[eé] cu[aá]ntos\b|\bdepende de (qui[eé]nes|cu[aá]ntos|la gente)/;
+
 const SOLO_IDA = /\b(solo|nada mas|nomas|unicamente) (de |la )?ida\b|\bviaje sencillo\b|\bsencillo (de )?ida\b|\bida sencilla\b|\bsin regreso\b/;
 /* ¿El cliente pidió un viaje de una sola ida? Vive aparte de `leeDeUnJalon`
    porque el camino de la IA también lo necesita: el agente no extrae este
@@ -2000,6 +2006,26 @@ function pasoDeCotizacion(t, crudo, estado, hoy) {
   /* ---- ¿cuántos son, de verdad? ---- */
   if (e.paso === 'cuantos') {
     const n = cuantaGente(t) || numeroSuelto(t);
+    /* ------------------------------------------------------------
+       «TODAVÍA NO SÉ CUÁNTOS VAMOS» TAMBIÉN LO ENTIENDE EL GUION
+       ------------------------------------------------------------
+       El dueño lo dictó el 8-sep-2026 viendo al bot insistir tres veces:
+       no saber cuántos son es un DATO, no un silencio. Pero se
+       implementó solo en el camino de la IA (`sinCuenta` se ponía en
+       `whatsapp.mjs` y en ningún otro lado), así que el guion seguía
+       repreguntando. Mientras la IA contesta, eso no se ve; el día que
+       la IA no contesta —se cayó, se acabó el crédito— el cliente queda
+       atrapado en un bucle.
+
+       Y había una prueba que exigía justo el bucle («y sí vuelve a
+       preguntar cuántos»), así que ninguna revisión lo iba a encontrar.
+       Sale de la auditoría del 10-sep-2026.
+       ------------------------------------------------------------ */
+    if (!n && NO_SABE_CUANTOS.test(t)) {
+      e.sinCuenta = true;
+      alSiguienteHueco(e);
+      return siguiente(e);
+    }
     if (!n) {
       /* Sin «perdón, no me quedó claro»: eso es confesarle al cliente que
          del otro lado hay un robot (dictado del dueño). Se vuelve a
