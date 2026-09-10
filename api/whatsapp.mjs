@@ -3633,6 +3633,21 @@ async function manda(envio) {
       return false;
     }
     if (!esParaElDueno && envio.texto) recuerdaTextoAlCliente(envio.para, envio.texto);
+    /* ------------------------------------------------------------
+       QUEDA APUNTADO A QUÉ NÚMERO SALIÓ CADA TICKET
+       ------------------------------------------------------------
+       El 10-sep-2026 una cotización real no le llegó al dueño. En el
+       registro no había forma de saber si el ticket se había armado, a
+       dónde había salido ni si Meta lo había aceptado: los envíos buenos
+       no dejaban rastro. Ahora sí, con los últimos 4 dígitos del
+       destinatario —suficiente para reconocerlo, sin escribir el número
+       completo en el log— y el id que devuelve Meta.
+       ------------------------------------------------------------ */
+    if (esParaElDueno) {
+      const cola = String(numeroParaMeta(envio.para) || '').slice(-4);
+      console.log('[al-dueño] salió ' + (envio.escribio || 'sin marca') +
+        ' al número que termina en ' + cola + (envio.sobreCliente ? ' · cliente ' + envio.sobreCliente : ''));
+    }
     /* Lo que solo debe pasar si WhatsApp aceptó el mensaje (la etapa
        «ya tiene precio», el precio aprendido). Auditoría 7-sep-2026, C9. */
     if (typeof envio.alMandar === 'function') {
