@@ -1310,8 +1310,34 @@ function armaContrato(ficha, cliente) {
   const v = ficha.viajeDatos || {};
   const hora = (h) => (h && /^\d{1,2}:\d{2}$/.test(h)) ? h.padStart(5, '0') : null;
   const salida = v.salida ? v.salida + (hora(d.horaSalida) ? 'T' + hora(d.horaSalida) : '') : '';
-  const regreso = (v.regreso || v.salida)
-    ? (v.regreso || v.salida) + (hora(d.horaRegreso) ? 'T' + hora(d.horaRegreso) : '')
+  /* ------------------------------------------------------------
+     EL REGRESO DEL MISMO DÍA TIENE QUE SER POSTERIOR A LA SALIDA
+     ------------------------------------------------------------
+     `CONTRATOS-API.md` lo exige: «fechaRegreso: tiene que ser posterior
+     a la salida», y si no, EuroSystem contesta 422. Una fecha sin hora
+     se convierte en las 00:00 de ese día, así que un viaje que sale y
+     vuelve el MISMO día mandaba un regreso a medianoche —anterior a la
+     recogida de las 7 a.m.— y el contrato se rechazaba SIEMPRE.
+
+     No es un caso raro: le pega a todo viaje de un día (Tequila,
+     Chapala, una boda) y a todo viaje sencillo, donde la hora de
+     regreso ni se pregunta. El cliente ya depositó y de los cinco
+     avisos de error de `subeContrato` ninguno le llega a él: solo al
+     dueño, que además no puede arreglarlo diciendo «va» otra vez
+     porque el dato se recalcula igual de roto. Auditoría del
+     10-sep-2026.
+
+     Cuando la hora de regreso está confirmada se usa ésa. Cuando no,
+     se cierra el día a las 23:59: es un lugar, no un dato, y va dicho
+     con todas sus letras en las observaciones para que la oficina lo
+     cuadre. Inventar una hora de regreso creíble sería peor —parecería
+     acordada—; las 23:59 se leen como lo que son.
+     ------------------------------------------------------------ */
+  const diaDeRegreso = v.regreso || v.salida;
+  const horaDeRegreso = hora(d.horaRegreso);
+  const regresoSinHora = !!diaDeRegreso && !horaDeRegreso && diaDeRegreso === v.salida;
+  const regreso = diaDeRegreso
+    ? diaDeRegreso + 'T' + (horaDeRegreso || (regresoSinHora ? '23:59' : '00:00'))
     : '';
   /* Lo que quedó «por confirmar» no viaja como texto al contrato: un
      «por confirmar» impreso en la dirección de recogida es peor que un
@@ -1356,6 +1382,13 @@ function armaContrato(ficha, cliente) {
     (pax > 0 ? '' : ' PASAJEROS: no se le preguntaron al cliente, confirmar con él.') +
     (pendientes.length
       ? ' POR CONFIRMAR CON EL CLIENTE: ' + pendientes.join(', ') + '.'
+      : '') +
+    /* Las 23:59 del regreso no son una hora acordada: son el cierre del
+       día que la puerta exige para aceptar un viaje que va y vuelve el
+       mismo día. Se dice aquí para que la oficina no la lea como un
+       acuerdo (10-sep-2026). */
+    (regresoSinHora
+      ? ' HORA DE REGRESO: no se acordó; el contrato la cierra a las 23:59 del mismo día. Cuadrarla con el cliente.'
       : '') +
     (dicho(d.direccionDestino) ? ' Llegada: ' + d.direccionDestino + '.' : '');
   cuerpo.servicio.itinerario = dicho(d.direccionDestino)
@@ -4486,4 +4519,7 @@ export default atiende;
 export const GET = atiende;
 export const POST = atiende;
 /* Solo para probar el candado de salida sin pasar por todo el webhook. */
-export { manda };
+/* `armaContrato` se exporta para probarla sola: es la que traduce la ficha
+   al cuerpo que exige `CONTRATOS-API.md`, y ahí un dato mal formado no se
+   ve hasta que EuroSystem contesta 422 —con el cliente ya pagado—. */
+export { manda, armaContrato };
