@@ -8,7 +8,14 @@
 
      · «va» (y sus parientes)  → el precio tal cual lo calculó el bot
      · un número               → ese precio, en vez del calculado
+     · «no hay» (y parientes)  → no hay unidad para esa fecha
      · cualquier otra cosa     → sus palabras, literales, como siempre
+
+   El «no hay» entró el 9-sep-2026, dictado del dueño: «1 dar precio y
+   consultar disponibilidad, en ese mismo mensaje puedo decir el precio o
+   decir que no hay». Antes solo podía escribirlo con sus palabras y le
+   llegaba al cliente tal cual, sin que el bot supiera que ese viaje se
+   cayó.
 
    Sin red y sin estado: se prueba con texto en `probar-confirmacion`.
    ------------------------------------------------------------ */
@@ -28,10 +35,29 @@ const PARECE_ANO = /^20(?:2[0-9]|3[0-5])$/;
    frase corta («2», «10»), y eso se le pasa al cliente literal. */
 const PRECIO_MINIMO = 1000;
 
+/* «No hay», «no tengo unidad», «está ocupado ese día», «no alcanza», «ya
+   se apartó». Corto y completo: una frase larga con explicación se le pasa
+   al cliente literal, que también sirve. */
+/* Tiene que ser TODO el mensaje, no un arranque: «no hay problema, mándale
+   48000» y «no me acuerdo, déjame checar» son otra cosa y se le pasan al
+   cliente (o son un precio). Se admite una cola corta de fecha: «no hay
+   unidad para esa fecha». */
+const COLA_DE_FECHA = '(?:\\s+(?:para|en|ese|esa|el|la|los|las)\\s+[a-záéíóúñ0-9\\s]{1,20})?';
+const NO_HAY = new RegExp(
+  '^(?:' +
+    '(?:ya\\s+)?no\\s+(?:hay|tengo|tenemos|queda|quedan|alcanza|alcanzan)(?:\\s+(?:unidad|unidades|nada|disponibilidad|camion|camiones|autobus|autobuses|sprinter))?' + COLA_DE_FECHA +
+    '|sin\\s+(?:unidad|unidades|disponibilidad)' + COLA_DE_FECHA +
+    '|no\\s+disponible' + COLA_DE_FECHA +
+    '|(?:ya\\s+)?(?:se\\s+)?(?:apart[oó]|est[aá]\\s+apartad[oa]|est[aá]\\s+ocupad[oa]|ocupad[oa])' + COLA_DE_FECHA +
+    '|est[aá]n\\s+(?:ocupad[oa]s|apartad[oa]s)' + COLA_DE_FECHA +
+    '|no' +
+  ')[.!]*$', 'i');
+
 function interpreta(texto) {
   const t = String(texto || '').trim();
   if (!t) return { tipo: 'texto' };
   if (VA.test(t)) return { tipo: 'va' };
+  if (NO_HAY.test(t)) return { tipo: 'noHay', dijo: t };
 
   const m = t.match(PRECIO);
   if (m) {

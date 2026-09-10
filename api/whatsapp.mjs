@@ -1659,6 +1659,11 @@ function esUnSiSeco(texto) {
   if (!t || /\bno\b/.test(t) || t.length > 40) return false;
   return /^(si|sip|simon|claro( que si)?|asi es|exacto|correcto|ese mismo( dia)?|el mismo dia|mismo dia|ida y vuelta( el mismo dia)?|si el mismo dia|si mismo dia|si es ida y vuelta)$/.test(t);
 }
+/* Lo dice él solo: «ida y vuelta el mismo día», «regresamos ese mismo
+   día», «salimos y nos venimos el mismo día». No entra si trae otra fecha
+   («ida y vuelta, regresamos el 13») ni si lo niega. */
+const DICE_MISMO_DIA = /\b(ida y vuelta el mismo dia|el mismo dia (de |nos )?(regresamos|venimos|volvemos|regreso)|regresamos (ese |el )?mismo dia|nos venimos (ese |el )?mismo dia|volvemos (ese |el )?mismo dia|(salimos|vamos) y (regresamos|nos venimos|volvemos) el mismo dia|ida y vuelta( el)? mismo dia|es el mismo dia)\b/;
+
 /* «Sí, de guadalajara»: un sí con cola (corrida real del 8-sep-2026,
    escenario f). Cuenta como sí mientras no traiga un «no» ni una fecha ni
    hable del regreso: «sí, pero regresamos el 13» no es el mismo día. */
@@ -1852,7 +1857,28 @@ async function loQueDiceElAgente(envio) {
     const ultimoAntesDeHablar = agente.historialDe(cliente).filter(function (t) { return t.de === 'bot'; }).pop();
     const ultimoTexto = (ultimoAntesDeHablar && ultimoAntesDeHablar.texto) || '';
     let cambio = false;
-    if (antes.salida && !antes.regreso && /mismo d[ií]a/i.test(ultimoTexto) && (esUnSiSeco(texto) || empiezaConSi(texto, hoy))) {
+    /* Con el viaje ya sabido y la fecha vacía —lo que queda después de un
+       «no hay»—, cualquier fecha que traiga el mensaje ES la salida. El
+       modelo la trataba como pregunta («¿también para el 31 o cambias la
+       del 24?») y el viaje se quedaba sin fecha (corrida real del
+       9-sep-2026). */
+    if (antes.destino && !antes.salida) {
+      let laFecha = null;
+      try { laFecha = conversacion.fechaDe(texto, hoy); } catch (e) { laFecha = null; }
+      if (laFecha) {
+        console.error('[agente] viaje conocido sin fecha: «' + String(texto).slice(0, 40) + '» fija la salida en ' + laFecha);
+        antes = Object.assign({}, antes, { salida: laFecha }); cambio = true;
+      }
+    }
+    /* «Ida y vuelta el mismo día» dicho por su cuenta, sin que nadie se lo
+       preguntara: es un dato, no la respuesta a una pregunta. En la corrida
+       real del 9-sep-2026 el cliente lo dijo y el bot le contestó «¿y qué
+       día regresan?». */
+    if (antes.salida && !antes.regreso && DICE_MISMO_DIA.test(conversacion.normaliza(texto))) {
+      console.error('[agente] dijo «ida y vuelta el mismo día»: regreso = salida (' + antes.salida + ')');
+      antes = Object.assign({}, antes, { regreso: antes.salida }); cambio = true;
+    }
+    else if (antes.salida && !antes.regreso && /mismo d[ií]a/i.test(ultimoTexto) && (esUnSiSeco(texto) || empiezaConSi(texto, hoy))) {
       console.error('[agente] «sí» al mismo día: regreso = salida (' + antes.salida + ')');
       antes = Object.assign({}, antes, { regreso: antes.salida }); cambio = true;
     }

@@ -1221,6 +1221,54 @@ function procesa(crudo, firma, entorno) {
           }
           if (pendiente) {
             const dicho = confirmacion.interpreta(dirigido.texto);
+            /* ------------------------------------------------------------
+               «NO HAY» ES UNA RESPUESTA VÁLIDA AL TICKET DEL PRECIO
+               ------------------------------------------------------------
+               Dictado del dueño (9-sep-2026): «1 dar precio y consultar
+               disponibilidad; en ese mismo mensaje puedo decir el precio o
+               decir que no hay». Antes solo podía escribirlo con sus
+               palabras: le llegaba al cliente literal y el viaje se quedaba
+               esperando un precio que nunca iba a llegar.
+               ------------------------------------------------------------ */
+            if (dicho.tipo === 'noHay') {
+              if (cargaCitada) tickets.consumeTicket(citado);
+              /* El viaje deja de estar pendiente de precio: ni recordatorio
+                 de las 15 h ni seguimiento por un precio que no existe. */
+              tickets.anotaEtapa(dirigido.cliente, 'escribio', { porConfirmar: null }, ahora);
+              /* Y el viaje queda cargado SIN fechas: si el cliente propone
+                 otra («¿y para el 31?»), solo falta esa y sale un ticket
+                 nuevo. Sin esto el viaje se perdía y había que volver a
+                 preguntarle todo (corrida real del 9-sep-2026). */
+              const v = (pendiente && pendiente.resumen) || {};
+              if (v.destino) {
+                guardaCharla(dirigido.cliente, {
+                  destino: v.destino, origen: v.origen || null, gente: v.gente || null,
+                  unidad: v.unidad || null, unidadNombre: v.unidadNombre || null,
+                  recorridos: typeof v.recorridos === 'number' ? v.recorridos : null,
+                  nombre: (charlaDe(dirigido.cliente) || {}).nombre || null,
+                  paso: 'salida'
+                }, ahora);
+              }
+              envios.push({
+                numeroDeOrigen: deQuien,
+                para: dirigido.cliente,
+                texto: 'Te tengo malas 🙈 Para esa fecha ya no me queda unidad disponible.\n\n' +
+                  '¿Quieres que veamos otra fecha? Si me dices cuál, te la checo enseguida.',
+                pasaAPersona: false,
+                escribio: '[precio · sin disponibilidad]'
+              });
+              envios.push({
+                numeroDeOrigen: deQuien,
+                para: tickets.numeroDelDueno(env) || deQuien,
+                esTicket: true,
+                sobreCliente: dirigido.cliente,
+                texto: '✅ Le dije a ' + dirigido.cliente + ' que no hay unidad para esa fecha y le ofrecí buscar otra.',
+                pasaAPersona: false,
+                escribio: '[precio · sin disponibilidad · acuse]'
+              });
+              tickets.yaLoContesto(dirigido.cliente);
+              continue;
+            }
             if (dicho.tipo !== 'texto') {
               if (cargaCitada) tickets.consumeTicket(citado);
               envios.push({
@@ -1261,6 +1309,52 @@ function procesa(crudo, firma, entorno) {
               subeContrato: true,
               pasaAPersona: false,
               escribio: '[contrato · autorizado]'
+            });
+            tickets.yaLoContesto(dirigido.cliente);
+            continue;
+          }
+
+          /* ------------------------------------------------------------
+             ¿ESTÁ AUTORIZANDO LA TRANSFERENCIA?
+             ------------------------------------------------------------
+             Dictado del dueño (9-sep-2026): «2 autorizar transferencia:
+             cuando el cliente manda la transferencia, el bot me la manda y
+             la reviso; en lo que la apruebo, el bot va a hacer las
+             preguntas para generar el contrato».
+
+             Va DESPUÉS del «va» del contrato, y así no chocan: cuando los
+             datos ya están completos su «va» es para el contrato (que es
+             el último paso y el que registra en EuroSystem); mientras no lo
+             estén, su «va» sobre ese cliente aprueba el pago. En su flujo
+             real el pago llega primero, cuando el contrato todavía no está
+             completo, así que cada «va» cae donde debe.
+             ------------------------------------------------------------ */
+          const esperaAprobarPago = !!(fichaDelCliente && !fichaDelCliente.pagoAprobado &&
+            ['mando_comprobante', 'datos_del_contrato', 'contrato_listo'].indexOf(fichaDelCliente.etapa) >= 0);
+          if (esperaAprobarPago && confirmacion.interpreta(dirigido.texto).tipo === 'va') {
+            tickets.anotaEtapa(dirigido.cliente, fichaDelCliente.etapa, { pagoAprobado: true }, ahora);
+            const faltan = contrato.faltantes(fichaDelCliente.contrato || {});
+            envios.push({
+              numeroDeOrigen: deQuien,
+              para: dirigido.cliente,
+              texto: '¡Listo! Tu pago quedó confirmado ✅ Tu fecha ya está apartada.' +
+                (faltan.length
+                  ? '\n\nSolo me falta ' + String(faltan[0].pide).replace(/\*/g, '').replace(/^El\s+/, 'el ').replace(/^La\s+/, 'la ') + ' y queda tu contrato.'
+                  : '\n\nEn un momento te llega tu contrato.'),
+              pasaAPersona: false,
+              escribio: '[pago · autorizado]'
+            });
+            envios.push({
+              numeroDeOrigen: deQuien,
+              para: tickets.numeroDelDueno(env) || deQuien,
+              esTicket: true,
+              sobreCliente: dirigido.cliente,
+              texto: '✅ Pago de ' + dirigido.cliente + ' autorizado. Ya le avisé.' +
+                (faltan.length
+                  ? '\n\nLe faltan ' + faltan.length + ' dato(s) del contrato; cuando estén te mando la ficha para que autorices el contrato.'
+                  : '\n\nSus datos ya están completos: contéstame la ficha del contrato con *va* y lo registro en EuroSystem.'),
+              pasaAPersona: false,
+              escribio: '[pago · autorizado · acuse]'
             });
             tickets.yaLoContesto(dirigido.cliente);
             continue;

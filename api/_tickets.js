@@ -475,6 +475,12 @@ function anotaEtapa(cliente, etapa, extra, ahora) {
        cambio: el cliente pasó de 15 a 22 y el bot le ofreció el anticipo del
        viaje de 15 (corrida real del 9-sep-2026). Se limpia solo cuando se
        da un precio nuevo (`viajeDatos` nuevo). */
+    /* El dueño ya revisó la transferencia y la autorizó (9-sep-2026). Con
+       esto el cliente sabe que su fecha está apartada de verdad, y el «va»
+       siguiente del dueño ya es para el contrato, no para el pago. */
+    pagoAprobado: (extra && Object.prototype.hasOwnProperty.call(extra, 'pagoAprobado'))
+      ? !!extra.pagoAprobado
+      : !!(antes && antes.pagoAprobado),
     precioVencido: (extra && extra.viajeDatos)
       ? !!(extra && extra.precioVencido)
       : ((extra && Object.prototype.hasOwnProperty.call(extra, 'precioVencido'))

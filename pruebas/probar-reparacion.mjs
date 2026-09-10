@@ -79,6 +79,22 @@ async function dice(texto, de) {
 function mismo(a, b) { return String(a || '').replace(/\D/g, '').slice(-10) === String(b || '').replace(/\D/g, '').slice(-10); }
 function textos(para) { return mandados.filter((m) => mismo(m.to, para)).map((m) => (m.text && m.text.body) || ''); }
 function limpia() { webhook.olvidaTodo(); agente.olvidaTodo(); tk.olvidaTodo(); mandados = []; payloads = []; llamadasALaIA = 0; }
+/* El id del último ticket que el bot le mandó al dueño sobre ESE cliente,
+   para poder contestarlo citándolo, como en el teléfono. */
+function idDelUltimoTicketDe(cliente) {
+  let idx = -1;
+  mandados.forEach(function (m, i) {
+    if (mismo(m.to, DUENO) && /Precio por confirmar/i.test((m.text && m.text.body) || '') &&
+        (m.text.body.indexOf(String(cliente).slice(-10)) >= 0)) idx = i;
+  });
+  return idx >= 0 ? 'wamid.s' + (idx + 1) : null;
+}
+async function contestaTicket(texto, ticket) {
+  contador++;
+  const cuerpo = JSON.stringify({ entry: [{ changes: [{ value: { metadata: { phone_number_id: '111' },
+    messages: [{ id: 'wamid.tk' + contador, from: DUENO, type: 'text', text: { body: texto }, context: { id: ticket } }] } }] }] });
+  await atiende(new Request('https://x/api/whatsapp', { method: 'POST', body: cuerpo, headers: { 'x-hub-signature-256': firma(cuerpo) } }));
+}
 
 /* ============================================================ */
 titulo('R1 · cuatro datos en cuatro turnos: cero preguntas repetidas');
@@ -965,6 +981,83 @@ titulo('R27 · el freno ya no deja mudo al cliente (escenario s real: dio sus da
   laIA = () => ({ respuesta: 'Va 🙌', datos: {}, accion: 'seguir' });
   for (let i = 1; i <= 25; i++) await dice('total ' + (1000 + i), DUENO);
   okQue('al dueño el freno no le aplica', textos(DUENO).length >= 20);
+}
+
+/* ============================================================ */
+titulo('R28 · las TRES autorizaciones del dueño (dictado del 9-sep-2026): precio o «no hay», transferencia, contrato');
+{
+  /* --- 1 · «no hay» al ticket del precio --- */
+  limpia();
+  const A = '5213366670437';
+  laIA = () => ({ respuesta: null, datos: { destino: 'Tequila', salida: '2026-10-17', regreso: '2026-10-17', gente: 18, origen: 'Guadalajara', recorridos: 0 }, accion: 'cotizar' });
+  await dice('a tequila el 17 de octubre ida y vuelta, somos 18, de guadalajara, solo nos llevan y traen', A);
+  const ticketA = idDelUltimoTicketDe(A);
+  okQue('salió el ticket del precio', !!ticketA);
+  let antes = textos(A).length;
+  await contestaTicket('no hay unidad para esa fecha', ticketA);
+  const dichoA = textos(A).slice(antes).join('\n');
+  okQue('«no hay» le llega al cliente como falta de disponibilidad', /no me queda unidad|no hay unidad/i.test(dichoA));
+  okQue('  y se le ofrece otra fecha', /otra fecha/i.test(dichoA));
+  okQue('  sin mandarle ningún precio', !/Total: \$/.test(dichoA));
+  ok('  el viaje deja de estar pendiente de precio', ((tk.fichaDe(A) || {}).porConfirmar), null);
+  okQue('  y al dueño le llega el acuse', /no hay unidad para esa fecha/i.test(textos(DUENO).slice(-1)[0] || ''));
+
+  /* --- 2 · autorizar la transferencia --- */
+  limpia();
+  const B = '5213366670438';
+  tk.anotaEtapa(B, 'mando_comprobante', { total: 19000, anticipo: 4000,
+    viajeDatos: { origen: 'Guadalajara', destino: 'Puerto Vallarta', salida: '2026-11-06', regreso: '2026-11-08', gente: 16, unidad: 'Sprinter' } }, Date.now());
+  antes = textos(B).length;
+  await dice(B + ' va', DUENO);
+  const dichoB = textos(B).slice(antes).join('\n');
+  okQue('el «va» al comprobante confirma el pago al cliente', /pago qued[oó] confirmado|Tu pago qued/i.test(dichoB));
+  okQue('  y le dice que su fecha está apartada', /fecha ya está apartada/i.test(dichoB));
+  okQue('  la ficha queda con el pago aprobado', (tk.fichaDe(B) || {}).pagoAprobado === true);
+  okQue('  y al dueño se le dice qué sigue', /autorizado/i.test(textos(DUENO).slice(-1)[0] || ''));
+
+  /* --- 3 · autorizar el contrato, ya con el pago aprobado --- */
+  tk.anotaEtapa(B, 'contrato_listo', { contrato: {
+    nombre: 'Laura Beltrán Ríos', telefono: '3366670438',
+    direccionSalida: 'av. patria 2050, zapopan', horaSalida: '06:00',
+    direccionDestino: 'hotel playa bonita, vallarta', horaRegreso: '17:00'
+  } }, Date.now());
+  antes = textos(DUENO).length;
+  await dice(B + ' va', DUENO);
+  const dichoDueno = textos(DUENO).slice(antes).join('\n');
+  okQue('con el pago YA aprobado, el segundo «va» va por el contrato (dijo: ' + JSON.stringify(dichoDueno.slice(0, 70)) + ')',
+    /contrato/i.test(dichoDueno));
+  ok('  y al cliente NO se le confirma el pago dos veces',
+    textos(B).filter((t) => /pago qued[oó] confirmado/i.test(t)).length, 1);
+}
+
+/* ============================================================ */
+titulo('R29 · «ida y vuelta el mismo día» dicho por su cuenta ya cierra el regreso (corrida real del 9-sep)');
+{
+  limpia();
+  const C = '5213366670439';
+  webhook.guardaCharla(C, { destino: 'Tequila', origen: 'Ocotlán', gente: 14, salida: '2026-10-31', recorridos: 0, paso: 'regreso', nombre: 'Prueba' });
+  /* La IA no lo apunta, como en la corrida real: pregunta el regreso. */
+  laIA = () => ({ respuesta: '¿Y qué día regresan?', datos: {}, accion: 'seguir' });
+  const antes = textos(C).length;
+  await dice('sí, el mismo, ida y vuelta el mismo día', C);
+  const viaje = ((tk.fichaDe(C) || {}).porConfirmar || {}).resumen || webhook.charlaDe(C) || {};
+  ok('el regreso queda igual a la salida', viaje.regreso, '2026-10-31');
+  okQue('  y NO se le vuelve a preguntar el regreso', !/qu[eé] d[ií]a regresan/i.test(textos(C).slice(antes).join('\n')));
+  /* Pero «ida y vuelta, regresamos el 13» sigue siendo otro día. */
+  limpia();
+  const D = '5213366670440';
+  webhook.guardaCharla(D, { destino: 'Tequila', origen: 'Ocotlán', gente: 14, salida: '2026-10-31', recorridos: 0, paso: 'regreso', nombre: 'Prueba' });
+  laIA = () => ({ respuesta: 'Va, del 31 al 2.', datos: { regreso: '2026-11-02' }, accion: 'seguir' });
+  await dice('ida y vuelta, pero regresamos el 2 de noviembre', D);
+  const v2 = ((tk.fichaDe(D) || {}).porConfirmar || {}).resumen || webhook.charlaDe(D) || {};
+  ok('  con otra fecha de regreso, se respeta esa', v2.regreso, '2026-11-02');
+  /* Y tras un «no hay», la fecha que proponga ES la salida del mismo viaje. */
+  limpia();
+  const E = '5213366670441';
+  webhook.guardaCharla(E, { destino: 'Tequila', origen: 'Ocotlán', gente: 14, unidad: 'sprinter', unidadNombre: 'Sprinter', recorridos: 0, paso: 'salida', nombre: 'Prueba' });
+  laIA = () => ({ respuesta: '¿También para el 31 o cambias la del 24?', datos: {}, accion: 'seguir' });
+  await dice('ah caray, ¿y para el 31 de octubre?', E);
+  ok('tras un «no hay», la fecha propuesta fija la salida', (webhook.charlaDe(E) || {}).salida, '2026-10-31');
 }
 
 console.log('\n' + buenas + ' buenas, ' + malas + ' malas');

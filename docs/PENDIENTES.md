@@ -200,6 +200,26 @@ vez por minuto («voy leyendo tus mensajes»). Al dueño el freno nunca le
 aplica. Prueba R27. También: tras el comprobante ya no se repite la lista
 de cinco datos cuando el acuse acaba de pedirlos.
 
+**Las TRES autorizaciones del dueño** (dictado del 9-sep-2026: «hay 3
+interacciones que recibo yo»). Ya estaban las de precio y contrato; se
+completó lo que faltaba:
+1. **Precio o «no hay».** Al ticket del precio ahora puede contestar «no
+   hay», «no tengo unidad para esa fecha», «ya está apartado»: el cliente
+   recibe que no hay disponibilidad y se le ofrece otra fecha, el viaje
+   deja de estar pendiente de precio y queda cargado sin fechas, de modo
+   que la fecha que él proponga sale en un ticket nuevo. Se aprieta el
+   detector para que «no hay problema, mándale 48000» siga siendo texto.
+2. **Autorizar la transferencia.** Su «va» al comprobante reenviado marca
+   el pago como aprobado (`pagoAprobado` en la ficha), el cliente recibe
+   «tu pago quedó confirmado, tu fecha ya está apartada» y a él se le dice
+   qué falta. Va DESPUÉS del «va» del contrato en el código, para que
+   cuando los datos ya estén completos su «va» sea el del contrato.
+3. **Autorizar el contrato.** Ya existía: con los datos completos, su «va»
+   lo registra en EuroSystem como BORRADOR.
+Y dos de la misma corrida: «ida y vuelta el mismo día» dicho por su cuenta
+ya cierra el regreso, y con el viaje conocido sin fecha, la fecha que traiga
+el mensaje ES la salida. Pruebas R28 y R29.
+
 **Y la duda del dueño («no me llegan mensajes para confirmar precios»):**
 no era una falla de envío. En el registro de producción no hay NI UN
 «Precio por confirmar» de sus pruebas, porque ninguna llegó a completar el

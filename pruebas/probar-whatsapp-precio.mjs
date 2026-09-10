@@ -707,7 +707,11 @@ function siembraFichaCompleta(C) {
   eurosystemContesta = { status: 201, cuerpo: { folio: 43801, urlPdf: 'https://eurosystem/pdf/43801', contratoId: 'c1', estado: 'BORRADOR', repetido: false } };
 }
 
-/* 4 · Sin ficha completa, el «va» es texto normal: se pasa literal. */
+/* 4 · Sin ficha completa, el «va» AUTORIZA LA TRANSFERENCIA.
+   Cambió el 9-sep-2026 (dictado del dueño: sus tres autorizaciones son
+   precio, transferencia y contrato). Un cliente en «datos_del_contrato» ya
+   depositó: su «va» ahí es el visto bueno del pago, no un texto suelto.
+   El contrato se autoriza después, cuando los datos estén completos. */
 {
   webhook.olvidaTodo(); mandados = []; contratosMandados = [];
   const C = '5213366670022';
@@ -718,7 +722,8 @@ function siembraFichaCompleta(C) {
   /* Fase 2 (7-sep-2026): el «va» a un ticket que no es de precio ni
      autoriza un contrato no se le pasa al cliente como texto suelto. */
   okQue('  y el «va» NO le llega suelto al cliente', !/^va$/m.test(textos(C).join('\n')));
-  okQue('  al dueño se le dice que ese no es el ticket del precio', /no es el ticket del precio/i.test(textos(DUENO).join('\n')));
+  okQue('  se toma como autorización de la transferencia', /pago qued[oó] confirmado/i.test(textos(C).join('\n')));
+  okQue('  y la ficha queda con el pago aprobado', (tickets.fichaDe(C) || {}).pagoAprobado === true);
 }
 
 /* ============================================================

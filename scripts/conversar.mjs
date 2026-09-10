@@ -128,6 +128,22 @@ const va = (C) => async () => {
   console.log('\nDUEÑO contesta el ticket: va');
   await manda(DUENO, 'va', { context: { id: t } });
 };
+/* El dueño contesta el ticket con «no hay»: no hay unidad esa fecha. */
+const noHay = () => async () => {
+  const t = ultimoTicket();
+  if (!t) { console.log('(sin ticket que contestar)'); return; }
+  console.log('\nDUEÑO contesta el ticket: no hay unidad para esa fecha');
+  await manda(DUENO, 'no hay unidad para esa fecha', { context: { id: t } });
+};
+/* El dueño autoriza la transferencia contestando el comprobante que le
+   reenvió el bot, que es como lo va a hacer en su teléfono. */
+const apruebaPago = () => async () => {
+  let idx = -1;
+  mandados.forEach((m, i) => { if (mismo(m.to, DUENO)) idx = i; });
+  if (idx < 0) { console.log('(no hay nada del dueño que contestar)'); return; }
+  console.log('\nDUEÑO contesta el comprobante: va   (autoriza la transferencia)');
+  await manda(DUENO, 'va', { context: { id: 'wamid.s' + (idx + 1) } });
+};
 /* El dueño escribe una orden suya (relevo, total, etc.). */
 const dueno = (texto) => async () => {
   console.log('\nDUEÑO: ' + texto);
@@ -211,11 +227,20 @@ const escenarios = {
     '¿a qué cuenta les deposito?', foto('5213366679020'),
     'ya está el depósito', 'soy Óscar Medina Tapia',
     'nos recogen en calle hidalgo 45, tlaquepaque, a las 5 de la mañana',
-    'llegamos al hotel las palmas en mazatlán y de regreso salimos a la 1 de la tarde']
+    'llegamos al hotel las palmas en mazatlán y de regreso salimos a la 1 de la tarde'],
+  /* u · las TRES autorizaciones del dueño, tal como las dictó el 9-sep:
+     el «no hay» de disponibilidad, el precio, la transferencia y el
+     contrato. Destino sencillo, sin direcciones hasta después del pago. */
+  u: ['hola, ocupo una sprinter de ocotlán a tequila el 24 de octubre, ida y vuelta, somos 14, solo nos llevan y traen',
+    noHay(), 'ah caray, y para el 31 de octubre?', 'sí, el mismo, ida y vuelta el mismo día',
+    precio(9800),
+    'va, ahí les deposito', foto('5213366679021'), apruebaPago(),
+    'soy Norma Aguilar Ceja', 'nos recogen en morelos 210, ocotlán, a las 7 de la mañana',
+    'llegamos a la plaza principal de tequila y salimos de regreso a las 7 de la noche']
 };
 const pedidos = process.argv.slice(2).filter((x) => escenarios[x]);
 for (const k of (pedidos.length ? pedidos : Object.keys(escenarios))) {
-  const C = '52133666790' + { a: '01', b: '02', c: '03', d: '04', e: '05', f: '06', g: '07', h: '08', i: '09', j: '10', k: '11', l: '12', m: '13', n: '14', o: '15', p: '16', q: '17', r: '18', s: '19', t: '20' }[k];
+  const C = '52133666790' + { a: '01', b: '02', c: '03', d: '04', e: '05', f: '06', g: '07', h: '08', i: '09', j: '10', k: '11', l: '12', m: '13', n: '14', o: '15', p: '16', q: '17', r: '18', s: '19', t: '20', u: '21' }[k];
   const guion = escenarios[k].map((p) => (typeof p === 'function' && p.length === 0 && k === 'e') ? p : p);
   await corre('Escenario ' + k, C, guion);
   console.log('\n(gastado hasta aquí: $' + gastado.toFixed(3) + ' USD)');

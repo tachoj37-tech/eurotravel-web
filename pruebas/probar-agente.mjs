@@ -240,7 +240,15 @@ titulo('después de la espera no se vuelve a pedir el precio (7-sep-2026)');
   const s2 = JSON.stringify(sistemasVistos[sistemasVistos.length - 1] || []);
   /* Lo SABIDO del viaje nuevo es solo Mazamitla; el de Vallarta aparece
      aparte, como «precio ya pedido», para que la IA no lo confunda. */
-  okQue('  el viaje nuevo empezó de cero: lo sabido es solo Mazamitla', /YA SE SABE DEL VIAJE: destino=Mazamitla\./.test(s2));
+  /* Desde el 9-sep-2026 la fecha también queda fijada aquí: con el viaje
+     conocido y sin salida, la fecha que traiga el mensaje ES la salida (el
+     modelo la trataba como pregunta y el viaje se quedaba sin fecha). Lo
+     que se vigila sigue siendo lo mismo: que el viaje nuevo NO arrastre
+     nada del de Vallarta, que aparece aparte como precio ya pedido. */
+  const sabido = (s2.split('YA SE SABE DEL VIAJE:')[1] || '').split('\\n')[0];
+  okQue('  el viaje nuevo empezó de cero: Mazamitla, sin nada de Vallarta',
+    /destino=Mazamitla/.test(sabido) && !/Vallarta/.test(sabido));
+  okQue('  y el de Vallarta sigue aparte, como precio ya pedido', /PRECIO YA PEDIDO[^\\]*Vallarta/.test(s2));
   if (!/YA SE SABE DEL VIAJE: destino=Mazamitla\./.test(s2)) console.log('     contexto: ' + (s2.match(/YA SE SABE[^\\]*/) || [''])[0]);
   okQue('  y el de Vallarta sigue ahí como precio ya pedido', /PRECIO YA PEDIDO: [^"]*Vallarta/.test(s2));
   ok('  y sigue sin ticket nuevo (todavía faltan datos)', tickets(), 1);
