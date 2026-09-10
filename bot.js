@@ -1085,6 +1085,11 @@ function fragmentosDeFecha(t) {
 
 /* Después de «a», «para» o «hacia» viene el destino — y se corta en
    cuanto empieza otra cosa: una coma, una fecha, o cuántos son. */
+/* Lo que el cliente contesta cuando lo que trae en la cabeza es CUÁNDO,
+   no a dónde. Va anclado a propósito: «Domingo Arenas» o «El Salto de
+   mañana» tienen que seguir pasando. */
+const SOLO_ES_FECHA = /^(?:el |este |la |los )?(hoy|hoy mismo|manana|pasado manana|ayer|ya|ahorita|ahora|urgente|mismo dia|fin|finde|fin de semana|lunes|martes|miercoles|jueves|viernes|sabado|domingo|proxima semana|semana que entra|proximo mes|otro fin)$/;
+
 function destinoDeLaFrase(crudo) {
   const m = String(crudo || '').match(
     /\b(a|al|para|hacia|rumbo a)\s+([A-Za-zÁÉÍÓÚÑáéíóúñ][^,;.!?]{2,45})/i);
@@ -1116,6 +1121,20 @@ function destinoDeLaFrase(crudo) {
     .trim();
   d = limpiaDestino(d);
   if (d.length < 3) return null;
+  /* ------------------------------------------------------------
+     UNA FECHA NO ES UN DESTINO — 10-sep-2026
+     ------------------------------------------------------------
+     «quiero para hoy mismo» —de los mensajes más normales que hay,
+     el del que trae prisa— salía como «Creo que entendí: *a Hoy
+     Mismo*» y el bot seguía preguntando qué día regresaban de un
+     lugar llamado Hoy Mismo.
+
+     El corte de arriba parte por palabras de fecha, pero necesita
+     espacio antes: cuando la fecha es TODO lo que dijo, no hay nada
+     que cortar. Se comprueba anclado —principio y fin— para no
+     tumbar un destino que solo empiece con una de estas palabras.
+     ------------------------------------------------------------ */
+  if (SOLO_ES_FECHA.test(normaliza(d))) return null;
   /* Se devuelve el artículo que se comió el «al», salvo que el cliente
      ya lo haya escrito él («vamos al el Manto» no existe, pero «a El
      Manto» sí). */

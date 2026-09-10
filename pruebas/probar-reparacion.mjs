@@ -1905,5 +1905,31 @@ titulo('R59 · la unidad que el cliente nombra le gana al número de personas');
   }
 }
 
+titulo('R60 · una fecha no es un destino');
+{
+  /* «quiero para hoy mismo» —de los mensajes más normales que hay, el del
+     que trae prisa— salía como «Creo que entendí: *a Hoy Mismo*» y el bot
+     seguía preguntando qué día regresaban de un lugar llamado Hoy Mismo.
+     `destinoDeLaFrase` corta por palabras de fecha, pero necesita espacio
+     antes: cuando la fecha es TODO lo que dijo, no hay nada que cortar. */
+  const bot = (await import(pathToFileURL(path.join(RAIZ, 'bot.js')).href)).default;
+  const HOY = '2026-09-10';
+
+  for (const frase of ['quiero para hoy mismo', 'lo necesito para manana',
+    'para el sabado', 'necesito una sprinter para ya']) {
+    const r = bot.respuestaA(frase, null, HOY);
+    okQue('«' + frase + '» no inventa un destino', !(r.estado && r.estado.destino));
+  }
+
+  /* Y los destinos que empiezan con una de esas palabras siguen pasando:
+     El Salto es de Jalisco y Domingo Arenas existe. */
+  for (const [frase, esperado] of [['vamos a chapala manana', 'Chapala'],
+    ['a el salto', 'El Salto'], ['a domingo arenas', 'Domingo Arenas'],
+    ['a puerto vallarta el sabado', 'Puerto Vallarta']]) {
+    const r = bot.respuestaA(frase, null, HOY);
+    okQue('«' + frase + '» sigue siendo ' + esperado, r.estado.destino === esperado);
+  }
+}
+
 console.log('\n' + buenas + ' buenas, ' + malas + ' malas');
 process.exit(malas ? 1 : 0);
