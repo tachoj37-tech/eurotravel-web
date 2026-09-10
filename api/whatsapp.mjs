@@ -1987,12 +1987,86 @@ const MARCAS_PARA_EL_DUENO = new RegExp('^\\[(?:' + [
      hablarle al cliente, que sí sirve mientras se vigila el estreno. */
   /* El resumen de los que no contestaron, que él pidió */
   'seguimiento · al dueño',
+  /* Lo que Meta rechazó mientras la ventana de 24 h estaba cerrada y se
+     le entrega en cuanto vuelve a escribir. No es ruido nuevo: son las
+     mismas cinco cosas, entregadas tarde en vez de perdidas. */
+  'apartados · al dueño',
   /* Cuando algo se frenó y el cliente quedó con un «dame un momento»: eso
      es exactamente una duda, y alguien tiene que contestarle. */
   'incidente · '
 ].join('|') + ')');
 
 const depositoMandadoAhora = new Set();
+
+/* ------------------------------------------------------------
+   LO QUE NO LE LLEGÓ AL DUEÑO, GUARDADO HASTA QUE ÉL ESCRIBA
+   ------------------------------------------------------------
+   La ventana de 24 horas de Meta corre en las DOS direcciones. Si el
+   dueño lleva un día sin escribirle al número del bot, Meta rechaza
+   todo lo que le mandemos —incluido «te mandaron un comprobante»— y
+   hasta hoy eso solo dejaba un renglón en el registro. El aviso se
+   perdía para siempre: el webhook le contesta 200 a Meta, así que
+   Meta tampoco reintenta.
+
+   Ya le pasó el 9-sep-2026 y se tardó un día en descubrirse.
+
+   Aquí se apartan y se le entregan en cuanto él escriba, que es el
+   instante exacto en que la ventana se reabre.
+
+   LO QUE ESTO **NO** ES: memoria de verdad. Vive en la instancia, así
+   que un despliegue o un arranque en frío se la lleva. Cubre el caso
+   común —el dueño escribe en las horas siguientes— y no cubre el
+   caso malo. Lo durable pide una tabla nueva, y una tabla nueva pasa
+   por el dueño y por `experto-migraciones` (regla del proyecto).
+   ------------------------------------------------------------ */
+const TOPE_APARTADOS = 30;
+const apartadosParaElDueno = [];
+
+function guardaParaCuandoAbra(envio) {
+  /* Sin el texto no hay nada que reenviar; una foto o un PDF tampoco se
+     guardan: su liga de Meta caduca y reenviarla daría un error distinto
+     y más confuso. De esos se apunta que existieron. */
+  const texto = envio.texto
+    ? envio.texto
+    : '(te mandaron ' + (envio.ligaDeFoto ? 'una foto' : 'un archivo') + ' que no se pudo reenviar; ' +
+      'ábrelo en el chat del cliente)';
+  apartadosParaElDueno.push({
+    cuando: Date.now(),
+    escribio: envio.escribio || 'sin marca',
+    sobreCliente: envio.sobreCliente || null,
+    texto: texto
+  });
+  while (apartadosParaElDueno.length > TOPE_APARTADOS) apartadosParaElDueno.shift();
+  console.error('[apartado] guardado hasta que el dueño escriba: ' + (envio.escribio || 'sin marca') +
+    ' (van ' + apartadosParaElDueno.length + ')');
+}
+
+/* Se llama cuando el dueño acaba de escribir: ésa es la ventana abierta.
+   Va en UN mensaje —no treinta— para no volverlo ruido, que es justo lo
+   que él pidió que no pasara. */
+async function entregaLoApartado() {
+  if (!apartadosParaElDueno.length) return 0;
+  const dueno = tickets.numeroDelDueno(process.env);
+  if (!dueno) return 0;
+  const lote = apartadosParaElDueno.splice(0, apartadosParaElDueno.length);
+  const cuerpo = lote.map(function (a) {
+    const hace = Math.round((Date.now() - a.cuando) / 60000);
+    return '— ' + (hace >= 60 ? 'hace ' + Math.round(hace / 60) + ' h' : 'hace ' + hace + ' min') +
+      (a.sobreCliente ? ' · cliente ' + a.sobreCliente : '') + '\n' + a.texto;
+  }).join('\n\n');
+  const salio = await manda({
+    numeroDeOrigen: process.env.WHATSAPP_PHONE_ID, para: dueno, esTicket: true, pasaAPersona: false,
+    texto: '📬 *Esto no te llegó mientras la ventana estaba cerrada*\n\n' +
+      'WhatsApp no deja escribirte si tú llevas más de 24 h sin mandarle nada al bot. ' +
+      'Te lo aparté y aquí va:\n\n' + cuerpo,
+    escribio: '[apartados · al dueño]'
+  });
+  /* Si tampoco salió, se vuelven a apartar: perderlos aquí sería repetir
+     el mismo defecto que esto arregla. */
+  if (!salio) { apartadosParaElDueno.unshift.apply(apartadosParaElDueno, lote); return 0; }
+  console.log('[apartado] entregados ' + lote.length + ' aviso(s) al dueño');
+  return lote.length;
+}
 
 /* El último texto que salió hacia cada cliente, para no repetirlo tal cual
    en el mensaje siguiente. Vive en memoria y se acota: en una instancia
@@ -4000,11 +4074,13 @@ async function manda(envio) {
          recibió «en breve te paso tu cotización» y del otro lado no hay
          nadie. Se marca aparte para poder buscarlo en el registro. */
       if (esParaElDueno) {
+        const porLaVentana = /131047|24 hour|re-?engagement/i.test(detalle);
         console.error('[TICKET-PERDIDO] CRÍTICO: no le llegó al dueño ' + (envio.escribio || 'sin marca') +
           ' sobre el cliente ' + (envio.sobreCliente || '?') + '. ' +
-          (/131047|24 hour|re-?engagement/i.test(detalle)
+          (porLaVentana
             ? 'Meta lo rechazó por la ventana de 24 horas: el dueño tiene que escribirle al número del bot para reabrirla.'
             : 'Revisa el detalle de arriba.'));
+        if (porLaVentana) guardaParaCuandoAbra(envio);
       }
       /* El contrato no se pierde porque Meta no haya podido bajar el PDF
          (liga caída, archivo muy grande, tipo que no le gustó): va la liga
@@ -4476,6 +4552,19 @@ async function atiendeElAviso(crudo, firma, marcaDePuerta) {
      moría con la instancia. De esos solo se guarda la ficha, no la
      charla: su charla no se cargó y guardarla vacía la borraría. */
   const dueno = tickets.numeroDelDueno(process.env);
+  /* Si el dueño escribió en este aviso, la ventana de 24 h acaba de
+     reabrirse: es el único instante en que se le puede entregar lo que
+     Meta rechazó antes. Va después de repartir para que la respuesta a
+     lo que él acaba de escribir salga primero y el atraso vaya detrás. */
+  if (dueno && apartadosParaElDueno.length) {
+    try {
+      const escribioElDueno = webhook.numerosDelAviso(JSON.parse(crudo.toString('utf8')))
+        .some(function (n) { return tickets.mismoNumero(n, dueno); });
+      if (escribioElDueno) await entregaLoApartado();
+    } catch (e) {
+      console.error('[apartado] no se pudieron entregar: ' + (e && e.message));
+    }
+  }
   const tocados = [];
   for (const envio of r.envios) {
     [envio && envio.para, envio && envio.sobreCliente].forEach(function (n) {
