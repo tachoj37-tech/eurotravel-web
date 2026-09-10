@@ -1332,8 +1332,11 @@ function procesa(crudo, firma, entorno) {
              ------------------------------------------------------------ */
           const tipoDelTicket = (cargaCitada && cargaCitada.tipo) || null;
           const esVa = !!dirigido && confirmacion.interpreta(dirigido.texto).tipo === 'va';
+          /* Al viaje sencillo no se le pide la hora de regreso: sin esto el
+             contrato de un viaje de una sola ida nunca queda completo. */
+          const soloIdaDelViaje = !!((fichaDelCliente || {}).viajeDatos || {}).soloIda;
           const datosCompletos = !!(fichaDelCliente && fichaDelCliente.contrato &&
-            contrato.estaCompleto(fichaDelCliente.contrato));
+            contrato.estaCompleto(fichaDelCliente.contrato, soloIdaDelViaje));
           if (esVa && fichaDelCliente && !fichaDelCliente.contratoSubido &&
               (tipoDelTicket === 'contrato' || tipoDelTicket === 'pago' ||
                ['mando_comprobante', 'datos_del_contrato', 'contrato_listo'].indexOf(fichaDelCliente.etapa) >= 0)) {
@@ -1349,7 +1352,7 @@ function procesa(crudo, firma, entorno) {
             /* Al cliente solo se le avisa la primera vez que su pago queda
                confirmado: es lo que él está esperando. */
             if (autoriza === 'pago' && !fichaDelCliente.pagoAprobado) {
-              const faltan = contrato.faltantes(fichaDelCliente.contrato || {});
+              const faltan = contrato.faltantes(fichaDelCliente.contrato || {}, soloIdaDelViaje);
               envios.push({
                 numeroDeOrigen: deQuien,
                 para: dirigido.cliente,
@@ -1721,7 +1724,8 @@ function procesa(crudo, firma, entorno) {
                 /* Si la IA no contesta, esto es lo que se manda: se le
                    vuelve a pedir lo que falte, con lo que ya se tenía.
                    Nunca un silencio. */
-                texto: contrato.pideLoQueFalta(f.contrato, null),
+                texto: contrato.pideLoQueFalta(f.contrato, null, !!f.pagoAprobado,
+                  !!((f.viajeDatos || {}).soloIda)),
                 pasa: false,
                 datosDelContrato: true,
                 contratoQueVa: f.contrato || null,

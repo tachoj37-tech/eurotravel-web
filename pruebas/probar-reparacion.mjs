@@ -1311,5 +1311,34 @@ titulo('R41 · la cuenta no se manda a quien ya depositó, ni dos veces sin pedi
   delete process.env.CLABE;
 }
 
+titulo('R42 · al viaje sencillo no se le pide la hora de regreso');
+{
+  const contrato = (await import(pathToFileURL(path.join(RAIZ, 'api', '_datos-contrato.js')).href)).default;
+  const datos = {
+    nombre: 'Fernando Ibarra Luna', telefono: '3312345678',
+    direccionSalida: 'av. lópez mateos 3000, zapopan', horaSalida: '08:00',
+    direccionDestino: 'hotel casa tequila'
+  };
+  okQue('redondo: falta la hora de regreso', contrato.estaCompleto(datos, false) === false);
+  okQue('sencillo: con eso ya está completo', contrato.estaCompleto(datos, true) === true);
+  okQue('  y no se la pide en el texto',
+    !/hora.*salir de regreso/i.test(contrato.pideLoQueFalta(datos, null, true, true)));
+}
+
+titulo('R43 · a quien ya depositó no se le ofrece apartar, y con el pago aprobado no se le habla de confirmarlo');
+{
+  limpia();
+  const C = '5213366670461';
+  tk.anotaEtapa(C, 'contrato_listo', { total: 19000, anticipo: 4000, pagoAprobado: true,
+    contrato: { nombre: 'Laura Beltrán Ríos', telefono: '3312345678', direccionSalida: 'av. patria 2050', horaSalida: '06:00', direccionDestino: 'hotel playa bonita', horaRegreso: '17:00' },
+    viajeDatos: { origen: 'Guadalajara', destino: 'Puerto Vallarta', salida: '2026-11-06', regreso: '2026-11-08', gente: 16, unidad: 'Sprinter', recorridos: 0 } }, Date.now());
+  laIA = () => ({ respuesta: null, datos: {}, accion: 'seguir' });
+  const antes = textos(C).length;
+  await dice('ya quedó todo?', C);
+  const t = textos(C).slice(antes).join('\n');
+  okQue('no le ofrece apartar lo que ya depositó', !/te la aparto/i.test(t));
+  okQue('  y le dice que su pago está confirmado', /pago ya est[aá] confirmado/i.test(t));
+}
+
 console.log('\n' + buenas + ' buenas, ' + malas + ' malas');
 process.exit(malas ? 1 : 0);

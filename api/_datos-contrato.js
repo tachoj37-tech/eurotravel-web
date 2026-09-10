@@ -218,12 +218,20 @@ function junta(tenia, nuevo) {
   return salida;
 }
 
-function faltantes(datos) {
+/* `soloIda`: el viaje que no regresa. Preguntarle a ese cliente «¿a qué hora
+   quieren salir de regreso?» no es un trámite de más: es una pregunta sin
+   respuesta posible, y el contrato se queda atorado para siempre esperándola
+   (corrida real del 9-sep-2026, escenario w: el cliente contestó «no hay
+   regreso» y el bot volvió a pedirla). */
+function faltantes(datos, soloIda) {
   const d = datos || {};
-  return OBLIGATORIOS.filter(function (c) { return !d[c.id]; });
+  return OBLIGATORIOS.filter(function (c) {
+    if (soloIda && c.id === 'horaRegreso') return false;
+    return !d[c.id];
+  });
 }
 
-function estaCompleto(datos) { return faltantes(datos).length === 0; }
+function estaCompleto(datos, soloIda) { return faltantes(datos, soloIda).length === 0; }
 
 /* ------------------------------------------------------------
    LA PRIMERA PREGUNTA
@@ -270,8 +278,8 @@ function pideLosDatos(esAgencia) {
    Se le acusa lo que sí dio —por nombre, para que se note que se
    leyó— y se le pide solo lo que falta.
    ------------------------------------------------------------ */
-function pideLoQueFalta(datos, nuevos, pagoAprobado) {
-  const faltan = faltantes(datos);
+function pideLoQueFalta(datos, nuevos, pagoAprobado, soloIda) {
+  const faltan = faltantes(datos, soloIda);
 
   if (!faltan.length) {
     /* Con la transferencia ya verificada, decirle «en cuanto se confirme tu

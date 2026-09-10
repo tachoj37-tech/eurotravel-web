@@ -846,7 +846,9 @@ async function datosDelContrato(envio) {
 
   const nuevos = contrato.limpia(leido);
   const juntos = contrato.junta(envio.contratoQueVa, nuevos);
-  const completo = contrato.estaCompleto(juntos);
+  /* Al viaje sencillo no se le pide la hora de regreso: no la tiene. */
+  const soloIdaDelViaje = !!((tickets.fichaDe(envio.para) || {}).viajeDatos || {}).soloIda;
+  const completo = contrato.estaCompleto(juntos, soloIdaDelViaje);
   const trajoAlgo = contrato.CAMPOS.some(function (c) { return nuevos[c.id] != null && nuevos[c.id] !== ''; });
 
   /* ------------------------------------------------------------
@@ -889,7 +891,7 @@ async function datosDelContrato(envio) {
       const estado = f.contratoSubido
         ? 'Tu contrato ya está armado, folio *' + f.contratoSubido.folio + '* 📄'
         : 'Tu comprobante ya lo tiene el equipo; en cuanto lo confirmen te llega tu contrato 🙌';
-      const faltan = contrato.faltantes(juntos);
+      const faltan = contrato.faltantes(juntos, soloIdaDelViaje);
       /* La lista de cinco puntos se manda UNA vez. Si el cliente vuelve a
          escribir sin traer datos, se le pide UNO solo, como lo pediría una
          persona: la lista repetida es lo que hacía sentir formulario
@@ -903,7 +905,7 @@ async function datosDelContrato(envio) {
           ? 'Va 🙌' + (unoSolo || (f.pagoAprobado
             ? ' En cuanto el dueño dé el visto bueno a estos datos te mando tu contrato.'
             : ' En cuanto se confirme tu pago te mando tu contrato.'))
-          : contrato.pideLoQueFalta(juntos, nuevos, f.pagoAprobado));
+          : contrato.pideLoQueFalta(juntos, nuevos, f.pagoAprobado, soloIdaDelViaje));
       return [{
         numeroDeOrigen: envio.numeroDeOrigen, para: envio.para, texto: texto,
         pasaAPersona: false, escribio: '[datos del contrato · estado]'
@@ -920,7 +922,8 @@ async function datosDelContrato(envio) {
   const salida = [{
     numeroDeOrigen: envio.numeroDeOrigen,
     para: envio.para,
-    texto: contrato.pideLoQueFalta(juntos, nuevos),
+    texto: contrato.pideLoQueFalta(juntos, nuevos,
+      !!(tickets.fichaDe(envio.para) || {}).pagoAprobado, soloIdaDelViaje),
     pasaAPersona: false,
     escribio: '[datos del contrato]'
   }];
@@ -1161,7 +1164,8 @@ async function subeContrato(envio) {
     }];
   };
 
-  if (!ficha || !ficha.contrato || !contrato.estaCompleto(ficha.contrato)) {
+  if (!ficha || !ficha.contrato ||
+      !contrato.estaCompleto(ficha.contrato, !!(ficha.viajeDatos && ficha.viajeDatos.soloIda))) {
     return alDueno('No tengo la ficha completa de ese cliente 🙈. Pídele los datos que falten o captúralo tú.', '[contrato · sin ficha]');
   }
   if (ficha.contratoSubido && ficha.contratoSubido.folio) {
@@ -1365,6 +1369,20 @@ function yaTieneContrato(cliente) {
 function esperaNeutraConPrecio(cliente, estado) {
   const conContrato = yaTieneContrato(cliente);
   if (conContrato) return conContrato;
+  /* Y a quien ya depositó tampoco se le ofrece apartar: ya apartó. En la
+     corrida real del 9-sep-2026 (escenario s) un cliente que había mandado
+     su comprobante y dictado todos sus datos preguntó «¿ya quedó todo?» y
+     recibió «¿te la aparto?». */
+  {
+    const f = tickets.fichaDe(cliente) || {};
+    const yaDeposito = ['mando_comprobante', 'datos_del_contrato', 'contrato_listo'].indexOf(f.etapa) >= 0 ||
+      !!f.fotoDelClienteEn;
+    if (yaDeposito) {
+      return f.pagoAprobado
+        ? 'Tu pago ya está confirmado ✅ En cuanto se dé el visto bueno a tus datos te llega tu contrato por aquí.'
+        : 'Tu comprobante ya lo tiene el equipo 🙌 En cuanto lo confirmen te llega tu contrato por aquí.';
+    }
+  }
   const v = viajeConPrecio(tickets.fichaDe(cliente));
   if (!v || !v.estado) return null;
   if (v.estado === 'pedido') return 'Va 🙌 En cuanto tenga tu precio te lo paso por aquí.';
@@ -2112,6 +2130,17 @@ async function loQueDiceElAgente(envio) {
     if (base && base.nombre) antes = Object.assign({}, antes, { nombre: base.nombre });
   }
   const nuevo = conversacion.pegaDatos(antes, dicho.datos);
+  /* «Solo de ida» dicho a la IA. El agente no extrae ese dato —no está en
+     su esquema— así que lo lee el código, igual que el guion. Va aquí
+     arriba, pegado a `pegaDatos`, porque si se lee más abajo el bot ya
+     preguntó «¿y qué día regresan?» a alguien que acaba de decir que no
+     regresa (corrida real del 9-sep-2026, escenario w). Se cotiza como
+     salir y volver el mismo día, que es lo que el motor sabe cobrar; el
+     contrato sí dice SENCILLO. */
+  if (conversacion.esSoloIda(texto || '')) {
+    nuevo.soloIda = true;
+    if (nuevo.salida && !nuevo.regreso) nuevo.regreso = nuevo.salida;
+  }
   /* «Otro viaje» explícito queda marcado en la plática: los mensajes que
      sigan son de ese viaje nuevo, no basura que haya que reemplazar. */
   if (esOtroViaje && viajeDeLaFicha) nuevo.otroViaje = true;
@@ -2344,20 +2373,6 @@ async function loQueDiceElAgente(envio) {
           'o si quieres te recomiendo uno.';
       }
     }
-  }
-
-  /* «Solo de ida» dicho a la IA. El agente no extrae ese dato —no está en
-     su esquema— así que lo lee el código, igual que el guion. Sin esto el
-     contrato salía REDONDO aunque el cliente hubiera dicho que no regresa
-     (corrida real del 9-sep-2026, escenario w). */
-  if (conversacion.esSoloIda(texto || '')) {
-    nuevo.soloIda = true;
-    /* Y con eso el viaje YA está completo: sin esta línea el bot le seguía
-       preguntando «¿y qué día regresan?» a alguien que acababa de decir
-       que no regresa (corrida real del 9-sep-2026, escenario w, dos veces
-       en la misma plática). Se cotiza como salir y volver el mismo día,
-       que es lo que el motor sabe cobrar; el contrato sí dice SENCILLO. */
-    if (nuevo.salida && !nuevo.regreso) nuevo.regreso = nuevo.salida;
   }
 
   /* ------------------------------------------------------------
