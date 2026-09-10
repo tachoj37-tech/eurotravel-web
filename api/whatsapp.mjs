@@ -1121,11 +1121,18 @@ function armaContrato(ficha, cliente) {
   const referencia = ('WA-' + String(cliente || '').replace(/\D+/g, '').slice(-10) + '-' + (v.salida || '')).slice(0, 80);
   const cuerpo = logica.contratoDesde(m, { id: referencia });
   cuerpo.referenciaExterna = referencia;
-  cuerpo.observaciones = 'Vendido por WhatsApp (Eurobot), autorizado por el dueño. ' +
-    'Anticipo por transferencia; confirmar que entró antes de dar por apartado.' +
-    (d.direccionDestino ? ' Llegada: ' + d.direccionDestino + '.' : '');
+  /* PASAJEROS: el bot NO se los pregunta al cliente a propósito (dictado
+     del dueño, 8-sep-2026: «lo que importa es la renta del camión, no las
+     personas»). Cuando no salieron solos en la plática, la puerta exige un
+     número y se manda 1 — que es el valor por omisión, no un dato. Sin
+     esta línea el contrato dice «1 pasajero» para un autobús de 50 y la
+     oficina se lo cree. */
   const pax = Number(v.pasajeros || v.gente) || 0;
   cuerpo.servicio.pasajeros = pax > 0 ? Math.min(pax, 90) : 1;
+  cuerpo.observaciones = 'Vendido por WhatsApp (Eurobot), autorizado por el dueño. ' +
+    'Anticipo por transferencia; confirmar que entró antes de dar por apartado.' +
+    (pax > 0 ? '' : ' PASAJEROS: no se le preguntaron al cliente, confirmar con él.') +
+    (d.direccionDestino ? ' Llegada: ' + d.direccionDestino + '.' : '');
   cuerpo.servicio.itinerario = d.direccionDestino
     ? 'Llegada: ' + d.direccionDestino + (d.horaRegreso ? '. Regresan a las ' + d.horaRegreso : '')
     : undefined;
@@ -1195,29 +1202,64 @@ async function subeContrato(envio) {
     contratoSubido: { folio: datos.folio, urlPdf: datos.urlPdf || null, contratoId: datos.contratoId || null, cuando: Date.now() }
   });
   console.log('[contrato] registrado folio ' + datos.folio + (datos.repetido ? ' (ya existía)' : ''));
-  const salida = alDueno('📄 Contrato registrado en EuroSystem como *BORRADOR*, folio *' + datos.folio + '*' +
-    (datos.repetido ? ' (ya existía)' : '') + '.' +
-    (datos.urlPdf ? '\n' + datos.urlPdf : '') +
-    '\n\nLo confirmas en el panel cuando entre el anticipo.', '[contrato · registrado]');
-  /* Y al cliente también, dictado del dueño (5-sep-2026): «la liga del PDF
-     a mí, al cliente y al sistema». Solo la primera vez: si ya existía, el
-     cliente ya la tiene. */
+  /* ------------------------------------------------------------
+     EL ORDEN QUE DICTÓ EL DUEÑO (9-sep-2026)
+
+       1. el PDF al cliente
+       2. el mismo PDF a él
+       3. el contrato subido al sistema — que es lo que acaba de pasar
+          arriba, porque el PDF sale justamente de ahí
+
+     Antes de esto los dos recibían la LIGA en texto. La liga vence a los
+     30 días; el archivo entregado por WhatsApp se queda en la plática
+     para siempre. Y el dueño pidió recibirlo «por si falla subirlo yo»:
+     por eso, además del archivo, se le manda el aviso con la liga, que
+     sobrevive aunque Meta no haya podido bajar el PDF.
+     ------------------------------------------------------------ */
+  const nombreDelArchivo = 'Contrato-' + datos.folio + '.pdf';
+  const salida = [];
+  /* 1) Al cliente, y solo la primera vez: si el contrato ya existía, ya lo
+        tiene desde entonces. */
   if (datos.urlPdf && !datos.repetido) {
     salida.push({
       numeroDeOrigen: envio.numeroDeOrigen,
       para: envio.para,
-      texto: TEXTO_CONTRATO_AL_CLIENTE(datos.folio, datos.urlPdf),
+      ligaDeDocumento: datos.urlPdf,
+      nombreDeArchivo: nombreDelArchivo,
+      texto: TEXTO_CONTRATO_AL_CLIENTE(datos.folio),
+      textoDeRespaldo: TEXTO_CONTRATO_AL_CLIENTE(datos.folio, datos.urlPdf),
       pasaAPersona: false,
-      escribio: '[contrato · liga al cliente]'
+      escribio: '[contrato · pdf al cliente]'
     });
   }
+  /* 2) El mismo archivo al dueño. */
+  if (datos.urlPdf) {
+    salida.push({
+      numeroDeOrigen: envio.numeroDeOrigen,
+      para: dueno,
+      ligaDeDocumento: datos.urlPdf,
+      nombreDeArchivo: nombreDelArchivo,
+      texto: '📄 Contrato *' + datos.folio + '* de ' + envio.para +
+        (datos.repetido ? ' (ya existía)' : ''),
+      pasaAPersona: false,
+      escribio: '[contrato · pdf al dueño]'
+    });
+  }
+  /* 3) Y el aviso con la liga, que le sirve aunque el archivo no haya
+        salido: de ahí lo baja y lo sube él. */
+  salida.push(alDueno('📄 Contrato registrado en EuroSystem como *BORRADOR*, folio *' + datos.folio + '*' +
+    (datos.repetido ? ' (ya existía)' : '') + '.' +
+    (datos.urlPdf ? '\n' + datos.urlPdf : '') +
+    '\n\nLo confirmas en el panel cuando entre el anticipo.', '[contrato · registrado]')[0]);
   return salida;
 }
 
-/* T-125 · Lo que recibe el cliente cuando su contrato ya quedó registrado. */
+/* T-125 · Lo que recibe el cliente cuando su contrato ya quedó registrado.
+   Sin `liga` es el pie del PDF; con `liga` es el respaldo en texto para
+   cuando Meta no pudo bajar el archivo. */
 function TEXTO_CONTRATO_AL_CLIENTE(folio, liga) {
   return 'Listo, ya quedó tu contrato con el folio *' + folio + '* 🎉\n' +
-    'Aquí lo puedes ver y guardar:\n' + liga + '\n\n' +
+    (liga ? 'Aquí lo puedes ver y guardar:\n' + liga + '\n\n' : 'Aquí te va en PDF para que lo guardes.\n\n') +
     'En cuanto se vea reflejado tu anticipo te confirmo la fecha.';
 }
 
@@ -3080,6 +3122,21 @@ async function manda(envio) {
               type: 'image',
               image: Object.assign({ link: envio.ligaDeFoto }, envio.texto ? { caption: envio.texto } : {})
             }
+          /* Un ARCHIVO nuestro por su dirección firmada: el PDF del contrato
+             que devuelve EuroSystem. Meta lo baja y lo entrega como
+             documento dentro de la plática, así que al cliente le queda el
+             archivo guardado aunque la liga venza a los 30 días (dictado
+             del dueño, 9-sep-2026: «mandas el PDF al cliente, me lo mandas
+             a mí, y lo subes al sistema»). Si Meta no lo puede bajar, más
+             abajo se manda `textoDeRespaldo` con la liga: nadie se queda
+             sin el contrato. */
+          : envio.ligaDeDocumento
+          ? {
+              type: 'document',
+              document: Object.assign({ link: envio.ligaDeDocumento },
+                envio.nombreDeArchivo ? { filename: envio.nombreDeArchivo } : {},
+                envio.texto ? { caption: envio.texto } : {})
+            }
           : {
               type: 'text',
               text: { preview_url: false, body: envio.texto }
@@ -3092,6 +3149,17 @@ async function manda(envio) {
          es adivinar. */
       const detalle = await r.text().catch(function () { return ''; });
       console.error('[whatsapp] Meta contesto ' + r.status + ': ' + detalle.slice(0, 500));
+      /* El contrato no se pierde porque Meta no haya podido bajar el PDF
+         (liga caída, archivo muy grande, tipo que no le gustó): va la liga
+         en texto, que es lo que se mandaba antes de que hubiera archivo. */
+      if (envio.ligaDeDocumento && envio.textoDeRespaldo) {
+        console.error('[whatsapp] el PDF no salió; se manda la liga en texto');
+        return await manda(Object.assign({}, envio, {
+          ligaDeDocumento: null, nombreDeArchivo: null,
+          texto: envio.textoDeRespaldo, textoDeRespaldo: null,
+          escribio: (envio.escribio || '') + ' · liga en texto'
+        }));
+      }
       return false;
     }
     /* Lo que solo debe pasar si WhatsApp aceptó el mensaje (la etapa

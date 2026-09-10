@@ -91,6 +91,7 @@ let mandados = [];
 let llamadasALaIA = 0;
 let cuerposALaIA = [];
 let laIADice = null;
+let metaRechazaDocumentos = false;
 
 globalThis.fetch = async function (url, opciones) {
   const u = String(url);
@@ -98,6 +99,16 @@ globalThis.fetch = async function (url, opciones) {
 
   if (u.indexOf('graph.facebook.com') !== -1) {
     mandados.push(cuerpo);
+    /* Meta no siempre puede bajar un archivo por su liga (liga caída, tipo
+       que no le gustó, archivo grande). Con esto se prueba que el contrato
+       no se pierde por eso: se cae al texto con la liga. */
+    if (metaRechazaDocumentos && cuerpo.type === 'document') {
+      return {
+        ok: false, status: 400,
+        json: async function () { return {}; },
+        text: async function () { return '{"error":{"message":"Media download failed"}}'; }
+      };
+    }
     return {
       ok: true, status: 200,
       json: async function () { return { messages: [{ id: 'wamid.salida' + mandados.length }] }; },
@@ -667,9 +678,26 @@ function siembraFichaCompleta(C) {
   okQue('  y la liga del PDF', /eurosystem\/pdf\/43801/.test(alDueno));
   okQue('  y dice BORRADOR', /BORRADOR/.test(alDueno));
   /* Cambió el 5-sep-2026: «la liga del PDF a mí, al cliente y al sistema».
-     Antes se afirmaba que al cliente no le llegaba nada. */
-  const alCliente = textos(C).join('\n');
-  okQue('  al cliente le llega su folio y la liga', /folio \*43801\*/.test(alCliente) && /eurosystem\/pdf\/43801/.test(alCliente));
+     Antes se afirmaba que al cliente no le llegaba nada.
+
+     Y cambió otra vez el 9-sep-2026: el dueño dictó que se mande el ARCHIVO,
+     no la liga («mandas el PDF al cliente, me lo mandas a mí, y lo subes al
+     sistema»). Por eso la liga ya no viaja en `text.body` sino en el
+     documento, y el folio va en su pie. La liga firmada vence a los 30 días;
+     el archivo entregado se queda en la plática. */
+  const documentos = function (para) {
+    return mandados.filter(function (m) { return mismo(m.to, para) && m.type === 'document'; });
+  };
+  const pdfDelCliente = documentos(C)[0];
+  okQue('  al cliente le llega el PDF del contrato', !!pdfDelCliente);
+  ok('  con la liga firmada de EuroSystem', pdfDelCliente && pdfDelCliente.document.link,
+    'https://eurosystem/pdf/43801');
+  ok('  con nombre de archivo', pdfDelCliente && pdfDelCliente.document.filename, 'Contrato-43801.pdf');
+  okQue('  y su folio en el pie', /folio \*43801\*/.test((pdfDelCliente && pdfDelCliente.document.caption) || ''));
+  const pdfDelDueno = documentos(DUENO)[0];
+  okQue('  al dueño le llega el mismo PDF', !!pdfDelDueno &&
+    pdfDelDueno.document.link === (pdfDelCliente && pdfDelCliente.document.link));
+  const alCliente = textos(C).concat((pdfDelCliente && pdfDelCliente.document.caption) || '').join('\n');
   okQue('  sin palabras prohibidas', !/sistema|proceso|formulario|ticket/i.test(alCliente));
   const b = contratosMandados[0] || {};
   /* Los últimos 10 dígitos (fase 2, C8): por cita o por número escrito, la
@@ -696,6 +724,22 @@ function siembraFichaCompleta(C) {
   /* Fase 2 (7-sep-2026): un «va» a un ticket que ya no confirma nada no
      le llega al cliente suelto; el dueño recibe el aviso. */
   okQue('  y NO le llega un «va» suelto al cliente', !/^va$/m.test(textos(C).join('\n')));
+}
+
+/* 2b · Si Meta no puede bajar el PDF, la liga sale en texto. El dueño pidió
+   recibir el contrato «por si falla subirlo yo» (9-sep-2026): quedarse sin
+   nada porque el archivo no salió es justo lo que no puede pasar. */
+{
+  webhook.olvidaTodo(); mandados = []; contratosMandados = [];
+  const C = '5213366670023';
+  siembraFichaCompleta(C);
+  metaRechazaDocumentos = true;
+  await contesta('va', 'wamid.ficha-' + C);
+  metaRechazaDocumentos = false;
+  const alCliente = textos(C).join('\n');
+  okQue('con el PDF caído, al cliente le llega la liga en texto',
+    /folio \*43801\*/.test(alCliente) && /eurosystem\/pdf\/43801/.test(alCliente));
+  okQue('  y al dueño también', /eurosystem\/pdf\/43801/.test(textos(DUENO).join('\n')));
 }
 
 /* 3 · EuroSystem lo rechaza: se le dice al dueño con las palabras del error. */
