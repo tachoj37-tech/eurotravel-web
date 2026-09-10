@@ -929,15 +929,44 @@ async function datosDelContrato(envio) {
   const dueno = tickets.numeroDelDueno(process.env);
   const yaEstaba = (tickets.fichaDe(envio.para) || {}).contratoAvisado;
   if (completo && dueno && !yaEstaba) {
+    const f = tickets.fichaDe(envio.para) || {};
     salida.push({
       numeroDeOrigen: envio.numeroDeOrigen,
       para: dueno,
-      texto: contrato.fichaParaElDueno(juntos, envio.para),
+      texto: contrato.fichaParaElDueno(juntos, envio.para) +
+        '\n\nContéstame *este mensaje* con *va* para autorizar estos datos.',
       esTicket: true,
       sobreCliente: envio.para,
+      /* La carga dice QUÉ ticket es: su «va» aquí autoriza los datos, no
+         el pago ni un precio (dictado del dueño, 9-sep-2026). */
+      carga: { tipo: 'contrato' },
       pasaAPersona: false,
       escribio: '[ficha del contrato]'
     });
+    /* ------------------------------------------------------------
+       Y EL SEGUNDO: VERIFICAR LA TRANSFERENCIA
+       ------------------------------------------------------------
+       Dictado del dueño (9-sep-2026): «cuando los mande me manda otro
+       mensaje, 1 para verificar datos de contrato y otro para verificar
+       transferencia; una vez autorizados los dos se genera el contrato».
+       Si ya aprobó el pago antes, este segundo no hace falta.
+       ------------------------------------------------------------ */
+    if (!f.pagoAprobado) {
+      salida.push({
+        numeroDeOrigen: envio.numeroDeOrigen,
+        para: dueno,
+        texto: '💵 *Falta verificar la transferencia*\n\n' +
+          'De ' + envio.para + (typeof f.anticipo === 'number' ? ' · anticipo $' + f.anticipo.toLocaleString('en-US') : '') +
+          '\nSu comprobante te llegó arriba.\n\n' +
+          'Contéstame *este mensaje* con *va* cuando la veas en el banco.\n' +
+          'Con esa y la de los datos, el contrato se genera solo.\n_cliente: ' + envio.para + '_',
+        esTicket: true,
+        sobreCliente: envio.para,
+        carga: { tipo: 'pago' },
+        pasaAPersona: false,
+        escribio: '[verificar la transferencia]'
+      });
+    }
     tickets.anotaEtapa(envio.para, 'contrato_listo', { contratoAvisado: true });
   }
 

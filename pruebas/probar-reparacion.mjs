@@ -1013,7 +1013,7 @@ titulo('R28 · las TRES autorizaciones del dueño (dictado del 9-sep-2026): prec
   okQue('el «va» al comprobante confirma el pago al cliente', /pago qued[oó] confirmado|Tu pago qued/i.test(dichoB));
   okQue('  y le dice que su fecha está apartada', /fecha ya está apartada/i.test(dichoB));
   okQue('  la ficha queda con el pago aprobado', (tk.fichaDe(B) || {}).pagoAprobado === true);
-  okQue('  y al dueño se le dice qué sigue', /autorizado/i.test(textos(DUENO).slice(-1)[0] || ''));
+  okQue('  y al dueño se le dice qué sigue', /transferencia verificada|Falta /i.test(textos(DUENO).slice(-1)[0] || ''));
 
   /* --- 3 · autorizar el contrato, ya con el pago aprobado --- */
   tk.anotaEtapa(B, 'contrato_listo', { contrato: {
@@ -1058,6 +1058,44 @@ titulo('R29 · «ida y vuelta el mismo día» dicho por su cuenta ya cierra el r
   laIA = () => ({ respuesta: '¿También para el 31 o cambias la del 24?', datos: {}, accion: 'seguir' });
   await dice('ah caray, ¿y para el 31 de octubre?', E);
   ok('tras un «no hay», la fecha propuesta fija la salida', (webhook.charlaDe(E) || {}).salida, '2026-10-31');
+}
+
+/* ============================================================ */
+titulo('R30 · dos vistos buenos y el contrato se genera solo, en cualquier orden (dictado del 9-sep-2026)');
+{
+  const viaje = { origen: 'Guadalajara', destino: 'Chapala', salida: '2026-11-20', regreso: '2026-11-20', gente: 12, unidad: 'Sprinter' };
+  const datos = { nombre: 'Laura Pérez', telefono: '3312345678',
+    direccionSalida: 'Av. Patria 2050', horaSalida: '07:00',
+    direccionDestino: 'Hotel Villa Montecarlo', horaRegreso: '18:00' };
+  const arma = function (C) {
+    tk.anotaEtapa(C, 'contrato_listo', { total: 9000, anticipo: 2000, contratoAvisado: true, contrato: datos, viajeDatos: viaje }, Date.now());
+    tk.recuerdaTicket('wamid.contrato-' + C, C, { tipo: 'contrato' });
+    tk.recuerdaTicket('wamid.pago-' + C, C, { tipo: 'pago' });
+  };
+  /* --- orden A: primero la transferencia, luego los datos --- */
+  limpia();
+  const A = '5213366670442';
+  arma(A);
+  await contestaTicket('va', 'wamid.pago-' + A);
+  okQue('con solo la transferencia NO se genera el contrato', !(tk.fichaDe(A) || {}).contratoSubido);
+  okQue('  y se le dice al dueño qué falta', /Falta los datos del contrato|datos del contrato/i.test(textos(DUENO).slice(-1)[0] || ''));
+  okQue('  al cliente sí se le confirma el pago', /pago qued[oó] confirmado/i.test(textos(A).join('\n')));
+  ok('  la ficha trae el pago aprobado', (tk.fichaDe(A) || {}).pagoAprobado, true);
+  await contestaTicket('va', 'wamid.contrato-' + A);
+  okQue('con los DOS, el contrato se registra', /folio|EuroSystem|CONTRATOS_API_KEY/i.test(textos(DUENO).slice(-1)[0] || ''));
+  ok('  y la ficha trae los datos autorizados', (tk.fichaDe(A) || {}).contratoAutorizado, true);
+
+  /* --- orden B: primero los datos, luego la transferencia --- */
+  limpia();
+  const B = '5213366670443';
+  arma(B);
+  await contestaTicket('va', 'wamid.contrato-' + B);
+  okQue('con solo los datos NO se genera el contrato', !(tk.fichaDe(B) || {}).contratoSubido);
+  okQue('  y se le dice que falta la transferencia', /Falta la transferencia/i.test(textos(DUENO).slice(-1)[0] || ''));
+  okQue('  y al cliente NO se le confirma un pago que no se ha visto', !/pago qued[oó] confirmado/i.test(textos(B).join('\n')));
+  await contestaTicket('va', 'wamid.pago-' + B);
+  okQue('con los DOS, el contrato se registra (otro orden)', /folio|EuroSystem|CONTRATOS_API_KEY/i.test(textos(DUENO).slice(-1)[0] || ''));
+  okQue('  y ahí sí se le confirma el pago al cliente', /pago qued[oó] confirmado/i.test(textos(B).join('\n')));
 }
 
 console.log('\n' + buenas + ' buenas, ' + malas + ' malas');

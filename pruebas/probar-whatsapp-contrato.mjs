@@ -188,7 +188,12 @@ laIADice = {
     ['06:00', '16:00']);
 
   const alDueno = textos(DUENO);
-  ok('al dueño le llega la ficha', alDueno.length, 1);
+  /* Desde el 9-sep-2026 son DOS mensajes, como los pidió el dueño: uno con
+     los datos del contrato y otro para verificar la transferencia. El
+     contrato se genera cuando autoriza los dos. */
+  ok('al dueño le llegan los DOS mensajes: datos y transferencia', alDueno.length, 2);
+  okQue('  el segundo pide verificar la transferencia', /Falta verificar la transferencia/.test(alDueno[1] || ''));
+  okQue('  y le dice que con las dos el contrato sale solo', /el contrato se genera solo/.test(alDueno[1] || ''));
   okQue('  con todo armado para pasarlo al contrato',
     /María Fernanda/.test(alDueno[0]) && /Vallarta 1234/.test(alDueno[0]) &&
     /06:00/.test(alDueno[0]));

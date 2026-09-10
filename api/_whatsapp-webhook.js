@@ -1172,7 +1172,13 @@ function procesa(crudo, firma, entorno) {
           const citado = m.context && m.context.id;
           const cargaCitada = (dirigido && dirigido.via === 'cita') ? dirigido.carga : null;
           let pendiente = null;
-          if (cargaCitada) pendiente = cargaCitada.consumido ? null : cargaCitada;
+          /* Solo la carga de un ticket DE PRECIO cuenta como precio
+             pendiente. Los tickets de contrato y de transferencia también
+             llevan carga (para saber cuál es cuál), y sin esta guarda un
+             «va» a cualquiera de ellos se leía como confirmar un precio. */
+          if (cargaCitada && (cargaCitada.cotiza || cargaCitada.resumen)) {
+            pendiente = cargaCitada.consumido ? null : cargaCitada;
+          }
           /* SOLO el ticket del precio confirma precio (auditoría 7-sep-2026,
              C2). Antes, un «15000» contestando el ticket del comprobante
              —para anotar el depósito— le mandaba al cliente una cotización
@@ -1298,64 +1304,74 @@ function procesa(crudo, firma, entorno) {
              para el cliente. La subida —que tiene red— vive en
              `whatsapp.mjs`.
              ------------------------------------------------------------ */
-          if (fichaDelCliente && fichaDelCliente.contrato &&
-              contrato.estaCompleto(fichaDelCliente.contrato) &&
-              !fichaDelCliente.contratoSubido &&
-              confirmacion.interpreta(dirigido.texto).tipo === 'va') {
-            envios.push({
-              numeroDeOrigen: deQuien,
-              para: dirigido.cliente,
-              texto: '',
-              subeContrato: true,
-              pasaAPersona: false,
-              escribio: '[contrato · autorizado]'
-            });
-            tickets.yaLoContesto(dirigido.cliente);
-            continue;
-          }
-
           /* ------------------------------------------------------------
-             ¿ESTÁ AUTORIZANDO LA TRANSFERENCIA?
+             DOS VISTOS BUENOS, EN CUALQUIER ORDEN
              ------------------------------------------------------------
-             Dictado del dueño (9-sep-2026): «2 autorizar transferencia:
-             cuando el cliente manda la transferencia, el bot me la manda y
-             la reviso; en lo que la apruebo, el bot va a hacer las
-             preguntas para generar el contrato».
-
-             Va DESPUÉS del «va» del contrato, y así no chocan: cuando los
-             datos ya están completos su «va» es para el contrato (que es
-             el último paso y el que registra en EuroSystem); mientras no lo
-             estén, su «va» sobre ese cliente aprueba el pago. En su flujo
-             real el pago llega primero, cuando el contrato todavía no está
-             completo, así que cada «va» cae donde debe.
+             Dictado del dueño (9-sep-2026): al completarse los datos le
+             llegan DOS mensajes —uno para verificar los datos del contrato
+             y otro para verificar la transferencia— y «una vez autorizados
+             los dos, se genera el contrato». Cuál autoriza cada «va» lo
+             dice la carga del ticket que contestó; si contestó algo sin
+             carga (el comprobante reenviado, por ejemplo) se toma como el
+             pago, que es lo que se le reenvió.
              ------------------------------------------------------------ */
-          const esperaAprobarPago = !!(fichaDelCliente && !fichaDelCliente.pagoAprobado &&
-            ['mando_comprobante', 'datos_del_contrato', 'contrato_listo'].indexOf(fichaDelCliente.etapa) >= 0);
-          if (esperaAprobarPago && confirmacion.interpreta(dirigido.texto).tipo === 'va') {
-            tickets.anotaEtapa(dirigido.cliente, fichaDelCliente.etapa, { pagoAprobado: true }, ahora);
-            const faltan = contrato.faltantes(fichaDelCliente.contrato || {});
-            envios.push({
-              numeroDeOrigen: deQuien,
-              para: dirigido.cliente,
-              texto: '¡Listo! Tu pago quedó confirmado ✅ Tu fecha ya está apartada.' +
-                (faltan.length
-                  ? '\n\nSolo me falta ' + String(faltan[0].pide).replace(/\*/g, '').replace(/^El\s+/, 'el ').replace(/^La\s+/, 'la ') + ' y queda tu contrato.'
-                  : '\n\nEn un momento te llega tu contrato.'),
-              pasaAPersona: false,
-              escribio: '[pago · autorizado]'
-            });
-            envios.push({
-              numeroDeOrigen: deQuien,
-              para: tickets.numeroDelDueno(env) || deQuien,
-              esTicket: true,
-              sobreCliente: dirigido.cliente,
-              texto: '✅ Pago de ' + dirigido.cliente + ' autorizado. Ya le avisé.' +
-                (faltan.length
-                  ? '\n\nLe faltan ' + faltan.length + ' dato(s) del contrato; cuando estén te mando la ficha para que autorices el contrato.'
-                  : '\n\nSus datos ya están completos: contéstame la ficha del contrato con *va* y lo registro en EuroSystem.'),
-              pasaAPersona: false,
-              escribio: '[pago · autorizado · acuse]'
-            });
+          const tipoDelTicket = (cargaCitada && cargaCitada.tipo) || null;
+          const esVa = !!dirigido && confirmacion.interpreta(dirigido.texto).tipo === 'va';
+          const datosCompletos = !!(fichaDelCliente && fichaDelCliente.contrato &&
+            contrato.estaCompleto(fichaDelCliente.contrato));
+          if (esVa && fichaDelCliente && !fichaDelCliente.contratoSubido &&
+              (tipoDelTicket === 'contrato' || tipoDelTicket === 'pago' ||
+               ['mando_comprobante', 'datos_del_contrato', 'contrato_listo'].indexOf(fichaDelCliente.etapa) >= 0)) {
+            /* Qué autoriza este «va». Sin carga: el pago si falta, y si el
+               pago ya estaba, los datos. */
+            const autoriza = tipoDelTicket ||
+              (fichaDelCliente.pagoAprobado ? 'contrato' : 'pago');
+            const yaPago = autoriza === 'pago' ? true : !!fichaDelCliente.pagoAprobado;
+            const yaDatos = autoriza === 'contrato' ? true : !!fichaDelCliente.contratoAutorizado;
+            tickets.anotaEtapa(dirigido.cliente, fichaDelCliente.etapa,
+              { pagoAprobado: yaPago, contratoAutorizado: yaDatos }, ahora);
+
+            /* Al cliente solo se le avisa la primera vez que su pago queda
+               confirmado: es lo que él está esperando. */
+            if (autoriza === 'pago' && !fichaDelCliente.pagoAprobado) {
+              const faltan = contrato.faltantes(fichaDelCliente.contrato || {});
+              envios.push({
+                numeroDeOrigen: deQuien,
+                para: dirigido.cliente,
+                texto: '¡Listo! Tu pago quedó confirmado ✅ Tu fecha ya está apartada.' +
+                  (faltan.length
+                    ? '\n\nSolo me falta ' + String(faltan[0].pide).replace(/\*/g, '').replace(/^El\s+/, 'el ').replace(/^La\s+/, 'la ') + ' y queda tu contrato.'
+                    : '\n\nEn un momento te llega tu contrato.'),
+                pasaAPersona: false,
+                escribio: '[pago · autorizado]'
+              });
+            }
+
+            /* Con los dos vistos buenos y los datos completos, el contrato
+               se genera solo. Si falta uno, se le dice cuál. */
+            if (yaPago && yaDatos && datosCompletos) {
+              envios.push({
+                numeroDeOrigen: deQuien,
+                para: dirigido.cliente,
+                texto: '',
+                subeContrato: true,
+                pasaAPersona: false,
+                escribio: '[contrato · autorizado]'
+              });
+            } else {
+              const falta = !yaPago ? 'la transferencia'
+                : (!datosCompletos ? 'que el cliente termine de darme sus datos' : 'los datos del contrato');
+              envios.push({
+                numeroDeOrigen: deQuien,
+                para: tickets.numeroDelDueno(env) || deQuien,
+                esTicket: true,
+                sobreCliente: dirigido.cliente,
+                texto: '✅ Anotado' + (autoriza === 'pago' ? ': transferencia verificada' : ': datos del contrato verificados') +
+                  ' para ' + dirigido.cliente + '.\n\nFalta ' + falta + ' y el contrato se genera solo.',
+                pasaAPersona: false,
+                escribio: '[autorización · falta la otra]'
+              });
+            }
             tickets.yaLoContesto(dirigido.cliente);
             continue;
           }

@@ -638,9 +638,13 @@ process.env.CONFIRMAR_DISPONIBILIDAD = '0';
 titulo('el contrato con el «va» a la ficha');
 const tickets = (await import(pathToFileURL(path.join(RAIZ, 'api', '_tickets.js')).href)).default;
 
+/* Desde el 9-sep-2026 hay DOS vistos buenos: la transferencia y los datos
+   del contrato (dictado del dueño). Aquí se siembra con la transferencia
+   YA verificada, para probar el segundo; que sin ella no se genere nada se
+   prueba aparte, abajo. */
 function siembraFichaCompleta(C) {
   tickets.anotaEtapa(C, 'contrato_listo', {
-    total: 48000, anticipo: 10000, contratoAvisado: true,
+    total: 48000, anticipo: 10000, contratoAvisado: true, pagoAprobado: true,
     contrato: {
       nombre: 'Laura Pérez', telefono: '3312345678',
       direccionSalida: 'Afuera del Tec, puerta 3', horaSalida: '7:00',

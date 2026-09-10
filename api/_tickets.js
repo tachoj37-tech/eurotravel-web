@@ -481,6 +481,13 @@ function anotaEtapa(cliente, etapa, extra, ahora) {
     pagoAprobado: (extra && Object.prototype.hasOwnProperty.call(extra, 'pagoAprobado'))
       ? !!extra.pagoAprobado
       : !!(antes && antes.pagoAprobado),
+    /* Y el visto bueno a los datos del contrato. Son DOS autorizaciones
+       distintas (dictado del dueño, 9-sep-2026: «1 para verificar datos de
+       contrato y otro para verificar transferencia; una vez autorizados los
+       dos, se genera el contrato»). Se pueden dar en cualquier orden. */
+    contratoAutorizado: (extra && Object.prototype.hasOwnProperty.call(extra, 'contratoAutorizado'))
+      ? !!extra.contratoAutorizado
+      : !!(antes && antes.contratoAutorizado),
     precioVencido: (extra && extra.viajeDatos)
       ? !!(extra && extra.precioVencido)
       : ((extra && Object.prototype.hasOwnProperty.call(extra, 'precioVencido'))
