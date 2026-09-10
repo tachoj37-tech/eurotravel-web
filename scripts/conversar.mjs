@@ -414,13 +414,40 @@ const escenarios = {
   ai: ['a tapalpa el 8 de noviembre, ida y vuelta el mismo día, somos 16, de guadalajara, solo nos llevan y traen',
     va('5213366679035'),
     'oye y cuánto sale a mazamitla el 15 de noviembre igual de ida y vuelta con los mismos 16?',
-    'mejor déjame el de tapalpa', 'apártamelo']
+    'mejor déjame el de tapalpa', 'apártamelo'],
+
+  /* aj · LA VUELTA COMPLETA que pidió el dueño (10-sep-2026): cotiza uno,
+     lo cotiza con precio, pide otro, lo cotiza también, se regresa al
+     primero y LO COMPRA hasta el contrato. Si esto falla, se pierde al
+     cliente: es la prueba que manda. */
+  aj: ['hola, quiero cotizar a chapala el 20 de octubre, ida y vuelta el mismo día, somos 14, de guadalajara, solo nos llevan y traen',
+    va('5213366679036'),
+    'oye y aparte, ¿cuánto sale a mazatlán del 5 al 7 de diciembre para 45, de guadalajara, solo llevar y traer?',
+    'el paradiso',
+    precio(58000),
+    'ok, mejor déjame el de chapala, ése sí lo quiero',
+    'apártamelo', foto('5213366679036'), apruebaPago(),
+    'soy Ramón Cárdenas Ibarra',
+    'nos recogen en av. américas 400, guadalajara, a las 7 de la mañana',
+    'llegamos al malecón de chapala y salimos de regreso a las 6 de la tarde',
+    autorizaDatos(),
+    '¿ya quedó?'],
+
+  /* ak · el que pide tres cotizaciones seguidas sin cerrar ninguna, y al
+     final quiere la de en medio. */
+  ak: ['a tequila el 17 de octubre ida y vuelta el mismo día, somos 18, de guadalajara, solo nos llevan y traen',
+    va('5213366679037'),
+    'y otra a tapalpa el 24 de octubre, igual 18, mismo día, solo llevar y traer',
+    va('5213366679037'),
+    'y otra más a mazamitla el 31 de octubre, igual',
+    va('5213366679037'),
+    'me quedo con la de tapalpa', 'cuánto era?', 'apártamelo']
 };
 const pedidos = process.argv.slice(2).filter((x) => escenarios[x]);
 for (const k of (pedidos.length ? pedidos : Object.keys(escenarios))) {
   const C = '52133666790' + { a: '01', b: '02', c: '03', d: '04', e: '05', f: '06', g: '07', h: '08', i: '09', j: '10', k: '11', l: '12', m: '13', n: '14', o: '15', p: '16', q: '17', r: '18', s: '19', t: '20', u: '21', v: '26', w: '22', x: '23', y: '24', z: '25',
     aa: '27', ab: '28', ac: '29', ad: '30', ae: '31',
-    af: '32', ag: '33', ah: '34', ai: '35' }[k];
+    af: '32', ag: '33', ah: '34', ai: '35', aj: '36', ak: '37' }[k];
   const guion = escenarios[k].map((p) => (typeof p === 'function' && p.length === 0 && k === 'e') ? p : p);
   await corre('Escenario ' + k, C, guion);
   console.log('\n(gastado hasta aquí: $' + gastado.toFixed(3) + ' USD)');

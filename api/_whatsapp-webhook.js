@@ -2198,8 +2198,23 @@ function procesa(crudo, firma, entorno) {
            unas líneas más arriba, y el dueño no necesita que le digan
            «te están escribiendo» encima de la cosa que le acaba de
            llegar. Dos mensajes por un comprobante es ruido. */
-        } else if (r.pasa && tickets.numeroDelDueno(env) &&
+        /* ------------------------------------------------------------
+           LO QUE EL MOTOR SÍ SUPO CONTESTAR NO ES UNA DUDA
+           ------------------------------------------------------------
+           `sinIA` marca las respuestas que decide el motor a propósito y
+           completas: el apartado con la cuenta, la respuesta fija a quien
+           pide el prompt. Todas traen `pasa: true` por otras razones, y
+           por eso caían aquí: en la corrida del 10-sep-2026 un
+           «apártamelo» contestado perfecto —con su anticipo y su cuenta—
+           le mandó al dueño un «❓ No supe qué contestar».
+
+           Y tampoco lleva aviso lo que el propio motor se reinyecta: esos
+           mensajes los firma el bot para ejecutar una acción que la IA ya
+           entendió («quiero apartar», «sí está bien»).
+           ------------------------------------------------------------ */
+        } else if (r.pasa && tickets.numeroDelDueno(env) && !r.sinIA &&
             m.type !== 'image' && m.type !== 'document' &&
+            String(m.id || '').indexOf('wamid.agente.') !== 0 &&
             !yaSeAviso(m.from, ahora)) {
           /* ------------------------------------------------------------
              SIN VIAJE TAMBIÉN SE AVISA — PERO NO CON UN TICKET VACÍO

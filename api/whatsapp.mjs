@@ -286,6 +286,35 @@ function yaLoCotizaste(ficha, res) {
   })[0] || null;
 }
 
+/* ------------------------------------------------------------
+   «DÉJAME EL DE CHAPALA»: EL DESTINO LO DICE ÉL, NO EL MODELO
+   ------------------------------------------------------------
+   Corrida real del 10-sep-2026. Con Chapala ya cotizado y Mazatlán
+   encima, el cliente escribió «ok, mejor déjame el de chapala, ése sí lo
+   quiero». El modelo no puso el destino en `datos` —leyó «ése» como el
+   autobús— así que la plática se quedó en Mazatlán. Y entonces
+   «apártamelo» le cobró el anticipo de Mazatlán, al dueño le llegó el
+   comprobante rotulado «Guadalajara → Mazatlán», y el contrato habría
+   salido del viaje equivocado. Eso es perder al cliente y cobrarle mal.
+
+   Así que el nombre del destino se busca en LO QUE ÉL ESCRIBIÓ, contra
+   los viajes que ya se le cotizaron. Es literal y no depende del modelo.
+   ------------------------------------------------------------ */
+function viajeArchivadoQueNombra(ficha, texto) {
+  if (!ficha || !Array.isArray(ficha.viajes) || !texto) return null;
+  const t = conversacion.normaliza(String(texto));
+  return ficha.viajes.filter(function (v) {
+    if (!v || !v.destino || typeof v.total !== 'number' || v.total <= 0) return null;
+    const d = conversacion.normaliza(String(v.destino));
+    if (d.length < 4) return false;
+    return t.indexOf(d) >= 0 ||
+      /* «Vallarta» por «Puerto Vallarta», «San Juan» por «San Juan de los
+         Lagos»: basta la palabra más larga del nombre. */
+      d.split(/\s+/).filter(function (p) { return p.length >= 6; })
+        .some(function (p) { return t.indexOf(p) >= 0; });
+  })[0] || null;
+}
+
 function ticketDePrecio(res, precio, cal, cliente, unidad, historial, yaDado) {
   const lineas = ['💰 *Precio por confirmar*', ''];
   const pax = res.gente || res.pasajeros;
@@ -2068,7 +2097,9 @@ async function loQueDiceElAgente(envio) {
      plática (que se cierra al pedirlo). Se le cuenta a la IA para que no
      vuelva a preguntar «¿a dónde van?» después de «ok», y para que si el
      cliente quiere OTRO viaje, lo tome de cero. */
-  const viajeDeLaFicha = viajeConPrecio(tickets.fichaDe(cliente));
+  /* `let` y no `const`: si el cliente vuelve a una cotización anterior, más
+     abajo se le devuelve su precio a la ficha y esto tiene que reflejarlo. */
+  let viajeDeLaFicha = viajeConPrecio(tickets.fichaDe(cliente));
   /* Una plática que quedó en «confirmar» con el precio ya pedido es un
      residuo del defecto del 7-sep-2026 (las guardadas antes del arreglo
      viven hasta siete días en el almacén). Se descarta: si no, ese cliente
@@ -2130,7 +2161,15 @@ async function loQueDiceElAgente(envio) {
       const t = conversacion.normaliza(texto);
       const nombrado = agente.unidadPorTexto ? agente.unidadPorTexto(texto) : null;
       const busNombrado = nombrado && (conversacion.UNIDADES || []).find(function (u) { return u.id === nombrado && u.cat === 'autobus'; });
-      const busSenalado = (!busNombrado && SENALA_ESE.test(t)) ? unicoAutobusEnTexto(ultimoTexto) : null;
+      /* «Ése» señala al autobús que el bot acaba de nombrar… salvo que el
+         cliente esté señalando un VIAJE: «mejor déjame el de chapala, ése
+         sí lo quiero» se leyó como escoger el Paradiso, y de ahí en
+         adelante el bot siguió en el viaje equivocado (corrida real del
+         10-sep-2026). Si en la misma frase nombra un viaje que ya se le
+         cotizó, «ése» es el viaje. */
+      const senalaUnViaje = !!viajeArchivadoQueNombra(tickets.fichaDe(cliente), texto);
+      const busSenalado = (!busNombrado && !senalaUnViaje && SENALA_ESE.test(t))
+        ? unicoAutobusEnTexto(ultimoTexto) : null;
       const quiere = /\b(quiero|me late|me gusta|reserv|apart|cotiza|cuanto|precio|ese|esa|ese mismo|el mismo)\b/.test(t);
       const bus = busNombrado || busSenalado;
       if (bus && quiere) {
@@ -2582,6 +2621,106 @@ async function loQueDiceElAgente(envio) {
         nuevo.destino = base.destino;
         webhook.guardaCharla(cliente, nuevo);
       }
+    }
+  }
+
+  /* ------------------------------------------------------------
+     VOLVER A UNA COTIZACIÓN ANTERIOR TIENE QUE FUNCIONAR
+     ------------------------------------------------------------
+     Dictado del dueño (10-sep-2026): «si el cliente quiere una cotización
+     nueva, dásela, pero no se te olvide la pasada; si le sacas una
+     cotización y después quiere volver a la anterior y comprarla, si
+     falla pierdes al cliente».
+
+     La ficha guarda UN viaje: el segundo pisa al primero. Lo que el
+     primero deja es su renglón en el archivo (`ficha.viajes`), con su
+     total y —desde hoy— su anticipo. Así que cuando la plática vuelve a
+     apuntar a un viaje archivado que YA tenía precio, ese viaje se
+     devuelve a la ficha completo: total, anticipo y datos. Desde ahí todo
+     lo demás funciona solo —apartar cobra el anticipo correcto, el
+     contrato sale con las fechas correctas— porque para el resto del
+     sistema simplemente es «el viaje que tiene precio».
+
+     El que estaba activo no se pierde: `armaFicha` lo archiva al entrar
+     el otro, con la misma cuenta.
+     ------------------------------------------------------------ */
+  {
+    const f = tickets.fichaDe(cliente);
+    /* Primero por lo que el modelo leyó; si no, por el nombre del destino
+       en las palabras del cliente, que es lo que no se puede perder. */
+    const archivado = yaLoCotizaste(f, nuevo) || viajeArchivadoQueNombra(f, texto);
+    const activo = viajeBaseDeLaFicha(f);
+    /* Se compara el ARCHIVADO con el ACTIVO, no la plática con el activo:
+       cuando el cliente vuelve a un viaje anterior la plática todavía trae
+       el viaje nuevo —está sembrada de la ficha— así que compararla con el
+       activo siempre daba «es el mismo» y nunca se devolvía nada. */
+    const vuelveAOtro = !!(archivado && archivado.estado === 'precio dado' &&
+      (!activo || !mismoViaje(archivado, activo)));
+    if (vuelveAOtro) {
+      const devuelto = {
+        origen: archivado.origen || null, destino: archivado.destino,
+        salida: archivado.salida || null, regreso: archivado.regreso || null,
+        gente: archivado.gente || null,
+        unidad: (unidadDelCatalogo(archivado.unidad) || {}).name || archivado.unidad || null,
+        unidadNombre: (unidadDelCatalogo(archivado.unidad) || {}).name || archivado.unidad || null,
+        recorridos: typeof archivado.recorridos === 'number' ? archivado.recorridos : 0,
+        paseo: archivado.paseo || null, soloIda: !!archivado.soloIda
+      };
+      console.error('[agente] el cliente volvió a un viaje ya cotizado (' + archivado.destino +
+        '): se le devuelve su precio de $' + archivado.total);
+      tickets.anotaEtapa(cliente, 'con_precio', {
+        total: archivado.total,
+        anticipo: typeof archivado.anticipo === 'number' ? archivado.anticipo : null,
+        viajeDatos: devuelto,
+        porConfirmar: null,
+        precioVencido: false,
+        viaje: '📍 ' + (devuelto.origen ? devuelto.origen + ' → ' : '') + devuelto.destino +
+          (devuelto.salida ? '\n📅 ' + tickets.comoSeDice(devuelto.salida) +
+            (devuelto.regreso ? ' al ' + tickets.comoSeDice(devuelto.regreso) : '') : '')
+      }, Date.now());
+      /* Y la plática queda como ese viaje, no como una mezcla de los dos.
+         La unidad se rehace desde el catálogo: dejar el `unidadNombre` del
+         viaje que se abandona hacía que el viaje devuelto no se pareciera
+         a sí mismo, y el bot pedía otra vez un precio que ya tenía
+         («Marcopolo Paradiso G8 · 14 pax» para el viaje de la Sprinter). */
+      delete nuevo.unidad; delete nuevo.unidadNombre; delete nuevo.unidadId;
+      Object.keys(devuelto).forEach(function (k) { if (devuelto[k] !== null) nuevo[k] = devuelto[k]; });
+      const uDevuelta = unidadDelCatalogo(archivado.unidad);
+      if (uDevuelta) {
+        nuevo.unidad = uDevuelta.cat;
+        nuevo.unidadNombre = uDevuelta.name;
+        if (uDevuelta.cat === 'autobus') nuevo.unidadId = uDevuelta.id;
+      }
+      webhook.guardaCharla(cliente, nuevo);
+      viajeDeLaFicha = viajeConPrecio(tickets.fichaDe(cliente));
+    }
+  }
+
+  /* ------------------------------------------------------------
+     «¿CUÁNTO ERA?» SE CONTESTA CON LA CIFRA, NO CON UN RODEO
+     ------------------------------------------------------------
+     Corrida real del 10-sep-2026: con tres cotizaciones encima el cliente
+     escogió una y preguntó «cuánto era?». El modelo no puede escribir
+     cifras —esa regla existe para que no se las invente— así que contestó
+     «es el que ya te pasamos». Al cliente eso no le sirve: la tenía que
+     buscar hacia arriba en el chat.
+
+     La cifra la sabe la ficha, y aquí la escribe el código, que es quien
+     sí puede. Solo cuando el precio es de ESE viaje y no está vencido.
+     ------------------------------------------------------------ */
+  {
+    const PREGUNTA_CUANTO = /\b(cu[aá]nto|cu[aá]l)\s+(era|es|qued[oó]|sale|ser[ií]a|me\s+dijiste|fue)\b|recu[eé]rdame\s+(el\s+)?precio|\bcu[aá]nto\s+cuesta\b|\bel\s+precio\s+(cu[aá]l|era|es)\b/i;
+    const f = tickets.fichaDe(cliente) || {};
+    if (PREGUNTA_CUANTO.test(String(texto || '')) && !f.precioVencido &&
+        typeof f.total === 'number' && f.total > 0 && f.viajeDatos && f.viajeDatos.destino) {
+      const v = f.viajeDatos;
+      const pesos = function (x) { return '$' + Number(x).toLocaleString('es-MX'); };
+      console.error('[agente] preguntó el precio que ya tiene: lo repite el código, con su cifra');
+      dicho.accion = 'seguir';
+      dicho.respuesta = 'Tu ' + v.destino + (v.salida ? ' del ' + conversacion.fechaEnPalabras(v.salida) : '') +
+        ' quedó en *' + pesos(f.total) + '* total' +
+        (typeof f.anticipo === 'number' && f.anticipo > 0
+          ? ', con *' + pesos(f.anticipo) + '* de anticipo para apartarlo' : '') + ' 🙌';
     }
   }
 

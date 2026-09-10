@@ -394,7 +394,7 @@ function llave(cliente) { return soloDigitos(cliente).slice(-10); }
    que al cotizar otro no se olvide el anterior (pedido del dueño,
    7-sep-2026). Se archiva el que sale cuando entra uno distinto. */
 const TOPE_VIAJES = 5;
-function archivaViaje(lista, viaje, total, estado) {
+function archivaViaje(lista, viaje, total, estado, anticipo) {
   if (!viaje || !viaje.destino) return lista;
   const clave = String(viaje.destino) + '|' + String(viaje.salida || '');
   const sinEse = (lista || []).filter(function (v) {
@@ -405,6 +405,20 @@ function archivaViaje(lista, viaje, total, estado) {
     salida: viaje.salida || null, regreso: viaje.regreso || null,
     gente: viaje.gente || null, unidad: viaje.unidadNombre || viaje.unidad || null,
     total: typeof total === 'number' ? total : null,
+    /* ------------------------------------------------------------
+       EL ANTICIPO Y LOS MOVIMIENTOS TAMBIÉN SE GUARDAN
+       ------------------------------------------------------------
+       Dictado del dueño (10-sep-2026): «si le sacas una cotización y
+       después quiere volver a la anterior y comprarla, si falla pierdes
+       al cliente». Para volver a ella no basta el total: hace falta el
+       anticipo con el que se aparta y los movimientos, que son parte del
+       viaje. Sin esto, «mejor el de Tapalpa, apártamelo» no tenía monto
+       que cobrar.
+       ------------------------------------------------------------ */
+    anticipo: typeof anticipo === 'number' ? anticipo : null,
+    recorridos: typeof viaje.recorridos === 'number' ? viaje.recorridos : null,
+    paseo: viaje.paseo || null,
+    soloIda: !!viaje.soloIda,
     estado: estado
   });
   return sinEse.slice(0, TOPE_VIAJES);
@@ -432,10 +446,11 @@ function anotaEtapa(cliente, etapa, extra, ahora) {
   const nuevoPendiente = extra && extra.porConfirmar && extra.porConfirmar.resumen;
   const viejoPendiente = antes && antes.porConfirmar && antes.porConfirmar.resumen;
   if (nuevoPendiente && viejoPendiente && !mismoViaje(nuevoPendiente, viejoPendiente)) {
-    viajes = archivaViaje(viajes, viejoPendiente, antes.porConfirmar.total, 'precio pedido');
+    viajes = archivaViaje(viajes, viejoPendiente, antes.porConfirmar.total, 'precio pedido',
+      antes.porConfirmar.anticipo);
   }
   if (extra && extra.viajeDatos && antes && antes.viajeDatos && !mismoViaje(extra.viajeDatos, antes.viajeDatos)) {
-    viajes = archivaViaje(viajes, antes.viajeDatos, antes.total, 'precio dado');
+    viajes = archivaViaje(viajes, antes.viajeDatos, antes.total, 'precio dado', antes.anticipo);
   }
   const ficha = {
     viajes: viajes,

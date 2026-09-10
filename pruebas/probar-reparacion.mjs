@@ -1512,24 +1512,77 @@ titulo('R50 · una segunda cotización no hereda los datos de la primera (10-sep
     (webhook.charlaDe(D) || {}).gente === 40);
 }
 
-titulo('R51 · si el cliente se regresa a un viaje ya cotizado, el ticket se lo dice al dueño');
+titulo('R51 · volver a una cotización anterior devuelve SU precio, y se puede apartar');
 {
   limpia();
   const C = '5213366670469';
+  process.env.CLABE = '012345678901234567';
+  /* Activo: Mazamitla, $14,500. Archivado: Tapalpa, $12,000 con $2,500 de
+     anticipo, que es al que el cliente se va a regresar. */
   tk.anotaEtapa(C, 'con_precio', { total: 14500, anticipo: 3000,
     viajeDatos: { origen: 'Guadalajara', destino: 'Mazamitla', salida: '2026-11-15', regreso: '2026-11-15',
       gente: 16, unidad: 'Sprinter', recorridos: 0 } }, Date.now());
-  /* Y en el archivo, el de Tapalpa que ya se cotizó en $12,000. */
   const f = tk.fichaDe(C);
   f.viajes = [{ destino: 'Tapalpa', origen: 'Guadalajara', salida: '2026-11-08', regreso: '2026-11-08',
-    gente: 16, unidad: 'Sprinter', total: 12000, estado: 'precio dado' }];
+    gente: 16, unidad: 'Sprinter', recorridos: 0, total: 12000, anticipo: 2500, estado: 'precio dado' }];
   laIA = () => ({ respuesta: null, datos: { destino: 'Tapalpa', salida: '2026-11-08', regreso: '2026-11-08' }, accion: 'cotizar' });
   const antes = mandados.length;
   await dice('mejor déjame el de tapalpa', C);
-  const ticket = mandados.slice(antes).filter((m) => mismo(m.to, DUENO))
-    .map((m) => (m.text && m.text.body) || '').filter((t) => /Precio por confirmar/.test(t))[0] || '';
-  okQue('el ticket avisa que ese viaje ya se lo cotizó', /Ya se lo cotizaste/.test(ticket));
-  okQue('  con el monto que él mismo puso', /12,000/.test(ticket));
+  const fDespues = tk.fichaDe(C) || {};
+  ok('la ficha vuelve al viaje de Tapalpa', (fDespues.viajeDatos || {}).destino, 'Tapalpa');
+  ok('  con SU precio', fDespues.total, 12000);
+  ok('  y SU anticipo', fDespues.anticipo, 2500);
+  okQue('  y NO se le pide otro precio al dueño',
+    !mandados.slice(antes).filter((m) => mismo(m.to, DUENO)).some((m) => /Precio por confirmar/.test((m.text && m.text.body) || '')));
+  okQue('  el de Mazamitla no se pierde: queda archivado',
+    (fDespues.viajes || []).some((v) => /Mazamitla/i.test(v.destino) && v.total === 14500));
+  /* Y ahora sí se puede comprar: el apartado cobra el anticipo de Tapalpa. */
+  laIA = () => ({ respuesta: null, datos: {}, accion: 'apartar' });
+  const antes2 = textos(C).length;
+  await dice('apártamelo', C);
+  const t = textos(C).slice(antes2).join('\n');
+  okQue('«apártamelo» cobra el anticipo del viaje recuperado', /2,500/.test(t));
+  okQue('  y le llega la cuenta, que para ese viaje no se la habían mandado', t.indexOf('012345678901234567') >= 0);
+  delete process.env.CLABE;
+}
+
+titulo('R52 · «¿cuánto era?» se contesta con la cifra que ya tiene la ficha');
+{
+  limpia();
+  const C = '5213366670470';
+  tk.anotaEtapa(C, 'con_precio', { total: 9500, anticipo: 2000,
+    viajeDatos: { origen: 'Guadalajara', destino: 'Tapalpa', salida: '2026-10-24', regreso: '2026-10-24',
+      gente: 18, unidad: 'Sprinter', recorridos: 0 } }, Date.now());
+  laIA = () => ({ respuesta: 'El total es el que ya te pasamos.', datos: {}, accion: 'seguir' });
+  const antes = textos(C).length;
+  await dice('cuánto era?', C);
+  const t = textos(C).slice(antes).join('\n');
+  okQue('sale el total', /9,500/.test(t));
+  okQue('  y el anticipo', /2,000/.test(t));
+  okQue('  y no el rodeo del modelo', !/el que ya te pasamos/i.test(t));
+  /* Con el precio vencido NO se repite: sería ofrecer un precio que ya no
+     es el suyo. */
+  tk.anotaEtapa(C, 'con_precio', { precioVencido: true, viajeDatos: (tk.fichaDe(C) || {}).viajeDatos }, Date.now());
+  const antes2 = textos(C).length;
+  await dice('y cuánto era?', C);
+  okQue('  con el precio vencido no se repite la cifra', !/9,500/.test(textos(C).slice(antes2).join('\n')));
+}
+
+titulo('R53 · lo que el motor se reinyecta no le llega al dueño como duda');
+{
+  limpia();
+  const C = '5213366670471';
+  process.env.CLABE = '012345678901234567';
+  tk.anotaEtapa(C, 'con_precio', { total: 9500, anticipo: 2000,
+    viajeDatos: { origen: 'Guadalajara', destino: 'Tapalpa', salida: '2026-10-24', regreso: '2026-10-24',
+      gente: 18, unidad: 'Sprinter', recorridos: 0 } }, Date.now());
+  laIA = () => ({ respuesta: null, datos: {}, accion: 'apartar' });
+  const antes = textos(DUENO).length;
+  await dice('apártamelo', C);
+  okQue('el cliente sí recibe su apartado', /de anticipo/.test(textos(C).join('\n')));
+  okQue('  y al dueño NO le llega «no supe qué contestar»',
+    !/No supe qué contestar/.test(textos(DUENO).slice(antes).join('\n')));
+  delete process.env.CLABE;
 }
 
 console.log('\n' + buenas + ' buenas, ' + malas + ' malas');
