@@ -441,6 +441,12 @@ function anotaEtapa(cliente, etapa, extra, ahora) {
        (escenario x) el cliente mandó su comprobante sin cotización y un
        turno después el bot le contestó «no me llegó nada por aquí». */
     fotoDelClienteEn: (extra && extra.fotoDelClienteEn) || (antes && antes.fotoDelClienteEn) || null,
+    /* Cuándo se le mandaron la CLABE y la cuenta. Dictado del dueño
+       (9-sep-2026): «que la clave no se repita; si dice apártamelo,
+       respóndele que necesito el depósito primero». Antes la regla era la
+       contraria —se repetía cada vez— y por eso esto tiene que sobrevivir
+       a que la plática se vacíe: vive en la ficha, no en la charla. */
+    cuentaMandadaEn: (extra && extra.cuentaMandadaEn) || (antes && antes.cuentaMandadaEn) || null,
     /* El precio que el bot calculó y que espera el «va» del dueño. Se
        reemplaza si viene uno nuevo, se borra si viene `null` explícito
        (ya se mandó), y si no viene nada se conserva el que había. */

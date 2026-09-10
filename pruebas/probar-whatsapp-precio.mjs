@@ -548,7 +548,9 @@ function idDelUltimoTicket() {
   process.env.CLABE = '012345678901234567';
   process.env.SITIO_URL = 'https://eurotravel-web.vercel.app';
   webhook.guardaCharla(C, null);
-  for (const pide of ['cuál es la cuenta para depositar?', 'apártamela', 'ok me la aparto, cómo te pago?']) {
+  /* Los que SÍ la piden con todas sus letras la reciben, cuantas veces la
+     pidan: nombrar la cuenta, o preguntar cómo se paga. */
+  for (const pide of ['cuál es la cuenta para depositar?', 'ok me la aparto, cómo te pago?']) {
     mandados = [];
     await dice(pide, C);
     const t = textos(C).join('\n');
@@ -558,6 +560,27 @@ function idDelUltimoTicket() {
        pelonas, para copiar. */
     okQue('  con la imagen de la ficha antes de los datos', mandados.some((m) => mismo(m.to, C) && m.image && /ficha-bancaria\.png$/.test(m.image.link || '')));
     okQue('  y la CLABE sola para copiar', textos(C).indexOf('012345678901234567') >= 0);
+  }
+  /* ------------------------------------------------------------
+     Y «APÁRTAMELA» A SECAS, YA CON LA CUENTA MANDADA, NO LA REPITE
+     ------------------------------------------------------------
+     Cambió el 9-sep-2026. La regla anterior era la contraria —«la CLABE se
+     repite cada vez que la pida»— y este mismo bloque la exigía. El dueño
+     la cambió con estas palabras: «que la clave no se repita, así está
+     bien; si dice apártamelo, respóndele que necesito el depósito primero
+     para que se aparte». Pedirla por su nombre sigue funcionando: eso no
+     es repetirla sola, es contestarle.
+     ------------------------------------------------------------ */
+  mandados = [];
+  await dice('apártamela', C);
+  {
+    const t = textos(C).join('\n');
+    okQue('«apártamela» con la cuenta ya mandada: pide el depósito, no repite la cuenta',
+      /se aparta con el anticipo/.test(t) && textos(C).indexOf('012345678901234567') < 0);
+    okQue('  y sin la imagen de la ficha otra vez',
+      !mandados.some((m) => mismo(m.to, C) && m.image && /ficha-bancaria\.png$/.test(m.image.link || '')));
+    okQue('  pero le recuerda que los datos van arriba y que mande el comprobante',
+      /arriba/.test(t) && /comprobante/.test(t));
   }
   ok('  y la ficha quedó en «va_a_apartar»', tk.fichaDe(C).etapa, 'va_a_apartar');
   delete process.env.CLABE;

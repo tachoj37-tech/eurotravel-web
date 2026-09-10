@@ -582,7 +582,16 @@ async function precioDe(envio, opciones) {
   }
   /* Y la CLABE y el número de cuenta, pelones, cada uno en su mensaje, para
      copiarlos con un toque largo. Van después de la foto, al final. */
-  if (apartado) mensajesParaCopiar(envio.numeroDeOrigen, envio.para).forEach(function (m) { mios.push(m); });
+  if (apartado) {
+    mensajesParaCopiar(envio.numeroDeOrigen, envio.para).forEach(function (m) { mios.push(m); });
+    /* La cuenta ya salió: queda anotado para no repetirla sola en el
+       siguiente «apártamelo» (dictado del dueño, 9-sep-2026). El precio la
+       lleva pegada, así que ÉSTA es casi siempre la primera vez que el
+       cliente la ve. */
+    const fPrecio = tickets.fichaDe(envio.para);
+    tickets.anotaEtapa(envio.para, (fPrecio && fPrecio.etapa) || 'con_precio',
+      { cuentaMandadaEn: Date.now() });
+  }
 
   /* ------------------------------------------------------------
      Y SI EL PRECIO NO SALIO, AL DUENO LE LLEGA EL VIAJE
@@ -1725,7 +1734,7 @@ function loQueYaHice(ficha, antes) {
   const e = ficha && ficha.etapa;
   if (e === 'pidio_precio') h.push('pedí el precio al vendedor; el cliente ya recibió «en breve te paso tu cotización»');
   if (ETAPAS_DESPUES_DEL_PRECIO.indexOf(e) >= 0) h.push('entregué el precio total con el monto de apartado y la CLABE (el sistema los anexa; tú no escribas cuentas)');
-  if (['va_a_apartar', 'mando_comprobante', 'datos_del_contrato', 'contrato_listo'].indexOf(e) >= 0) h.push('el cliente ya pidió apartar: le mandé otra vez el apartado y la CLABE');
+  if (['va_a_apartar', 'mando_comprobante', 'datos_del_contrato', 'contrato_listo'].indexOf(e) >= 0) h.push('el cliente ya pidió apartar y ya tiene la cuenta: no se la vuelvas a mandar, pídele el depósito');
   if (['mando_comprobante', 'datos_del_contrato', 'contrato_listo'].indexOf(e) >= 0) h.push('recibí su comprobante; se están juntando los datos del contrato');
   if (e === 'contrato_listo') h.push('el contrato está completo; falta confirmar el pago');
   return h;
@@ -2753,7 +2762,16 @@ async function loQueDiceElAgente(envio) {
        CLABE— y después se restaura el viaje que iba. */
     const conPlaticaLimpia = accion === 'persona' || accion === 'apartar';
     if (conPlaticaLimpia) webhook.guardaCharla(cliente, null);
-    const hecho = await reinyectaAlGuion(envio, CANONICO[accion]);
+    /* Cuando el cliente PIDIÓ la cuenta con esas palabras, la reinyección
+       las conserva: el guion decide si repite los datos bancarios según lo
+       que lee, y un «pásame la cuenta otra vez» convertido en un «quiero
+       apartar» pelón se quedaba sin la cuenta (9-sep-2026, al cambiar la
+       regla de repetir). La CLABE no se repite sola; sí cuando la piden. */
+    const canonico = (accion === 'apartar' && webhook.PIDE_LA_CUENTA &&
+      webhook.PIDE_LA_CUENTA.test(String(texto || '')))
+      ? 'quiero apartar, pásame la cuenta'
+      : CANONICO[accion];
+    const hecho = await reinyectaAlGuion(envio, canonico);
     if (conPlaticaLimpia) webhook.guardaCharla(cliente, nuevo);
     if (hecho) return true;
     /* El motor no pudo: que al menos salga lo que dijo la IA, o el guion. */
@@ -3292,7 +3310,12 @@ async function manda(envio) {
     const conPrecioYAnticipo = !!(fichaDelPara && typeof fichaDelPara.total === 'number' && fichaDelPara.total > 0 &&
       typeof fichaDelPara.anticipo === 'number' && fichaDelPara.anticipo > 0);
     const pideDepositar = /\b(deposita|transfi[eé]re|haz (el|tu) dep[oó]sito|te paso (la cuenta|los datos)|datos (de|para) (dep[oó]sito|transferencia|el dep[oó]sito))\b/i.test(String(envio.texto));
+    /* Y no se anexa si la cuenta ya se le mandó antes: la regla del dueño
+       cambió el 9-sep-2026 y la CLABE no se repite sola. Este rescate es
+       para el mensaje que le dice «deposita» a alguien que todavía no
+       tiene los datos. */
     if (conPrecioYAnticipo && pideDepositar && clabeBuena && !envio.conDatosParaCopiar &&
+        !(fichaDelPara && fichaDelPara.cuentaMandadaEn) &&
         !depositoMandadoAhora.has(almacen.llave(envio.para))) {
       envio = Object.assign({}, envio, { texto: String(envio.texto) + '\n\n' + bloqueApartado({ anticipo: fichaDelPara.anticipo }), conDatosParaCopiar: true });
       console.log('[apartado] se anexó el bloque de depósito a un texto que pedía depositar sin la CLABE');

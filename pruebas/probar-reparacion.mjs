@@ -221,7 +221,7 @@ titulo('R3 · el vendedor pone $23,000 para 30: el cliente recibe $23,000 y ning
 }
 
 /* ============================================================ */
-titulo('R9 · el precio lleva unidad + total + foto + apartado + CLABE; y la CLABE se repite cada vez que la pida (Falla 6)');
+titulo('R9 · el precio lleva unidad + total + foto + apartado + CLABE; y la CLABE se repite solo si la PIDE (Falla 6, regla cambiada el 9-sep-2026)');
 {
   limpia();
   const C = '5213366670407';
@@ -259,10 +259,16 @@ titulo('R9 · el precio lleva unidad + total + foto + apartado + CLABE; y la CLA
     return i >= 0 && j > i;
   })());
   okQue('  y «mándame tu comprobante»', /comprobante/.test(textoPrecio));
+  /* Cambió el 9-sep-2026. Antes esta línea exigía lo contrario: «recibe de
+     nuevo el apartado y la CLABE». El dueño lo cambió con estas palabras:
+     «que la clave no se repita; si dice apártamelo, respóndele que necesito
+     el depósito primero para que se aparte». La CLABE ya salió pegada al
+     precio, así que aquí no se repite. */
   const antes2 = mandados.length;
   await dice('ok, quiero apartar', C);
   const t2 = textos(C).slice(mandados.slice(0, antes2).filter((m) => mismo(m.to, C)).length).join('\n');
-  okQue('«ok, quiero apartar»: recibe de nuevo el apartado y la CLABE', /de anticipo|de apartado/.test(t2) && t2.indexOf(CLABE) >= 0);
+  okQue('«ok, quiero apartar» con la CLABE ya mandada: pide el depósito y no la repite',
+    /se aparta con el anticipo/.test(t2) && t2.indexOf(CLABE) < 0);
   const antes3 = mandados.length;
   await dice('pásame la cuenta otra vez', C);
   const t3 = textos(C).slice(mandados.slice(0, antes3).filter((m) => mismo(m.to, C)).length).join('\n');
@@ -274,13 +280,22 @@ titulo('R9 · el precio lleva unidad + total + foto + apartado + CLABE; y la CLA
   const salio = await manda({ numeroDeOrigen: '111', para: C, pasaAPersona: false, escribio: '[prueba]', texto: 'Deposita a la CLABE 999999999999999999 por favor' });
   okQue('un texto con OTRA CLABE se frena (no sale)', salio === false && !textos(C).slice(mandados.slice(0, antes4).filter((m) => mismo(m.to, C)).length).join('').includes('999999999999999999'));
   okQue('  y al dueño le llega el incidente', /Frené un mensaje con una CLABE/.test(textos(DUENO).join('\n')));
-  /* Un texto que dice «deposita» sin la CLABE recibe el bloque anexado
-     (en una vuelta nueva: los datos van una vez por vuelta). */
+  /* Un texto que dice «deposita» a alguien que TODAVÍA no tiene la cuenta
+     recibe el bloque anexado: ése es el rescate, y sigue vivo. A quien ya
+     la tiene no se le anexa (regla cambiada el 9-sep-2026: la CLABE no se
+     repite sola). */
   await dice('ok', C);
   const antes5 = mandados.length;
   await manda({ numeroDeOrigen: '111', para: C, pasaAPersona: false, escribio: '[prueba]', texto: 'Va, deposita cuando puedas y me mandas el comprobante 🙌' });
   const t5 = textos(C).slice(mandados.slice(0, antes5).filter((m) => mismo(m.to, C)).length).join('\n');
-  okQue('«deposita cuando puedas» sin CLABE sale CON el bloque anexado', t5.indexOf(CLABE) >= 0 && /de apartado/.test(t5));
+  okQue('a quien YA tiene la cuenta no se le anexa otra vez', t5.indexOf(CLABE) < 0);
+  const S = '5213366670418';
+  tk.anotaEtapa(S, 'con_precio', { total: 7000, anticipo: 1500,
+    viajeDatos: { origen: 'Guadalajara', destino: 'Tequila', salida: '2026-09-20', regreso: '2026-09-20', gente: 15, unidad: 'Sprinter', recorridos: 0 } }, Date.now());
+  const antes6 = mandados.length;
+  await manda({ numeroDeOrigen: '111', para: S, pasaAPersona: false, escribio: '[prueba]', texto: 'Va, deposita cuando puedas y me mandas el comprobante 🙌' });
+  const t6 = mandados.slice(antes6).filter((m) => mismo(m.to, S)).map((m) => (m.text && m.text.body) || '').join('\n');
+  okQue('  pero a quien NO la tiene sí se le anexa', t6.indexOf(CLABE) >= 0 && /de apartado/.test(t6));
   delete process.env.CLABE; delete process.env.CUENTA; delete process.env.DATOS_BANCARIOS;
 }
 

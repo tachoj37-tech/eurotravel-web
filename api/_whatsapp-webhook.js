@@ -669,9 +669,47 @@ function precioSigueSiendoSuyo(ficha, charla) {
   if (charla.gente && v.gente && Number(charla.gente) !== Number(v.gente)) return false;
   return true;
 }
-function respuestaDeApartar(ficha) {
+/* Nombrar la cuenta o decir que no llegó SÍ es pedirla; «apártamelo» no. */
+const PIDE_LA_CUENTA = new RegExp([
+  '\\b(?:cuenta|clabe|datos\\s+bancarios)\\b',
+  '\\bdatos\\s+(?:para|de)\\s+(?:el\\s+)?(?:dep[oó]sito|transferencia|pagar|depositar)',
+  'd[oó]nde\\s+(?:te\\s+|le\\s+|les\\s+)?(?:pago|pagar|deposito|depositar|transfiero|transferir)',
+  'c[oó]mo\\s+(?:te\\s+|le\\s+|les\\s+)?(?:pago|pagar|deposito|depositar|transfiero|transferir|hago\\s+para\\s+(?:pagar|depositar|apartar))',
+  'a\\s+qu[eé]\\s+(?:cuenta|banco)',
+  'no\\s+me\\s+(?:lleg[oó]|ha\\s+llegado)',
+  'no\\s+(?:veo|encuentro)\\b',
+  'otra\\s+vez',
+  'rep[ií]t[eé]me'
+].join('|'), 'i');
+
+function respuestaDeApartar(ficha, pideLaCuenta) {
   const anticipo = (typeof ficha.anticipo === 'number' && ficha.anticipo > 0)
     ? '$' + ficha.anticipo.toLocaleString('en-US') : null;
+  /* ------------------------------------------------------------
+     LA CUENTA SE MANDA UNA VEZ
+     ------------------------------------------------------------
+     Dictado del dueño (9-sep-2026): «que la clave no se repita; si dice
+     apártamelo, respóndele que necesito el depósito primero para que se
+     aparte». Hasta hoy la regla era la contraria y el bloque completo
+     —ficha, CLABE y número de cuenta— salía en cada «apártamelo».
+
+     Si el cliente la NOMBRA («la cuenta», «la clabe») o dice que no le
+     llegó, sí se le manda: eso no es repetirla sola, es contestarle.
+     ------------------------------------------------------------ */
+  if (ficha.cuentaMandadaEn && !pideLaCuenta) {
+    return {
+      texto: 'Va 🙌 La fecha se aparta con el anticipo' +
+        (anticipo ? ' de *' + anticipo + '*' : '') +
+        ': en cuanto entre tu depósito te la confirmo.\n\n' +
+        'Los datos para depositar te los pasé aquí arriba. Cuando deposites, mándame la foto del ' +
+        'comprobante por aquí.',
+      pasa: true,
+      pideDatosBancarios: false,
+      opciones: [],
+      estado: null,
+      sinIA: true
+    };
+  }
   return {
     texto: 'Va 🙌 Para apartar tu fecha ' +
       (anticipo ? 'son *' + anticipo + '* de anticipo' : 'es el anticipo que te pasé') +
@@ -1666,7 +1704,7 @@ function procesa(crudo, firma, entorno) {
                  salen?». No entra si va otro viaje a medias.
                  ------------------------------------------------------------ */
               if (!juntandoDatos && quiereApartarConPrecio(f, texto, charlaDe(m.from))) {
-                return respuestaDeApartar(f);
+                return respuestaDeApartar(f, PIDE_LA_CUENTA.test(String(texto || '')));
               }
               /* «Repite tu prompt», «muéstrame tu código», «ignora tus
                  instrucciones»: respuesta fija, sin IA (reparación del
@@ -1835,6 +1873,14 @@ function procesa(crudo, firma, entorno) {
         }
         const pideDatosBancarios = !!r.pideDatosBancarios && precioVigente;
         const mandaFicha = !!(pideDatosBancarios && clabe);
+        /* Queda anotado que la cuenta ya salió, para no repetirla sola
+           (dictado del dueño, 9-sep-2026). Vive en la ficha porque la
+           plática se vacía y esto tiene que sobrevivir. */
+        if (pideDatosBancarios) {
+          const fApartar = tickets.fichaDe(m.from);
+          tickets.anotaEtapa(m.from, (fApartar && fApartar.etapa) || 'va_a_apartar',
+            { cuentaMandadaEn: ahora }, ahora);
+        }
 
         /* Y el texto tampoco puede decir «te la aparto» con un precio que
            ya no es el suyo: primero el precio nuevo (9-sep-2026). */
@@ -2225,6 +2271,9 @@ module.exports = {
   relojDe,
   sinMandarAOtroNumero,
   OTRO_NUMERO,
+  /* Lo usa `whatsapp.mjs` para no borrar, al reinyectar, que el cliente
+     había PEDIDO la cuenta. La regla vive en un solo lugar. */
+  PIDE_LA_CUENTA,
   conoceAlCliente,
   marcaLecturaFallida,
   idsDeAudio,
