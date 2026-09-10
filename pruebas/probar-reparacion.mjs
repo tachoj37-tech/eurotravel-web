@@ -1122,5 +1122,194 @@ titulo('R31 · el viaje redondo es lo de siempre; el sencillo solo si el cliente
   ]) okQue('«' + dicho + '» → NO es solo ida', lee(dicho).soloIda === false);
 }
 
+/* ============================================================
+   R32–R37 · LO QUE ENCONTRÓ LA TANDA v–z DEL 9-SEP-2026
+   ============================================================ */
+
+titulo('R32 · con el precio ya dado, la IA no vuelve a cotizar el mismo viaje');
+{
+  limpia();
+  const C = '5213366670450';
+  tk.anotaEtapa(C, 'con_precio', { total: 62000, anticipo: 12500,
+    viajeDatos: { origen: 'Guadalajara', destino: 'San Miguel de Allende', salida: '2026-11-28',
+      regreso: '2026-11-30', gente: 45, unidad: 'Marcopolo Paradiso G8', recorridos: 0 } }, Date.now());
+  process.env.CLABE = '012345678901234567';
+  /* La IA hace lo que hizo la real con «órale, va»: pedir cotizar. */
+  laIA = () => ({ respuesta: null, datos: {}, accion: 'cotizar' });
+  const antes = mandados.length;
+  await dice('órale, va', C);
+  const alDueno = mandados.slice(antes).filter((m) => mismo(m.to, DUENO)).map((m) => (m.text && m.text.body) || '');
+  okQue('NO se manda un segundo «Precio por confirmar»', !alDueno.some((t) => /Precio por confirmar/.test(t)));
+  const alCliente = mandados.slice(antes).filter((m) => mismo(m.to, C)).map((m) => (m.text && m.text.body) || '').join('\n');
+  okQue('  y al cliente no se le promete una cotización que ya tiene', !/en breve te paso tu cotizaci/i.test(alCliente));
+  /* Se le contesta la espera neutra, que cierra ofreciendo apartar. La
+     CLABE NO se manda sola: la regla del dueño es que se repite cuando la
+     PIDE, y aquí no la pidió (escenario z, 9-sep-2026). */
+  okQue('  se le ofrece apartar', /te la aparto/i.test(alCliente));
+  okQue('  y NO le llega la CLABE sin pedirla', alCliente.indexOf('012345678901234567') < 0);
+  delete process.env.CLABE;
+}
+
+titulo('R33 · «¿y si somos 10?» es una pregunta, no un cambio: no vence el precio');
+{
+  limpia();
+  const C = '5213366670451';
+  tk.anotaEtapa(C, 'con_precio', { total: 14500, anticipo: 3000,
+    viajeDatos: { origen: 'Guadalajara', destino: 'Mazamitla', salida: '2026-12-15',
+      regreso: '2026-12-15', gente: 12, unidad: 'Sprinter', recorridos: 0 } }, Date.now());
+  /* La IA lee «10» como el grupo nuevo, que es lo que hizo la real. */
+  laIA = () => ({ respuesta: 'Con 10 siguen en Sprinter, sin problema.', datos: { gente: 10 }, accion: 'seguir' });
+  const antes = mandados.length;
+  await dice('y si somos 10?', C);
+  okQue('el precio NO queda vencido', !(tk.fichaDe(C) || {}).precioVencido);
+  okQue('  y no se pide otro precio al dueño',
+    !mandados.slice(antes).filter((m) => mismo(m.to, DUENO)).some((m) => /Precio por confirmar/.test((m.text && m.text.body) || '')));
+  /* Y un cambio de verdad SÍ lo vence. */
+  laIA = () => ({ respuesta: 'Va, 22 entonces.', datos: { gente: 22 }, accion: 'seguir' });
+  await dice('ya somos 22', C);
+  okQue('«ya somos 22» sí vence el precio', (tk.fichaDe(C) || {}).precioVencido === true);
+}
+
+titulo('R34 · no se inventa un comprobante ni se niega el que llegó');
+{
+  limpia();
+  const C = '5213366670452';
+  tk.anotaEtapa(C, 'con_precio', { total: 14500, anticipo: 3000,
+    viajeDatos: { origen: 'Guadalajara', destino: 'Mazamitla', salida: '2026-12-15', regreso: '2026-12-15', gente: 12, unidad: 'Sprinter', recorridos: 0 } }, Date.now());
+  laIA = () => ({ respuesta: 'Listo, vi tu comprobante. Dime cuándo mandas la otra mitad.', datos: {}, accion: 'seguir' });
+  let antes = textos(C).length;
+  await dice('ya deposité pero nomás mandé la mitad', C);
+  const t1 = textos(C).slice(antes).join('\n');
+  okQue('sin comprobante recibido, NO dice que lo vio', !/vi tu comprobante/i.test(t1));
+  okQue('  y le pide que lo mande', /mándame|mandame|todav[ií]a no me llega/i.test(t1));
+  /* Ahora el comprobante SÍ llegó. */
+  /* El caso del escenario x: la foto llegó ANTES de que hubiera precio, así
+     que la etapa no se movió. El bot igual no puede negarla: al dueño ya se
+     la reenvió. */
+  const D = '5213366670453';
+  tk.anotaEtapa(D, 'escribio', { fotoDelClienteEn: Date.now() }, Date.now());
+  laIA = () => ({ respuesta: 'No me llegó nada por aquí. ¿Me lo mandaste por este chat?', datos: {}, accion: 'seguir' });
+  antes = textos(D).length;
+  await dice('ya te mandé el comprobante', D);
+  const t2 = textos(D).slice(antes).join('\n');
+  okQue('con el comprobante recibido, NO lo niega', !/no me lleg[oó] nada/i.test(t2));
+  okQue('  y dice que ya lo tiene el equipo', /s[ií] me lleg[oó]|ya lo tiene el equipo/i.test(t2));
+}
+
+titulo('R35 · no se mete a 30 personas en una Sprinter');
+{
+  limpia();
+  const C = '5213366670454';
+  laIA = () => ({ respuesta: 'Con 20 o 30 caben en una Sprinter tranquilos. ¿Y para cuándo lo ven?', datos: {}, accion: 'seguir' });
+  const antes = textos(C).length;
+  await dice('como 20 o 30, depende', C);
+  const t = textos(C).slice(antes).join('\n');
+  okQue('no sale «30 caben en una Sprinter»', !/30 caben en una Sprinter/i.test(t));
+  okQue('  se dice la capacidad real y se ofrece autobús', /hasta 20/.test(t) && /autob[uú]s/i.test(t));
+}
+
+titulo('R36 · el catálogo de autobuses no se repite dos veces seguidas');
+{
+  limpia();
+  const C = '5213366670455';
+  /* La IA nombra un autobús a su manera, así que el motor la reemplaza por
+     el catálogo: es lo que pasó en la corrida real. */
+  laIA = () => ({ respuesta: 'Te recomiendo el Irizar i6S: tiene baño, pantallas y reclinables.', datos: {}, accion: 'seguir' });
+  webhook.guardaCharla(C, { destino: 'Puerto Vallarta', salida: '2026-11-13', regreso: '2026-11-15', gente: 30, unidad: 'autobus', nombre: 'Prueba' });
+  await dice('que camiones tienen?', C);
+  okQue('la primera vez sí sale el catálogo', /Estos son los autobuses|se ajustan a la capacidad/.test(textos(C).join('\n')));
+  const antes = textos(C).length;
+  await dice('de gdl', C);
+  const t = textos(C).slice(antes).join('\n');
+  okQue('«de gdl» NO recibe el catálogo otra vez', !/Estos son los autobuses|se ajustan a la capacidad/.test(t));
+  /* Pero si lo vuelve a pedir, sí se le enseña. */
+  const antes2 = textos(C).length;
+  await dice('enséñame otra vez los camiones', C);
+  okQue('  y si lo pide otra vez, sí sale', /Estos son los autobuses|se ajustan a la capacidad/.test(textos(C).slice(antes2).join('\n')));
+}
+
+titulo('R37 · «solo de ida» dicho a la IA también llega al contrato');
+{
+  limpia();
+  const C = '5213366670456';
+  laIA = () => ({ respuesta: 'Va, solo la ida entonces.', datos: { destino: 'Colima', salida: '2026-11-12', gente: 15 }, accion: 'seguir' });
+  await dice('de guadalajara a colima el 12 de noviembre, solo de ida, somos 15', C);
+  okQue('la plática queda marcada como solo ida', (webhook.charlaDe(C) || {}).soloIda === true);
+  const bot = (await import(pathToFileURL(path.join(RAIZ, 'bot.js')).href)).default;
+  okQue('  y «quiero algo sencillo» no la marca', bot.esSoloIda('quiero algo sencillo') === false);
+}
+
+titulo('R38 · a quien dijo «solo de ida» no se le pregunta el regreso');
+{
+  limpia();
+  const C = '5213366670457';
+  laIA = () => ({ respuesta: 'Va, solo la ida.', datos: { destino: 'Tequila', origen: 'Guadalajara', salida: '2026-11-12', gente: 15 }, accion: 'seguir' });
+  const antes = textos(C).length;
+  await dice('de guadalajara a tequila el 12 de noviembre, solo de ida, somos 15', C);
+  /* La plática se vacía al cotizar, así que la prueba mira el ticket que le
+     llegó al dueño: ahí está el viaje que se armó. */
+  const ticket = textos(DUENO).filter((t) => /Precio por confirmar/.test(t)).pop() || '';
+  okQue('el viaje sale con salida y regreso el mismo día', /12 de noviembre al 12 de noviembre/.test(ticket));
+  okQue('  y no se le pregunta qué día regresan', !/qu[eé] d[ií]a regresan|y qu[eé] d[ií]a regresan/i.test(textos(C).slice(antes).join('\n')));
+}
+
+titulo('R39 · una dirección de llegada no cambia el destino del viaje');
+{
+  limpia();
+  const C = '5213366670458';
+  tk.anotaEtapa(C, 'con_precio', { total: 7000, anticipo: 1500,
+    viajeDatos: { origen: 'Guadalajara', destino: 'Tequila', salida: '2026-11-12', regreso: '2026-11-12', gente: 15, unidad: 'Sprinter', recorridos: 0 } }, Date.now());
+  laIA = () => ({ respuesta: 'Anotado.', datos: { destino: 'Casa Tequila, Tequila' }, accion: 'seguir' });
+  const antes = mandados.length;
+  await dice('llegamos al hotel casa tequila', C);
+  ok('el destino de la ficha sigue siendo el del precio', ((tk.fichaDe(C) || {}).viajeDatos || {}).destino, 'Tequila');
+  okQue('  el precio no queda vencido', !(tk.fichaDe(C) || {}).precioVencido);
+  okQue('  y no se pide otro precio',
+    !mandados.slice(antes).filter((m) => mismo(m.to, DUENO)).some((m) => /Precio por confirmar/.test((m.text && m.text.body) || '')));
+}
+
+titulo('R40 · con el contrato ya mandado, no se le ofrece apartar otra vez');
+{
+  limpia();
+  const C = '5213366670459';
+  tk.anotaEtapa(C, 'contrato_listo', { total: 19000, anticipo: 4000, pagoAprobado: true, contratoAutorizado: true,
+    contratoSubido: { folio: 50001, urlPdf: 'https://x/pdf', contratoId: 'c1', cuando: Date.now() },
+    viajeDatos: { origen: 'Guadalajara', destino: 'Puerto Vallarta', salida: '2026-12-04', regreso: '2026-12-06', gente: 17, unidad: 'Sprinter', recorridos: 0 } }, Date.now());
+  laIA = () => ({ respuesta: null, datos: {}, accion: 'seguir' });
+  const antes = textos(C).length;
+  await dice('ya quedó?', C);
+  const t = textos(C).slice(antes).join('\n');
+  okQue('no le ofrece apartar lo que ya está contratado', !/te la aparto/i.test(t));
+  okQue('  le dice su folio', /50001/.test(t));
+}
+
+titulo('R41 · la cuenta no se manda a quien ya depositó, ni dos veces sin pedirla');
+{
+  limpia();
+  const C = '5213366670460';
+  process.env.CLABE = '012345678901234567';
+  tk.anotaEtapa(C, 'con_precio', { total: 14500, anticipo: 3000,
+    viajeDatos: { origen: 'Guadalajara', destino: 'Mazamitla', salida: '2026-12-15', regreso: '2026-12-15', gente: 12, unidad: 'Sprinter', recorridos: 0 } }, Date.now());
+  laIA = () => ({ respuesta: null, datos: {}, accion: 'apartar' });
+  await dice('bueno va, apártamelo', C);
+  okQue('la primera vez sí va la CLABE', textos(C).indexOf('012345678901234567') >= 0);
+  let antes = textos(C).length;
+  await dice('ok gracias', C);
+  const t1 = textos(C).slice(antes).join('\n');
+  okQue('«ok gracias» NO recibe el bloque otra vez', t1.indexOf('012345678901234567') < 0);
+  /* Pero si la pide, se repite: regla del dueño. */
+  antes = textos(C).length;
+  await dice('perdón, me pasas otra vez la cuenta?', C);
+  okQue('  si la pide, sí se repite', textos(C).slice(antes).join('\n').indexOf('012345678901234567') >= 0);
+  /* Y a quien ya mandó comprobante, nunca. */
+  antes = textos(C).length;
+  tk.anotaEtapa(C, 'con_precio', { fotoDelClienteEn: Date.now() }, Date.now());
+  await dice('ya deposité pero nomás mandé la mitad', C);
+  const t2 = textos(C).slice(antes).join('\n');
+  okQue('a quien ya depositó no se le manda la cuenta', t2.indexOf('012345678901234567') < 0);
+  okQue('  y se le dice que su comprobante ya lo tiene el equipo', /ya lo tiene el equipo/i.test(t2));
+  delete process.env.CLABE;
+}
+
 console.log('\n' + buenas + ' buenas, ' + malas + ' malas');
 process.exit(malas ? 1 : 0);

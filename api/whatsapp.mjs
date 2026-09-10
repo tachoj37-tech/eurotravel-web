@@ -900,8 +900,10 @@ async function datosDelContrato(envio) {
       const texto = pregunta
         ? estado + (yaLaVio ? unoSolo : listaCompleta)
         : (yaLaVio
-          ? 'Va 🙌' + (unoSolo || ' En cuanto se confirme tu pago te mando tu contrato.')
-          : contrato.pideLoQueFalta(juntos, nuevos));
+          ? 'Va 🙌' + (unoSolo || (f.pagoAprobado
+            ? ' En cuanto el dueño dé el visto bueno a estos datos te mando tu contrato.'
+            : ' En cuanto se confirme tu pago te mando tu contrato.'))
+          : contrato.pideLoQueFalta(juntos, nuevos, f.pagoAprobado));
       return [{
         numeroDeOrigen: envio.numeroDeOrigen, para: envio.para, texto: texto,
         pasaAPersona: false, escribio: '[datos del contrato · estado]'
@@ -1230,8 +1232,8 @@ async function subeContrato(envio) {
       para: envio.para,
       ligaDeDocumento: datos.urlPdf,
       nombreDeArchivo: nombreDelArchivo,
-      texto: TEXTO_CONTRATO_AL_CLIENTE(datos.folio),
-      textoDeRespaldo: TEXTO_CONTRATO_AL_CLIENTE(datos.folio, datos.urlPdf),
+      texto: TEXTO_CONTRATO_AL_CLIENTE(datos.folio, null, ficha.pagoAprobado),
+      textoDeRespaldo: TEXTO_CONTRATO_AL_CLIENTE(datos.folio, datos.urlPdf, ficha.pagoAprobado),
       pasaAPersona: false,
       escribio: '[contrato · pdf al cliente]'
     });
@@ -1261,10 +1263,16 @@ async function subeContrato(envio) {
 /* T-125 · Lo que recibe el cliente cuando su contrato ya quedó registrado.
    Sin `liga` es el pie del PDF; con `liga` es el respaldo en texto para
    cuando Meta no pudo bajar el archivo. */
-function TEXTO_CONTRATO_AL_CLIENTE(folio, liga) {
+function TEXTO_CONTRATO_AL_CLIENTE(folio, liga, pagoAprobado) {
   return 'Listo, ya quedó tu contrato con el folio *' + folio + '* 🎉\n' +
     (liga ? 'Aquí lo puedes ver y guardar:\n' + liga + '\n\n' : 'Aquí te va en PDF para que lo guardes.\n\n') +
-    'En cuanto se vea reflejado tu anticipo te confirmo la fecha.';
+    /* El contrato solo se genera con las DOS autorizaciones, así que cuando
+       la transferencia ya está verificada decirle «en cuanto se vea
+       reflejado tu anticipo» es contradecirse (corrida real del 9-sep-2026,
+       escenario y). */
+    (pagoAprobado
+      ? 'Tu anticipo ya quedó confirmado y tu fecha está apartada ✅'
+      : 'En cuanto se vea reflejado tu anticipo te confirmo la fecha.');
 }
 
 /* ------------------------------------------------------------
@@ -1343,7 +1351,20 @@ function preguntaParaElCliente(estado) {
    8-sep (escenario b) «sí, ese mismo día regresamos» después del precio
    se leyó como destino «a Regresamos» y el siguiente «ok» mandó un segundo
    ticket. Se contesta algo neutro y cierto. */
+/* Lo que se le contesta a un cliente cuyo contrato YA se generó y ya le
+   llegó con folio. Sin esto, el guion neutro le decía «¿te la aparto?» a
+   quien acababa de recibir su contrato (corrida real del 9-sep-2026,
+   escenario y). */
+function yaTieneContrato(cliente) {
+  const f = tickets.fichaDe(cliente);
+  if (!(f && f.contratoSubido && f.contratoSubido.folio)) return null;
+  return 'Ya está todo listo ✅ Tu contrato tiene el folio *' + f.contratoSubido.folio +
+    '* y te lo mandé por aquí en PDF. Si no lo ves, dime y te lo reenvío.';
+}
+
 function esperaNeutraConPrecio(cliente, estado) {
+  const conContrato = yaTieneContrato(cliente);
+  if (conContrato) return conContrato;
   const v = viajeConPrecio(tickets.fichaDe(cliente));
   if (!v || !v.estado) return null;
   if (v.estado === 'pedido') return 'Va 🙌 En cuanto tenga tu precio te lo paso por aquí.';
@@ -1646,6 +1667,17 @@ function mensajesParaCopiar(numeroDeOrigen, para) {
    mandaron en ESTE aviso y no se repiten.
    ------------------------------------------------------------ */
 const depositoMandadoAhora = new Set();
+
+/* El último texto que salió hacia cada cliente, para no repetirlo tal cual
+   en el mensaje siguiente. Vive en memoria y se acota: en una instancia
+   nueva simplemente no hay con qué comparar, y el mensaje sale. */
+const ES_CATALOGO = /Estos son los autobuses que tenemos|se ajustan a la capacidad/;
+const ultimoTextoAlCliente = new Map();
+function recuerdaTextoAlCliente(para, texto) {
+  if (!para || !texto) return;
+  if (ultimoTextoAlCliente.size > 500) ultimoTextoAlCliente.clear();
+  ultimoTextoAlCliente.set(almacen.llave(para), String(texto));
+}
 const MARCAS_DE_DEPOSITO = /\[(ficha bancaria|clabe para copiar|cuenta para copiar|datos de depósito)\]/;
 
 /* Nota del 9-sep-2026, para no volver a «arreglarlo»: en la corrida real,
@@ -2207,6 +2239,152 @@ async function loQueDiceElAgente(envio) {
     }
   }
 
+  /* ------------------------------------------------------------
+     NO SE INVENTA LO QUE LLEGÓ Y LO QUE NO
+     ------------------------------------------------------------
+     Corridas reales del 9-sep-2026:
+
+       · escenario z — el cliente NUNCA mandó comprobante y el bot dijo
+         «Listo, vi tu comprobante».
+       · escenario x — el cliente SÍ lo había mandado un turno antes (al
+         dueño le llegó reenviado) y el bot dijo «No me llegó nada por
+         aquí. ¿Me lo mandaste por este chat o por otro lado?».
+       · escenarios w e y — el bot le prometió al cliente un contrato que
+         no existía, y en «y» se lo prometió cuando el contrato YA se le
+         había mandado con folio.
+
+     El sistema sabe las tres cosas. Cuando el modelo las contradice, su
+     respuesta se cambia por la verdad: son datos, no opiniones.
+     ------------------------------------------------------------ */
+  {
+    const r = String(dicho.respuesta || '');
+    const f = tickets.fichaDe(cliente) || {};
+    const llego = ['mando_comprobante', 'datos_del_contrato', 'contrato_listo'].indexOf(f.etapa) >= 0 ||
+      !!f.fotoDelClienteEn;
+    const diceQueLoVio = /\b(ya\s+)?(lo\s+)?vi\s+tu\s+comprobante|recib[ií]\s+tu\s+comprobante|(ya\s+)?me\s+lleg[oó]\s+(tu|el)\s+comprobante|tu\s+comprobante\s+(ya\s+)?(me\s+)?lleg/i.test(r);
+    const diceQueNoLlego = /no\s+me\s+(ha\s+)?lleg[oó]\s+(nada|tu\s+comprobante|ning[uú]n)|no\s+(veo|tengo)\s+(tu|ning[uú]n)\s+comprobante|no\s+ha\s+llegado\s+(nada|tu\s+comprobante)/i.test(r) ||
+      /* Pedirlo otra vez es negarlo con otras palabras: en el escenario w el
+         bot dijo «ya lo vi» y al turno siguiente «¿me pasas el comprobante
+         para validarlo?». */
+      /(me\s+(pasas|mandas|env[ií]as|compartes)|m[aá]ndame|p[aá]same)\s+(el|tu)\s+comprobante/i.test(r);
+    if (diceQueLoVio && !llego) {
+      console.error('[agente] dijo que vio un comprobante que nunca llegó: se corrige');
+      dicho.accion = 'seguir';
+      dicho.respuesta = 'Todavía no me llega tu comprobante por aquí 🙌 Mándame la foto o la captura de la ' +
+        'transferencia y en cuanto la revisen te confirmo tu fecha.';
+    } else if (diceQueNoLlego && llego) {
+      console.error('[agente] negó un comprobante que sí llegó: se corrige');
+      dicho.accion = 'seguir';
+      dicho.respuesta = 'Sí me llegó tu comprobante, ya lo tiene el equipo 🙌 En cuanto lo confirmen te aviso por aquí.';
+    }
+    /* El contrato: ni se promete si no hay nada, ni se anuncia como
+       pendiente cuando ya se mandó con folio. */
+    const hablaDelContrato = /\bcontrato\b/i.test(r);
+    const contratoYaHecho = !!(f.contratoSubido && f.contratoSubido.folio);
+    if (hablaDelContrato && contratoYaHecho && /(te\s+)?(llega|mando|mandar[eé]|va\s+a\s+llegar|en\s+cuanto)\b/i.test(r)) {
+      console.error('[agente] anunció como pendiente un contrato que ya se mandó (folio ' + f.contratoSubido.folio + '): se corrige');
+      dicho.accion = 'seguir';
+      dicho.respuesta = 'Tu contrato ya te lo mandé por aquí, con el folio *' + f.contratoSubido.folio + '* 🎉 ' +
+        'Si no lo ves, dime y te lo reenvío.';
+    } else if (hablaDelContrato && !contratoYaHecho && !llego &&
+        /(te\s+)?(llega|mando|mandar[eé]|va\s+a\s+llegar)\b/i.test(r)) {
+      console.error('[agente] prometió un contrato sin comprobante recibido: se corrige');
+      dicho.accion = 'seguir';
+      dicho.respuesta = 'El contrato se arma en cuanto entre tu anticipo 🙌 Cuando deposites, mándame el ' +
+        'comprobante por aquí y con eso seguimos.';
+    }
+  }
+
+  /* ------------------------------------------------------------
+     UNA CAPACIDAD QUE NO EXISTE ES UNA VENTA QUE SE CAE
+     ------------------------------------------------------------
+     Corrida real del 9-sep-2026 (escenario v): «como 20 o 30, depende» y el
+     bot contestó «Con 20 o 30 caben en una Sprinter tranquilos». La
+     Sprinter es hasta 20. Ese grupo se presenta el día del viaje y no cabe.
+     Si el modelo mete a más gente de la que aguanta la unidad que nombró,
+     su respuesta se cambia por la lista de los que sí caben.
+     ------------------------------------------------------------ */
+  {
+    const r = String(dicho.respuesta || '');
+    const nombrada = (conversacion.UNIDADES || []).filter(function (u) {
+      return u.cat !== 'autobus' && new RegExp('\\b' + conversacion.normaliza(u.name).split(/\s+/)[0] + '\\b', 'i').test(conversacion.normaliza(r));
+    })[0];
+    if (nombrada && /\b(caben|cabe|entran|le\s+caben|van\s+bien|van\s+c[oó]modos)\b/i.test(r)) {
+      const nums = (r.match(/\b\d{1,3}\b/g) || []).map(Number).filter(function (x) { return x >= 5 && x <= 90; });
+      const mayor = nums.length ? Math.max.apply(null, nums) : 0;
+      if (mayor > Number(nombrada.max)) {
+        console.error('[agente] dijo que ' + mayor + ' caben en ' + nombrada.name + ' (es hasta ' + nombrada.max + '): se corrige');
+        dicho.accion = 'seguir';
+        dicho.respuesta = 'Ojo: en ' + nombrada.name + ' caben hasta ' + nombrada.max + '. Para ' + mayor +
+          ' ya es autobús.\n\n' + conversacion.mensajeDeAutobuses(mayor);
+      }
+    }
+  }
+
+  /* ------------------------------------------------------------
+     EL CATÁLOGO NO SE REPITE RENGLÓN POR RENGLÓN
+     ------------------------------------------------------------
+     Corrida real del 9-sep-2026 (escenarios v y x): la lista de autobuses
+     salió TRES veces seguidas. El cliente contestó «de gdl» y recibió el
+     catálogo otra vez; contestó «solo nos llevan y traen» y otra vez. El
+     motor la manda cada turno porque escoger camión es lo que falta, y
+     nadie miraba si ya iba en el mensaje anterior.
+
+     Si el cliente la vuelve a pedir, se repite: eso es atenderlo. Lo que
+     no se vale es contestar con el catálogo algo que no lo pidió.
+     ------------------------------------------------------------ */
+  {
+    const r = String(dicho.respuesta || '');
+    if (ES_CATALOGO.test(r) && !pideAutobuses(texto || '')) {
+      const anterior = agente.historialDe(cliente).filter(function (h) { return h.de === 'bot'; }).pop();
+      if (anterior && ES_CATALOGO.test(String(anterior.texto || ''))) {
+        console.error('[agente] el catálogo ya iba en el mensaje anterior: no se repite');
+        dicho.accion = 'seguir';
+        dicho.respuesta = 'Los de arriba son todos los que tenemos 🙌 Dime cuál te late y te mando sus fotos, ' +
+          'o si quieres te recomiendo uno.';
+      }
+    }
+  }
+
+  /* «Solo de ida» dicho a la IA. El agente no extrae ese dato —no está en
+     su esquema— así que lo lee el código, igual que el guion. Sin esto el
+     contrato salía REDONDO aunque el cliente hubiera dicho que no regresa
+     (corrida real del 9-sep-2026, escenario w). */
+  if (conversacion.esSoloIda(texto || '')) {
+    nuevo.soloIda = true;
+    /* Y con eso el viaje YA está completo: sin esta línea el bot le seguía
+       preguntando «¿y qué día regresan?» a alguien que acababa de decir
+       que no regresa (corrida real del 9-sep-2026, escenario w, dos veces
+       en la misma plática). Se cotiza como salir y volver el mismo día,
+       que es lo que el motor sabe cobrar; el contrato sí dice SENCILLO. */
+    if (nuevo.salida && !nuevo.regreso) nuevo.regreso = nuevo.salida;
+  }
+
+  /* ------------------------------------------------------------
+     UNA DIRECCIÓN NO ES UN DESTINO NUEVO
+     ------------------------------------------------------------
+     Corrida real del 9-sep-2026 (escenario w): el cliente dio la dirección
+     de llegada —«llegamos al hotel casa tequila»— y el destino del viaje
+     pasó de «Tequila» a «Casa Tequila, Tequila». Con eso el viaje dejó de
+     ser el mismo, el precio se dio por otro y salió un segundo ticket al
+     dueño. Si el destino nuevo y el que ya tiene precio se contienen uno
+     al otro, es el mismo lugar dicho con más palabras: manda el de antes.
+
+     Va ANTES de `yaTienePrecioEseViaje`: si se corrige después, la
+     comparación ya se hizo con el destino inflado y no sirve de nada.
+     ------------------------------------------------------------ */
+  {
+    const base = viajeBaseDeLaFicha(tickets.fichaDe(cliente));
+    if (base && base.destino && nuevo.destino) {
+      const a = conversacion.normaliza(nuevo.destino), b = conversacion.normaliza(base.destino);
+      if (a !== b && (a.indexOf(b) >= 0 || b.indexOf(a) >= 0)) {
+        console.error('[agente] «' + nuevo.destino + '» es el mismo destino que «' + base.destino + '» con más palabras: se conserva el de la ficha');
+        nuevo.destino = base.destino;
+        webhook.guardaCharla(cliente, nuevo);
+      }
+    }
+  }
+
   const yaEstaTodo = !conversacion.loQueFalta(nuevo);
   /* El viaje que ya tiene precio (pedido o dado) no se vuelve a cotizar solo
      porque la plática esté completa: desde que la plática se siembra de la
@@ -2220,7 +2398,25 @@ async function loQueDiceElAgente(envio) {
      ofrece (9-sep-2026, escenario k). */
   /* Y no si es OTRO viaje: pedir una segunda cotización no vence el precio
      del primero (corrida real del 9-sep-2026, escenario q). */
-  if (viajeDeLaFicha && viajeDeLaFicha.estado === 'dado' && !yaTienePrecioEseViaje && cambiaAlgo &&
+  /* ------------------------------------------------------------
+     «¿Y SI SOMOS 10?» NO ES UN CAMBIO: ES UNA PREGUNTA
+     ------------------------------------------------------------
+     Corrida real del 9-sep-2026 (escenario z): con el precio ya entregado,
+     «y si somos 10?» venció el precio, mandó OTRO ticket al dueño y dejó al
+     cliente en un callejón —pidió la cuenta tres veces y las tres recibió
+     «con ese cambio el precio se mueve»—. La condicional es la marca: «y
+     si…», «si fuéramos…». Un cambio de verdad se dice en indicativo («ya
+     somos 22», «seremos 30»), y ése sí vence el precio.
+     ------------------------------------------------------------ */
+  const HIPOTETICO = /(^|\s)(y\s+)?si\s+(fu[eé]ramos|somos|vamos|van|son|fueran|le\s+(bajo|subo|bajamos|subimos))\b|(^|\s)y\s+(entre|para)\s+\d/;
+  const esHipotetico = HIPOTETICO.test(conversacion.normaliza(texto || ''));
+  if (esHipotetico && viajeDeLaFicha && viajeDeLaFicha.estado === 'dado' && !yaTienePrecioEseViaje) {
+    console.error('[agente] pregunta hipotética sobre un viaje con precio: no cambia el viaje ni vence el precio');
+    /* La plática vuelve al viaje que SÍ tiene precio: lo que la IA leyó
+       como cambio era una suposición del cliente. */
+    const base = viajeBaseDeLaFicha(tickets.fichaDe(cliente));
+    if (base) Object.keys(base).forEach(function (k) { nuevo[k] = base[k]; });
+  } else if (viajeDeLaFicha && viajeDeLaFicha.estado === 'dado' && !yaTienePrecioEseViaje && cambiaAlgo &&
       !esOtroViaje && !nuevo.otroViaje) {
     const f = tickets.fichaDe(cliente);
     if (f && !f.precioVencido) {
@@ -2230,6 +2426,68 @@ async function loQueDiceElAgente(envio) {
   }
   let accion = dicho.accion;
   if (accion === 'seguir' && yaEstaTodo && !yaTienePrecioEseViaje) accion = 'cotizar';
+  /* ------------------------------------------------------------
+     UN VIAJE QUE YA TIENE PRECIO NO SE VUELVE A COTIZAR
+     ------------------------------------------------------------
+     Corrida real del 9-sep-2026 (escenario x): el dueño escribió $62,000 al
+     ticket, el cliente contestó «órale, va» y el modelo pidió «cotizar». Se
+     le mandó al dueño un SEGUNDO ticket del mismo viaje —«no pude
+     calcularlo»— y al cliente «en breve te paso tu cotización», con el
+     precio ya en su teléfono. El candado de arriba solo cubría el ascenso
+     de «seguir» a «cotizar»; cuando el modelo pide cotizar él mismo, nadie
+     lo frenaba.
+
+     Un «va» después del precio es querer apartar, así que ahí va: es el
+     único paso que sigue, y la CLABE se repite cada vez que la pida
+     (regla del dueño). Si el precio quedó vencido por un cambio de verdad,
+     esto no aplica: ahí sí toca cotizar otra vez.
+     ------------------------------------------------------------ */
+  if (accion === 'cotizar' && yaTienePrecioEseViaje) {
+    const f = tickets.fichaDe(cliente);
+    if (!(f && f.precioVencido)) {
+      console.error('[agente] ese viaje ya tiene precio: no se vuelve a cotizar');
+      /* Y no se salta al apartado por su cuenta: la espera neutra del guion
+         ya cierra con «¿te la aparto?» cuando toca, y así un «ok gracias»
+         no dispara la CLABE otra vez. */
+      accion = 'seguir';
+    }
+  }
+  /* ------------------------------------------------------------
+     LA CUENTA NO SE MANDA A QUIEN YA DEPOSITÓ
+     ------------------------------------------------------------
+     Corrida real del 9-sep-2026 (escenario z): el bloque de apartado con la
+     ficha, la CLABE y la cuenta salió CINCO veces seguidas, incluida una a
+     «ya deposité pero nomás mandé la mitad» y otra a «ok gracias». La regla
+     del dueño es que la CLABE se repite CADA VEZ QUE LA PIDA; esto es lo
+     otro: mandarla sin que la pida y contra lo que el cliente acaba de
+     decir.
+     ------------------------------------------------------------ */
+  if (accion === 'apartar') {
+    const f = tickets.fichaDe(cliente) || {};
+    const dichoCliente = String(texto || '');
+    /* «Ya deposité» trae la palabra «deposit», así que buscarla a secas
+       convertía en «me la pidió» justo el mensaje que dice lo contrario.
+       Pedirla es nombrar la cuenta o la CLABE, o querer apartar sin haber
+       depositado todavía. */
+    const yaDeposito = !!f.fotoDelClienteEn ||
+      /\bya\s+(deposit|transfer|pagu[eé]|mand[eé])|dep[oó]sito\s+(hecho|listo)|ya\s+(est[aá]|qued[oó])\s+(el\s+)?dep[oó]sito|ya\s+te\s+mand[eé]/i.test(dichoCliente);
+    const pideCuenta = /\b(cuenta|clabe|datos\s+(para|de)\s+(el\s+)?(dep[oó]sito|transferencia|pagar))\b|d[oó]nde\s+(pago|deposito|te\s+deposito|los?\s+deposito)|otra\s+vez\s+(la\s+|los\s+)?(cuenta|datos)/i.test(dichoCliente);
+    const quiereApartar = /\bap[aá]rta\w*|\bapartar\b|\breserv\w*/i.test(dichoCliente);
+    const loPidio = pideCuenta || (quiereApartar && !yaDeposito);
+    if (yaDeposito && !loPidio) {
+      console.error('[agente] ya depositó: no se le vuelve a mandar la cuenta');
+      accion = 'seguir';
+      dicho.respuesta = f.fotoDelClienteEn
+        ? 'Tu comprobante ya lo tiene el equipo 🙌 En cuanto lo confirmen te aviso por aquí.'
+        : 'Perfecto 🙌 Mándame la foto del comprobante por aquí y en cuanto lo revisen te confirmo tu fecha.';
+    } else if (!loPidio && f.etapa === 'va_a_apartar') {
+      /* Ya se le mandó el apartado con la CLABE y no la volvió a pedir: un
+         «ok gracias» no tiene por qué traer el bloque completo otra vez. */
+      console.error('[agente] ya se le mandó el apartado y no lo pidió: no se repite');
+      accion = 'seguir';
+      dicho.respuesta = 'Aquí sigo 🙌 Cuando deposites me mandas el comprobante y te confirmo tu fecha.';
+    }
+  }
   if (accion === 'cotizar' && !yaEstaTodo) accion = 'seguir';   // le falta algo: que lo pida
   if (accion === 'seguir' && !yaEstaTodo && dicho.respuesta && PROMETE_PRECIO.test(dicho.respuesta) &&
       !(viajeDeLaFicha && viajeDeLaFicha.estado)) {
@@ -3035,6 +3293,30 @@ async function manda(envio) {
       depositoMandadoAhora.add(almacen.llave(envio.para));
     }
   }
+  /* ------------------------------------------------------------
+     EL CATÁLOGO NO SALE DOS VECES SEGUIDAS
+     ------------------------------------------------------------
+     Corrida real del 9-sep-2026 (escenarios v y x): la lista de autobuses
+     salió tres veces seguidas, porque escoger camión es lo que falta y el
+     motor la manda en cada turno. Aquí, en la única puerta de salida, se
+     cubren los dos caminos —el del agente y el del guion—.
+
+     Si el cliente la vuelve a pedir, se repite: eso es atenderlo.
+     ------------------------------------------------------------ */
+  if (!esParaElDueno && !envio.esTicket && !envio.plantilla && ES_CATALOGO.test(String(envio.texto || ''))) {
+    const anterior = ultimoTextoAlCliente.get(almacen.llave(envio.para));
+    const dichos = agente.historialDe(envio.para) || [];
+    const ultimoDelCliente = dichos.filter(function (h) { return h.de === 'cliente'; }).pop();
+    const loPidio = !!(ultimoDelCliente && pideAutobuses(ultimoDelCliente.texto || ''));
+    if (anterior && ES_CATALOGO.test(anterior) && !loPidio) {
+      console.log('[catalogo] la lista ya salió en el mensaje anterior: no se repite');
+      envio = Object.assign({}, envio, {
+        texto: 'Los de arriba son todos los que tenemos 🙌 Dime cuál te late y te mando sus fotos, ' +
+          'o si quieres te recomiendo uno.',
+        escribio: (envio.escribio || '') + ' · sin repetir el catálogo'
+      });
+    }
+  }
   /* Nada de «por persona» con dinero hacia un cliente (dictado del dueño,
      8-sep-2026, reparación Falla 3): el precio es total, tal cual lo puso
      el vendedor. Un texto así se frena y queda en el registro. */
@@ -3166,6 +3448,7 @@ async function manda(envio) {
       }
       return false;
     }
+    if (!esParaElDueno && envio.texto) recuerdaTextoAlCliente(envio.para, envio.texto);
     /* Lo que solo debe pasar si WhatsApp aceptó el mensaje (la etapa
        «ya tiene precio», el precio aprendido). Auditoría 7-sep-2026, C9. */
     if (typeof envio.alMandar === 'function') {

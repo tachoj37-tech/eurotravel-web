@@ -602,6 +602,21 @@ function quiereApartarConPrecio(ficha, texto, charla) {
   /* Sin acentos: «apártamela», «depósito», «dónde». */
   const t = String(texto || '').normalize('NFD').replace(/[̀-ͯ]/g, '');
   if (!t || t.length > 160 || !APARTAR_O_CUENTA.test(t)) return false;
+  /* ------------------------------------------------------------
+     «YA DEPOSITÉ» NO ES PEDIR LA CUENTA
+     ------------------------------------------------------------
+     Corrida real del 9-sep-2026 (escenario z): el bloque de apartado con la
+     ficha, la CLABE y el número de cuenta salió cinco veces seguidas, una
+     de ellas contestando a «ya deposité pero nomás mandé la mitad». La
+     culpa era de `deposit\w*` aquí arriba, que caza igual «deposito» que
+     «deposité». La regla del dueño es que la CLABE se repite cuando la
+     PIDE; quien ya depositó no la está pidiendo. Si aun así nombra la
+     cuenta o la CLABE, se le manda: ahí sí la pidió.
+     ------------------------------------------------------------ */
+  const yaDeposito = /\bya\s+(deposit\w*|transfer\w*|pagu[ée]|mand[ée])|dep[oó]sito\s+(hecho|listo|ya\s+hecho)|ya\s+(esta|quedo)\s+(el\s+)?deposito|ya\s+te\s+mand[ée]/i
+    .test(t);
+  const nombraLaCuenta = /\b(cuenta|clabe|datos\s+bancarios)\b/i.test(t);
+  if (yaDeposito && !nombraLaCuenta) return false;
   /* Un viaje nuevo a medias en la plática (OTRO destino, ya con fecha o
      gente) no es «apártame el de antes». Una plática con solo un destino
      suelto —o el mismo destino del viaje con precio— no lo bloquea: el
@@ -1993,6 +2008,10 @@ function procesa(crudo, firma, entorno) {
              el comprobante sin abrir nada.
              ------------------------------------------------------------ */
           const f = tickets.fichaDe(m.from);
+          /* Queda anotado que llegó, aunque no haya precio todavía: si no,
+             el bot puede negar un archivo que el dueño ya tiene en su
+             teléfono (corrida real del 9-sep-2026, escenario x). */
+          tickets.anotaEtapa(m.from, (f && f.etapa) || 'escribio', { fotoDelClienteEn: ahora }, ahora);
           const conQue = f && f.viaje
             ? '\n' + f.viaje +
               (typeof f.anticipo === 'number'

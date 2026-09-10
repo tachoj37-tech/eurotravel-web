@@ -44,6 +44,9 @@ process.env.SITIO_URL = 'https://eurotravel-web.vercel.app';
 process.env.CLABE = process.env.CLABE || '012320001927217407';
 process.env.CUENTA = process.env.CUENTA || '0192721740';
 process.env.DATOS_BANCARIOS = process.env.DATOS_BANCARIOS || 'BBVA Bancomer · a nombre de Turismo ET, S.A. de C.V.';
+/* Llave de mentiras: la puerta de contratos de aquí abajo es de mentiras
+   también, así que no toca EuroSystem de verdad. */
+process.env.CONTRATOS_API_KEY = 'llave-de-mentiras';
 delete process.env.ALMACEN_URL; delete process.env.ALMACEN_CLAVE;
 
 /* Tope de gasto (dictado del dueño, 8-sep-2026: «solo usa 1 dólar para
@@ -74,6 +77,7 @@ for (const k of ['log', 'error']) {
 
 const fetchReal = globalThis.fetch;
 let mandados = [];
+let contratos = [];
 globalThis.fetch = async function (url, opciones) {
   const u = String(url);
   if (u.indexOf('graph.facebook.com') !== -1) {
@@ -81,6 +85,21 @@ globalThis.fetch = async function (url, opciones) {
     return { ok: true, status: 200, json: async () => ({ messages: [{ id: 'wamid.s' + mandados.length }] }), text: async () => '{}' };
   }
   if (u.indexOf('api.anthropic.com') !== -1) return fetchReal(url, opciones);
+  /* EuroSystem de mentiras: contesta como la puerta real de contratos, para
+     poder ver el PDF llegando al cliente y al dueño sin registrar nada en el
+     sistema de verdad. El cuerpo se guarda para revisarlo. */
+  if (u.indexOf('/api/contratos/externo') !== -1) {
+    contratos.push(JSON.parse(opciones.body));
+    const folio = 50000 + contratos.length;
+    console.log('\n[EuroSystem de mentiras] contrato registrado · folio ' + folio +
+      ' · tipoViaje=' + ((JSON.parse(opciones.body).servicio || {}).tipoViaje || '—') +
+      ' · pasajeros=' + ((JSON.parse(opciones.body).servicio || {}).pasajeros || '—'));
+    return {
+      ok: true, status: 201,
+      json: async () => ({ folio: folio, urlPdf: 'https://eurosystem.site/api/contratos/x' + folio + '/pdf?t=firma', contratoId: 'c' + folio, estado: 'BORRADOR', repetido: false }),
+      text: async () => '{}'
+    };
+  }
   return { ok: false, status: 500, json: async () => ({}), text: async () => 'sin red' };
 };
 
@@ -104,20 +123,28 @@ function ultimoTicket() {
   let idx = -1; mandados.forEach((m, i) => { if (mismo(m.to, DUENO) && /Precio por confirmar/.test((m.text && m.text.body) || '')) idx = i; });
   return idx >= 0 ? 'wamid.s' + (idx + 1) : null;
 }
+/* Cómo se ve un mensaje en el teléfono: texto, foto, o el PDF del contrato
+   (que desde el 9-sep-2026 va como archivo, no como liga). */
+function comoSeVe(m) {
+  if (m.text && m.text.body) return m.text.body;
+  if (m.image) return '[foto ' + (m.image.link || 'del cliente') + '] ' + (m.image.caption || '');
+  if (m.document) return '[PDF ' + (m.document.filename || m.document.link) + '] ' + (m.document.caption || '');
+  return JSON.stringify(m);
+}
+
 async function corre(nombre, C, guion) {
-  webhook.olvidaTodo(); agente.olvidaTodo(); tk.olvidaTodo(); mandados = [];
+  webhook.olvidaTodo(); agente.olvidaTodo(); tk.olvidaTodo(); mandados = []; contratos = [];
   console.log('\n══════════ ' + nombre + ' ══════════');
   for (const paso of guion) {
     const antes = mandados.length;
     if (typeof paso === 'function') { await paso(); }
     else { console.log('\nCLIENTE: ' + paso); await manda(C, paso); }
     for (const m of mandados.slice(antes)) {
-      if (mismo(m.to, C)) console.log('BOT:     ' + ((m.text && m.text.body) || (m.image ? '[foto ' + (m.image.link || m.image.id) + '] ' + (m.image.caption || '') : JSON.stringify(m))).replace(/\n/g, '\n         '));
+      if (mismo(m.to, C)) console.log('BOT:     ' + comoSeVe(m).replace(/\n/g, '\n         '));
       /* El mensaje al dueño COMPLETO: es lo que él va a leer en su
          teléfono, y con una sola línea no se puede revisar. */
       else if (mismo(m.to, DUENO)) {
-        console.log('→ DUEÑO:  ' + ((m.text && m.text.body) ||
-          (m.image ? '[reenvío de una foto del cliente]' : '[medio]')).replace(/\n/g, '\n          '));
+        console.log('→ DUEÑO:  ' + comoSeVe(m).replace(/\n/g, '\n          '));
       }
     }
   }
@@ -154,6 +181,21 @@ const foto = (C) => async () => {
   console.log('\nCLIENTE: [foto del comprobante]');
   await manda(C, '', { type: 'image', image: { id: 'media-' + Date.now(), mime_type: 'image/jpeg' } });
 };
+/* El dueño contesta con «va» el ÚLTIMO mensaje suyo que hable de lo que se
+   le pide (los datos del contrato, la transferencia). Es como lo hace en el
+   teléfono: busca ese mensaje y lo cita. */
+const autoriza = (patron, etiqueta) => async () => {
+  let idx = -1;
+  mandados.forEach(function (m, i) {
+    if (mismo(m.to, DUENO) && patron.test(comoSeVe(m))) idx = i;
+  });
+  if (idx < 0) { console.log('\n(⚠️ el dueño NO recibió nada de «' + etiqueta + '»: no hay qué autorizar)'); return; }
+  console.log('\nDUEÑO contesta «' + etiqueta + '»: va');
+  await manda(DUENO, 'va', { context: { id: 'wamid.s' + (idx + 1) } });
+};
+const autorizaDatos = () => autoriza(/ficha|datos del contrato|autorizar estos datos/i, 'los datos del contrato');
+const autorizaTransferencia = () => autoriza(/verificar la transferencia|comprobante/i, 'la transferencia');
+
 /* El dueño contesta el ticket de un autobús con el precio. */
 const precio = (monto) => async () => {
   const t = ultimoTicket();
@@ -236,11 +278,70 @@ const escenarios = {
     precio(9800),
     'va, ahí les deposito', foto('5213366679021'), apruebaPago(),
     'soy Norma Aguilar Ceja', 'nos recogen en morelos 210, ocotlán, a las 7 de la mañana',
-    'llegamos a la plaza principal de tequila y salimos de regreso a las 7 de la noche']
+    'llegamos a la plaza principal de tequila y salimos de regreso a las 7 de la noche'],
+
+  /* ============================================================
+     LA TANDA DEL 9-SEP-2026 (v–z)
+     ============================================================
+     Dictado del dueño: «actúa como un tonto: pregunta, pruébalo, no le
+     hagas caso al chatbot, usa faltas de ortografía, equivócate, haz
+     preguntas. Quiero que esto sea prueba de todo». Y de paso se prueban
+     las tres cosas nuevas: las dos autorizaciones seguidas, el PDF que
+     llega como archivo, y el viaje sencillo.
+     ============================================================ */
+
+  /* v · el que escribe pésimo y no contesta lo que se le pregunta. */
+  v: ['ola', 'kiero saber precios', 'pss no se, a donde recomiendan',
+    'aaa ok y a vallarta ke tal', 'no se cuantos vamos todavia', 'ay no se, como 20 o 30, depende',
+    'y kuanto cuesta mas o menos?', 'ta caro no?', 'oye tienen wifi?',
+    'aaa mira, es del 13 al 15 de noviembre', 'de gdl', 'nomas nos llevan y traen',
+    'ke onda ya?'],
+
+  /* w · VIAJE SENCILLO de verdad, hasta el contrato. Se revisa que el
+     contrato salga SENCILLO y que el PDF le llegue a los dos. */
+  w: ['buenas, ocupo una sprinter de guadalajara a tequila el 12 de noviembre, solo de ida, somos 15',
+    'no, nada mas la ida, allá nos quedamos', 'sí, solo nos llevan',
+    va('5213366679022'),
+    'va, cómo le hago para apartar', foto('5213366679022'),
+    'ya deposité', autorizaTransferencia(),
+    'soy Fernando Ibarra Luna', 'nos recogen en av. lópez mateos 3000, zapopan, a las 8 de la mañana',
+    'llegamos al hotel casa tequila, no hay regreso',
+    autorizaDatos(), autorizaTransferencia(),
+    'ya me llegó todo?'],
+
+  /* x · el que no hace caso: le preguntan una cosa y contesta otra, tres
+     veces seguidas, y manda el comprobante ANTES de tener precio. */
+  x: ['hola quiero un camión para mi grupo', 'para un evento', 'es una boda',
+    'a san miguel de allende', 'no me acuerdo bien de la fecha', 'ah sí, el 28 de noviembre',
+    foto('5213366679023'),
+    'ya te mandé el comprobante', 'regresamos el 30', 'somos 45', 'de guadalajara',
+    'solo nos llevan y traen', 'el paradiso', precio(62000), 'órale, va'],
+
+  /* y · LA COTIDIANA COMPLETA hasta el PDF, con las dos autorizaciones
+     seguidas, que es como el dueño dijo que las va a dar. */
+  y: ['buenas tardes, quiero cotizar', 'a puerto vallarta', 'del 4 al 6 de diciembre',
+    'somos 17', 'sí, de guadalajara', 'nada más nos llevan y traen',
+    va('5213366679024'),
+    'va, apártamelo', foto('5213366679024'),
+    'ya está el depósito', autorizaTransferencia(),
+    'soy Adriana Ponce Vega', 'nos recogen en niños héroes 1500, guadalajara, a las 6 de la mañana',
+    'llegamos al hotel villa del mar y de regreso salimos a las 4 de la tarde',
+    autorizaDatos(),
+    'ya quedó?'],
+
+  /* z · el que se equivoca y corrige a media plática, regatea, deposita de
+     menos y pregunta lo mismo tres veces. */
+  z: ['a mazamitla el 15 de noviembre, somos 12, de guadalajara, ida y vuelta',
+    'ay no, perdón, es el 15 de diciembre no de noviembre', 'sí, ida y vuelta el mismo día',
+    'solo nos llevan y traen',
+    va('5213366679025'),
+    'está caro', 'no me lo dejas en 6 mil?', 'y si somos 10?',
+    'bueno va', 'oye ya te dije que sí, dónde deposito', 'perdón, otra vez la cuenta?',
+    'ya deposité pero nomás mandé la mitad', 'ok gracias']
 };
 const pedidos = process.argv.slice(2).filter((x) => escenarios[x]);
 for (const k of (pedidos.length ? pedidos : Object.keys(escenarios))) {
-  const C = '52133666790' + { a: '01', b: '02', c: '03', d: '04', e: '05', f: '06', g: '07', h: '08', i: '09', j: '10', k: '11', l: '12', m: '13', n: '14', o: '15', p: '16', q: '17', r: '18', s: '19', t: '20', u: '21' }[k];
+  const C = '52133666790' + { a: '01', b: '02', c: '03', d: '04', e: '05', f: '06', g: '07', h: '08', i: '09', j: '10', k: '11', l: '12', m: '13', n: '14', o: '15', p: '16', q: '17', r: '18', s: '19', t: '20', u: '21', v: '26', w: '22', x: '23', y: '24', z: '25' }[k];
   const guion = escenarios[k].map((p) => (typeof p === 'function' && p.length === 0 && k === 'e') ? p : p);
   await corre('Escenario ' + k, C, guion);
   console.log('\n(gastado hasta aquí: $' + gastado.toFixed(3) + ' USD)');

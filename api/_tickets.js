@@ -435,6 +435,12 @@ function anotaEtapa(cliente, etapa, extra, ahora) {
        llegaría la misma ficha en cada mensaje que el cliente escriba
        después de completarla. */
     contratoAvisado: !!((extra && extra.contratoAvisado) || (antes && antes.contratoAvisado)),
+    /* Que el cliente ya mandó una foto o un PDF por el chat. Va aparte de
+       la etapa porque una foto puede llegar ANTES de que haya precio, y
+       entonces la etapa no se mueve: en la corrida del 9-sep-2026
+       (escenario x) el cliente mandó su comprobante sin cotización y un
+       turno después el bot le contestó «no me llegó nada por aquí». */
+    fotoDelClienteEn: (extra && extra.fotoDelClienteEn) || (antes && antes.fotoDelClienteEn) || null,
     /* El precio que el bot calculó y que espera el «va» del dueño. Se
        reemplaza si viene uno nuevo, se borra si viene `null` explícito
        (ya se mandó), y si no viene nada se conserva el que había. */

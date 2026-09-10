@@ -1152,6 +1152,15 @@ function origenDeLaFrase(crudo) {
   return o.length >= 3 ? o : null;
 }
 
+const SOLO_IDA = /\b(solo|nada mas|nomas|unicamente) (de |la )?ida\b|\bviaje sencillo\b|\bsencillo (de )?ida\b|\bida sencilla\b|\bsin regreso\b/;
+/* ¿El cliente pidió un viaje de una sola ida? Vive aparte de `leeDeUnJalon`
+   porque el camino de la IA también lo necesita: el agente no extrae este
+   dato y sin esto el contrato salía REDONDO aunque el cliente hubiera dicho
+   «solo de ida» (corrida real del 9-sep-2026, escenario w). */
+function esSoloIda(crudo) {
+  return SOLO_IDA.test(normaliza(String(crudo || '')));
+}
+
 function leeDeUnJalon(crudo, hoy) {
   const original = String(crudo || '');
   const t = normaliza(original);
@@ -1192,7 +1201,7 @@ function leeDeUnJalon(crudo, hoy) {
        no regresa. Así que `sencillo` solo cuenta pegado a «viaje» o a
        «ida», nunca suelto.
        ------------------------------------------------------------ */
-    soloIda: /\b(solo|nada mas|nomas|unicamente) (de |la )?ida\b|\bviaje sencillo\b|\bsencillo (de )?ida\b|\bida sencilla\b|\bsin regreso\b|\bnada mas de ida\b/.test(t),
+    soloIda: esSoloIda(original),
     ocasion: ocasionDe(original),
     respuesta: null
   };
@@ -4068,7 +4077,7 @@ module.exports = {
   /* Para probar la tolerancia a faltas sin pasar por todo el bot. */
   esLaPalabra, fonetica, distancia,
   normaliza, cuantaGente, unidadPara, fechaDe, fechaEnPalabras, hoyISO, mensajeDeTodosLosAutobuses,
-  esDelExtranjero,
+  esDelExtranjero, esSoloIda,
   /* `pregunta` y `diasEntre` se exportan para poder vigilarlos desde las
      pruebas: que ninguna opción se pase de los topes de WhatsApp —3
      botones de 20 caracteres o 10 filas de 24— y que los días se cuenten

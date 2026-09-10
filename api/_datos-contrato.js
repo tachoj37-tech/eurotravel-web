@@ -270,12 +270,19 @@ function pideLosDatos(esAgencia) {
    Se le acusa lo que sí dio —por nombre, para que se note que se
    leyó— y se le pide solo lo que falta.
    ------------------------------------------------------------ */
-function pideLoQueFalta(datos, nuevos) {
+function pideLoQueFalta(datos, nuevos, pagoAprobado) {
   const faltan = faltantes(datos);
 
   if (!faltan.length) {
-    return 'Listo, con eso tengo todo ✅\n\nEn cuanto se confirme tu pago ' +
-      'te mando tu contrato.';
+    /* Con la transferencia ya verificada, decirle «en cuanto se confirme tu
+       pago» es contradecirse: el dueño la aprobó hace rato y el cliente ya
+       recibió «tu pago quedó confirmado» (corrida real del 9-sep-2026,
+       escenario y). */
+    return pagoAprobado
+      ? 'Listo, con eso tengo todo ✅\n\nEn cuanto el dueño dé el visto bueno a estos datos ' +
+        'te mando tu contrato por aquí.'
+      : 'Listo, con eso tengo todo ✅\n\nEn cuanto se confirme tu pago ' +
+        'te mando tu contrato.';
   }
 
   /* Qué se acaba de recibir, para que sepa que se leyó. Solo si trajo
