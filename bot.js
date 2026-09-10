@@ -2975,6 +2975,13 @@ const PIDE_FOTOS = ['foto', 'fotos', 'fotografia', 'fotografias', 'imagen', 'ima
   'como se ve', 'como es por dentro', 'como son las unidades',
   'ver la unidad', 'ver el camion', 'ver la sprinter'];
 
+/* Boletos sueltos: la misma expresión que usa `whatsapp.mjs`, menos
+   «un lugar» y «dos lugares» —ahí van con la IA de respaldo; aquí, a
+   secas, «vamos a un lugar cerca de Chapala» sería un falso positivo—.
+   El boleto de avión no cuenta: ése lo nombra quien ya viene volando y
+   pide traslado del aeropuerto. */
+const PIDE_BOLETOS = /\b(boletos?|pasajes?|corridas?|asientos? sueltos?|lugares? sueltos?)\b(?!.*\bavi[oó]n\b)/;
+
 /* ------------------------------------------------------------
    EL SALUDO, EN TRES FORMAS
    ------------------------------------------------------------
@@ -3035,6 +3042,38 @@ function respuestaBase(mensaje, estado, hoy) {
         estado: estado
       };
     }
+  }
+
+  /* ------------------------------------------------------------
+     BOLETOS SUELTOS NO SE VENDEN — Y EL GUION TAMBIÉN LO DICE
+     ------------------------------------------------------------
+     Eurotravel renta la unidad completa con chofer. El que pregunta
+     «¿venden boletos a Monterrey?» está pensando en una corrida de
+     camión, y si nadie se lo aclara se entera hasta que ve el precio
+     de un autobús entero.
+
+     La regla se escribió el 9-sep-2026 pero solo en `whatsapp.mjs`, o
+     sea solo cuando la IA contesta. Sin IA el guion leía «Monterrey»
+     como destino y arrancaba la cotización sin decir palabra. Sale de
+     la auditoría del 10-sep-2026, la misma de los destinos del
+     extranjero.
+
+     Va aquí, junto a las fotos y antes del paso en curso, por lo
+     mismo: si fuera después, el paso ya se habría comido el texto. El
+     estado no se toca — se aclara y se repite lo que estaba pendiente,
+     que es lo que hace un vendedor.
+     ------------------------------------------------------------ */
+  if (PIDE_BOLETOS.test(t)) {
+    const aclara = 'Boletos sueltos no manejamos 🙌 Lo que hacemos es rentarte la ' +
+      'unidad completa con chofer para tu grupo, de ida y de regreso.';
+    if (estado && estado.paso) {
+      const p = pregunta(estado);
+      return { texto: aclara + '\n\n' + p.texto, opciones: p.opciones, pasa: false, estado: estado };
+    }
+    return {
+      texto: aclara + '\n\n¿A dónde van y cuántos son?',
+      opciones: ['Cotizar mi viaje', 'Ver fotos'], pasa: false
+    };
   }
 
   /* Si va a media cotización, ese paso manda: lo que escriba es la

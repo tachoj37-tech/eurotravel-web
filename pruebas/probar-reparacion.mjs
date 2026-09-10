@@ -1831,5 +1831,42 @@ titulo('R57 · «solo nos llevan y traen» lo entiende el guion, sin IA');
   okQue('«2» siguen siendo 2 recorridos', conDos.recorridos === 2);
 }
 
+titulo('R58 · el guion tampoco vende boletos sueltos');
+{
+  /* Tercera de la misma auditoría. Eurotravel renta la unidad completa;
+     la regla estaba escrita el 9-sep pero solo en `whatsapp.mjs`. Sin IA
+     el guion leía «¿venden boletos a Monterrey?» como un viaje a
+     Monterrey y arrancaba la cotización sin aclarar nada: el cliente se
+     enteraba hasta que veía el precio de un autobús entero. */
+  const bot = (await import(pathToFileURL(path.join(RAIZ, 'bot.js')).href)).default;
+  const HOY = '2026-09-10';
+
+  for (const frase of ['venden boletos a monterrey?', 'cuanto cuesta un boleto',
+    'quiero dos pasajes a vallarta', 'a que hora sale la corrida', 'venden asientos sueltos?']) {
+    const r = bot.respuestaA(frase, null, HOY);
+    okQue('«' + frase + '» se aclara que es la unidad completa', /unidad completa con chofer/.test(r.texto));
+    okQue('  y no se guarda como destino', !(r.estado && r.estado.destino));
+  }
+
+  /* A media cotización se aclara SIN perder el hilo: el paso no se mueve
+     y la pregunta pendiente se repite. */
+  {
+    let r = bot.respuestaA('a vallarta somos 12', null, HOY);
+    const antes = r.estado.paso;
+    r = bot.respuestaA('venden boletos?', r.estado, HOY);
+    okQue('a media cotización también se aclara', /unidad completa con chofer/.test(r.texto));
+    okQue('  y el paso no se mueve', r.estado.paso === antes);
+    okQue('  y se repite la pregunta pendiente', /qu[eé] d[ií]a salen/i.test(r.texto));
+  }
+
+  /* Y lo que NO es un boleto suelto sigue de largo. El boleto de avión lo
+     nombra quien ya viene volando y quiere traslado del aeropuerto. */
+  for (const frase of ['nos llega el boleto de avion a las 8, nos pueden recoger',
+    'vamos a un lugar cerca de chapala']) {
+    const r = bot.respuestaA(frase, null, HOY);
+    okQue('«' + frase + '» no se frena', !/unidad completa con chofer/.test(r.texto));
+  }
+}
+
 console.log('\n' + buenas + ' buenas, ' + malas + ' malas');
 process.exit(malas ? 1 : 0);
