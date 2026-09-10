@@ -3667,8 +3667,27 @@ async function manda(envio) {
           /* Y al almacén, para cuando esta instancia ya no exista. Sin
              esperar: a Meta hay que contestarle rápido. */
           if (almacen.hayAlmacen()) almacen.guardaTicket(id, envio.sobreCliente, envio.carga || null).catch(function () {});
+        } else {
+          /* ------------------------------------------------------------
+             UN 200 SIN ID NO ES UN MENSAJE ENTREGADO
+             ------------------------------------------------------------
+             El envío no sale por Meta directo sino por la puerta de
+             Dualhook, y una puerta puede contestar 200 con un cuerpo que
+             no trae `messages[0].id`. Hasta hoy eso se tragaba entero: el
+             ticket no quedaba registrado —así que el «va» del dueño ya no
+             sabría de qué cliente hablaba— y en el registro no quedaba
+             nada. Buscando por qué una cotización no llegó (10-sep-2026)
+             éste era uno de los caminos que no se podían descartar.
+             ------------------------------------------------------------ */
+          console.error('[TICKET-SIN-ID] La puerta contestó ' + r.status + ' pero sin id de mensaje para ' +
+            (envio.escribio || 'sin marca') + ' (cliente ' + envio.sobreCliente + '). ' +
+            'No se pudo registrar el ticket: si el dueño lo contesta, no se sabrá de quién es. ' +
+            'Cuerpo: ' + JSON.stringify(cuerpo).slice(0, 300));
         }
-      } catch (e) { /* sin id: queda el camino del numero escrito */ }
+      } catch (e) {
+        console.error('[TICKET-SIN-ID] No se pudo leer la respuesta de la puerta para ' +
+          (envio.escribio || 'sin marca') + ' (cliente ' + envio.sobreCliente + '): ' + e.message);
+      }
     }
 
     /* ------------------------------------------------------------
