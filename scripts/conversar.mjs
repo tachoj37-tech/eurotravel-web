@@ -47,6 +47,9 @@ process.env.DATOS_BANCARIOS = process.env.DATOS_BANCARIOS || 'BBVA Bancomer · a
 /* Llave de mentiras: la puerta de contratos de aquí abajo es de mentiras
    también, así que no toca EuroSystem de verdad. */
 process.env.CONTRATOS_API_KEY = 'llave-de-mentiras';
+/* Como en producción desde el 10-sep-2026: el bot llega hasta la cotización
+   y ahí el chat pasa a una persona, que dispara lo demás con sus botones. */
+process.env.BOT_HASTA_COTIZACION = process.env.BOT_HASTA_COTIZACION || '1';
 delete process.env.ALMACEN_URL; delete process.env.ALMACEN_CLAVE;
 
 /* Tope de gasto (dictado del dueño, 8-sep-2026: «solo usa 1 dólar para
@@ -195,6 +198,16 @@ const autoriza = (patron, etiqueta) => async () => {
 };
 const autorizaDatos = () => autoriza(/ficha|datos del contrato|autorizar estos datos/i, 'los datos del contrato');
 const autorizaTransferencia = () => autoriza(/verificar la transferencia|comprobante/i, 'la transferencia');
+
+/* Los botones del dueño con el chat ya en sus manos: contesta cualquier
+   mensaje suyo sobre ese cliente con una palabra. */
+const boton = (palabra) => async () => {
+  let idx = -1;
+  mandados.forEach(function (m, i) { if (mismo(m.to, DUENO)) idx = i; });
+  if (idx < 0) { console.log('\n(⚠️ no hay mensaje del dueño que contestar para «' + palabra + '»)'); return; }
+  console.log('\nDUEÑO aprieta el botón: ' + palabra);
+  await manda(DUENO, palabra, { context: { id: 'wamid.s' + (idx + 1) } });
+};
 
 /* El dueño contesta el ticket de un autobús con el precio. */
 const precio = (monto) => async () => {
@@ -521,7 +534,50 @@ const escenarios = {
   /* au · el que pregunta cosas que el bot no puede saber. */
   au: ['hola, tienen unidades con baño?', 'y cuántos años tienen las unidades?',
     'sus choferes tienen licencia federal?', 'están asegurados?',
-    'cuál es su dirección física?', 'ok, quiero cotizar a colima el 5 de noviembre para 20, de guadalajara, ida y vuelta']
+    'cuál es su dirección física?', 'ok, quiero cotizar a colima el 5 de noviembre para 20, de guadalajara, ida y vuelta'],
+
+  /* ============================================================
+     EL FLUJO NUEVO: EL BOT LLEGA HASTA LA COTIZACIÓN (av–ay)
+     ============================================================
+     Dictado del dueño (10-sep-2026). El bot cotiza y suelta el chat; de
+     ahí en adelante el vendedor dispara con sus botones. Estos cuatro
+     escenarios son los que hay que mirar antes de mover el bot a Kommo.
+     ============================================================ */
+
+  /* av · la venta completa por el camino nuevo, de «hola» al contrato,
+     con el vendedor apretando los tres botones. */
+  av: ['hola, quiero cotizar una sprinter a puerto vallarta',
+    'del 6 al 8 de noviembre', 'somos 16', 'sí, de guadalajara', 'solo nos llevan y traen',
+    va('5213366679048'),
+    'va, me interesa', 'cómo le hago para apartar?',
+    boton('cuenta'),
+    'ya deposité', foto('5213366679048'),
+    boton('recibido'),
+    boton('contrato'),
+    'soy Laura Beltrán Ríos', 'nos recogen en av. patria 2050, zapopan, a las 6 de la mañana',
+    'llegamos al hotel playa bonita y de regreso salimos a las 5 de la tarde'],
+
+  /* aw · el cliente sigue escribiendo después de la cotización: NADA de
+     eso lo debe contestar el bot; todo tiene que llegarle al vendedor. */
+  aw: ['a chapala el 20 de octubre, ida y vuelta el mismo día, somos 14, de guadalajara, solo nos llevan y traen',
+    va('5213366679049'),
+    'oye y qué incluye?', 'tienen seguro?', 'me puedes hacer descuento?',
+    'y si somos 20?', 'ok déjame lo checo'],
+
+  /* ax · pide OTRA cotización con el chat ya en manos del vendedor. El
+     bot no debe despertar solo; con «bot» sí retoma y cotiza. */
+  ax: ['a tequila el 17 de octubre, ida y vuelta el mismo día, somos 18, de guadalajara, solo nos llevan y traen',
+    va('5213366679050'),
+    'oye y aparte, cuánto sale a mazatlán del 5 al 7 de diciembre para 45?',
+    dueno('3366679050 bot'),
+    'cuánto sale a mazatlán del 5 al 7 de diciembre para 45, de guadalajara, solo llevar y traer?',
+    'el paradiso'],
+
+  /* ay · el vendedor aprieta botones a destiempo: sin cotización y con el
+     cliente a media plática. No se debe romper ni mandar cosas raras. */
+  ay: ['hola, quiero información',
+    boton('cuenta'),
+    'a tequila el 17 de octubre', boton('contrato'), 'somos 18']
 };
 const pedidos = process.argv.slice(2).filter((x) => escenarios[x]);
 for (const k of (pedidos.length ? pedidos : Object.keys(escenarios))) {
@@ -529,7 +585,8 @@ for (const k of (pedidos.length ? pedidos : Object.keys(escenarios))) {
     aa: '27', ab: '28', ac: '29', ad: '30', ae: '31',
     af: '32', ag: '33', ah: '34', ai: '35', aj: '36', ak: '37',
     al: '38', am: '39', an: '40', ao: '41', ap: '42', aq: '43',
-    ar: '44', as: '45', at: '46', au: '47' }[k];
+    ar: '44', as: '45', at: '46', au: '47',
+    av: '48', aw: '49', ax: '50', ay: '51' }[k];
   const guion = escenarios[k].map((p) => (typeof p === 'function' && p.length === 0 && k === 'e') ? p : p);
   await corre('Escenario ' + k, C, guion);
   console.log('\n(gastado hasta aquí: $' + gastado.toFixed(3) + ' USD)');

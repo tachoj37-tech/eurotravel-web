@@ -169,5 +169,21 @@ titulo('con «bot» el chat vuelve, y el bot hace todo como antes');
   okQue('y el bot vuelve a contestarle solo', textos(C).length > antes);
 }
 
+/* ============================================================ */
+titulo('los botones a destiempo: sin cotización no se dice una frase rota');
+{
+  limpia();
+  const C = '5213366668004';
+  /* Ficha sin precio: el vendedor apretó «cuenta» antes de cotizar. */
+  tk.anotaEtapa(C, 'escribio', {}, Date.now());
+  tk.recuerdaTicket('wamid.chat-' + C, C);
+  const antes = textos(C).length;
+  await dice('cuenta', DUENO, 'wamid.chat-' + C);
+  const t = textos(C).slice(antes).join('\n');
+  okQue('no sale «el anticipo de anticipo»', !/el anticipo de anticipo/i.test(t));
+  okQue('  se dice de otra forma, sin hueco', /se deja un anticipo/i.test(t));
+  okQue('  y la cuenta sí le llega igual', textos(C).indexOf('012320001927217407') >= 0);
+}
+
 console.log('\n' + buenas + ' buenas, ' + malas + ' malas');
 process.exit(malas ? 1 : 0);

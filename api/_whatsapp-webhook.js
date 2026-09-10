@@ -1231,13 +1231,19 @@ function procesa(crudo, firma, entorno) {
               }
               const f = tickets.fichaDe(aQuien) || {};
               if (cual === 'cuenta') {
-                const anticipo = (typeof f.anticipo === 'number' && f.anticipo > 0)
-                  ? '*$' + f.anticipo.toLocaleString('en-US') + '*' : 'el anticipo';
+                /* Sin monto en la ficha —el vendedor apretó el botón antes de
+                   cotizar— la frase se dice de otra forma, no se rellena el
+                   hueco: «son el anticipo de anticipo» es lo que salía en la
+                   corrida del 10-sep-2026. */
+                const conMonto = (typeof f.anticipo === 'number' && f.anticipo > 0);
                 envios.push({
                   numeroDeOrigen: deQuien, para: aQuien,
-                  texto: 'Va 🙌 Para apartar tu fecha son ' + anticipo + ' de anticipo; el resto lo puedes ' +
-                    'ir abonando o liquidarlo el día del viaje.\n\nEn cuanto deposites, mándame aquí la foto ' +
-                    'del comprobante y te confirmo tu fecha.',
+                  texto: (conMonto
+                    ? 'Va 🙌 Para apartar tu fecha son *$' + f.anticipo.toLocaleString('en-US') +
+                      '* de anticipo; el resto lo puedes ir abonando o liquidarlo el día del viaje.'
+                    : 'Va 🙌 Para apartar tu fecha se deja un anticipo y el resto lo puedes ir abonando ' +
+                      'o liquidarlo el día del viaje.') +
+                    '\n\nEn cuanto deposites, mándame aquí la foto del comprobante y te confirmo tu fecha.',
                   pasaAPersona: false, escribio: '[datos de depósito]'
                 });
                 /* Y detrás, lo que no se puede teclear a mano: la ficha, la
