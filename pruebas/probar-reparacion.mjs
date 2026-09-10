@@ -24,6 +24,21 @@ process.env.ANTHROPIC_API_KEY = 'k';
 process.env.DUENO_WHATSAPP = '5213311112222';
 process.env.CONFIRMAR_PRECIOS = '1';
 process.env.AGENTE_IA = '1';
+/* ------------------------------------------------------------
+   ESTE ARCHIVO PRUEBA EL CAMINO AUTOMÁTICO, CON LA VARIABLE EN 0
+   ------------------------------------------------------------
+   Desde el 10-sep-2026 el bot en producción llega HASTA la cotización y
+   ahí entrega el chat a una persona (BOT_HASTA_COTIZACION=1). Lo que
+   hacía solo después del precio —el apartado con la CLABE, el acuse del
+   comprobante, las preguntas del contrato— no se borró: ahora lo dispara
+   la persona con una palabra, y sigue existiendo tal cual.
+
+   Estas pruebas describen ESE camino, así que fijan la variable en 0 a
+   propósito. No son pruebas obsoletas: son las que garantizan que apagar
+   el relevo devuelve el bot completo. El camino nuevo se prueba aparte.
+   ------------------------------------------------------------ */
+process.env.BOT_HASTA_COTIZACION = '0';
+
 process.env.SITIO_URL = 'https://eurotravel-web.vercel.app';
 delete process.env.ALMACEN_URL; delete process.env.ALMACEN_CLAVE;
 

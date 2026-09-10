@@ -61,6 +61,21 @@ process.env.SIEMPRE_IA = '0';
    vigila el guion, la compuerta y las llamadas contadas de la IA lectora.
    El agente tiene su propio arnés: `probar-agente.mjs`. */
 process.env.AGENTE_IA = '0';
+/* ------------------------------------------------------------
+   ESTE ARCHIVO PRUEBA EL CAMINO AUTOMÁTICO, CON LA VARIABLE EN 0
+   ------------------------------------------------------------
+   Desde el 10-sep-2026 el bot en producción llega HASTA la cotización y
+   ahí entrega el chat a una persona (BOT_HASTA_COTIZACION=1). Lo que
+   hacía solo después del precio —el apartado con la CLABE, el acuse del
+   comprobante, las preguntas del contrato— no se borró: ahora lo dispara
+   la persona con una palabra, y sigue existiendo tal cual.
+
+   Estas pruebas describen ESE camino, así que fijan la variable en 0 a
+   propósito. No son pruebas obsoletas: son las que garantizan que apagar
+   el relevo devuelve el bot completo. El camino nuevo se prueba aparte.
+   ------------------------------------------------------------ */
+process.env.BOT_HASTA_COTIZACION = '0';
+
 
 const atiende = (await import(pathToFileURL(path.join(RAIZ, 'api', 'whatsapp.mjs')).href)).default;
 const webhook = (await import(pathToFileURL(path.join(RAIZ, 'api', '_whatsapp-webhook.js')).href)).default;

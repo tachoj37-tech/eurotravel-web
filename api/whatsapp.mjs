@@ -608,13 +608,15 @@ async function precioDe(envio, opciones) {
        precio de verdad salió hacia el cliente: si Meta lo rechaza, el chat
        no se le entrega a nadie.
        ------------------------------------------------------------ */
-    /* Viene APAGADO a propósito. Encenderlo apaga de golpe todo lo que el
-       bot hace después del precio —el apartado con la CLABE, el acuse del
-       comprobante, las preguntas del contrato y las dos autorizaciones—,
-       que es justo lo que se construyó y se probó estos días. El dueño lo
-       pidió el 10-sep-2026; queda listo detrás de la variable para que lo
-       encienda cuando confirme que eso es lo que quiere apagar. */
-    if (String(process.env.BOT_HASTA_COTIZACION || '0').trim() === '1') {
+    /* ENCENDIDO desde el 10-sep-2026, cuando el dueño lo confirmó junto con
+       los botones: «que el bot solamente llegue hasta generar cotizaciones».
+       Lo que el bot hacía solo después del precio no se borró —el apartado
+       con la CLABE, el acuse del comprobante, las preguntas del contrato—:
+       ahora lo dispara la persona con una palabra («cuenta», «recibido»,
+       «contrato»), y con `BOT_HASTA_COTIZACION=0` el bot vuelve a hacerlo
+       todo solo, tal como estaba. Las pruebas de ese camino automático
+       fijan la variable en 0 a propósito; las del camino nuevo, en 1. */
+    if (String(process.env.BOT_HASTA_COTIZACION || '1').trim() === '1') {
       tickets.anotaEtapa(envio.para, 'con_precio', { enManosDe: 'dueno' });
       console.log('[relevo] cotización entregada: el chat pasa a una persona');
     }
