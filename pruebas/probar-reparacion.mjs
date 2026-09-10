@@ -1762,5 +1762,74 @@ titulo('R55 · si el cliente dice qué unidad quiere, el número de personas NO 
   okQue('sin decir unidad: ahí sí se pregunta cuántos', /cu[aá]ntos/i.test(sinUnidad));
 }
 
+titulo('R56 · el guion solo también frena los destinos del extranjero');
+{
+  /* Auditoría del 10-sep-2026: se fueron buscando las reglas del dueño que
+     viven SOLO en el camino de la IA (`api/whatsapp.mjs`) y no en el guion
+     (`bot.js`). Son las peores porque se ven bien mientras el modelo
+     contesta y truenan el día que no contesta.
+
+     `esDelExtranjero` se escribió el 9-sep, se exportó… y dentro de
+     `bot.js` no se llamaba en ningún lado. Probado en seco, el guion
+     aceptaba Bogotá, Nueva York y Madrid como destinos buenos y seguía
+     pidiendo la fecha del viaje a Colombia. */
+  const bot = (await import(pathToFileURL(path.join(RAIZ, 'bot.js')).href)).default;
+  const HOY = '2026-09-10';
+
+  /* 1 · Primer mensaje de la conversación: cae en `aplicaEntendido`. */
+  for (const frase of ['quiero ir a bogota', 'vamos a nueva york el 20 de octubre', 'a madrid somos 20']) {
+    const r = bot.respuestaA(frase, null, HOY);
+    okQue('«' + frase + '» no se toma como destino', !r.estado.destino);
+    okQue('  y se le dice que solo se viaja por México', /carretera aqu[ií] en M[eé]xico/.test(r.texto));
+  }
+
+  /* 2 · Y ya adentro, en el paso de destino, que es el otro camino. */
+  {
+    let r = bot.respuestaA('somos 40', null, HOY);
+    r = bot.respuestaA('a bogota', r.estado, HOY);
+    okQue('en el paso de destino tampoco pasa', !r.estado.destino);
+    okQue('  y se queda preguntando a dónde van', r.estado.paso === 'destino');
+  }
+
+  /* 3 · Lo nacional NO se frena. Ojo con San Antonio Tlayacapan y San
+     Diego de Alejandría: son de Jalisco y suenan a Estados Unidos. */
+  for (const frase of ['quiero ir a vallarta', 'a san antonio tlayacapan', 'a san diego de alejandria']) {
+    const r = bot.respuestaA(frase, null, HOY);
+    okQue('«' + frase + '» sí se toma', !!r.estado.destino);
+  }
+}
+
+titulo('R57 · «solo nos llevan y traen» lo entiende el guion, sin IA');
+{
+  /* De la misma auditoría. `diceQueNoSeMueven` vivía solo en
+     `whatsapp.mjs`: sin IA, «solo nos llevan y traen» —la forma más común
+     de contestar esa pregunta— dejaba al cliente en un bucle,
+     repreguntándole lo mismo. «Nada más llevar y traer» sí se entendía,
+     que es lo que escondía el defecto. */
+  const bot = (await import(pathToFileURL(path.join(RAIZ, 'bot.js')).href)).default;
+  const HOY = '2026-09-10';
+
+  function hastaRecorridos(respuesta) {
+    let e = null, r = null;
+    for (const m of ['a vallarta somos 12', '20 de octubre', '22 de octubre', 'guadalajara', respuesta]) {
+      r = bot.respuestaA(m, e, HOY); e = r.estado;
+    }
+    return e;
+  }
+
+  for (const frase of ['solo nos llevan y traen', 'nada mas llevar y traer',
+    'no nos vamos a mover', 'solo nos llevan', 'nomas que nos dejen y nos recogen',
+    'sin recorridos']) {
+    const e = hastaRecorridos(frase);
+    okQue('«' + frase + '» son 0 recorridos', e.recorridos === 0);
+    okQue('  y el viaje avanza en vez de repreguntar', e.paso !== 'recorridos');
+  }
+
+  /* Y un número sigue siendo un número: el arreglo no se comió el caso
+     que sí funcionaba. */
+  const conDos = hastaRecorridos('2');
+  okQue('«2» siguen siendo 2 recorridos', conDos.recorridos === 2);
+}
+
 console.log('\n' + buenas + ' buenas, ' + malas + ' malas');
 process.exit(malas ? 1 : 0);

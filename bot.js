@@ -1158,6 +1158,10 @@ function origenDeLaFrase(crudo) {
    el cliente se queda en un bucle (auditoría del 10-sep-2026). */
 const NO_SABE_CUANTOS = /\b(no s[eé]|no sabemos|no tengo|todav[ií]a no|a[uú]n no|ni idea)\b[^.?!]{0,30}\b(cu[aá]nt[oa]s|el n[uú]mero|la cantidad|cu[aá]nta gente)|\bapenas (estoy|estamos|ando|andamos) (juntando|armando|organizando|viendo)|\bno s[eé] cu[aá]ntos\b|\bdepende de (qui[eé]nes|cu[aá]ntos|la gente)/;
 
+/* «No nos movemos allá», dicho al guion. Misma expresión que usa
+   `whatsapp.mjs`, escrita aquí para que el motor la entienda sin IA. */
+const NO_SE_MUEVEN = /\b(solo|nomas|nada mas|unicamente|puro) (nos |que nos )?(lleven|llevan|llevar|traigan|traen|dejen|dejan)\b|\bllevar y traer\b|\bnos llevan y (nos )?traen\b|\bnos dejan y (nos )?recogen\b|\bno (nos vamos a|vamos a|nos) mover\b|\bsin recorridos\b|\bida y vuelta nada mas\b/;
+
 const SOLO_IDA = /\b(solo|nada mas|nomas|unicamente) (de |la )?ida\b|\bviaje sencillo\b|\bsencillo (de )?ida\b|\bida sencilla\b|\bsin regreso\b/;
 /* ¿El cliente pidió un viaje de una sola ida? Vive aparte de `leeDeUnJalon`
    porque el camino de la IA también lo necesita: el agente no extrae este
@@ -2243,6 +2247,30 @@ function pasoDeCotizacion(t, crudo, estado, hoy) {
     e.destino = (leido.destino
       ? limpiaDestino(leido.destino)
       : limpiaDestino(dicho)).slice(0, 120);
+    /* ------------------------------------------------------------
+       EL EXTRANJERO TAMBIÉN LO FRENA EL GUION
+       ------------------------------------------------------------
+       `esDelExtranjero` se escribió el 9-sep-2026 y se exportó, pero
+       dentro de este archivo no se llamaba en ningún lado: el freno
+       vivía solo en `whatsapp.mjs`, o sea solo cuando la IA contesta.
+       Probado en seco el 10-sep-2026, el guion aceptaba «quiero ir a
+       bogota», «vamos a nueva york el 20 de octubre» y «a madrid somos
+       20» como destinos buenos, y seguía a la fecha.
+
+       Se frena aquí, después de limpiar el destino, porque es el único
+       punto por el que pasan las dos formas de decirlo: el destino
+       suelto y el destino leído de una frase entera.
+       ------------------------------------------------------------ */
+    if (esDelExtranjero(e.destino)) {
+      const fuera = e.destino;
+      e.destino = null; e.salida = null; e.regreso = null;
+      e.paso = 'destino';
+      return {
+        texto: 'Uy, hasta *' + fuera + '* no llegamos: los viajes son por ' +
+          'carretera aquí en México 🚐\n\n¿A qué lugar de la República van?',
+        pasa: false, estado: e, opciones: [], noEntendio: true
+      };
+    }
     /* La ocasión sale SOLO de lo que el cliente haya escrito al decir
        el destino —«vamos a Tequila de despedida»—; el destino solo no
        la da (8-sep-2026). No se le pregunta nunca: «¿para qué es el
@@ -2411,7 +2439,19 @@ function pasoDeCotizacion(t, crudo, estado, hoy) {
   /* ---- recorridos ---- */
   if (e.paso === 'recorridos') {
     let n = null;
-    if (/ningun|no\b|nada|solo ida|ninguna/.test(t)) n = 0;
+    /* ------------------------------------------------------------
+       «SOLO NOS LLEVAN Y TRAEN» TAMBIÉN LO ENTIENDE EL GUION
+       ------------------------------------------------------------
+       Es la forma más común de contestar esta pregunta, y el guion no la
+       entendía: «nada más llevar y traer» sí, «solo nos llevan y traen»
+       no. Se quedaba atorado en el paso, repreguntando.
+       Vivía solo en el camino de la IA (`diceQueNoSeMueven` en
+       `whatsapp.mjs`), así que el día que la IA no contesta el cliente
+       entra en un bucle. Sale de la auditoría del 10-sep-2026, la misma
+       que encontró lo de «todavía no sé cuántos vamos».
+       ------------------------------------------------------------ */
+    if (NO_SE_MUEVEN.test(t)) n = 0;
+    else if (/ningun|no\b|nada|solo ida|ninguna/.test(t)) n = 0;
     else {
       const m = t.match(/(\d{1,2})/);
       if (m) n = Number(m[1]);
@@ -3857,6 +3897,21 @@ function aplicaEntendido(datos, hoy) {
      sobrevivir hasta `armaContrato`. */
   if (datos.soloIda) e.soloIda = true;
   if (datos.soloIda && e.salida && !e.regreso) e.regreso = e.salida;
+
+  /* El mismo freno del extranjero que el paso de destino. Aquí es donde
+     cae el PRIMER mensaje de una conversación —«quiero ir a bogota»,
+     con el estado todavía vacío—, así que sin esto el guion armaba el
+     viaje a Colombia antes de llegar al paso de destino (10-sep-2026). */
+  if (e.destino && esDelExtranjero(e.destino)) {
+    const fuera = e.destino;
+    e.destino = null; e.salida = null; e.regreso = null;
+    e.paso = 'destino';
+    return {
+      texto: 'Uy, hasta *' + fuera + '* no llegamos: los viajes son por ' +
+        'carretera aquí en México 🚐\n\n¿A qué lugar de la República van?',
+      pasa: false, estado: e, opciones: [], noEntendio: true
+    };
+  }
 
   alSiguienteHueco(e);
 
