@@ -1278,17 +1278,25 @@ async function subeContrato(envio) {
       ligaDeDocumento: datos.urlPdf,
       nombreDeArchivo: nombreDelArchivo,
       texto: '📄 Contrato *' + datos.folio + '* de ' + envio.para +
-        (datos.repetido ? ' (ya existía)' : ''),
+        (datos.repetido ? ' (ya existía)' : '') +
+        '\nEn EuroSystem como *BORRADOR*. Lo confirmas en el panel cuando entre el anticipo.',
+      /* Si Meta no puede bajar el PDF, va la liga en texto: el dueño pidió
+         recibirlo «por si falla subirlo yo», así que quedarse sin nada no
+         es una opción. Antes esto era un segundo mensaje aparte; se juntó
+         en uno solo el 9-sep-2026, cuando dictó que a su teléfono llegue
+         menos. */
+      textoDeRespaldo: '📄 Contrato registrado en EuroSystem como *BORRADOR*, folio *' + datos.folio + '*' +
+        (datos.repetido ? ' (ya existía)' : '') + '.\n' + datos.urlPdf +
+        '\n\nLo confirmas en el panel cuando entre el anticipo.',
       pasaAPersona: false,
       escribio: '[contrato · pdf al dueño]'
     });
+  } else {
+    /* Sin PDF que mandar, al menos el folio. */
+    salida.push(alDueno('📄 Contrato registrado en EuroSystem como *BORRADOR*, folio *' + datos.folio + '*' +
+      (datos.repetido ? ' (ya existía)' : '') +
+      '.\n\nLo confirmas en el panel cuando entre el anticipo.', '[contrato · pdf al dueño]')[0]);
   }
-  /* 3) Y el aviso con la liga, que le sirve aunque el archivo no haya
-        salido: de ahí lo baja y lo sube él. */
-  salida.push(alDueno('📄 Contrato registrado en EuroSystem como *BORRADOR*, folio *' + datos.folio + '*' +
-    (datos.repetido ? ' (ya existía)' : '') + '.' +
-    (datos.urlPdf ? '\n' + datos.urlPdf : '') +
-    '\n\nLo confirmas en el panel cuando entre el anticipo.', '[contrato · registrado]')[0]);
   return salida;
 }
 
@@ -1712,6 +1720,41 @@ function mensajesParaCopiar(numeroDeOrigen, para) {
    cliente los recibió dos veces seguidas. Se anota a quién ya se le
    mandaron en ESTE aviso y no se repiten.
    ------------------------------------------------------------ */
+/* Las marcas que SÍ pueden llegarle al teléfono del dueño (9-sep-2026).
+   Una marca nueva que deba llegarle se agrega aquí y en ningún otro lado.
+   Está escrita renglón por renglón a propósito: se lee de un vistazo. */
+const MARCAS_PARA_EL_DUENO = new RegExp('^\\[(?:' + [
+  /* 1 · dar el precio y la disponibilidad */
+  'ticket\\]', 'ticket precio', 'ticket calendario',
+  'precio por confirmar', 'precio · falta el número', 'precio que no salio',
+  'calendario sin confirmar', 'recordatorio',
+  /* 2 · la transferencia */
+  'reenvio de (?:image|document)', 'verificar la transferencia',
+  /* 3 · el contrato */
+  'ficha del contrato', 'contrato · pdf al dueño',
+  'contrato · (?:sin ficha|rechazado|sin llave|sin respuesta|sin viaje|ya subido)',
+  /* 4 · el primer mensaje de un número nuevo */
+  'ticket · primer mensaje',
+  /* 5 · las dudas: lo que el bot no contesta porque no está seguro */
+  'ticket · duda', 'ticket · pregunta al dueño', 'ticket · quiere hablar contigo',
+  'ticket · destino del extranjero', 'ticket · desconfía',
+  'ticket · cambio después de apartar', 'ticket · cambio de fecha',
+  'datos del contrato · cambio al dueño',
+  /* Acuses de lo que él mismo contestó, y sus propias órdenes */
+  'pago · autorizado', 'autorización · falta la otra',
+  'precio · (?:ticket equivocado|sin nada que confirmar|sin disponibilidad · acuse)',
+  'del dueño · ', 'total actualizado', 'total · no aplicado',
+  /* El relevo: mientras él tiene el chat en sus manos, ese chat sí le
+     llega entero — es lo que pidió al escribir «yo». */
+  'relevo · ',
+  'ver\\]', 'ver · sin destinatario', 'tablero', 'espia', 'la IA lo destrabó',
+  /* El resumen de los que no contestaron, que él pidió */
+  'seguimiento · al dueño',
+  /* Cuando algo se frenó y el cliente quedó con un «dame un momento»: eso
+     es exactamente una duda, y alguien tiene que contestarle. */
+  'incidente · '
+].join('|') + ')');
+
 const depositoMandadoAhora = new Set();
 
 /* El último texto que salió hacia cada cliente, para no repetirlo tal cual
@@ -3306,6 +3349,39 @@ async function manda(envio) {
      sí (los tickets traen nombres de campos a propósito). */
   const dueno = tickets.numeroDelDueno(process.env);
   const esParaElDueno = dueno && tickets.mismoNumero(envio.para, dueno);
+  /* ------------------------------------------------------------
+     AL TELÉFONO DEL DUEÑO SOLO LLEGA LO QUE ÉL PIDIÓ
+     ------------------------------------------------------------
+     Dictado del dueño (9-sep-2026): «no me mandes todos los mensajes que
+     circulan por el chat a mi número personal. Nomás cinco cosas: los tres
+     mensajes que necesitan mi autorización, el inicio de conversación y
+     alguna duda».
+
+     El filtro vive aquí, en la única puerta de salida, y es una lista de
+     lo que SÍ pasa. Lo que no está, no sale, y queda en el registro con su
+     marca: si algún día falta algo, se ve en el log y se agrega aquí, en
+     un solo lugar.
+
+     Lo que pasa, y por qué:
+       · las tres autorizaciones — precio, transferencia, contrato
+       · el primer mensaje de un número nuevo
+       · las dudas: lo que el bot no contesta porque no está seguro
+       · los acuses de SUS propias respuestas (le contestó a un ticket y
+         necesita saber que llegó)
+       · el PDF del contrato, que él pidió recibir «por si falla subirlo yo»
+       · una CLABE ajena, que es dinero
+
+     Lo que se calló: el «💬 Te están escribiendo» de cada mensaje que el
+     guion no entendía —que era justo «todos los mensajes que circulan»—,
+     los dos incidentes de texto frenado (el cliente ya recibió un mensaje
+     neutro y el detalle está en el registro) y el acuse de texto del
+     contrato registrado, porque el PDF ya le llega.
+     ------------------------------------------------------------ */
+  if (esParaElDueno && !MARCAS_PARA_EL_DUENO.test(String(envio.escribio || ''))) {
+    console.log('[al-dueño] callado ' + (envio.escribio || 'sin marca') + ': ' +
+      String(envio.texto || '[medio]').slice(0, 120).replace(/\n/g, ' '));
+    return true;
+  }
   /* Una plantilla no manda `texto`: ese campo es solo la marca para el log
      (`[plantilla …]`), y la marca misma es texto interno. */
   if (!esParaElDueno && !envio.esTicket && !envio.plantilla && esTextoInterno(envio.texto)) {

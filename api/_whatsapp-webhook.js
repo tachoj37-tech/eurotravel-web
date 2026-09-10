@@ -1540,6 +1540,11 @@ function procesa(crudo, firma, entorno) {
            seguimiento y el tablero).
            ------------------------------------------------------------ */
         const fichaDeAhora = tickets.fichaDe(m.from);
+        /* ¿Es la primera vez que este número escribe? Se mira AQUÍ, antes
+           de que cualquier paso de abajo le cree la ficha; el aviso se
+           arma más adelante, cuando ya hay `envios`. */
+        const esNumeroNuevo = !fichaDeAhora && !charlaDe(m.from) &&
+          !!tickets.numeroDelDueno(env) && !tickets.mismoNumero(m.from, tickets.numeroDelDueno(env));
         if (fichaDeAhora && fichaDeAhora.enManosDe === 'dueno') {
           tickets.anotaEtapa(m.from, fichaDeAhora.etapa, { clienteEn: ahora }, ahora);
           const dueno = tickets.numeroDelDueno(env);
@@ -2061,6 +2066,34 @@ function procesa(crudo, firma, entorno) {
            un medio suyo por su id dentro de la misma cuenta, y así no
            hay que bajarlo ni volverlo a subir.
            ------------------------------------------------------------ */
+        /* ------------------------------------------------------------
+           EL PRIMER MENSAJE DE UN NÚMERO NUEVO
+           ------------------------------------------------------------
+           Dictado del dueño (9-sep-2026): «mándame cuando un número inicie
+           una conversación». Una sola vez por número: la marca vive en la
+           ficha, así que ni un segundo mensaje ni una instancia nueva lo
+           repiten. Va sin el texto del cliente en el cuerpo del ticket
+           —eso sería otra vez reenviarle la conversación—; lo que importa
+           es que alguien nuevo tocó la puerta.
+           ------------------------------------------------------------ */
+        if (esNumeroNuevo) {
+          const fPrimero = tickets.fichaDe(m.from);
+          tickets.anotaEtapa(m.from, (fPrimero && fPrimero.etapa) || 'escribio',
+            { avisadoDelPrimero: true }, ahora);
+          envios.push({
+            numeroDeOrigen: deQuien,
+            para: tickets.numeroDelDueno(env),
+            texto: '👋 *Número nuevo escribiendo*\n\n' +
+              (nombreDe(m.from) ? nombreDe(m.from) + ' · ' : '') + m.from + '\n\n' +
+              'Ya lo estoy atendiendo. Si quieres tomar tú este chat, contéstame *este mensaje* ' +
+              'con *yo*.\n_cliente: ' + m.from + '_',
+            esTicket: true,
+            sobreCliente: m.from,
+            pasaAPersona: false,
+            escribio: '[ticket · primer mensaje]'
+          });
+        }
+
         if ((m.type === 'image' || m.type === 'document') &&
             tickets.numeroDelDueno(env)) {
           const medio = (m.image || m.document || {});
@@ -2188,16 +2221,26 @@ function procesa(crudo, firma, entorno) {
             para: tickets.numeroDelDueno(env),
             esTicket: true,
             sobreCliente: m.from,
-            texto: '💬 *Te están escribiendo*\n\n' +
+            /* ------------------------------------------------------------
+               ANTES ERA «💬 TE ESTÁN ESCRIBIENDO»; AHORA ES UNA DUDA
+               ------------------------------------------------------------
+               Dictado del dueño (9-sep-2026): «no me mandes todos los
+               mensajes que circulan por el chat; cuando no entiendas algo,
+               pregúntame en personal». Es el mismo momento —el bot no supo
+               qué contestar— pero dicho como lo que es, y sin sonar a que
+               le reenvían la conversación entera. Si el agente sí contestó
+               ese mensaje, esto ni sale (`avisoDeEscritura`).
+               ------------------------------------------------------------ */
+            texto: '❓ *No supe qué contestar*\n\n' +
               '_' + (texto === null ? '[' + (m.type || 'no-texto') + ']'
                 : String(texto).slice(0, 300)) + '_\n\n' +
-              'Contéstame *este mensaje* y yo se lo paso.\n' +
+              'No le contesté nada de esto. Contéstame *este mensaje* y le llega tal cual.\n' +
               '_cliente: ' + m.from + '_',
             pasaAPersona: false,
             /* Marca para `reparte`: si el agente contestó bien este mismo
                mensaje, este aviso sobra (auditoría general del 8-sep, 16). */
             avisoDeEscritura: true,
-            escribio: '[aviso]'
+            escribio: '[ticket · duda]'
           });
         }
       }

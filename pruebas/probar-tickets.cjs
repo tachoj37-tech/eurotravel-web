@@ -42,6 +42,11 @@ function titulo(t) { console.log('\n== ' + t.toUpperCase() + ' =='); }
 
 const SECRETO = 'secreto-de-prueba';
 const DUENO = '5213311112222';
+/* Desde el 9-sep-2026 el dueño recibe un aviso la primera vez que un
+   número escribe. Estas pruebas cuentan los mensajes que le llegan POR EL
+   VIAJE, así que ese saludo se descuenta; que llegue una sola vez y con lo
+   que debe traer se prueba aparte, en R47. */
+function esElPrimero(e) { return String(e.escribio || '') === '[ticket · primer mensaje]'; }
 const CLIENTE = '5213399998888';
 const ENV = { WHATSAPP_APP_SECRET: SECRETO, DUENO_WHATSAPP: DUENO };
 
@@ -227,8 +232,11 @@ hook.olvidaTodo(); tk.olvidaTodo();
   ok('el bot ya no le contesta a ese cliente', r.envios.length, 0);
 
   /* Pero a OTRO cliente sí, obviamente. */
+  /* Le contesta a él, y aparte le avisa al dueño que es un número nuevo
+     (9-sep-2026): dos envíos, uno para cada quien. */
   const otro = corre(aviso('5213377776666', 'hola'));
-  okQue('a otro cliente sí le sigue contestando', otro.envios.length === 1);
+  okQue('a otro cliente sí le sigue contestando',
+    otro.envios.filter(function (e) { return e.para !== DUENO; }).length === 1);
 }
 
 titulo('el silencio se acaba solo');
@@ -266,7 +274,7 @@ hook.olvidaTodo(); tk.olvidaTodo();
   });
 
   const alCliente = ultimos.filter(function (e) { return e.para === CLIENTE; });
-  const alDueno = ultimos.filter(function (e) { return e.para === DUENO; });
+  const alDueno = ultimos.filter(function (e) { return e.para === DUENO && !esElPrimero(e); });
 
   okQue('al cliente le llega su respuesta', alCliente.length === 1);
   okQue('y al dueño le llega SU ticket', alDueno.length === 1);
@@ -311,7 +319,7 @@ hook.olvidaTodo(); tk.olvidaTodo();
   });
   const r = corre(cuerpo);
   const alCliente = r.envios.filter(function (e) { return e.para === CLIENTE; });
-  const alDueno = r.envios.filter(function (e) { return e.para === DUENO; });
+  const alDueno = r.envios.filter(function (e) { return e.para === DUENO && !esElPrimero(e); });
 
   okQue('al cliente se le acusa recibo', alCliente.length === 1);
   okQue('  sin volver a preguntarle desde cero',
@@ -347,7 +355,7 @@ titulo('el que pide una persona antes de decir a dónde va');
 hook.olvidaTodo(); tk.olvidaTodo();
 {
   const r = corre(aviso(CLIENTE, 'quiero hablar con alguien'));
-  const alDueno = r.envios.filter(function (e) { return e.para === DUENO; });
+  const alDueno = r.envios.filter(function (e) { return e.para === DUENO && !esElPrimero(e); });
 
   ok('al dueño sí le llega el aviso', alDueno.length, 1);
   okQue('  diciéndole qué escribió el cliente',
@@ -371,7 +379,7 @@ hook.olvidaTodo(); tk.olvidaTodo();
   let cuantos = 0;
   for (let i = 0; i < 5; i++) {
     const r = corre(aviso(CLIENTE, 'quiero hablar con alguien'));
-    cuantos += r.envios.filter(function (e) { return e.para === DUENO; }).length;
+    cuantos += r.envios.filter(function (e) { return e.para === DUENO && !esElPrimero(e); }).length;
   }
   ok('cinco mensajes iguales, un solo aviso', cuantos, 1);
 }
@@ -386,7 +394,7 @@ hook.olvidaTodo(); tk.olvidaTodo();
       messages: [{ id: 'foto2', from: CLIENTE, type: 'image', image: { id: 'img-9' } }]
     } }] }]
   });
-  const alDueno = corre(cuerpo).envios.filter(function (e) { return e.para === DUENO; });
+  const alDueno = corre(cuerpo).envios.filter(function (e) { return e.para === DUENO && !esElPrimero(e); });
   ok('por una foto le llega UNA cosa, no dos', alDueno.length, 1);
   ok('  y es la foto', alDueno[0].reenviaMedio, 'img-9');
 }
@@ -399,7 +407,7 @@ titulo('y ya no se mandan tickets vacíos');
 hook.olvidaTodo(); tk.olvidaTodo();
 {
   const r = corre(aviso(CLIENTE, 'holaaaa xyzq'));
-  const alDueno = r.envios.filter(function (e) { return e.para === DUENO; });
+  const alDueno = r.envios.filter(function (e) { return e.para === DUENO && !esElPrimero(e); });
   ok('sin viaje que cotizar, no hay ticket', alDueno.length, 0);
   /* Y ninguno de los que sí salen puede traer huecos. */
   const conHuecos = r.envios.filter(function (e) { return /\? → \?|\? días/.test(e.texto); });
@@ -454,7 +462,7 @@ hook.olvidaTodo(); tk.olvidaTodo();
      despierta a las 15 horas. */
   tk.anotaPendiente(CLIENTE, '🎫 Vallarta, 4 días', Date.now() - 16 * 3600000);
   const r = corre(aviso('5213377776666', 'hola'));
-  const alDueno = r.envios.filter(function (e) { return e.para === DUENO; });
+  const alDueno = r.envios.filter(function (e) { return e.para === DUENO && !esElPrimero(e); });
   okQue('al dueño le llega el recordatorio', alDueno.length === 1);
   okQue('  y se le nota que es recordatorio', /Llevas \*16 horas\*/.test(alDueno[0].texto));
 }

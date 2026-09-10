@@ -447,6 +447,9 @@ function anotaEtapa(cliente, etapa, extra, ahora) {
        contraria —se repetía cada vez— y por eso esto tiene que sobrevivir
        a que la plática se vacíe: vive en la ficha, no en la charla. */
     cuentaMandadaEn: (extra && extra.cuentaMandadaEn) || (antes && antes.cuentaMandadaEn) || null,
+    /* Que al dueño ya se le avisó que este número escribió por primera vez
+       (dictado del 9-sep-2026). Una vez por número, nunca dos. */
+    avisadoDelPrimero: !!((extra && extra.avisadoDelPrimero) || (antes && antes.avisadoDelPrimero)),
     /* Cuántas veces se le ha dicho «primero el depósito» sin que llegue.
        Sirve para no contestarle tres veces con la misma frase palabra por
        palabra, que es lo que hace sonar a máquina. */

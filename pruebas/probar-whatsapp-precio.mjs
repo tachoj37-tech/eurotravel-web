@@ -695,11 +695,18 @@ function siembraFichaCompleta(C) {
   const C = '5213366670020';
   siembraFichaCompleta(C);
   await contesta('va', 'wamid.ficha-' + C);
-  const alDueno = textos(DUENO).join('\n');
+  /* Desde el 9-sep-2026 al dueño le llega UN solo mensaje del contrato: el
+     PDF, con el folio y el estado en el pie. El acuse de texto aparte se
+     calló cuando dictó que a su teléfono llegue menos; la liga vive en el
+     documento y, si Meta no lo puede bajar, en su texto de respaldo. */
+  const pdfAlDueno = mandados.filter((m) => mismo(m.to, DUENO) && m.type === 'document')[0];
+  const alDueno = textos(DUENO).concat((pdfAlDueno && pdfAlDueno.document.caption) || '').join('\n');
   ok('con «va» se mandó UN contrato a EuroSystem', contratosMandados.length, 1);
-  okQue('  al dueño le llega el folio', /folio \*43801\*/.test(alDueno));
-  okQue('  y la liga del PDF', /eurosystem\/pdf\/43801/.test(alDueno));
+  okQue('  al dueño le llega el folio', /Contrato \*43801\*/.test(alDueno));
+  okQue('  y el PDF con la liga', !!pdfAlDueno && /eurosystem\/pdf\/43801/.test(pdfAlDueno.document.link || ''));
   okQue('  y dice BORRADOR', /BORRADOR/.test(alDueno));
+  ok('  y le llega UN solo mensaje del contrato, no dos',
+    mandados.filter((m) => mismo(m.to, DUENO)).length, 1);
   /* Cambió el 5-sep-2026: «la liga del PDF a mí, al cliente y al sistema».
      Antes se afirmaba que al cliente no le llegaba nada.
 

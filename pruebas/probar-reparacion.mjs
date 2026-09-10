@@ -1418,5 +1418,46 @@ titulo('R46 · no se inventan años de operación ni nada de la empresa');
     /Un cliente desconf/i.test(textos(DUENO).join('\n')));
 }
 
+titulo('R47 · un número nuevo se avisa UNA vez; a los demás mensajes no se les avisa');
+{
+  limpia();
+  const C = '5213366670465';
+  laIA = () => ({ respuesta: '¡Qué tal! ¿A dónde va el plan?', datos: {}, accion: 'seguir' });
+  await dice('hola', C);
+  const primeros = textos(DUENO).filter((t) => /Número nuevo escribiendo/.test(t));
+  ok('el primer mensaje de un número nuevo se avisa', primeros.length, 1);
+  okQue('  con su número', primeros[0].indexOf(C) >= 0);
+  okQue('  y sin el texto del cliente', !/hola/i.test(primeros[0]));
+  await dice('quiero cotizar a vallarta', C);
+  await dice('el 20 de noviembre', C);
+  ok('  y no se repite en los siguientes mensajes',
+    textos(DUENO).filter((t) => /Número nuevo escribiendo/.test(t)).length, 1);
+}
+
+titulo('R48 · al teléfono del dueño solo llega lo que él pidió (9-sep-2026)');
+{
+  limpia();
+  const { manda } = await import(pathToFileURL(path.join(RAIZ, 'api', 'whatsapp.mjs')).href);
+  const C = '5213366670466';
+  const dice1 = async (escribio, texto) => {
+    const antes = textos(DUENO).length;
+    await manda({ numeroDeOrigen: '111', para: DUENO, esTicket: true, sobreCliente: C,
+      pasaAPersona: false, escribio: escribio, texto: texto });
+    return textos(DUENO).length > antes;
+  };
+  /* Lo que SÍ le llega: las tres autorizaciones, el número nuevo y las dudas. */
+  for (const m of ['[ticket]', '[precio por confirmar]', '[reenvio de image]',
+    '[verificar la transferencia]', '[ficha del contrato]', '[contrato · pdf al dueño]',
+    '[ticket · primer mensaje]', '[ticket · duda]', '[ticket · pregunta al dueño]',
+    '[ticket · cambio después de apartar]', '[pago · autorizado]', '[incidente · clabe ajena]']) {
+    okQue('sí llega ' + m, await dice1(m, 'prueba de ' + m));
+  }
+  /* Lo que ya NO: el reenvío de cada mensaje del chat y el acuse de texto
+     del contrato, que ya va en el pie del PDF. */
+  for (const m of ['[aviso]', '[contrato · registrado]', '[foto de la unidad]', '[agente]']) {
+    okQue('NO llega ' + m, !(await dice1(m, 'prueba de ' + m)));
+  }
+}
+
 console.log('\n' + buenas + ' buenas, ' + malas + ' malas');
 process.exit(malas ? 1 : 0);
