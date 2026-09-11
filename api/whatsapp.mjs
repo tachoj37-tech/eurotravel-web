@@ -433,7 +433,24 @@ function ticketDePrecio(res, precio, cal, cliente, unidad, historial, yaDado) {
        inventar. Dictado del dueño ese día: «solo en tu ticket, por
        ahora» — la página pública no se tocó.
        ------------------------------------------------------------ */
-    const delExcel = (delCatalogo && res.destino)
+    /* ------------------------------------------------------------
+       SOLO PARA LO QUE EL MOTOR NO SABE COTIZAR
+       ------------------------------------------------------------
+       Si la unidad SÍ tiene cotizador —hoy solo la Sprinter— y aun así
+       no salió número, eso es una FALLA, no un hueco. Enseñarle el
+       renglón pelón del Excel ahí sería peor que no enseñar nada: esa
+       columna es el precio base del destino y no trae los días, ni el
+       recargo de salida, ni los movimientos, que es justo lo que el
+       motor sí calcula.
+
+       Se cazó en la corrida real del 10-sep-2026, escenario u: el
+       cliente cambió la fecha, la segunda cotización se quedó sin
+       `cotiza` y el ticket pasó de «Calculado: $7,000» a «Del Excel:
+       $7,000». En Tequila a un día daba lo mismo; en un viaje de cinco
+       días habría cobrado de menos.
+       ------------------------------------------------------------ */
+    const elMotorLaSabe = tarifa.seSabeCotizar(comoSeLlama || '');
+    const delExcel = (delCatalogo && res.destino && !elMotorLaSabe)
       ? destinos.preciosDeListaDeUnidad(res.destino, delCatalogo.id)
       : [];
     if (delExcel.length) {

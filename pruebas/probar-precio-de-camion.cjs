@@ -141,6 +141,41 @@ titulo('la página pública NO se abrió: los camiones se siguen rechazando');
   ok('y la Sprinter sí', tarifa.seSabeCotizar('Sprinter'));
 }
 
+titulo('el renglón del Excel es SOLO para lo que el motor no sabe cotizar');
+{
+  /* ------------------------------------------------------------
+     Esta es la condición exacta que decide si el ticket enseña el
+     renglón del Excel (`api/whatsapp.mjs`, dentro de `ticketDePrecio`):
+     se enseña cuando el motor NO sabe cotizar esa unidad.
+
+     Por qué importa: si la unidad sí tiene cotizador —hoy solo la
+     Sprinter— y aun así no salió número, eso es una FALLA, no un hueco.
+     La columna del Excel es el precio BASE del destino: no trae los
+     días, ni el recargo de salida, ni los movimientos. Enseñarla ahí
+     sería cobrar de menos sin que se note.
+
+     Se cazó en la corrida real del 10-sep-2026, escenario u: el cliente
+     cambió la fecha, la segunda cotización se quedó sin `cotiza` y el
+     ticket pasó de «Calculado: $7,000» a «Del Excel: $7,000». En
+     Tequila a un día daba lo mismo; en uno de cinco, no.
+
+     Vuelto a correr con el modelo de verdad después del arreglo, el
+     mismo escenario dice «No pude calcularlo: escríbeme el precio»,
+     que es la respuesta honesta.
+     ------------------------------------------------------------ */
+  const ensenaElExcel = (u) => !tarifa.seSabeCotizar(u) &&
+    destinos.preciosDeListaDeUnidad('Puerto Vallarta, Jal.', {
+      'Sprinter': 'sprinter', 'Marcopolo Paradiso G8': 'g8', 'Neobus': 'neobus',
+      'Irizar PB': 'irizar-pb', 'Suburban': 'suburban'
+    }[u]).length > 0;
+
+  ok('la Sprinter NO lo enseña (su precio lo calcula el motor)', !ensenaElExcel('Sprinter'));
+  ok('el Marcopolo sí', ensenaElExcel('Marcopolo Paradiso G8'));
+  ok('el Neobus sí', ensenaElExcel('Neobus'));
+  ok('el PB sí', ensenaElExcel('Irizar PB'));
+  ok('la Suburban no, porque no tiene columna', !ensenaElExcel('Suburban'));
+}
+
 titulo('la Sprinter no cambió ni un peso');
 {
   /* Barrido de todos los destinos del catálogo: el precio de lista de la
