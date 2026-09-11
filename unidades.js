@@ -71,6 +71,35 @@ window.UNIDADES = [
     desc: 'La misma línea premium del i6S: espacio, silencio de marcha y equipamiento completo para trayectos largos.',
     amen: ['Aire acondicionado', 'Baño a bordo', 'Pantallas', 'Audio'],
     spec: [['i-users', '47 pasajeros'], ['i-snow', 'Aire acondicionado'], ['i-wc', 'Baño a bordo'], ['i-tv', 'Pantallas y sistema de audio'], ['i-seat', 'Asientos reclinables'], ['i-bag', 'Cajuela amplia'], ['i-shield', 'Seguro de viajero incluido'], ['i-pin', 'Monitoreo GPS']] },
+  /* ------------------------------------------------------------
+     EL SEGUNDO i6, EL DE 51 — 10-sep-2026
+     ------------------------------------------------------------
+     El dueño tiene DOS Irizar i6: el de 47 de arriba y éste de 51, del
+     que «solo hay 1». Se descubrió leyendo su Excel: el rótulo
+     «NEOBUS/i6 50/51 PAX» nombraba un i6 de 51 que no existía en el
+     catálogo.
+
+     `soloBot` lo deja FUERA de la página —de la galería y del selector
+     del cotizador— pero dentro del catálogo, para que el bot sí lo
+     ofrezca. Dictado suyo: «en el bot sí va, solo en la página déjalo
+     como pendiente». El pendiente son las FOTOS: de éste no hay. Cuando
+     las haya, se quita esta bandera y entra a la página como los demás.
+
+     EL NOMBRE LLEVA EL 51 A PROPÓSITO. Dos unidades llamadas «Irizar
+     i6» romperían dos cosas a la vez: la elección de camión en `bot.js`
+     —que descarta las palabras que comparten dos camiones, así que «i6»
+     dejaría de escoger a ninguno— y la llave de los precios aprendidos,
+     que se arma con el NOMBRE de la unidad y mezclaría los dos precios
+     en un solo renglón.
+
+     Su precio es el de la columna «NEOBUS/i6 50/51 PAX», no el del i6
+     de 47: ver `COLUMNA_DE_UNIDAD` en `api/_destinos.js`.
+     ------------------------------------------------------------ */
+  { id: 'irizar-i6-51', cat: 'autobus', cotizadorAutomatico: false, soloBot: true, sinFotos: true,
+    tag: 'Autobús · Premium', name: 'Irizar i6 51', cap: '51 pasajeros', max: 51, img: 'i6',
+    desc: 'La misma línea premium del i6, en su versión de 51 asientos: espacio, silencio de marcha y equipamiento completo para trayectos largos.',
+    amen: ['Aire acondicionado', 'Baño a bordo', 'Pantallas', 'Audio'],
+    spec: [['i-users', '51 pasajeros'], ['i-snow', 'Aire acondicionado'], ['i-wc', 'Baño a bordo'], ['i-tv', 'Pantallas y sistema de audio'], ['i-seat', 'Asientos reclinables'], ['i-bag', 'Cajuela amplia'], ['i-shield', 'Seguro de viajero incluido'], ['i-pin', 'Monitoreo GPS']] },
   /* 47 · Misma verificación y misma razón que el i6 de arriba. */
   /* NO es «larga distancia» · Dictado del dueño el 4-sep-2026: «el PB
      no es de la distancia, no lo pongas así». Va un escalón arriba del

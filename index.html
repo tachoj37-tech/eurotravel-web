@@ -3515,7 +3515,13 @@ window.IMGS = {
     if (!reduce && slides.length) restart();
 
     /* ================= flota ================= */
-    var UNITS = window.UNIDADES || [];
+    /* `soloBot` deja una unidad FUERA de la página — de la galería y del
+       selector del cotizador, que se arman los dos desde esta lista— sin
+       sacarla del catálogo, para que el bot de WhatsApp sí la pueda
+       ofrecer. Hoy la usa el Irizar i6 de 51, del que todavía no hay
+       fotos: dictado del dueño el 10-sep-2026, «en el bot sí va, solo en
+       la página déjalo como pendiente». */
+    var UNITS = (window.UNIDADES || []).filter(function (u) { return !u.soloBot; });
 
     var fleetEl = byId('fleet');
 

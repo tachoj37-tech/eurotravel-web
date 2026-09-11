@@ -446,10 +446,14 @@ function cotiza(extra) {
 
   /* Los i6 son los dos premium: «utiliza todo lo i6, que es premium,
      ya sea sin S o con S». */
+  /* CAMBIÓ DE LADO EL 10-sep-2026: decía «los dos i6» y ahora son TRES.
+     El dueño tiene un segundo Irizar i6, el de 51, que se descubrió
+     leyendo su Excel —el rótulo «NEOBUS/i6 50/51 PAX» nombraba un i6
+     que no existía en el catálogo—. Lo que la aserción cuida no cambió:
+     que TODOS los i6 sean premium, sin importar cuántos haya. */
   const i6 = catalogo.filter(function (u) { return /^Irizar i6/.test(u.name); });
-  ok('los dos i6 son premium', i6.length, 2);
-  ok('  y los dos lo dicen',
-    i6.filter(function (u) { return /Premium/i.test(u.tag); }).length, 2);
+  okQue('hay i6 en el catálogo', i6.length >= 2);
+  ok('  y TODOS son premium', i6.filter(function (u) { return /Premium/i.test(u.tag); }).length, i6.length);
 
   /* Y el PB dejó de ser «larga distancia», que no es una categoría del
      negocio. */
@@ -503,13 +507,31 @@ function cotiza(extra) {
   }).map(function (u) { return u.name; });
   ok('toda unidad tiene fotos, o dice que le faltan', faltan, []);
 
-  /* Y la que dice que le faltan NO promete una: `mediosDe` le contesta
-     null a quien pregunte. Sin esto, el bot ofrecería enseñar algo que
-     no existe. */
+  /* CAMBIÓ DE LADO EL 10-sep-2026. Decía que una unidad sin fotos NO
+     puede prometer ninguna —`mediosDe` devolvía null— y con eso alcanzaba
+     mientras el único caso era el G8, que no tenía de dónde sacarlas.
+
+     El Irizar i6 de 51 abrió un tercer caso, y lo dictó el dueño: «en el
+     bot solo ponle que no hay fotos del i6 de 51, pero ofrécelo; si
+     alguien pide fotos enséñale el de 47 i6, pero dile que no hay fotos
+     pero que te puedo enseñar de este i6».
+
+     Lo que la aserción cuida sigue siendo lo mismo y es lo único que
+     importa: que el bot NUNCA enseñe una foto haciéndola pasar por la
+     unidad que no es. Así que una unidad sin fotos propias tiene dos
+     salidas buenas —no prometer nada, o enseñar prestadas DICIENDO de
+     quién son— y una mala: enseñarlas calladas. */
   const pendientes = catalogo.filter(function (u) { return u.sinFotos; });
-  const prometen = pendientes.filter(function (u) { return !!bot.mediosDe(u.id); })
-    .map(function (u) { return u.name; });
-  ok('  y la que no las tiene, no las promete', prometen, []);
+  const mienten = pendientes.filter(function (u) {
+    const m = bot.mediosDe(u.id);
+    if (!m) return false;                       // no promete nada: bien
+    if (!m.prestadas) return true;              // trae fotos propias que no tiene: mal
+    const suyas = catalogo.filter(function (x) { return x.id === m.prestadas; })[0];
+    /* Prestadas, pero tiene que decirlo Y nombrar de quién son. */
+    return !/no tengo fotos|no hay fotos/i.test(m.texto) ||
+      !(suyas && m.texto.indexOf(suyas.name) !== -1);
+  }).map(function (u) { return u.name; });
+  ok('  y la que no las tiene, o no promete o dice que son prestadas', mienten, []);
 
   /* ---- el G8, dado de alta el 4-sep-2026 ---- */
   const g8 = catalogo.filter(function (u) { return /g8/i.test(u.name); })[0];

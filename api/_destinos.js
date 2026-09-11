@@ -656,20 +656,16 @@ function precioDominical(destino, desdeOcotlan) {
      10-sep-2026: «el Irizar PB y el Irizar i6 de 47 pasajeros comparten
      precios».
 
-   Y EL «i6» QUE APARECE EN EL RENGLÓN DEL NEOBUS, que despista:
+   Y EL «i6» DEL RENGLÓN DEL NEOBUS, que fue el que destapó todo:
 
      «NEOBUS/i6 50/51 PAX» cubre el Neobus **y un Irizar i6 de 51** que
-     el dueño sí tiene — «de éste solo hay 1», dijo el 10-sep-2026—
-     pero que NO está en `unidades.js` y no va a estar: se le preguntó
-     si darlo de alta y contestó «no lo pongas en la pág, no pasa
-     nada». Ese camión se vende por fuera, no por aquí.
+     el dueño sí tiene —«de éste solo hay 1», 10-sep-2026— y que no
+     estaba en el catálogo. Ahí se vio que faltaba una unidad entera.
 
-     Así que la columna `neobusI6` apunta solo al Neobus, y está bien.
-     Si algún día el i6 de 51 entra al catálogo, va a ESA columna —no a
-     la del PB, que es la de los de 47— y necesita un nombre distinto
-     del i6 que ya existe: dos unidades con el mismo nombre romperían
-     tanto la elección de camión en `bot.js` como la llave de los
-     precios aprendidos, que se arma con el nombre de la unidad.
+     Ya está dado de alta como `irizar-i6-51`, con `soloBot` para que
+     salga en el bot y todavía no en la página: lo que falta son sus
+     fotos. Su precio es ESTA columna, no la del PB —ésa es la de los
+     de 47—, y por eso las dos apuntan aquí.
 
    La Suburban NO tiene columna en el Excel: se queda pidiendo precio.
 
@@ -685,7 +681,10 @@ function precioDominical(destino, desdeOcotlan) {
 const COLUMNA_DE_UNIDAD = {
   'sprinter': ['sprinter'],
   'g8': ['marcopolo'],
+  /* El rótulo «NEOBUS/i6 50/51 PAX» nombra a los dos: el Neobus de 50 y
+     el Irizar i6 de 51, del que el dueño «solo tiene 1». */
   'neobus': ['neobusI6'],
+  'irizar-i6-51': ['neobusI6'],
   /* El rótulo «PB/i6 47 pax» nombra a los dos: el PB y el i6, ambos de 47. */
   'irizar-pb': ['pbI6'],
   'irizar-i6': ['pbI6'],

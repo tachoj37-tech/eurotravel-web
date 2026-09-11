@@ -31,6 +31,23 @@ window.MEDIOS_UNIDADES = {
   'irizar-i6':    { fotos: 7,  video: 'GfHNhM8FIkA' },
   'irizar-pb':    { fotos: 6,  video: 'F6UTzxOxIQs' },
 
+  /* ------------------------------------------------------------
+     EL i6 DE 51 · sin fotos propias, y se dice
+     ------------------------------------------------------------
+     Dado de alta el 10-sep-2026. De este camión NO hay fotos todavía.
+
+     Dictado del dueño, palabra por palabra: «en el bot solo ponle que
+     no hay fotos del i6 de 51, pero ofrécelo; si alguien pide fotos
+     enséñale el de 47 i6, pero dile que no hay fotos pero que te puedo
+     enseñar de este i6».
+
+     O sea: se prestan las del otro i6 y se dice de quién son. NO se
+     hacen pasar por suyas — eso sería enseñarle al cliente un camión y
+     entregarle otro, que es de las pocas cosas que no se arreglan
+     después. `prestadas` hace justo eso y cambia el texto.
+     ------------------------------------------------------------ */
+  'irizar-i6-51': { fotos: 0, video: null, prestadas: 'irizar-i6' },
+
   /* YA SE SUPO QUÉ ES · Era la página genérica «Irizar» del sitio y
      resultó ser el **Century**, la unidad de entrada: 47 pasajeros,
      confirmado por el dueño y por su propia página el 4-sep-2026.

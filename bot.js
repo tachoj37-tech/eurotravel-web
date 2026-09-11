@@ -982,15 +982,40 @@ const NO_ES_CIUDAD = /^(?:si|s[ií]|sip|sale|va|vale|ok|okey|oki|dale|claro|corr
    tienen cuatro— nunca escoge, y el día que entre otro Marcopolo la
    palabra «marcopolo» se descarta sola sin que nadie se acuerde.
    ------------------------------------------------------------ */
-function nombraEsteBus(texto, bus, todos) {
-  const t = normaliza(texto);
-  const suyo = normaliza(bus.name);
-  /* El nombre entero, tal cual. Es lo que manda el botón del propio bot. */
-  if (t.indexOf(suyo) !== -1) return true;
+function comoPalabra(p, t) {
+  return new RegExp('\\b' + String(p).replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b').test(t);
+}
 
-  /* Cuántos camiones usan cada palabra. La que usa más de uno no escoge. */
+/* Qué camiones nombra este mensaje. Devuelve un arreglo: vacío si no
+   nombró ninguno, uno si fue claro, y VARIOS si lo que dijo le queda a
+   más de uno —«el i6», con dos i6 en el catálogo—. Quien llama decide
+   qué hacer con el empate; aquí no se escoge por el cliente.
+
+   Se prueba de lo más seguro a lo menos:
+     1 · el nombre entero, que es lo que manda el botón del propio bot
+     2 · una palabra que sea SUYA y de nadie más
+     3 · una palabra que comparta con otro camión, o el nombre sin el
+         «Irizar» de adelante —«el i6S», «el PB», como se pide de viva
+         voz—. Aquí es donde salen los empates. */
+function busesQueNombra(texto, todos) {
+  const t = normaliza(texto);
+  const buses = todos || [];
+
+  /* GANA EL NOMBRE MÁS LARGO, y no es un detalle: «Irizar i6» es un
+     pedazo de «Irizar i6S» y de «Irizar i6 51», así que quien escribe el
+     nombre completo del i6S empata con tres camiones a la vez. El más
+     largo es el más específico, y es el que dijo. */
+  const contenidos = buses.filter(function (b) {
+    return t.indexOf(normaliza(b.name)) !== -1;
+  });
+  if (contenidos.length) {
+    const masLargo = Math.max.apply(null, contenidos.map(function (b) { return b.name.length; }));
+    return contenidos.filter(function (b) { return b.name.length === masLargo; });
+  }
+
+  /* Cuántos camiones usan cada palabra. */
   const cuantos = {};
-  (todos || []).forEach(function (u) {
+  buses.forEach(function (u) {
     const vistas = {};
     normaliza(u.name).split(/\s+/).forEach(function (p) {
       if (!p || vistas[p]) return;
@@ -999,14 +1024,19 @@ function nombraEsteBus(texto, bus, todos) {
     });
   });
 
-  const suyas = suyo.split(/\s+/).filter(function (p) { return p && cuantos[p] === 1; });
-  /* Y el nombre sin el «Irizar» de adelante, que es como se pide de
-     viva voz: «el i6S», «el PB». Se conserva porque son dos palabras. */
-  const sinMarca = suyo.replace(/^irizar\s*/, '');
-  if (sinMarca && sinMarca !== suyo) suyas.push(sinMarca);
+  const porPalabraSuya = buses.filter(function (b) {
+    return normaliza(b.name).split(/\s+/)
+      .filter(function (p) { return p && cuantos[p] === 1; })
+      .some(function (p) { return comoPalabra(p, t); });
+  });
+  if (porPalabraSuya.length) return porPalabraSuya;
 
-  return suyas.some(function (p) {
-    return new RegExp('\\b' + p.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b').test(t);
+  return buses.filter(function (b) {
+    const suyo = normaliza(b.name);
+    const sinMarca = suyo.replace(/^irizar\s*/, '');
+    const señas = suyo.split(/\s+/).filter(Boolean);
+    if (sinMarca && sinMarca !== suyo) señas.push(sinMarca);
+    return señas.some(function (p) { return comoPalabra(p, t); });
   });
 }
 
@@ -1116,21 +1146,50 @@ const MEDIOS = (typeof window !== 'undefined' && window.MEDIOS_UNIDADES) || {};
 function mediosDe(idUnidad) {
   const id = idUnidad === 'autobus' ? 'irizar-i6s' : String(idUnidad || 'sprinter');
   const m = MEDIOS[id];
-  if (!m || !m.fotos) return null;
+  if (!m) return null;
+
+  /* ------------------------------------------------------------
+     UNA UNIDAD PUEDE PEDIR PRESTADAS LAS FOTOS DE OTRA — 10-sep-2026
+     ------------------------------------------------------------
+     Del Irizar i6 de 51 todavía no hay fotos. Dictado del dueño: que se
+     ofrezca igual, y que si piden fotos se enseñen las del otro i6 —el
+     de 47— DICIENDO que no son de éste.
+
+     Lo que no se hace nunca es pasarlas por suyas: enseñarle al cliente
+     un camión y entregarle otro es de las pocas cosas que no se
+     arreglan después. Por eso el texto cambia y nombra a las dos
+     unidades.
+     ------------------------------------------------------------ */
+  const dePrestado = m.prestadas ? MEDIOS[m.prestadas] : null;
+  if (m.prestadas && (!dePrestado || !dePrestado.fotos)) return null;
+  if (!m.fotos && !dePrestado) return null;
+
+  const deDonde = m.prestadas || id;
+  const cuantas = m.prestadas ? dePrestado.fotos : m.fotos;
+  const video = m.prestadas ? dePrestado.video : m.video;
 
   const u = porId(id) || porId('sprinter');
+  const dueñaDeLasFotos = m.prestadas ? porId(m.prestadas) : null;
   const fotos = [];
-  for (let i = 1; i <= Math.min(3, m.fotos); i++) {
-    fotos.push('img/unidades/' + id + '/' + id + '-' + (i < 10 ? '0' : '') + i + '.jpg');
+  for (let i = 1; i <= Math.min(3, cuantas); i++) {
+    fotos.push('img/unidades/' + deDonde + '/' + deDonde + '-' + (i < 10 ? '0' : '') + i + '.jpg');
   }
   return {
     unidad: id,
     fotos: fotos,
-    video: m.video ? 'https://www.youtube.com/watch?v=' + m.video : null,
-    texto: 'Claro 📸 Ésta es la *' + (u ? u.name : 'unidad') + '*' +
-      (u ? ' — ' + u.cap : '') + '.\n\n' +
-      (m.video ? 'Te dejo también un video por dentro 👇\n\n' : '') +
-      '¿Te saco el precio de tu viaje?'
+    prestadas: m.prestadas || null,
+    video: video ? 'https://www.youtube.com/watch?v=' + video : null,
+    texto: m.prestadas
+      ? 'Del *' + (u ? u.name : 'ése') + '* todavía no tengo fotos 🙈\n\n' +
+        'Te enseño las del otro *' + (dueñaDeLasFotos ? dueñaDeLasFotos.name : 'Irizar i6') + '*' +
+        (dueñaDeLasFotos ? ', el de ' + dueñaDeLasFotos.cap : '') + ' — es el mismo modelo, ' +
+        'nomás que ése lleva ' + (dueñaDeLasFotos ? dueñaDeLasFotos.max : '') + ' y el tuyo ' +
+        (u ? u.max : '') + '.\n\n' +
+        '¿Te saco el precio de tu viaje?'
+      : 'Claro 📸 Ésta es la *' + (u ? u.name : 'unidad') + '*' +
+        (u ? ' — ' + u.cap : '') + '.\n\n' +
+        (video ? 'Te dejo también un video por dentro 👇\n\n' : '') +
+        '¿Te saco el precio de tu viaje?'
   };
 }
 
@@ -2238,9 +2297,48 @@ function pasoDeCotizacion(t, crudo, estado, hoy) {
       return b.name.length - a.name.length;
     });
 
-    let elegido = null;
-    for (let i = 0; i < porNombre.length && !elegido; i++) {
-      if (nombraEsteBus(t, porNombre[i], buses)) elegido = porNombre[i];
+    const nombrados = busesQueNombra(t, porNombre);
+    let elegido = nombrados.length === 1 ? nombrados[0] : null;
+
+    /* ------------------------------------------------------------
+       CUANDO LO QUE DIJO LE QUEDA A DOS — 10-sep-2026
+       ------------------------------------------------------------
+       Desde que entró el Irizar i6 de 51 hay DOS i6 en el catálogo, y
+       «el i6» a secas ya no dice cuál. Antes esto escogía el primero
+       que empatara y seguía tan contento: el cliente pedía el de 51 y
+       se le cotizaba el de 47, que es otra columna del Excel y otro
+       precio.
+
+       No se escoge por él. Primero se mira si dijo la capacidad —«el de
+       51», «somos 50»— porque eso sí lo resuelve solo; y si no, se le
+       pregunta nombrando los dos con sus asientos.
+       ------------------------------------------------------------ */
+    if (!elegido && nombrados.length > 1) {
+      const porAsientos = nombrados.filter(function (b) { return comoPalabra(b.max, t); });
+      if (porAsientos.length === 1) elegido = porAsientos[0];
+      else {
+        return {
+          texto: 'Tengo dos 🤔 ¿Cuál te late?\n\n' +
+            nombrados.map(function (b) { return '*' + b.name + '* — ' + b.cap; }).join('\n'),
+          pasa: false, estado: e,
+          opciones: nombrados.map(function (b) { return b.name; }).slice(0, 3)
+        };
+      }
+    }
+
+    /* ------------------------------------------------------------
+       «EL DE 47» ES UNA RESPUESTA A LA PREGUNTA QUE ACABO DE HACER
+       ------------------------------------------------------------
+       El bot enseña la lista con los asientos de cada uno —«*Irizar i6*
+       — 47 pasajeros»— y luego no entendía «el de 47». Preguntar algo y
+       no saber leer la respuesta propia es de lo peor que puede hacer.
+
+       Solo cuenta si ese número le queda a UN camión de la lista: con
+       dos de 47 no se adivina, se sigue preguntando (10-sep-2026).
+       ------------------------------------------------------------ */
+    if (!elegido) {
+      const porAsientos = buses.filter(function (b) { return comoPalabra(b.max, t); });
+      if (porAsientos.length === 1) elegido = porAsientos[0];
     }
 
     if (!elegido) {
