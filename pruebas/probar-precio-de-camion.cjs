@@ -59,15 +59,18 @@ const EXCEL = {
   'Guanajuato, Gto.':         [30000, 31000, null, null, null, null]
 };
 
-/* De la columna del Excel al `id` de la unidad, según la correspondencia
-   que dictó el dueño el 10-sep-2026 y la que se dedujo por nombre. */
+/* De la columna del Excel al `id` de la unidad. Los rótulos son los de la
+   captura que mandó el dueño el 10-sep-2026, copiados tal cual — con sus
+   mayúsculas y sus espacios—, porque es lo que el ticket le enseña y es
+   como él encuentra el renglón en su hoja. */
 const COLUMNAS = [
-  { i: 0, columna: 'NC47',      unidad: 'irizar',     nota: 'Century de 47' },
-  { i: 1, columna: '48/49',     unidad: 'irizar',     nota: 'Century de 49' },
-  { i: 2, columna: 'Neobus i6', unidad: 'neobus',     nota: 'Neobus' },
-  { i: 3, columna: 'PB i6',     unidad: 'irizar-pb',  nota: 'Irizar PB' },
-  { i: 4, columna: 'Marcopolo', unidad: 'g8',         nota: 'Marcopolo Paradiso G8' },
-  { i: 5, columna: 'Irizar',    unidad: 'irizar-i6s', nota: 'Irizar i6 / i6S' }
+  { i: 0, columna: 'BUS N C 47 PAX',            unidad: 'irizar',     nota: 'Century de 47' },
+  { i: 1, columna: 'BUS 48/49 PAX',             unidad: 'irizar',     nota: 'Century de 49' },
+  { i: 2, columna: 'NEOBUS/i6 50/51 PAX',       unidad: 'neobus',     nota: 'Neobus, 50 pax' },
+  { i: 3, columna: 'PB/i6 47 pax',              unidad: 'irizar-pb',  nota: 'Irizar PB, 47 pax' },
+  { i: 3, columna: 'PB/i6 47 pax',              unidad: 'irizar-i6',  nota: 'Irizar i6, 47 pax — comparte renglón con el PB' },
+  { i: 4, columna: 'MARCOPOLO G8 2026',         unidad: 'g8',         nota: 'Marcopolo Paradiso G8' },
+  { i: 5, columna: 'IRIZAR i6s 50/51 PAX 2023', unidad: 'irizar-i6s', nota: 'Irizar i6S, 51 pax, 2023' }
 ];
 
 titulo('cada número que se enseña es el de su Excel');
@@ -94,8 +97,35 @@ titulo('el Century enseña sus DOS columnas, porque el Excel tiene dos');
      Excel tiene dos columnas. No se escoge por el dueño. */
   const dos = destinos.preciosDeListaDeUnidad('Puerto Vallarta, Jal.', 'irizar');
   ok('salen las dos', dos.length === 2);
-  ok('  la de 47 en $32,000', dos[0] && dos[0].total === 32000 && dos[0].comoSeLlama === 'NC47');
-  ok('  la de 49 en $33,000', dos[1] && dos[1].total === 33000 && dos[1].comoSeLlama === '48/49');
+  ok('  la de 47 en $32,000', dos[0] && dos[0].total === 32000 && dos[0].comoSeLlama === 'BUS N C 47 PAX');
+  ok('  la de 49 en $33,000', dos[1] && dos[1].total === 33000 && dos[1].comoSeLlama === 'BUS 48/49 PAX');
+}
+
+titulo('los tres Irizar no se confunden entre ellos');
+{
+  /* Es el punto donde más fácil se cobra mal: el catálogo tiene cuatro
+     unidades con «Irizar» en el nombre y el Excel tres renglones que las
+     tocan. La captura del dueño (10-sep-2026) los separa por capacidad:
+
+       «IRIZAR i6s 50/51 PAX 2023» → el i6S, que es de 51
+       «PB/i6 47 pax»              → el PB y el i6, los dos de 47
+       «BUS N C 47 PAX» / «BUS 48/49 PAX» → el Century
+
+     Si alguna vez se cruzan, el i6S de $36,000 se cobraría a $34,000 o al
+     revés. Por eso van comprobados uno por uno. */
+  const cual = (u) => destinos.preciosDeListaDeUnidad('Puerto Vallarta, Jal.', u);
+  const i6s = cual('irizar-i6s'), i6 = cual('irizar-i6'), pb = cual('irizar-pb');
+
+  ok('el i6S (51 pax, 2023) va en su propio renglón, $36,000',
+    i6s.length === 1 && i6s[0].total === 36000 && i6s[0].comoSeLlama === 'IRIZAR i6s 50/51 PAX 2023');
+  ok('el i6 (47 pax) comparte el del PB, $34,000',
+    i6.length === 1 && i6[0].total === 34000 && i6[0].comoSeLlama === 'PB/i6 47 pax');
+  ok('el PB va en ése mismo, $34,000',
+    pb.length === 1 && pb[0].total === 34000 && pb[0].comoSeLlama === 'PB/i6 47 pax');
+  ok('el i6 y el i6S NO cobran igual', i6[0].total !== i6s[0].total);
+  ok('el i6 y el PB SÍ cobran igual', i6[0].total === pb[0].total);
+  ok('y ninguno de los tres toca las columnas del Century',
+    [i6s, i6, pb].every(function (r) { return !/BUS/.test(r[0].comoSeLlama); }));
 }
 
 titulo('lo que NO tiene columna sigue pidiendo el precio');

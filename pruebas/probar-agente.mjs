@@ -201,15 +201,17 @@ titulo('autobús: por la compuerta del dueño, nunca a otro número (6-sep-2026)
   /* CAMBIÓ DE LADO EL 10-sep-2026. Pedía que el ticket dijera «escríbeme el
      precio», o sea que llegara sin un solo número. Y llegaba sin número
      aunque el Neobus a Vallarta estuviera escrito en el Excel desde
-     siempre ($34,000, columna «Neobus i6»): el motor solo cotiza Sprinter,
+     siempre ($34,000, columna «NEOBUS/i6 50/51 PAX»): el motor solo cotiza Sprinter,
      así que las otras seis columnas del catálogo eran datos muertos.
 
      Lo que sigue siendo cierto —y es lo que esta aserción cuida ahora— es
      que el bot NO cotiza el camión: le enseña al dueño el renglón de su
      lista, diciendo de qué columna salió, y el precio lo pone él. */
   okQue('  al dueño le llega su ticket de precio', /Precio por confirmar/.test(alDueno));
+  /* El rótulo es el de SU hoja, copiado de la captura que mandó el
+     10-sep-2026, para que encuentre el renglón sin traducir nada. */
   okQue('  con el renglón del Excel para el Neobus, nombrando la columna',
-    /Del Excel: \*\$34,000\*/.test(alDueno) && /columna «Neobus i6»/.test(alDueno));
+    /Del Excel: \*\$34,000\*/.test(alDueno) && /columna «NEOBUS\/i6 50\/51 PAX»/.test(alDueno));
   okQue('  y sin un precio calculado por el motor', !/Calculado:/.test(alDueno));
   okQue('  con Neobus, 48 pax y Vallarta', /Neobus/.test(alDueno) && /48 pax/.test(alDueno) && /Vallarta/.test(alDueno));
   /* El dueño contesta con el precio, citando el ticket. */

@@ -635,22 +635,33 @@ function precioDominical(destino, desdeOcotlan) {
    un autobús de 51, y abrir la página con eso sería cobrar mal de
    verdad. Dictado del dueño ese día: «solo en tu ticket, por ahora».
 
-   LA CORRESPONDENCIA, y de dónde sale cada renglón:
+   LA CORRESPONDENCIA. El dueño mandó la captura de su Excel el
+   10-sep-2026, así que éstos son SUS rótulos, copiados tal cual:
 
-     busNC47   → Irizar Century de 47   ← dictado del dueño, 10-sep-2026
-     bus4849   → Irizar Century de 49   ← dictado del dueño, 10-sep-2026
-     neobusI6  → Neobus                 ← por nombre
-     pbI6      → Irizar PB              ← por nombre
-     marcopolo → Marcopolo Paradiso G8  ← por nombre
-     irizar    → Irizar i6 e i6S        ← POR ELIMINACIÓN, sin confirmar
-     sprinter  → Sprinter               ← ya vivía
+     «BUS N C 47 PAX»            → Irizar Century de 47
+     «BUS 48/49 PAX»             → Irizar Century de 49
+     «NEOBUS/i6 50/51 PAX»       → Neobus
+     «PB/i6 47 pax»              → Irizar PB **y también el Irizar i6**
+     «MARCOPOLO G8 2026»         → Marcopolo Paradiso G8
+     «IRIZAR i6s 50/51 PAX 2023» → Irizar i6S, ése y nadie más
+     «SPRINTER»                  → Sprinter
+
+   Dos cosas que la captura corrigió, y que estaban deducidas mal:
+
+   · La columna «Irizar» NO es el i6 y el i6S juntos. Su rótulo dice
+     «i6s 50/51 PAX 2023», que es exactamente el i6S del catálogo —51
+     pasajeros, modelo 2023—. El i6 no va ahí.
+   · El i6 del catálogo es de 47 pasajeros, y el rótulo «PB/i6 47 pax»
+     nombra a los dos con esa capacidad. O sea que el PB y el i6
+     comparten precio. Eso sale de leer su rótulo, no de una regla: si
+     algún día los separa, esta línea se parte en dos.
 
    La Suburban NO tiene columna en el Excel: se queda pidiendo precio.
 
-   El renglón `irizar` es el único que nadie confirmó — se dedujo porque
-   las otras seis ya tienen dueño. Por eso el ticket SIEMPRE nombra la
-   columna que usó: si estuviera mal, se ve al primer viaje en vez de
-   cobrarse en silencio durante meses.
+   Los rótulos se enseñan TAL CUAL en el ticket —con sus mayúsculas y
+   sus espacios— para que él encuentre el renglón en su hoja sin
+   traducir nada. Si alguna correspondencia estuviera mal, se ve al
+   primer viaje en vez de cobrarse en silencio durante meses.
 
    El Century es el caso raro: el catálogo tiene UNA unidad («47 a 49
    pasajeros») y el Excel tiene DOS columnas. No se escoge por él; se le
@@ -660,17 +671,25 @@ const COLUMNA_DE_UNIDAD = {
   'sprinter': ['sprinter'],
   'g8': ['marcopolo'],
   'neobus': ['neobusI6'],
+  /* El rótulo «PB/i6 47 pax» nombra a los dos: el PB y el i6, ambos de 47. */
   'irizar-pb': ['pbI6'],
-  'irizar-i6': ['irizar'],
+  'irizar-i6': ['pbI6'],
+  /* «IRIZAR i6s 50/51 PAX 2023»: el i6S y nadie más. */
   'irizar-i6s': ['irizar'],
   'irizar': ['busNC47', 'bus4849'],
   'suburban': []
 };
 
-/* Cómo se llama cada columna cuando se le enseña al dueño. */
+/* Cómo se llama cada columna cuando se le enseña al dueño: SU rótulo, tal
+   cual está escrito en la hoja, para que la encuentre sin traducir. */
 const NOMBRE_DE_COLUMNA = {
-  sprinter: 'Sprinter', marcopolo: 'Marcopolo', neobusI6: 'Neobus i6',
-  pbI6: 'PB i6', irizar: 'Irizar', busNC47: 'NC47', bus4849: '48/49'
+  sprinter: 'SPRINTER',
+  marcopolo: 'MARCOPOLO G8 2026',
+  neobusI6: 'NEOBUS/i6 50/51 PAX',
+  pbI6: 'PB/i6 47 pax',
+  irizar: 'IRIZAR i6s 50/51 PAX 2023',
+  busNC47: 'BUS N C 47 PAX',
+  bus4849: 'BUS 48/49 PAX'
 };
 
 /* Lo que el Excel dice de este destino para esta unidad. Devuelve un
