@@ -652,9 +652,24 @@ function precioDominical(destino, desdeOcotlan) {
      «i6s 50/51 PAX 2023», que es exactamente el i6S del catálogo —51
      pasajeros, modelo 2023—. El i6 no va ahí.
    · El i6 del catálogo es de 47 pasajeros, y el rótulo «PB/i6 47 pax»
-     nombra a los dos con esa capacidad. O sea que el PB y el i6
-     comparten precio. Eso sale de leer su rótulo, no de una regla: si
-     algún día los separa, esta línea se parte en dos.
+     nombra a los dos con esa capacidad. Confirmado por el dueño el
+     10-sep-2026: «el Irizar PB y el Irizar i6 de 47 pasajeros comparten
+     precios».
+
+   Y EL «i6» QUE APARECE EN EL RENGLÓN DEL NEOBUS, que despista:
+
+     «NEOBUS/i6 50/51 PAX» cubre el Neobus **y un Irizar i6 de 51** que
+     el dueño sí tiene — «de éste solo hay 1», dijo el 10-sep-2026—
+     pero que NO está en `unidades.js` y no va a estar: se le preguntó
+     si darlo de alta y contestó «no lo pongas en la pág, no pasa
+     nada». Ese camión se vende por fuera, no por aquí.
+
+     Así que la columna `neobusI6` apunta solo al Neobus, y está bien.
+     Si algún día el i6 de 51 entra al catálogo, va a ESA columna —no a
+     la del PB, que es la de los de 47— y necesita un nombre distinto
+     del i6 que ya existe: dos unidades con el mismo nombre romperían
+     tanto la elección de camión en `bot.js` como la llave de los
+     precios aprendidos, que se arma con el nombre de la unidad.
 
    La Suburban NO tiene columna en el Excel: se queda pidiendo precio.
 
