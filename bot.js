@@ -1040,6 +1040,23 @@ function busesQueNombra(texto, todos) {
   });
 }
 
+/* De un nombre tecleado —«i6s», «marcopolo», «el i6 51»— a la unidad del
+   catálogo. Se apoya en `busesQueNombra`, la MISMA lectura con la que el
+   bot entiende a un cliente que escoge camión: si algún día se entiende
+   mejor un nombre, se entiende igual por los dos lados.
+
+   Devuelve null cuando no es claro —incluido el empate—, y quien llama
+   pregunta. Aquí no se adivina (10-sep-2026). */
+function unidadesQueNombra(texto) {
+  const t = String(texto || '').trim();
+  if (!t) return [];
+  return busesQueNombra(t, UNIDADES);
+}
+function unidadPorNombre(texto) {
+  const salen = unidadesQueNombra(texto);
+  return salen.length === 1 ? salen[0] : null;
+}
+
 function destinoFlojo(d) {
   const n = normaliza(d || '');
   if (!n) return true;
@@ -4562,6 +4579,7 @@ function loQueFalta(estado) {
 
 module.exports = {
   respuestaA, textoDeCotizacion, textoDeSolicitud, aplicaEntendido, continuaCon, mediosDe,
+  unidadPorNombre, unidadesQueNombra,
   pegaDatos, loQueFalta, listaCortaDeAutobuses, autobusesPara, mensajeDeAutobuses,
   hayQueRevisarDisponibilidad,
   /* Se exportan para poder probarlos solos: son los que leen la frase

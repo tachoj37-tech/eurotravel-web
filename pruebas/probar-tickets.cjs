@@ -48,7 +48,20 @@ const DUENO = '5213311112222';
    que debe traer se prueba aparte, en R47. */
 function esElPrimero(e) { return String(e.escribio || '') === '[ticket · primer mensaje]'; }
 const CLIENTE = '5213399998888';
-const ENV = { WHATSAPP_APP_SECRET: SECRETO, DUENO_WHATSAPP: DUENO };
+/* ------------------------------------------------------------
+   EL DÍA SE FIJA, NO SE HEREDA DEL RELOJ — 11-sep-2026
+   ------------------------------------------------------------
+   Esta batería arma viajes con fechas escritas a mano —«10 de
+   septiembre», «13 de septiembre»— y sin fijar el día valían lo que
+   valieran HOY. El 10 de septiembre pasaron; el 11, «10 de septiembre»
+   ya es pasado y el viaje deja de armarse: el ticket no sale y la
+   prueba truena por una fecha, no por el código.
+
+   Se descubrió de la peor manera posible: la suite quedó verde a las
+   11 de la noche y en rojo a la mañana siguiente, sin que nadie tocara
+   nada. Una prueba que depende del reloj miente en las dos direcciones.
+   ------------------------------------------------------------ */
+const ENV = { WHATSAPP_APP_SECRET: SECRETO, DUENO_WHATSAPP: DUENO, HOY_DE_PRUEBA: '2026-09-05' };
 
 function firma(cuerpo) {
   return 'sha256=' + crypto.createHmac('sha256', SECRETO)

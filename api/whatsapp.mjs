@@ -2085,6 +2085,9 @@ const MARCAS_PARA_EL_DUENO = new RegExp('^\\[(?:' + [
      llega entero — es lo que pidió al escribir «yo». */
   'relevo · ',
   'ver\\]', 'ver · sin destinatario', 'tablero', 'espia', 'la IA lo destrabó',
+  /* La lista de atajos, que él mismo pidió escribiendo «atajos». Sin
+     este renglón el mensaje moría en silencio — cazado al probarlo. */
+  'atajos\\]',
   /* `espia` pasa, pero NO porque contradiga la regla del 9-sep-2026 sino
      porque es un interruptor suyo: el modo espía copia al dueño CADA
      mensaje que sale hacia un cliente —justo «todos los mensajes que

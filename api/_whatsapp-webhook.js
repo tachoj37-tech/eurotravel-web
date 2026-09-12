@@ -612,6 +612,23 @@ const PIDE_SUELTA = /^\s*(bot|ia|suelta|su[eé]ltalo|libera|lib[eé]ralo|retoma)
      contrato  → le llegan las preguntas para armar el contrato
      recibido  → se le acusa el comprobante y se le dice qué sigue
    ------------------------------------------------------------ */
+/* ------------------------------------------------------------
+   MANDARLE FOTOS AL CLIENTE, SIN BUSCARLAS EN LA GALERÍA
+   ------------------------------------------------------------
+   Hasta hoy las fotos solo salían cuando el CLIENTE las pedía. El
+   vendedor que quería enseñarlas tenía que buscarlas en su teléfono y
+   mandarlas a mano — y son ocho carpetas de unidades.
+
+   Ahora se piden por su nombre: «fotos i6s», «fotos marcopolo», «fotos
+   sprinter». Si no dice cuál, se usa la del viaje que ya trae la ficha,
+   que es lo más común (10-sep-2026).
+   ------------------------------------------------------------ */
+const PIDE_FOTOS_DE = /^\s*(?:fotos?|im[aá]genes?|ens[eé][nñ]ale|mu[eé]strale)\s*(?:de\s+(?:la|el|los|las)?\s*)?([a-z0-9áéíóúñ .-]{0,30})\s*[.!]*\s*$/i;
+
+/* La lista de todo lo que se puede escribir. Existe porque de nada sirve
+   un atajo que nadie sabe que está. */
+const PIDE_ATAJOS = /^\s*(atajos?|ayuda|comandos?|opciones|qu[eé] puedo (hacer|escribir)|men[uú])\s*[?¿!]*\s*$/i;
+
 const PIDE_CUENTA = /^\s*(cuenta|clabe|datos|dep[oó]sito|deposito|cobro)\s*[.!]*\s*$/i;
 const PIDE_CONTRATO = /^\s*(contrato|datos del contrato|papeles)\s*[.!]*\s*$/i;
 const PIDE_RECIBIDO = /^\s*(recibido|recib[ií]|ya cay[oó]|confirmado|lleg[oó])\s*[.!]*\s*$/i;
@@ -1224,6 +1241,104 @@ function procesa(crudo, firma, entorno) {
           const dirigido = tickets.clienteDeLaRespuesta(m, tickets.tickets);
 
           const textoDelDueno = (dirigido && dirigido.texto) || String((m.text && m.text.body) || '');
+
+          /* ---- «atajos»: la lista de todo lo que puede escribir ---- */
+          if (PIDE_ATAJOS.test(textoDelDueno)) {
+            envios.push({
+              numeroDeOrigen: deQuien, para: m.from,
+              texto: '⌨️ *Lo que puedes escribirme*\n\n' +
+                '*Contestando el mensaje de un cliente* (o con su número delante):\n' +
+                '· *cuenta* — le mando la ficha, la CLABE y el número\n' +
+                '· *contrato* — le pido sus datos para el contrato\n' +
+                '· *recibido* — le confirmo que su pago entró\n' +
+                '· *fotos* — le mando fotos de su unidad\n' +
+                '· *fotos i6s* — o de la que le digas: sprinter, marcopolo, neobus, pb, century, i6, i6 51, suburban\n' +
+                '· un *número* — ése es el precio y se lo mando cotizado\n' +
+                '· *total 52,000* — le corrijo el total sin volver a cotizar\n' +
+                '· *yo* — tomo yo el chat y el bot se calla\n' +
+                '· *bot* — se lo regreso al bot\n\n' +
+                '*Sueltos:*\n' +
+                '· *pendientes* — en qué va cada cliente\n' +
+                '· *ver 33 1234 5678* — qué me dijo ese cliente\n' +
+                '· *atajos* — esta lista',
+              pasaAPersona: false, escribio: '[atajos]'
+            });
+            continue;
+          }
+
+          /* ---- «fotos» / «fotos i6s»: se las manda al cliente ---- */
+          {
+            const pideFotos = PIDE_FOTOS_DE.exec(textoDelDueno);
+            if (pideFotos) {
+              const aQuien = dirigido && dirigido.cliente;
+              if (!aQuien) {
+                envios.push({
+                  numeroDeOrigen: deQuien, para: m.from,
+                  texto: '¿A quién le mando las fotos? Responde un mensaje de ese cliente con ' +
+                    '«fotos», o escríbeme su número y luego la palabra: «33 1234 5678 fotos i6s».',
+                  pasaAPersona: false, escribio: '[boton · sin cliente]'
+                });
+                continue;
+              }
+              /* La unidad que él nombró; si no nombró ninguna, la del viaje
+                 que ya trae la ficha, que es lo más común. */
+              const f = tickets.fichaDe(aQuien) || {};
+              const delViaje = (f.viajeDatos && (f.viajeDatos.unidadNombre || f.viajeDatos.unidad)) || null;
+              const dijo = String(pideFotos[1] || '').trim();
+              const candidatas = dijo ? conversacion.unidadesQueNombra(dijo) : [];
+              /* Nombró algo que le queda a dos —«i6», con los dos i6 del
+                 catálogo—: se pregunta, igual que se le pregunta al
+                 cliente. Aquí tampoco se adivina. */
+              if (candidatas.length > 1) {
+                envios.push({
+                  numeroDeOrigen: deQuien, para: m.from,
+                  texto: '¿Cuál de las dos? Escríbeme:\n' +
+                    candidatas.map(function (u) { return '· *fotos ' + u.name + '* — ' + u.cap; }).join('\n'),
+                  pasaAPersona: false, escribio: '[boton · sin fotos]'
+                });
+                continue;
+              }
+              const id = (candidatas[0] && candidatas[0].id) ||
+                (dijo ? null : idDeUnidad(delViaje) || 'sprinter');
+              const medios = id ? conversacion.mediosDe(id) : null;
+              if (!medios) {
+                envios.push({
+                  numeroDeOrigen: deQuien, para: m.from,
+                  texto: dijo
+                    ? 'No tengo fotos de «' + dijo + '» 🙈 Prueba con: *sprinter*, *marcopolo*, ' +
+                      '*neobus*, *pb*, *century*, *i6*, *i6 51*, *i6s* o *suburban*.'
+                    : 'Ese cliente todavía no tiene unidad en su viaje. Dime cuál: «fotos i6s».',
+                  pasaAPersona: false, escribio: '[boton · sin fotos]'
+                });
+                continue;
+              }
+              /* El texto primero y UNA sola foto —la del exterior—, que es
+                 la regla de la casa: «tres fotos seguidas en WhatsApp es
+                 spam» y «nomás mándale la foto», sin pie. Va por URL
+                 pública, como las demás; sin `SITIO_URL` no se manda
+                 ninguna, porque una liga rota es peor que nada. */
+              const sitio = String((env && env.SITIO_URL) || '').replace(/\/+$/, '');
+              envios.push({
+                numeroDeOrigen: deQuien, para: aQuien,
+                texto: medios.texto,
+                pasaAPersona: false, escribio: '[boton · fotos]'
+              });
+              if (sitio && medios.fotos && medios.fotos[0]) {
+                envios.push({
+                  numeroDeOrigen: deQuien, para: aQuien,
+                  ligaDeFoto: sitio + '/' + medios.fotos[0], texto: '',
+                  pasaAPersona: false, escribio: '[boton · fotos]'
+                });
+              }
+              envios.push({
+                numeroDeOrigen: deQuien, para: m.from, esTicket: true, sobreCliente: aQuien,
+                texto: '📸 Le mandé fotos' + (medios.prestadas ? ' (prestadas, y se lo dije)' : '') +
+                  ' a *' + aQuien + '*.\n\nOtros: *cuenta* · *contrato* · *recibido* · *atajos*.',
+                pasaAPersona: false, escribio: '[boton · fotos]'
+              });
+              continue;
+            }
+          }
 
           /* ---- los botones: «cuenta» / «contrato» / «recibido» ---- */
           {
