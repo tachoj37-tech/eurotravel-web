@@ -8,6 +8,93 @@ Reescrito el 11-sep-2026, cuando el dueño dijo dos cosas que cambian todo:
 
 ---
 
+## ANTES DE NADA: el plan tiene que ser Advanced
+
+Verificado en la documentación de Kommo el 11-sep-2026, y es lo primero
+que hay que mirar porque **si el plan es Base, nada de este documento
+funciona**:
+
+| Lo que el bot necesita | Desde qué plan |
+|---|---|
+| **Salesbot** (el que contesta) | Advanced |
+| **Widget propio** (por donde el bot habla con nuestro servidor) | Advanced |
+| **Webhooks** (avisos de Kommo hacia nosotros) | Advanced, Pro, Enterprise |
+| API v4 y exportar a CSV | todos |
+
+> «You need at least **Advanced** plan to use WebSDK and upload custom
+> widgets to your Kommo account»
+> — developers.kommo.com/docs/private-chatbot-integration
+
+Precios de septiembre de 2026: Base $25, Advanced $35, Pro $45 por
+usuario al mes. Subieron el 1-sep-2026 (antes eran $15 y $25).
+
+**Paso cero: entra a tu cuenta y mira qué plan tienes.** Si es Base, la
+decisión —subir a Advanced o no— es de negocio, no técnica, y hay que
+tomarla antes de seguir.
+
+---
+
+## Dos cosas más que salieron de leer la documentación
+
+**1 · El bot necesita un WIDGET, no sólo un paso de «petición HTTP».**
+
+El Salesbot no trae un paso genérico para llamar a un servidor. Lo que hay
+es `widget_request`, y sólo funciona desde un **widget propio** subido a la
+cuenta. O sea que la integración privada del paso 1 no es opcional: es la
+pieza por donde el bot habla.
+
+**2 · Hay dos segundos para contestar, y sí alcanzan.**
+
+Kommo exige un `200` en **2 segundos**:
+
+> «To acknowledge that the webhook has been received, you need to respond
+> within 2 seconds with an HTTP status code 200.»
+
+La IA tarda más que eso. La salida existe y es el `return_url` que viene en
+el propio webhook: se contesta el `200` de inmediato, se piensa la respuesta
+con calma, y después se llama a esa dirección para seguir la conversación.
+
+**Pero ese código HAY QUE ESCRIBIRLO — hoy no existe.**
+
+> **CORREGIDO EL 11-sep-2026.** Aquí decía que el bot «ya hace exactamente
+> esto con Meta, así que el código existe y está probado». Es falso, y lo
+> comprobé leyendo el handler: `api/whatsapp.mjs` hace
+> `await atiendeElAviso(...)` —que procesa el aviso ENTERO, incluida la
+> llamada a la IA y los envíos— y contesta el `200` **al final**. Meta lo
+> tolera porque su plazo es mucho más largo; Kommo no.
+>
+> O sea que meter el bot a Kommo no es reusar lo que hay: es partir el
+> camino en dos —contestar primero, trabajar después— y eso es trabajo de
+> arquitectura, no de conexión. Es la diferencia entre una tarde y varios
+> días, y más vale saberlo antes de prometer una fecha.
+
+### Cómo se va a partir, cuando toque (investigado el 11-sep-2026)
+
+Hay dos maneras en Vercel, y la primera no sirve aquí:
+
+**`waitUntil` — descartada.** Viene de `@vercel/functions`, o sea **la
+primera dependencia del proyecto** (hoy tiene cero, a propósito). Y su
+propia documentación dice que es *best-effort*: sin reintentos, sin
+durabilidad, y muere con la invocación. Para métricas o un log va bien;
+para **la respuesta a un cliente que está esperando**, no: si Vercel corta,
+el cliente se queda sin contestación y nadie se entera.
+
+**Auto-invocación — la buena.** Se contesta el `200` de inmediato y, antes
+de responder, se dispara un `fetch` a nuestra propia puerta con una marca.
+Ese segundo aviso es una invocación nueva, con su propio tiempo completo, y
+es la que piensa la respuesta y la manda por la API de Kommo. Sin
+dependencias, sin best-effort, y sin gastar una de las 12 funciones: entra
+por el mismo `whatsapp.mjs` con un rewrite, igual que ya se hizo con
+Dualhook.
+
+**No se toca hasta que Kommo esté confirmado.** Hoy el bot atiende clientes
+de verdad por Dualhook y Meta aguanta de sobra el tiempo actual; cambiar la
+forma de contestar ahora es puro riesgo sin ninguna ganancia. Cuando el plan
+Advanced esté y la cuenta responda, se hace — con su propia batería de
+pruebas, porque es el camino por donde pasa todo.
+
+---
+
 ## La buena noticia: hoy no hay mudanza
 
 El número que ya está en Kommo es **nuevo**, así que se convierte en el
@@ -82,7 +169,9 @@ KOMMO_TOKEN        el del paso 1
 ### 3 · Arma el embudo con estos nombres exactos
 
 ```
-nuevo
+escribio
+cotizando
+pidio_precio
 con_precio
 va_a_apartar
 mando_comprobante
@@ -90,9 +179,19 @@ datos_del_contrato
 contrato_listo
 ```
 
-Tal cual, con guion bajo y sin acentos. Son los que el bot ya usa por
-dentro desde hace semanas. Si les cambias el nombre hay que cambiarlo
-también en el código, y es de las cosas que se olvidan.
+Tal cual, con guion bajo y sin acentos, y **en ese orden**: el bot las
+compara por número para saber si una conversación avanzó o se regresó
+(`api/_etapas.js`). Si les cambias el nombre hay que cambiarlo también en
+el código.
+
+> **CORREGIDO EL 11-sep-2026.** Antes aquí decía una lista de SEIS que
+> empezaba con `nuevo`. Estaba mal de dos maneras: `nuevo` no existe en el
+> código —me la inventé— y faltaban las tres primeras de verdad
+> (`escribio`, `cotizando`, `pidio_precio`). Armar el embudo con esa lista
+> habría dejado al bot intentando mover leads a etapas inexistentes en las
+> tres cuartas partes de la conversación, que es justo el tramo donde se
+> arma el viaje. Salió de contar los usos de cada nombre en el código: los
+> otros cinco aparecen entre 15 y 17 veces, `nuevo` cero.
 
 ### 4 · Dime que ya
 
@@ -139,6 +238,91 @@ Lo que tiene que pasar, en orden:
 - En Kommo te queda el lead en la etapa `con_precio`, esperando precio.
 
 Si algo de eso no pasa, mándame la captura de la conversación.
+
+---
+
+## Los precios: de Kommo al cerebro
+
+Esto es lo que faltaba en toda la cadena, y Kommo lo resuelve mejor que
+cualquier otra cosa que se haya considerado.
+
+### El problema, dicho claro
+
+Hoy los precios que el dueño confirma **no se guardan en ningún lado**:
+
+- La tabla `precios` de Supabase **no existe** (comprobado el 11-sep-2026:
+  el único proyecto de la cuenta es el de EuroSystem, y no tiene ninguna
+  de las siete tablas del bot).
+- `guardaPrecio` termina en `.catch()` y quien lo llama pone otro, así que
+  un fallo no lo ve nadie.
+- Y aunque se guardaran, **no había puente** entre lo guardado y
+  `api/_destinos.js`, que es de donde el cotizador saca los precios.
+
+### Por qué Kommo es el mejor lugar
+
+Porque el precio ya va a vivir ahí sin que nadie haga nada extra. Kommo es
+un CRM: cada lead conserva su chat, sus notas y sus campos. Cuando el
+vendedor escribe el precio, **Kommo ya lo guardó**.
+
+Y leerlo después es más seguro que escucharlo en vivo: si un vendedor
+contesta a mano sin pasar por el bot, el bot no se entera —pero Kommo sí lo
+tiene. Leyendo la cuenta no se pierde ninguno.
+
+### Cómo queda la cadena
+
+```
+  el vendedor pone el precio en Kommo
+        ↓  (ya quedó guardado: no hay que hacer nada)
+  npm run precios:cerebro      ← leyendo Kommo, no Supabase
+        ↓
+  cerebro/precios-que-he-dado.md      el resumen
+  docs/PRECIOS-QUE-HE-DADO.md         el histórico
+  precios-aprendidos.json             el que puede leer el cotizador
+        ↓
+  el dueño revisa el diff y lo sube
+        ↓
+  el cotizador ya tiene ese precio
+```
+
+El script ya existe (`scripts/precios-al-cerebro.mjs`, 255 líneas), y la
+parte que agrupa, ordena y escribe los `.md` se aprovecha entera. Lo que hay
+que hacer, medido el 11-sep-2026:
+
+| | |
+|---|---|
+| Cambiar de dónde lee | ~10 líneas (hoy pega contra `/rest/v1/precios`) |
+| **Traducir la forma de los datos** | de los campos de Kommo a `{clave, total, anticipo, pasajeros, salida, fijado, cuando}` |
+| **Escribir `precios-aprendidos.json`** | hoy NO lo hace: sólo escribe los dos `.md` |
+| **Que `_destinos.js` lea ese JSON** | no existe ese puente |
+
+> **PRECISIÓN DEL 11-sep-2026.** Aquí decía «lo único que cambia es de dónde
+> lee». Es la mitad: cambiar la fuente son diez líneas, pero los otros tres
+> renglones de la tabla son código nuevo. Ninguno es difícil; lo que no vale
+> es venderlo como un ajuste de una línea.
+
+### La red de seguridad, que no cuesta nada
+
+Kommo **exporta a CSV o Excel con todos los campos personalizados**, y
+admite filtros. Así que si el script falla, si se cae la API o si un mes se
+olvida correrlo, los precios **no se pierden**: se bajan en un archivo y se
+vuelcan igual.
+
+Ésa es la ventaja grande frente a montar una base propia: el respaldo ya
+viene incluido y lo puede sacar el dueño solo, sin programar.
+
+### Por qué NO se hace automático (todavía)
+
+Se podría: con un webhook de «cambió la etapa del lead» pegándole a Vercel,
+y Vercel escribiendo en el repositorio por la API de GitHub. Funcionaría.
+
+Pero eso significa darle a un servidor permiso de escritura sobre el
+repositorio, y que un precio entre al catálogo sin que nadie lo vea. Para
+dinero, la regla de la casa es al revés: **se revisa antes de cobrarse.**
+Correr un comando cada quincena y mirar el diff cuesta dos minutos y evita
+que un precio mal capturado se cobre solo.
+
+Si con el tiempo correr el comando estorba, se automatiza — pero se empieza
+por lo revisable.
 
 ---
 
@@ -196,6 +380,50 @@ Cuando las pruebas estén y quieras pasar el número real:
 5. **Solo cuando los dos sentidos funcionen**, cancela Dualhook. Ni un
    minuto antes: mientras siga contratado, la vuelta atrás son cinco
    minutos.
+
+### CANCELAR EL WEBHOOK: el orden importa más que la prisa
+
+Esto es lo que hay que tener clarísimo, porque el instinto lleva a hacerlo
+al revés y el error no avisa.
+
+**Cancelar el webhook deja al bot mudo en el momento.** No se degrada, no
+contesta a medias, no manda un aviso: los clientes escriben y **no contesta
+nadie**. Ni el bot, ni un mensaje de «ahorita te atiendo». Y como el
+vendedor tampoco ve nada nuevo en su pantalla, puede pasar un día entero
+sin que se note — perdiendo cada cliente que escribió ese día.
+
+El webhook es la única puerta por donde entran los mensajes. Sin ella, el
+bot no está apagado: está sordo.
+
+**El orden seguro, y no hay otro:**
+
+```
+1. Kommo probado con el número NUEVO          ← ya funciona
+2. Mueves el número bueno a Kommo
+3. Compruebas los DOS sentidos:
+      · te llega un mensaje de prueba (se ve en los Logs de Vercel)
+      · el bot contesta y al cliente le llega
+4. Dejas pasar un día con los dos webhooks vivos
+5. HASTA ENTONCES cancelas el viejo
+```
+
+El paso 4 no es exceso de cuidado: es el único momento en que puedes ver si
+algo falla con clientes reales **teniendo la vuelta atrás a cinco minutos**.
+Cancelado el viejo, la vuelta atrás deja de existir.
+
+**Dos webhooks a la vez no se estorban.** Meta manda el aviso a donde
+apunte el override; el otro simplemente deja de recibir. No hay mensajes
+duplicados ni cobro doble por tenerlos montados.
+
+**Y no confundas las dos cosas que se pueden cancelar:**
+
+| Qué cancelas | Qué pasa |
+|---|---|
+| El **webhook** en Meta (cambiar la URL) | El bot deja de recibir **al instante**. Se deshace en 1 minuto. |
+| La **suscripción a Dualhook** (dejar de pagar) | Se pierde el número como está montado hoy. **No se deshace solo.** |
+
+Cancela primero el webhook —que es reversible— y deja la suscripción para
+cuando lleves días tranquilos.
 
 ### Cómo volver atrás, mientras Dualhook siga vivo
 

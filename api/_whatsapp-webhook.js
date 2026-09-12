@@ -2032,6 +2032,18 @@ function procesa(crudo, firma, entorno) {
                   respuesta.agente = true;
                   respuesta.estadoAntes = estadoAntes;
                 }
+                /* ------------------------------------------------------------
+                   SE APUNTA DÓNDE SE ATORÓ — 11-sep-2026 (fase 4)
+                   ------------------------------------------------------------
+                   El motor avisa con `atorado` cuando se rinde y llama a una
+                   persona. Aquí se escribe, para que el defecto lo encuentre
+                   la producción y no alguien adivinando qué habrá escrito el
+                   cliente. Es una línea por conversación trabada, no por
+                   mensaje: `atorado` solo sale cuando ya se entregó. */
+                if (respuesta && respuesta.atorado) {
+                  console.log('[atorado] paso=' + respuesta.atorado.paso +
+                    ' · dijo=«' + respuesta.atorado.dijo + '»');
+                }
                 return respuesta;
               }
               return {
@@ -2413,6 +2425,28 @@ function procesa(crudo, firma, entorno) {
             /* Para poder amarrar la respuesta del dueño con el cliente
                en cuanto Meta nos diga el id del mensaje. */
             sobreCliente: m.from,
+            /* ------------------------------------------------------------
+               EL DESTINO QUE EL CATÁLOGO NO CONOCE — 11-sep-2026 (fase 4)
+               ------------------------------------------------------------
+               Cuando el lugar no está en el catálogo, el ticket sale sin el
+               renglón del Excel y el dueño pone el precio a mano. Eso está
+               bien: lo que no estaba bien es que no quedara escrito en
+               ningún lado.
+
+               Un destino que se pide seguido y no está en la tabla es una
+               línea nueva del Excel esperando a que alguien se entere. Y
+               uno que aparece aquí por estar MAL ESCRITO —el catálogo no lo
+               reconoció aunque sí lo tenga— es un defecto de los caros: se
+               cotiza a mano un viaje que tenía precio.
+               ------------------------------------------------------------ */
+            ...(function () {
+              try {
+                if (s.destino && !destinos.buscaDestino({ direccion: s.destino })) {
+                  console.log('[sin-catalogo] destino=«' + String(s.destino).slice(0, 60) + '»');
+                }
+              } catch (e) { /* el registro nunca detiene un ticket */ }
+              return {};
+            })(),
             texto: tickets.armaTicket({
               cliente: m.from,
               origen: s.origen, destino: s.destino,

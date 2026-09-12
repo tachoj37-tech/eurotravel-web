@@ -497,8 +497,36 @@ async function leeTicket(id) {
    ------------------------------------------------------------
    Un renglón por cada «va» o número suyo (`_precios-aprendidos.js`
    arma el renglón). Se leen los últimos del mismo viaje para el
-   ticket del siguiente cliente. Si la tabla no existe, se falla en
-   silencio: el ticket sale sin historial, que es lo que había.
+   ticket del siguiente cliente.
+
+   ------------------------------------------------------------
+   FALLAR EN SILENCIO AQUÍ SALE CARO — 11-sep-2026
+   ------------------------------------------------------------
+   Esto decía «si la tabla no existe, se falla en silencio: el ticket
+   sale sin historial, que es lo que había». Suena razonable para LEER.
+   Para ESCRIBIR no: lo que se pierde no es un adorno del ticket, es el
+   precio que el dueño acaba de dictar — el único registro de cuánto
+   cobró ese viaje.
+
+   Y se comprobó que estaba pasando: el 11-sep-2026 se revisó la cuenta
+   de Supabase y **la tabla `precios` no existe**. Meses de precios
+   dictados que no se guardaron en ningún lado, sin una sola línea en
+   ningún log, porque este `.catch` se los tragaba y el de quien llama
+   se tragaba lo que quedara.
+
+   Ahora se avisa. No se lanza el error —un fallo de la base no puede
+   tumbar la respuesta al cliente, que es lo que de verdad importa— pero
+   queda escrito qué pasó y CON QUÉ VIAJE, para poder reponerlo a mano.
+
+   OJO CON CÓMO SE COMPRUEBA: `pide` no lanza nunca. Cuando algo sale
+   mal escribe su propio `[almacen] …` y devuelve `null`. Así que esto
+   se mira por el VALOR DEVUELTO, no con un try/catch — un try/catch
+   aquí no se dispararía jamás y daría por bueno cada fallo. (El primer
+   intento de este mismo arreglo, el 11-sep-2026, tenía justo ese error.)
+
+   Y por eso la línea de `[almacen]` no bastaba: dice que un POST falló,
+   pero no qué precio era. Con el renglón completo en el log, el precio
+   se repone; sin él, se perdió.
    ------------------------------------------------------------ */
 async function guardaPrecio(renglon) {
   if (!renglon || !renglon.clave || !(renglon.total > 0)) return false;
@@ -507,8 +535,12 @@ async function guardaPrecio(renglon) {
     cabeceras: { 'Prefer': 'return=minimal' },
     cuerpo: renglon,
     sinRespuesta: true
-  }).catch(function () { return null; });
-  return !!r;
+  });
+  if (r) return true;
+  /* El renglón entero: si la base no lo guardó, esto es lo único que
+     queda de ese precio. */
+  console.error('[precio-perdido] no se guardó · ' + JSON.stringify(renglon));
+  return false;
 }
 
 async function preciosParecidos(clave, cuantos) {

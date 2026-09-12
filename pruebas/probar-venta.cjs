@@ -755,11 +755,19 @@ okQue('«somos 16» sigue por el camino normal',
    cuida sigue siendo lo mismo: que «hola» NO se lea como un viaje
    soltado de un jalón, y que termine preguntando el destino. */
 {
-  const saludo = bot.respuestaA('hola', null, HOY).texto;
-  okQue('y «hola» no se lee como viaje', /a dónde van/i.test(saludo));
+  /* CAMBIÓ LA MEDIDA, NO LA REGLA — 12-sep-2026. Esto buscaba la frase
+     «a dónde van», y el dueño mandó quitarla: el saludo ahora pregunta
+     «¿Qué necesitas: cotizar un viaje o hablar con alguien?» y ofrece los
+     dos botones. Lo que esta prueba cuida es lo mismo de siempre —que
+     «hola» NO se lea como un viaje soltado de un jalón— así que ahora se
+     comprueba por el COMPORTAMIENTO y no por una frase: sin cotización,
+     esperando el viaje, y preguntando algo. */
+  const r = bot.respuestaA('hola', null, HOY);
+  okQue('y «hola» no se lee como viaje',
+    !r.cotiza && r.estado && r.estado.paso === 'destino' && /\?/.test(r.texto));
   okQue('  y dice a qué se dedica, para el que llegó de un anuncio',
-    /autobuses|camionetas/i.test(saludo));
-  okQue('  sin sonar a centralita', !/aquí \*?eurotravel/i.test(saludo));
+    /autobuses|camionetas/i.test(r.texto));
+  okQue('  sin sonar a centralita', !/aquí \*?eurotravel/i.test(r.texto));
 }
 
 /* ============================================================ */

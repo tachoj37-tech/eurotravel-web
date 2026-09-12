@@ -4479,7 +4479,7 @@ async function mandaSeguimientos(ahora) {
        Meta») siempre hay algo que hacer: texto libre si la ventana está
        abierta, plantilla si la hay, y si no, el toque se lo lleva el dueño
        (`alDueno`). Solo queda sin envío si no hay texto para ese toque. */
-    const envio = envioDelToque(f, d);
+    const envio = await envioDelToque(f, d);
     if (!envio) { cuenta.sinPlantilla++; continue; }
 
     /* La marca es condicional (B9/C13): solo gana la corrida que vio
@@ -4530,10 +4530,33 @@ async function mandaSeguimientos(ahora) {
    las 22 h cae ahí a propósito); si no, la plantilla aprobada cuyo nombre
    está en WHATSAPP_PLANTILLA_TOQUE1/2/3; y sin plantilla, `{ alDueno }`:
    el dueño le escribe desde su teléfono. */
-function envioDelToque(f, d) {
+async function envioDelToque(f, d) {
   const base = { numeroDeOrigen: process.env.WHATSAPP_PHONE_ID, para: f.cliente };
   if (d.ventanaAbierta) {
     const v = f.viajeDatos || {};
+    /* ------------------------------------------------------------
+       LA IA LO ESCRIBE PARA ESE VIAJE — 12-sep-2026
+       ------------------------------------------------------------
+       Dictado del dueño: «que la IA redacte los mensajes de cada 22
+       horas, cada 3 días y cada 7». Las diez frases fijas de cada toque
+       siguen aquí abajo y siguen siendo la red: si la IA no contesta, se
+       tarda, o dice algo que no pasa el candado de `sanea` —cualquier
+       cantidad de dinero, por ejemplo— va la de siempre.
+
+       Nunca se queda sin mandar nada por culpa de la IA. Es la misma
+       regla de todo el bot: la IA ayuda, el guion responde.
+       ------------------------------------------------------------ */
+    const suyo = await agente.redactaSeguimiento({
+      toque: d.toque, cliente: f.cliente,
+      viaje: {
+        destino: v.destino || null,
+        salida: v.salida ? tickets.comoSeDice(v.salida) : null,
+        gente: v.gente || null,
+        unidad: v.unidadNombre || v.unidad || null
+      }
+    }).catch(function () { return null; });
+    if (suyo) return Object.assign(base, { texto: suyo });
+
     const texto = recordatorios.recordatorio(d.toque, {
       cliente: f.cliente,
       /* Con el instante del precio: si el mismo cliente cotiza otro
@@ -4546,7 +4569,30 @@ function envioDelToque(f, d) {
     });
     return texto ? Object.assign(base, { texto: texto }) : null;
   }
-  const nombre = process.env['WHATSAPP_PLANTILLA_TOQUE' + d.toque];
+  /* ------------------------------------------------------------
+     LAS PLANTILLAS DE META SE PAGAN, Y AQUÍ ESTÁN APAGADAS
+     ------------------------------------------------------------
+     Dictado del dueño el 12-sep-2026: «solo úsalas si puedes usarlas
+     sin Meta, Meta cobra carísimo».
+
+     Hasta hoy el único freno era que la variable del nombre no
+     estuviera puesta. Eso no es un freno: es un descuido que funciona.
+     Basta que alguien configure `WHATSAPP_PLANTILLA_TOQUE1` —o que
+     siga puesta de las pruebas de septiembre— para que se empiece a
+     pagar por cada seguimiento, sin que nadie lo decida y sin que
+     aparezca en ningún lado hasta que llegue la factura.
+
+     Ahora hacen falta DOS cosas: la plantilla y encender
+     `PLANTILLAS_DE_PAGO=1` a propósito. Apagado —que es lo de hoy— el
+     toque fuera de la ventana de 24 h se le avisa al dueño y él
+     escribe desde su teléfono, que no paga ventana.
+
+     El camino de la plantilla NO se borra: sigue probado y listo para
+     el día que él decida que le conviene. Lo que cambia es que ese día
+     tiene que decirlo.
+     ------------------------------------------------------------ */
+  const dePago = String(process.env.PLANTILLAS_DE_PAGO || '').trim() === '1';
+  const nombre = dePago ? process.env['WHATSAPP_PLANTILLA_TOQUE' + d.toque] : null;
   if (!nombre) {
     /* Sin plantilla (lo normal desde el 8-sep-2026: «quitamos lo de Meta»):
        el toque no se le manda al cliente; se le avisa al dueño para que le
