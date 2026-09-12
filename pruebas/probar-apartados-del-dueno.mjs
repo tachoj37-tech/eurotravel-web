@@ -79,7 +79,7 @@ let n = 0;
 const firma = (c) => 'sha256=' + crypto.createHmac('sha256', SECRETO).update(c).digest('hex');
 const mismo = (a, b) => String(a || '').replace(/\D/g, '').slice(-10) === String(b || '').replace(/\D/g, '').slice(-10);
 function textos(para) {
-  return mandados.filter((m) => mismo(m.to, para)).map((m) => (m.text && m.text.body) || (m.image && m.image.caption) || '');
+  return mandados.filter((m) => mismo(m.to, para)).map((m) => (m.text && m.text.body) || (m.interactive && m.interactive.body && m.interactive.body.text) || (m.image && m.image.caption) || '');
 }
 async function dice(texto, de) {
   n++;

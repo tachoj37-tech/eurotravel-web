@@ -89,7 +89,7 @@ async function aviso(mensajes) {
 }
 const dice = (texto, de) => aviso([{ from: de, type: 'text', text: { body: texto } }]);
 function mismo(a, b) { return String(a || '').replace(/\D/g, '').slice(-10) === String(b || '').replace(/\D/g, '').slice(-10); }
-function textos(para) { return mandados.filter((m) => mismo(m.to, para)).map((m) => (m.text && m.text.body) || (m.image && m.image.caption) || ''); }
+function textos(para) { return mandados.filter((m) => mismo(m.to, para)).map((m) => (m.text && m.text.body) || (m.interactive && m.interactive.body && m.interactive.body.text) || (m.image && m.image.caption) || ''); }
 function limpia() { webhook.olvidaTodo(); agente.olvidaTodo(); mandados = []; sistemasVistos = []; }
 const DUENO = process.env.DUENO_WHATSAPP;
 

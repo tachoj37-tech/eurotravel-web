@@ -156,7 +156,7 @@ function mismo(a, b) {
 function textos(para) {
   return mandados
     .filter(function (m) { return !para || mismo(m.to, para); })
-    .map(function (m) { return (m.text && m.text.body) || (m.image && m.image.caption) || ''; });
+    .map(function (m) { return (m.text && m.text.body) || (m.interactive && m.interactive.body && m.interactive.body.text) || (m.image && m.image.caption) || ''; });
 }
 
 /* Lo que hace Vercel cuando recicla: la memoria del proceso se va, la
@@ -768,7 +768,7 @@ titulo('el modo espía');
   await dice(C, 'a chapala el 12 de septiembre somos 12, salimos de guadalajara');
 
   const i = mandados.findIndex(function (m) {
-    return mismo(m.to, DUENO) && /👁/.test((m.text && m.text.body) || '');
+    return mismo(m.to, DUENO) && /👁/.test((m.text && m.text.body) || (m.interactive && m.interactive.body && m.interactive.body.text) || '');
   });
   okQue('hay un espejo que responder', i !== -1);
 

@@ -4777,7 +4777,12 @@ function respuestaBase(mensaje, estado, hoy) {
         'y seguro de viajero — no se le suma nada después.\n\n' +
         '¿Contra qué lo estás comparando? Te ayudo a ver si de verdad te sale mejor.',
       pasa: false,
-      opciones: ['Contra otra empresa', 'Contra irnos en coche', 'Hablar con alguien']
+      /* «Contra irnos en coche» eran 21 caracteres y el tope de WhatsApp
+         son 20: ese mensaje habría perdido los TRES botones, porque Meta
+         tira el mensaje entero cuando uno se pasa. Lo cazó
+         `probar-botones-whatsapp.cjs` el 12-sep-2026, el día que los
+         botones empezaron a salir de verdad. */
+      opciones: ['Contra otra empresa', 'Contra ir en coche', 'Hablar con alguien']
     };
   }
 

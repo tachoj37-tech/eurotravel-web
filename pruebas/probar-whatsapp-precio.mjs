@@ -214,7 +214,7 @@ function mismo(a, b) {
 function textos(para) {
   return mandados
     .filter(function (m) { return !para || mismo(m.to, para); })
-    .map(function (m) { return (m.text && m.text.body) || ''; });
+    .map(function (m) { return (m.text && m.text.body) || (m.interactive && m.interactive.body && m.interactive.body.text) || ''; });
 }
 
 const CLIENTE = '5213399998888';

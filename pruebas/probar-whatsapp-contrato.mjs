@@ -138,7 +138,7 @@ function mismo(a, b) {
 function textos(para) {
   return mandados
     .filter(function (m) { return !para || mismo(m.to, para); })
-    .map(function (m) { return (m.text && m.text.body) || (m.image && m.image.caption) || ''; });
+    .map(function (m) { return (m.text && m.text.body) || (m.interactive && m.interactive.body && m.interactive.body.text) || (m.image && m.image.caption) || ''; });
 }
 
 const DUENO = '5213311112222';

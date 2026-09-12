@@ -87,7 +87,7 @@ async function manda(mensaje) {
 const dice = (texto, de) => manda({ from: de, type: 'text', text: { body: texto } });
 const contesta = (ticket, texto) => manda({ from: DUENO, type: 'text', text: { body: texto }, context: { id: ticket } });
 function mismo(a, b) { return String(a || '').replace(/\D/g, '').slice(-10) === String(b || '').replace(/\D/g, '').slice(-10); }
-function textos(para) { return mandados.filter((m) => mismo(m.to, para)).map((m) => (m.text && m.text.body) || (m.image && m.image.caption) || ''); }
+function textos(para) { return mandados.filter((m) => mismo(m.to, para)).map((m) => (m.text && m.text.body) || (m.interactive && m.interactive.body && m.interactive.body.text) || (m.image && m.image.caption) || ''); }
 function ultimoAlDueno() { let idx = -1; mandados.forEach(function (m, i) { if (mismo(m.to, DUENO)) idx = i; }); return idx < 0 ? null : 'wamid.s' + (idx + 1); }
 function limpia() { webhook.olvidaTodo(); agente.olvidaTodo(); tickets.olvidaTodo(); mandados = []; upserts = []; llamadasALaIA = 0; }
 const DUENO = process.env.DUENO_WHATSAPP;

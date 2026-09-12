@@ -98,7 +98,7 @@ async function manda(mensaje) {
 const dice = (texto, de) => manda({ from: de, text: { body: texto } });
 const contesta = (texto, citaId) => manda({ from: process.env.DUENO_WHATSAPP, text: { body: texto }, context: citaId ? { id: citaId } : undefined });
 function mismo(a, b) { return String(a || '').replace(/\D/g, '').slice(-10) === String(b || '').replace(/\D/g, '').slice(-10); }
-function textos(para) { return mandados.filter((m) => mismo(m.to, para)).map((m) => (m.text && m.text.body) || ''); }
+function textos(para) { return mandados.filter((m) => mismo(m.to, para)).map((m) => (m.text && m.text.body) || (m.interactive && m.interactive.body && m.interactive.body.text) || ''); }
 function idDelUltimoTicket() {
   let idx = -1;
   mandados.forEach(function (m, i) { if (mismo(m.to, process.env.DUENO_WHATSAPP)) idx = i; });

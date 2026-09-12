@@ -2187,6 +2187,23 @@ function procesa(crudo, firma, entorno) {
           numeroDeOrigen: deQuien,
           para: m.from,
           texto: texto2,
+          /* ------------------------------------------------------------
+             LOS BOTONES LLEGAN HASTA EL ENVÍO — 12-sep-2026
+             ------------------------------------------------------------
+             El bot lleva meses devolviendo `opciones` en cada respuesta y
+             se quedaban AQUÍ: no se copiaban al envío, así que WhatsApp
+             nunca los vio. El cliente leía «¿Cuál de esos te late?» sin
+             ver ninguno, y sólo la página los pintaba.
+
+             Se descubrió al poner los dos botones del saludo: en WhatsApp
+             el mensaje quedaba en «¿Qué necesitas?» a secas.
+
+             Meta los manda como `interactive`, gratis dentro de la ventana
+             de 24 h, y `whatsapp.mjs` se encarga de los tres límites —tres
+             botones, veinte caracteres, 1024 el cuerpo— y de caer a texto
+             normal si algo no cabe.
+             ------------------------------------------------------------ */
+          opciones: Array.isArray(r.opciones) ? r.opciones : [],
           pasaAPersona: r.pasa,
           /* ------------------------------------------------------------
              EL PRECIO SE PIDE AFUERA

@@ -92,14 +92,14 @@ async function dice(texto, de) {
   if (!r || r.status !== 200) console.log('     ¡el webhook contestó ' + (r && r.status) + ' a «' + texto + '»!');
 }
 function mismo(a, b) { return String(a || '').replace(/\D/g, '').slice(-10) === String(b || '').replace(/\D/g, '').slice(-10); }
-function textos(para) { return mandados.filter((m) => mismo(m.to, para)).map((m) => (m.text && m.text.body) || ''); }
+function textos(para) { return mandados.filter((m) => mismo(m.to, para)).map((m) => (m.text && m.text.body) || (m.interactive && m.interactive.body && m.interactive.body.text) || ''); }
 function limpia() { webhook.olvidaTodo(); agente.olvidaTodo(); tk.olvidaTodo(); mandados = []; payloads = []; llamadasALaIA = 0; }
 /* El id del último ticket que el bot le mandó al dueño sobre ESE cliente,
    para poder contestarlo citándolo, como en el teléfono. */
 function idDelUltimoTicketDe(cliente) {
   let idx = -1;
   mandados.forEach(function (m, i) {
-    if (mismo(m.to, DUENO) && /Precio por confirmar/i.test((m.text && m.text.body) || '') &&
+    if (mismo(m.to, DUENO) && /Precio por confirmar/i.test((m.text && m.text.body) || (m.interactive && m.interactive.body && m.interactive.body.text) || '') &&
         (m.text.body.indexOf(String(cliente).slice(-10)) >= 0)) idx = i;
   });
   return idx >= 0 ? 'wamid.s' + (idx + 1) : null;
@@ -215,7 +215,7 @@ titulo('R3 · el vendedor pone $23,000 para 30: el cliente recibe $23,000 y ning
   };
   for (const t of ['vamos a mazatlán', 'el 10 de octubre', 'regresamos el 12', 'somos 30', 'el neobus', 'sí', 'solo nos llevan y traen']) await dice(t, C);
   /* El vendedor contesta el ticket con el total. */
-  let idx = -1; mandados.forEach((m, i) => { if (mismo(m.to, DUENO) && /Precio por confirmar|precio/i.test((m.text && m.text.body) || '')) idx = i; });
+  let idx = -1; mandados.forEach((m, i) => { if (mismo(m.to, DUENO) && /Precio por confirmar|precio/i.test((m.text && m.text.body) || (m.interactive && m.interactive.body && m.interactive.body.text) || '')) idx = i; });
   const ticket = 'wamid.s' + (idx + 1);
   const antes = mandados.length;
   const va = JSON.stringify({ entry: [{ changes: [{ value: { metadata: { phone_number_id: '111' },
@@ -254,14 +254,14 @@ titulo('R9 · el precio lleva unidad + total + foto + apartado + CLABE; y la CLA
     return { respuesta: 'Va 🙌', datos: {}, accion: 'seguir' };
   };
   for (const t of ['vamos a tequila', 'el 20 de septiembre', 'sí, mismo día', 'somos 15', 'sí']) await dice(t, C);
-  let idx = -1; mandados.forEach((m, i) => { if (mismo(m.to, DUENO) && /Precio por confirmar/.test((m.text && m.text.body) || '')) idx = i; });
+  let idx = -1; mandados.forEach((m, i) => { if (mismo(m.to, DUENO) && /Precio por confirmar/.test((m.text && m.text.body) || (m.interactive && m.interactive.body && m.interactive.body.text) || '')) idx = i; });
   const ticket = 'wamid.s' + (idx + 1);
   const antes = mandados.length;
   const va = JSON.stringify({ entry: [{ changes: [{ value: { metadata: { phone_number_id: '111' },
     messages: [{ id: 'wamid.r9-va', from: DUENO, type: 'text', text: { body: 'va' }, context: { id: ticket } }] } }] }] });
   await atiende(new Request('https://x/api/whatsapp', { method: 'POST', body: va, headers: { 'x-hub-signature-256': firma(va) } }));
   const tras = mandados.slice(antes).filter((m) => mismo(m.to, C));
-  const textoPrecio = tras.map((m) => (m.text && m.text.body) || (m.image && m.image.caption) || '').join('\n');
+  const textoPrecio = tras.map((m) => (m.text && m.text.body) || (m.interactive && m.interactive.body && m.interactive.body.text) || (m.image && m.image.caption) || '').join('\n');
   okQue('con el «va» del vendedor el cliente recibe la unidad y el total', /Sprinter/.test(textoPrecio) && /\*Total: \$/.test(textoPrecio));
   okQue('  la foto de la unidad', tras.some((m) => m.image && /sprinter/i.test(m.image.link || '')));
   okQue('  el monto de apartado', /son \*\$[\d,]+\* de apartado/.test(textoPrecio));
@@ -309,7 +309,7 @@ titulo('R9 · el precio lleva unidad + total + foto + apartado + CLABE; y la CLA
     viajeDatos: { origen: 'Guadalajara', destino: 'Tequila', salida: '2026-09-20', regreso: '2026-09-20', gente: 15, unidad: 'Sprinter', recorridos: 0 } }, Date.now());
   const antes6 = mandados.length;
   await manda({ numeroDeOrigen: '111', para: S, pasaAPersona: false, escribio: '[prueba]', texto: 'Va, deposita cuando puedas y me mandas el comprobante 🙌' });
-  const t6 = mandados.slice(antes6).filter((m) => mismo(m.to, S)).map((m) => (m.text && m.text.body) || '').join('\n');
+  const t6 = mandados.slice(antes6).filter((m) => mismo(m.to, S)).map((m) => (m.text && m.text.body) || (m.interactive && m.interactive.body && m.interactive.body.text) || '').join('\n');
   okQue('  pero a quien NO la tiene sí se le anexa', t6.indexOf(CLABE) >= 0 && /de apartado/.test(t6));
   delete process.env.CLABE; delete process.env.CUENTA; delete process.env.DATOS_BANCARIOS;
 }
@@ -613,10 +613,10 @@ titulo('R13 · «¿Te mando fotos de alguno?» → «i6»: van las fotos del i6,
   ok('llegaron las 3 fotos del Irizar i6', fotos.length, 3);
   /* La descripción de la IA sí llega, pero DESPUÉS de las fotos, como remate. */
   const iFoto = desde.findIndex((m) => m.image);
-  const iTexto = desde.findIndex((m) => /muy cómodo para viajes largos/.test((m.text && m.text.body) || ''));
+  const iTexto = desde.findIndex((m) => /muy cómodo para viajes largos/.test((m.text && m.text.body) || (m.interactive && m.interactive.body && m.interactive.body.text) || ''));
   okQue('  la descripción de la IA va después de las fotos, como remate', iFoto >= 0 && iTexto > iFoto);
   ok('  el i6 quedó escogido', (webhook.charlaDe(C) || {}).unidadNombre, 'Irizar i6');
-  okQue('  y el remate no pregunta cuántos son', !/cu[aá]ntos (van|son)/i.test(desde.map((m) => (m.text && m.text.body) || '').join('\n')));
+  okQue('  y el remate no pregunta cuántos son', !/cu[aá]ntos (van|son)/i.test(desde.map((m) => (m.text && m.text.body) || (m.interactive && m.interactive.body && m.interactive.body.text) || '').join('\n')));
 }
 
 /* ============================================================ */
@@ -1186,9 +1186,9 @@ titulo('R32 · con el precio ya dado, la IA no vuelve a cotizar el mismo viaje')
   laIA = () => ({ respuesta: null, datos: {}, accion: 'cotizar' });
   const antes = mandados.length;
   await dice('órale, va', C);
-  const alDueno = mandados.slice(antes).filter((m) => mismo(m.to, DUENO)).map((m) => (m.text && m.text.body) || '');
+  const alDueno = mandados.slice(antes).filter((m) => mismo(m.to, DUENO)).map((m) => (m.text && m.text.body) || (m.interactive && m.interactive.body && m.interactive.body.text) || '');
   okQue('NO se manda un segundo «Precio por confirmar»', !alDueno.some((t) => /Precio por confirmar/.test(t)));
-  const alCliente = mandados.slice(antes).filter((m) => mismo(m.to, C)).map((m) => (m.text && m.text.body) || '').join('\n');
+  const alCliente = mandados.slice(antes).filter((m) => mismo(m.to, C)).map((m) => (m.text && m.text.body) || (m.interactive && m.interactive.body && m.interactive.body.text) || '').join('\n');
   okQue('  y al cliente no se le promete una cotización que ya tiene', !/en un momento te paso tu precio/i.test(alCliente));
   /* Se le contesta la espera neutra, que cierra ofreciendo apartar. La
      CLABE NO se manda sola: la regla del dueño es que se repite cuando la
@@ -1211,7 +1211,7 @@ titulo('R33 · «¿y si somos 10?» es una pregunta, no un cambio: no vence el p
   await dice('y si somos 10?', C);
   okQue('el precio NO queda vencido', !(tk.fichaDe(C) || {}).precioVencido);
   okQue('  y no se pide otro precio al dueño',
-    !mandados.slice(antes).filter((m) => mismo(m.to, DUENO)).some((m) => /Precio por confirmar/.test((m.text && m.text.body) || '')));
+    !mandados.slice(antes).filter((m) => mismo(m.to, DUENO)).some((m) => /Precio por confirmar/.test((m.text && m.text.body) || (m.interactive && m.interactive.body && m.interactive.body.text) || '')));
   /* Y un cambio de verdad SÍ lo vence. */
   laIA = () => ({ respuesta: 'Va, 22 entonces.', datos: { gente: 22 }, accion: 'seguir' });
   await dice('ya somos 22', C);
@@ -1313,7 +1313,7 @@ titulo('R39 · una dirección de llegada no cambia el destino del viaje');
   ok('el destino de la ficha sigue siendo el del precio', ((tk.fichaDe(C) || {}).viajeDatos || {}).destino, 'Tequila');
   okQue('  el precio no queda vencido', !(tk.fichaDe(C) || {}).precioVencido);
   okQue('  y no se pide otro precio',
-    !mandados.slice(antes).filter((m) => mismo(m.to, DUENO)).some((m) => /Precio por confirmar/.test((m.text && m.text.body) || '')));
+    !mandados.slice(antes).filter((m) => mismo(m.to, DUENO)).some((m) => /Precio por confirmar/.test((m.text && m.text.body) || (m.interactive && m.interactive.body && m.interactive.body.text) || '')));
 }
 
 titulo('R40 · con el contrato ya mandado, no se le ofrece apartar otra vez');
@@ -1526,7 +1526,7 @@ titulo('R50 · una segunda cotización no hereda los datos de la primera (10-sep
     datos: { destino: 'Puerto Vallarta', salida: '2026-09-15', regreso: '2026-09-20' }, accion: 'seguir' });
   const antes = mandados.length;
   await dice('Buenas noches, quiero hacer una cotización a Vallarta del 15 de septiembre al 20', C);
-  const alDueno = mandados.slice(antes).filter((m) => mismo(m.to, DUENO)).map((m) => (m.text && m.text.body) || '').join('\n');
+  const alDueno = mandados.slice(antes).filter((m) => mismo(m.to, DUENO)).map((m) => (m.text && m.text.body) || (m.interactive && m.interactive.body && m.interactive.body.text) || '').join('\n');
   okQue('NO se manda un ticket con los 40 y el i6 heredados',
     !/Irizar i6 · 40 pax/.test(alDueno));
   const ch = webhook.charlaDe(C) || {};
@@ -1566,7 +1566,7 @@ titulo('R51 · volver a una cotización anterior devuelve SU precio, y se puede 
   ok('  con SU precio', fDespues.total, 12000);
   ok('  y SU anticipo', fDespues.anticipo, 2500);
   okQue('  y NO se le pide otro precio al dueño',
-    !mandados.slice(antes).filter((m) => mismo(m.to, DUENO)).some((m) => /Precio por confirmar/.test((m.text && m.text.body) || '')));
+    !mandados.slice(antes).filter((m) => mismo(m.to, DUENO)).some((m) => /Precio por confirmar/.test((m.text && m.text.body) || (m.interactive && m.interactive.body && m.interactive.body.text) || '')));
   okQue('  el de Mazamitla no se pierde: queda archivado',
     (fDespues.viajes || []).some((v) => /Mazamitla/i.test(v.destino) && v.total === 14500));
   /* Y ahora sí se puede comprar: el apartado cobra el anticipo de Tapalpa. */

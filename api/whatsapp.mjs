@@ -4281,10 +4281,51 @@ async function manda(envio) {
                 envio.nombreDeArchivo ? { filename: envio.nombreDeArchivo } : {},
                 envio.texto ? { caption: envio.texto } : {})
             }
-          : {
-              type: 'text',
-              text: { preview_url: false, body: envio.texto }
-            })
+          /* ------------------------------------------------------------
+             LOS BOTONES, DE VERDAD — 12-sep-2026
+             ------------------------------------------------------------
+             El bot lleva meses devolviendo `opciones` en cada respuesta y
+             NUNCA habían salido por WhatsApp: se descartaban antes del
+             envío y solo las pintaba la página. O sea que el cliente de
+             WhatsApp leía «¿Cuál de esos te late?» sin ver ninguno.
+
+             Se descubrió al poner los dos botones del saludo: el mensaje
+             quedó en «¿Qué necesitas?» a secas, que sin botones es peor
+             que la versión de antes.
+
+             Meta los manda como `interactive` de tipo `button`, y son
+             GRATIS dentro de la ventana de 24 h — igual que el texto.
+
+             SUS TRES LÍMITES, y los tres se respetan aquí porque Meta
+             RECHAZA el mensaje entero si alguno se pasa (y entonces el
+             cliente no recibe nada, que es lo peor que puede pasar):
+               · tres botones como máximo
+               · veinte caracteres por botón
+               · 1024 el cuerpo
+
+             Si algo no cabe, se manda como texto de siempre. Nunca se
+             deja de mandar: un botón es un adorno, el mensaje no.
+             ------------------------------------------------------------ */
+          : (function () {
+              const ops = Array.isArray(envio.opciones) ? envio.opciones
+                .map(function (o) { return String(o || '').trim(); })
+                .filter(function (o) { return o && o.length <= 20; }) : [];
+              const cabe = ops.length >= 1 && ops.length <= 3 &&
+                String(envio.texto || '').length <= 1024;
+              if (!cabe) return { type: 'text', text: { preview_url: false, body: envio.texto } };
+              return {
+                type: 'interactive',
+                interactive: {
+                  type: 'button',
+                  body: { text: envio.texto },
+                  action: {
+                    buttons: ops.map(function (o, i) {
+                      return { type: 'reply', reply: { id: 'op' + (i + 1), title: o } };
+                    })
+                  }
+                }
+              };
+            })())
       })
     });
     if (!r.ok) {

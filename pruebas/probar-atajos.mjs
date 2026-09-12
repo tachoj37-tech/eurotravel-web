@@ -73,10 +73,10 @@ async function escribe(texto) {
   await atiende(new Request('https://x/api/whatsapp', { method: 'POST', body: c, headers: { 'x-hub-signature-256': firma(c) } }));
   return {
     alCliente: mandados.filter((m) => mismo(m.to, C)),
-    aMi: mandados.filter((m) => mismo(m.to, DUENO)).map((m) => (m.text && m.text.body) || '')
+    aMi: mandados.filter((m) => mismo(m.to, DUENO)).map((m) => (m.text && m.text.body) || (m.interactive && m.interactive.body && m.interactive.body.text) || '')
   };
 }
-const textoDe = (ms) => ms.map((m) => (m.text && m.text.body) || '').join('\n');
+const textoDe = (ms) => ms.map((m) => (m.text && m.text.body) || (m.interactive && m.interactive.body && m.interactive.body.text) || '').join('\n');
 const fotosDe = (ms) => ms.filter((m) => m.image && m.image.link).map((m) => m.image.link);
 
 /* Un cliente con su viaje ya armado y un Irizar i6S escogido. */

@@ -106,7 +106,7 @@ async function dice(texto, de) {
   if (!r || r.status !== 200) console.log('     ¡el webhook contestó ' + (r && r.status) + ' a «' + texto + '»: ' + (r ? await r.text() : '') + '!');
 }
 function mismo(a, b) { return String(a || '').replace(/\D/g, '').slice(-10) === String(b || '').replace(/\D/g, '').slice(-10); }
-function textos(para) { return mandados.filter((m) => mismo(m.to, para)).map((m) => (m.text && m.text.body) || ''); }
+function textos(para) { return mandados.filter((m) => mismo(m.to, para)).map((m) => (m.text && m.text.body) || (m.interactive && m.interactive.body && m.interactive.body.text) || ''); }
 const DUENO = process.env.DUENO_WHATSAPP;
 function limpia() { webhook.olvidaTodo(); agente.olvidaTodo(); mandados = []; llamadasALaIA = 0; sistemasVistos = []; }
 
@@ -305,7 +305,7 @@ titulo('después de la espera no se vuelve a pedir el precio (7-sep-2026)');
   ok('la segunda cotización manda su propio ticket', tickets(), 2);
   ok('  y la espera salió dos veces (una por viaje)', esperas(), 2);
   const idsDeTickets = [];
-  mandados.forEach(function (m, i) { if (mismo(m.to, DUENO) && /Precio por confirmar/.test((m.text && m.text.body) || '')) idsDeTickets.push('wamid.s' + (i + 1)); });
+  mandados.forEach(function (m, i) { if (mismo(m.to, DUENO) && /Precio por confirmar/.test((m.text && m.text.body) || (m.interactive && m.interactive.body && m.interactive.body.text) || '')) idsDeTickets.push('wamid.s' + (i + 1)); });
   const contexto3 = JSON.stringify(sistemasVistos[sistemasVistos.length - 1] || []);
   okQue('  al pedir el segundo precio, el de Vallarta NO se olvidó (queda como viaje anterior)', /VIAJES ANTERIORES[^"]*Vallarta/.test(contexto3) || /PRECIO YA PEDIDO[^"]*Vallarta/.test(contexto3));
 

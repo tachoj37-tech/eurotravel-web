@@ -92,7 +92,7 @@ async function manda(cuerpo, opciones) {
   return atiende(new Request(url, { method: 'POST', body: cuerpo, headers: headers }));
 }
 function mismo(a, b) { return String(a || '').replace(/\D/g, '').slice(-10) === String(b || '').replace(/\D/g, '').slice(-10); }
-function textos(para) { return mandados.filter((m) => mismo(m.to, para)).map((m) => (m.text && m.text.body) || ''); }
+function textos(para) { return mandados.filter((m) => mismo(m.to, para)).map((m) => (m.text && m.text.body) || (m.interactive && m.interactive.body && m.interactive.body.text) || ''); }
 function limpia() { webhook.olvidaTodo(); llamadas = []; mandados = []; }
 const DUENO = process.env.DUENO_WHATSAPP;
 
