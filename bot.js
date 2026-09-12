@@ -4564,6 +4564,29 @@ function respuestaBase(mensaje, estado, hoy) {
   }
 
   /* ------------------------------------------------------------
+     CONSULTAR UNA COTIZACIÓN ANTERIOR ES PEDIR UNA PERSONA
+     ------------------------------------------------------------
+     Dictado del dueño el 12-sep-2026: «hablar con alguien o consultar
+     cotizaciones previas, porque es lo mismo, prácticamente».
+
+     Y le sale a cuenta por una razón que él no tenía que saber: el bot
+     NO recuerda los viejos viajes de un día para otro. Los archiva en
+     memoria, y en serverless esa memoria se recicla. Si el bot
+     intentara contestar «tu cotización fue de $19,000» acertaría por
+     unos minutos y después diría que no encuentra nada — al cliente
+     que ya le habían dado un precio.
+
+     El vendedor sí lo encuentra. Así que esto pasa derecho, y va ANTES
+     de cualquier intento de cotizar: quien dice «ya me cotizaron» no
+     quiere empezar de cero, que es justo lo que le pasaba hasta hoy.
+     ------------------------------------------------------------ */
+  if (/\b(cotizaci[oó]n|cotizaciones|presupuesto|precio)\s+(previa|previas|anterior|anteriores|pasada|pasadas|de antes)\b/.test(t) ||
+      /\b(ya|me)\s+(cotiz|me cotizaron|dieron precio)/.test(t) ||
+      /\bmi\s+cotizaci[oó]n\b|\bconsultar\s+cotiza/.test(t)) {
+    return PASA;
+  }
+
+  /* ------------------------------------------------------------
      «¿CÓMO TE PAGO?» — LA PREGUNTA QUE MÁS VALE DE TODAS
      ------------------------------------------------------------
      Desde el 3-sep-2026 el anticipo se paga por TRANSFERENCIA, no
@@ -5156,7 +5179,11 @@ function respuestaBase(mensaje, estado, hoy) {
          las pruebas no bailen— porque dos clientes que se comparan el
          chat no deben ver la misma frase calcada. */
       texto: saludo(VENDEDOR, mensaje) +
-        '\n\n¿A dónde van? Con eso te saco el precio.',
+        /* La segunda frase va PEGADA a la pregunta, no en su propio
+           renglón: el guion no manda mensajes de más de tres líneas y el
+           saludo ya usa dos. Lo caza `probar-conversacion.cjs`. */
+        '\n\n¿A dónde van? Y si ya cotizaste con nosotros, dale a ' +
+        '*Hablar con alguien* y ahí la vemos.',
       pasa: false,
       estado: { paso: 'destino' },
       /* ------------------------------------------------------------
@@ -5166,14 +5193,32 @@ function respuestaBase(mensaje, estado, hoy) {
          a escribir. Dictado del dueño: que pueda escoger.
 
            1 · empezar un viaje nuevo
-           2 · su cotización anterior — la pone el webhook, y SOLO si de
-               verdad hay una (ver abajo)
-           3 · hablar con una persona
+           2 · hablar con una persona — Y AHÍ MISMO, consultar una
+               cotización anterior
+
+         SON DOS BOTONES, NO TRES, y eso lo decidió el dueño el
+         12-sep-2026: «hablar con alguien o consultar cotizaciones
+         previas, porque es lo mismo, prácticamente».
+
+         Tenía razón, y de paso resolvió un problema que el diseño de
+         tres botones no podía resolver. El botón de «mi cotización
+         anterior» dependía de que el bot RECORDARA ese viaje, y los
+         viajes archivados viven en un `Map()` en memoria: en
+         serverless cada instancia tiene la suya y se pierde al
+         reciclarse. Ese botón habría funcionado por minutos y fallado
+         por días — y un botón que a veces no encuentra nada es peor
+         que no tenerlo.
+
+         Mandándolo a una persona NUNCA falla: si el bot todavía tiene
+         la ficha, se la pasa al vendedor; si ya la perdió, el vendedor
+         la busca. El cliente no se entera de la diferencia.
 
          El texto está recortado porque WhatsApp NO ENSEÑA botones de
-         más de 20 caracteres: «Hablar con una persona» son 22 y se
-         quedaría cortado o no saldría. Hay una prueba que vigila ese
-         tope para todas las opciones del bot.
+         más de 20 caracteres: «Hablar con una persona» son 22 y
+         «Hablar con alguien o consultar cotizaciones previas» son 49.
+         Lo que no cabe en el botón se dice en el MENSAJE, que sí tiene
+         espacio. Hay una prueba que vigila ese tope para todas las
+         opciones del bot.
 
          Y los tres los entiende el guion cuando el cliente los aprieta
          —hay una batería que le da de comer al bot cada botón que
