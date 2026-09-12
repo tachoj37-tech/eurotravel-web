@@ -971,6 +971,80 @@ const ARRANQUE_DE_ORIGEN = /^(?:s[ií]|claro|va|ok|bien|correcto|as[ií] es)[,;.
    —«gdl» → «Guadalajara»— y si no la hay, lo limpia y lo capitaliza. Es
    lo que hace el paso del origen, puesto aparte para que los demás
    caminos lo hagan igual y no cada uno a su modo. */
+/* ============================================================
+   LA ÚNICA PUERTA: ¿ESTO NOMBRA UN LUGAR? — 11-sep-2026
+   ============================================================
+   Hasta hoy, TRECE sitios distintos decidían esto, cada uno con su
+   propia mezcla de seis comprobaciones. Por eso el mismo hueco se tapó
+   cuatro veces en un día: se arreglaba donde salió y seguía abierto en
+   los otros doce.
+
+   La lista de lo que se ha colado como destino o como origen, toda del
+   10 y 11 de septiembre:
+
+     «Hoy Mismo»                      una fecha
+     «El Sabado»                      una fecha
+     «Un Fin de Semana»               una temporada
+     «a Dónde Todavía»                la pregunta
+     «Donde Me Recomiendas»           la pregunta
+     «Tequila Entonces»               el destino con su muletilla
+     «Pues Todavia No Se, Que Me…»    la frase entera
+     «Hidalgo 45»                     una dirección, como ciudad
+     «si esta bien»                   un asentimiento, como ciudad
+     «ida y vuelta»                   como ciudad
+     «gdl»                            sin normalizar a Guadalajara
+
+   De aquí en adelante hay DOS funciones y nadie decide por su cuenta:
+   `comoDestino` y `comoOrigen`. Las dos devuelven el nombre ya limpio,
+   o null. Agregar una regla nueva se hace UNA vez.
+   ============================================================ */
+
+/* Lo que ningún lugar puede ser, sea destino u origen. */
+function esUnLugar(texto) {
+  const bruto = String(texto || '').trim();
+  if (!bruto) return false;
+  const n = normaliza(bruto);
+  /* Las abreviaturas ganan al tope de letras: «pv» y «gdl» son lugares
+     de dos y tres letras, y son de lo más común. La excepción ya existía
+     en el paso del destino y se perdió al juntar las reglas aquí. */
+  if (esAliasDeDestino(bruto)) return true;
+  if (n.length < 3) return false;
+  /* «no sé», «todavía no»: está diciendo que NO tiene el dato. */
+  if (TODAVIA_NO_SABE.test(n)) return false;
+  /* «dónde» es la pregunta, no la respuesta. */
+  if (/^d[oó]nde\b/.test(n)) return false;
+  return true;
+}
+
+/* El destino, limpio y listo para guardar. null si no es un lugar.
+   Una DIRECCIÓN sí vale como destino —Google manda direcciones enteras
+   y el catálogo las reconoce—; lo que no vale es como origen. */
+function comoDestino(crudo) {
+  if (!esUnLugar(crudo)) return null;
+  const d = limpiaDestino(crudo);
+  const n = normaliza(d);
+  if (!n || n.length < 3) return null;
+  if (SOLO_ES_FECHA.test(n) || NO_ES_UN_LUGAR.test(n)) return null;
+  if (/^d[oó]nde\b/.test(n)) return null;
+  return d.slice(0, 120);
+}
+
+/* La ciudad de donde salen, normalizada. null si no es una ciudad.
+   Aquí SÍ se rechaza una dirección: el origen decide el recargo de
+   salida, y una calle no empata con ninguna zona. */
+function comoOrigen(crudo) {
+  if (!esUnLugar(crudo)) return null;
+  const bruto = String(crudo || '').trim();
+  const n = normaliza(bruto);
+  if (NO_ES_CIUDAD.test(n) || NO_ES_UN_LUGAR.test(n) || SOLO_ES_FECHA.test(n)) return null;
+  if (pareceDireccion(bruto)) return null;
+  const o = comoCiudad(bruto);
+  const limpio = normaliza(o);
+  if (!limpio || limpio.length < 3) return null;
+  if (NO_ES_UN_LUGAR.test(limpio) || SOLO_ES_FECHA.test(limpio)) return null;
+  return String(o).slice(0, 120);
+}
+
 function comoCiudad(texto) {
   return esAliasDeDestino(texto)
     ? ALIAS_DESTINO[claveDeAlias(texto)]
@@ -1554,7 +1628,7 @@ const NO_SE_MUEVEN = /\b(solo|nomas|nada mas|unicamente|puro) (nos |que nos )?(l
 /* Lo que empieza con «de» y NO es un lugar: «de ida y vuelta», «de
    regreso», «de un día». Sin esto, «de ida y vuelta» se guardaba como
    ciudad de origen (11-sep-2026). */
-const NO_ES_UN_LUGAR = /^(un fin de semana|fin de semana|un puente|puente|en semana santa|semana santa|vacaciones|ida|ida y vuelta|vuelta|regreso|un dia|dos dias|paso|paseo|dia|noche|ahi|aqui|alla)$/;
+const NO_ES_UN_LUGAR = /^(?:de\s+)?(un fin de semana|fin de semana|un puente|puente|en semana santa|semana santa|vacaciones|ida|ida y vuelta|vuelta|regreso|un dia|dos dias|paso|paseo|dia|noche|ahi|aqui|alla)$/;
 
 /* «Ida y vuelta el mismo día», dicho en el renglón de la SALIDA. A
    propósito más apretada que la del paso de regreso: aquí no entra
@@ -2079,10 +2153,10 @@ function absorbeLoDemas(e, crudo, hoy) {
       e.unidad = 'autobus'; e.unidadNombre = suya.name; e.unidadId = suya.id; algo = true;
     }
   }
-  if (l.destino && !e.destino) { e.destino = limpiaDestino(l.destino); algo = true; }
+  if (l.destino && !e.destino) { const d = comoDestino(l.destino); if (d) { e.destino = d; algo = true; } }
   /* Como ciudad, no como lo tecleó: «de gdl» quedaba en «gdl» y así
      viajaba al ticket y al contrato. */
-  if (l.origen && !e.origen && !pareceDireccion(l.origen)) { e.origen = comoCiudad(l.origen); algo = true; }
+  if (l.origen && !e.origen) { const o = comoOrigen(l.origen); if (o) { e.origen = o; algo = true; } }
   if (!algo) return null;
   return l.gente ? 'Son *' + l.gente + '*, anotado 👍'
     : l.destino ? '*' + e.destino + '*, va 📍'
@@ -2618,11 +2692,11 @@ function pasoDeCotizacion(t, crudo, estado, hoy) {
          ------------------------------------------------------------ */
       const noSeMueve = NO_SE_MUEVEN.test(t);
       if (otro.destino || otro.salida || otro.gente || otro.origen || noSeMueve) {
-        if (otro.destino && !e.destino) e.destino = otro.destino;
+        if (otro.destino && !e.destino) { const d = comoDestino(otro.destino); if (d) e.destino = d; }
         if (otro.salida && !e.salida) e.salida = otro.salida;
         if (otro.regreso && !e.regreso) e.regreso = otro.regreso;
         if (otro.gente) e.gente = otro.gente;
-        if (otro.origen && !e.origen && !pareceDireccion(otro.origen)) e.origen = comoCiudad(otro.origen);
+        if (otro.origen && !e.origen) { const o = comoOrigen(otro.origen); if (o) e.origen = o; }
         if (noSeMueve && e.recorridos === undefined) e.recorridos = 0;
         alSiguienteHueco(e);
         return siguiente(e, 'Anotado 👍');
@@ -2724,7 +2798,7 @@ function pasoDeCotizacion(t, crudo, estado, hoy) {
     if (leido.salida) e.salida = leido.salida;
     if (leido.regreso) e.regreso = leido.regreso;
     /* El origen no se pisa: si ya venía de antes, ése es el bueno. */
-    if (leido.origen && !e.origen && !pareceDireccion(leido.origen)) e.origen = leido.origen;
+    if (leido.origen && !e.origen) { const o = comoOrigen(leido.origen); if (o) e.origen = o; }
 
     if (!leido.destino && (leido.gente || leido.salida || leido.unidad)) {
       if (leido.gente) e.gente = leido.gente;
@@ -2780,29 +2854,21 @@ function pasoDeCotizacion(t, crudo, estado, hoy) {
        preguntar sin regañar. Un destino de verdad cabe en pocas
        palabras, y si trae más, el buscador lo encuentra adentro.
        ------------------------------------------------------------ */
+    /* Lo que el buscador halló dentro de la frase, y si no halló nada, lo
+       que escribió — pero las dos cosas pasan por la MISMA puerta. Y una
+       frase larga sin lugar adentro no es un destino: si trae más de
+       cinco palabras y el buscador no encontró nada, es una parrafada. */
     const palabras = normaliza(dicho).split(/\s+/).filter(Boolean).length;
-    /* Y una temporada tampoco: «para un fin de semana», «un puente», «en
-       semana santa». `destinoDeLaFrase` ya las frena, pero cuando no
-       encuentra lugar el paso se quedaba con lo que hubiera, y esas
-       frases son cortas —no las caza el tope de palabras— y no llevan un
-       «no sé». Se comprueba sobre lo ya limpio, que es donde «para un
-       fin de semana» queda en «un fin de semana» (11-sep-2026). */
-    const candidato = normaliza(limpiaDestino(dicho));
-    if (!leido.destino && (SOLO_ES_FECHA.test(candidato) || NO_ES_UN_LUGAR.test(candidato))) {
+    const suDestino = leido.destino
+      ? comoDestino(leido.destino)
+      : (palabras > 5 ? null : comoDestino(dicho));
+    if (!suDestino) {
       return {
         texto: '¿A qué ciudad o pueblo van? 📍 Con el nombre del lugar me arranco.',
         pasa: false, estado: e, opciones: [], noEntendio: true
       };
     }
-    if (!leido.destino && (palabras > 5 || TODAVIA_NO_SABE.test(normaliza(dicho)))) {
-      return {
-        texto: '¿A qué ciudad o pueblo van? 📍 Con el nombre del lugar me arranco.',
-        pasa: false, estado: e, opciones: [], noEntendio: true
-      };
-    }
-    e.destino = (leido.destino
-      ? limpiaDestino(leido.destino)
-      : limpiaDestino(dicho)).slice(0, 120);
+    e.destino = suDestino;
     /* ------------------------------------------------------------
        EL EXTRANJERO TAMBIÉN LO FRENA EL GUION
        ------------------------------------------------------------
@@ -2891,9 +2957,7 @@ function pasoDeCotizacion(t, crudo, estado, hoy) {
        quita la preposición: «de guadalajara» se guardaba con el «de»
        pegado y así salía impreso —«Salen de *de guadalajara*»— y así
        llegaba al vendedor. */
-    e.origen = esAliasDeDestino(dicho)
-      ? ALIAS_DESTINO[claveDeAlias(dicho)]
-      : limpiaOrigen(dicho).slice(0, 120);
+    e.origen = comoOrigen(dicho);
     /* Antes decía `e.salida ? 'confirmar' : 'salida'` y se saltaba el
        regreso. Ver la nota de `alSiguienteHueco`. */
     alSiguienteHueco(e);
@@ -4507,17 +4571,17 @@ function continuaCon(estado, datos, hoy) {
   let pego = false;
   if (datos.salida && !e.salida) { e.salida = datos.salida; pego = true; }
   if (datos.regreso && !e.regreso) { e.regreso = datos.regreso; pego = true; }
-  if (datos.destino && !e.destino) { e.destino = limpiaDestino(datos.destino); pego = true; }
+  if (datos.destino && !e.destino) { const d = comoDestino(datos.destino); if (d) { e.destino = d; pego = true; } }
   /* El guion tomó un destino que no parece destino —una abreviatura, un
      pedazo de frase— y la IA reconoció uno de verdad: gana la IA. Un
      cliente real escribió «a vta»; el guion guardó «Vta» y la IA leyó
      Puerto Vallarta, pero como el hueco «ya estaba lleno» no se corregía. */
   if (datos.destino && e.destino && destinoFlojo(e.destino) &&
       normaliza(limpiaDestino(datos.destino)) !== normaliza(e.destino)) {
-    e.destino = limpiaDestino(datos.destino); pego = true;
+    const mejor = comoDestino(datos.destino); if (mejor) { e.destino = mejor; pego = true; }
   }
   /* Una direccion no es una ciudad: ver `pareceDireccion` (11-sep-2026). */
-  if (datos.origen && !e.origen && !pareceDireccion(datos.origen)) { e.origen = datos.origen; pego = true; }
+  if (datos.origen && !e.origen) { const o = comoOrigen(datos.origen); if (o) { e.origen = o; pego = true; } }
   if (datos.gente && !e.gente) { e.gente = datos.gente; pego = true; }
   if (datos.unidad && !e.unidad) { e.unidad = datos.unidad; pego = true; }
   if (datos.ocasion && !e.ocasion) { e.ocasion = datos.ocasion; pego = true; }
@@ -4526,7 +4590,7 @@ function continuaCon(estado, datos, hoy) {
      salida), el nuevo manda. */
   if (e.paso === 'salida' && datos.salida) { e.salida = datos.salida; pego = true; }
   if (e.paso === 'regreso' && datos.regreso) { e.regreso = datos.regreso; pego = true; }
-  if (e.paso === 'destino' && datos.destino) { e.destino = limpiaDestino(datos.destino); pego = true; }
+  if (e.paso === 'destino' && datos.destino) { const d = comoDestino(datos.destino); if (d) { e.destino = d; pego = true; } }
   if (!pego) return null;
   if (e.regreso && e.salida && e.regreso < e.salida) e.regreso = null;
   alSiguienteHueco(e);
@@ -4668,8 +4732,8 @@ function aplicaEntendido(datos, hoy) {
      mejor que una comparación equivocada. */
   if (datos.ocasion) e.ocasion = datos.ocasion;
   if (datos.agencia) e.agencia = true;
-  if (datos.destino) e.destino = limpiaDestino(datos.destino);
-  if (datos.origen && !pareceDireccion(datos.origen)) e.origen = datos.origen;
+  { const d = datos.destino ? comoDestino(datos.destino) : null; if (d) e.destino = d; }
+  { const o = datos.origen ? comoOrigen(datos.origen) : null; if (o) e.origen = o; }
   if (datos.salida) e.salida = datos.salida;
   if (datos.regreso) e.regreso = datos.regreso;
 
@@ -4756,7 +4820,7 @@ function pegaDatos(estado, datos) {
   if (d.destino) {
     const limpio = limpiaDestino(d.destino);
     if (!e.destino || destinoFlojo(e.destino) || e.paso === 'destino' ||
-        normaliza(limpio) !== normaliza(e.destino)) e.destino = limpio;
+        normaliza(limpio) !== normaliza(e.destino)) { const d = comoDestino(limpio); if (d) e.destino = d; }
   }
   /* Una dirección no es una ciudad, y aquí es por donde entra la que lee
      la IA: «nos recogen en hidalgo 45» dejaba el origen en «Hidalgo 45»
@@ -4765,8 +4829,9 @@ function pegaDatos(estado, datos) {
     /* «Guadalajara norte», «zapopan», «gdl centro»: para cotizar es la
        ciudad; la zona y la colonia van al contrato, no aquí. */
     const o = normaliza(d.origen);
-    e.origen = /guadalajara|gdl|zapopan|tlaquepaque|tonala|tlajomulco|zona metropolitana/.test(o)
-      ? 'Guadalajara' : d.origen;
+    const suyo = /guadalajara|gdl|zapopan|tlaquepaque|tonala|tlajomulco|zona metropolitana/.test(o)
+      ? 'Guadalajara' : comoOrigen(d.origen);
+    if (suyo) e.origen = suyo;
   }
   if (d.salida) e.salida = d.salida;
   if (d.regreso) e.regreso = d.regreso;
@@ -4967,7 +5032,7 @@ module.exports = {
   /* Para probar la tolerancia a faltas sin pasar por todo el bot. */
   esLaPalabra, fonetica, distancia,
   normaliza, cuantaGente, unidadPara, fechaDe, fechaEnPalabras, hoyISO, mensajeDeTodosLosAutobuses,
-  esDelExtranjero, esSoloIda,
+  esDelExtranjero, esSoloIda, comoDestino, comoOrigen, esUnLugar,
   /* `pregunta` y `diasEntre` se exportan para poder vigilarlos desde las
      pruebas: que ninguna opción se pase de los topes de WhatsApp —3
      botones de 20 caracteres o 10 filas de 24— y que los días se cuenten

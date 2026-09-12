@@ -91,7 +91,12 @@ titulo('de «hola» al precio, sin ayuda');
   okQue('al final pide el precio', !!ultimo.cotiza);
   okQue('  y dice qué se cotizó, para poder repetírselo', !!ultimo.resumen);
   ok('  con el destino que dijo', ultimo.cotiza && ultimo.cotiza.destino.direccion, 'Chapala');
-  ok('  el origen que dijo', ultimo.cotiza && ultimo.cotiza.origen.direccion, 'guadalajara');
+  /* CAMBIÓ DE LADO EL 11-sep-2026: esperaba «guadalajara» en minúsculas,
+     o sea el texto crudo que tecleó el cliente. Ahora el origen pasa por
+     `comoOrigen`, que lo devuelve como ciudad —«Guadalajara»—, y ése es
+     el que viaja al ticket, al contrato y a la llave de los precios
+     aprendidos. La aserción daba por bueno lo que había que arreglar. */
+  ok('  el origen que dijo, ya como ciudad', ultimo.cotiza && ultimo.cotiza.origen.direccion, 'Guadalajara');
   ok('  y las dos fechas', [ultimo.cotiza.salida, ultimo.cotiza.regreso],
     ['2026-09-12', '2026-09-14']);
 }
