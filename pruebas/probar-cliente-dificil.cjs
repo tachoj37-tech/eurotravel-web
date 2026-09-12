@@ -307,5 +307,43 @@ titulo('el viaje no llega a confirmar sin decir en qué se va');
   ok('con 45 no se escoge solo', !corre(['a tequila', 'somos 45', 'sabado 19', 'mismo dia']).estado.unidad);
 }
 
+titulo('lo que salió con la IA apagada (corrida del 11-sep por la noche)');
+{
+  /* El tope diario de la API se agotó a media corrida, así que 240
+     mensajes se contestaron SOLO con el guion. Fue un regalo: es
+     exactamente el escenario «qué pasa el día que el modelo falle», y
+     ahí salieron tres cosas más. */
+
+  /* 1 · «dónde» no es un lugar, es la pregunta. */
+  const comoDestino = (t) => (conv.respuestaA(t, null, HOY).estado || {}).destino;
+  for (const t of ['no sé a dónde todavía', 'todavia no se a donde',
+    'a donde me recomiendas', 'a donde van ustedes']) {
+    ok('«' + t + '» no es destino', !comoDestino(t));
+  }
+  ok('pero «a chapala» sí', comoDestino('a chapala') === 'Chapala');
+  ok('y «quiero ir a vallarta el 20» también', comoDestino('quiero ir a vallarta el 20') === 'Puerto Vallarta');
+
+  /* 2 · «quiero un camión» tiene que dejar memoria. Sin esto el mensaje
+     siguiente empezaba de cero: el cliente decía «el 20 de diciembre» y
+     el bot contestaba «déjame checarte eso bien tantito». Y es la regla
+     que el dueño dictó en mayúsculas: si dice camión, eso manda. */
+  const camion = conv.respuestaA('quiero un camion', null, HOY);
+  ok('«quiero un camión» deja el camión anotado', (camion.estado || {}).unidad === 'autobus');
+  const van = conv.respuestaA('ocupo una camioneta', null, HOY);
+  ok('«ocupo una camioneta» deja la Sprinter', (van.estado || {}).unidad === 'sprinter');
+
+  /* 3 · La conversación entera, que antes se perdía en el primer
+     mensaje, ahora llega completa. */
+  const r = corre(['quiero un camion', 'el 20 de diciembre', 'no sé a dónde todavía',
+    'a mazatlán', 'el i6s', 'de gdl', 'regresamos el 23', 'no nos movemos']);
+  ok('el camión se conservó desde el primer mensaje', r.estado.unidadNombre === 'Irizar i6S');
+  ok('  la fecha dicha antes del destino también', r.estado.salida === '2026-12-20');
+  ok('  el destino', r.estado.destino === 'Mazatlán');
+  ok('  el regreso', r.estado.regreso === '2026-12-23');
+  ok('  el origen, y como ciudad', r.estado.origen === 'Guadalajara');
+  ok('  los recorridos', r.estado.recorridos === 0);
+  ok('  y llega a confirmar', r.estado.paso === 'confirmar');
+}
+
 console.log('\n' + buenas + ' buenas, ' + malas + ' malas');
 process.exit(malas ? 1 : 0);

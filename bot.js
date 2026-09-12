@@ -1469,6 +1469,20 @@ function destinoDeLaFrase(crudo) {
      tumbar un destino que solo empiece con una de estas palabras.
      ------------------------------------------------------------ */
   if (SOLO_ES_FECHA.test(normaliza(d))) return null;
+  /* ------------------------------------------------------------
+     «DÓNDE» NO ES UN LUGAR, ES LA PREGUNTA
+     ------------------------------------------------------------
+     Corrida del 11-sep-2026, con la IA apagada: «no sé a dónde
+     todavía» → «Creo que entendí: *a Dónde Todavía*» y el viaje se
+     quedó con ese destino. Igual «a dónde me recomiendas».
+
+     El «a …» de esta función es justo el que arrastra la pregunta. Y
+     quien escribe eso está diciendo que NO sabe a dónde va, que es lo
+     contrario de un destino.
+     ------------------------------------------------------------ */
+  if (/^d[oó]nde\b/.test(normaliza(d))) return null;
+  if (TODAVIA_NO_SABE.test(normaliza(crudo))) return null;
+  if (NO_ES_UN_LUGAR.test(normaliza(d))) return null;
   /* Se devuelve el artículo que se comió el «al», salvo que el cliente
      ya lo haya escrito él («vamos al el Manto» no existe, pero «a El
      Manto» sí). */
@@ -2056,8 +2070,19 @@ function absorbeLoDemas(e, crudo, hoy) {
     if (!e.unidad && n > Number(SUBURBAN.max) && n <= Number(SPRINTER.max)) e.unidad = 'sprinter';
   }
   if (l.unidad && !e.unidad) { e.unidad = l.unidad; algo = true; }
+  /* El NOMBRE de un camión también cuenta, lo diga donde lo diga: «el
+     i6s» contestando «¿qué día regresan?» se tiraba, y el cliente tenía
+     que repetirlo en el paso de escoger (11-sep-2026). */
+  if (!e.unidadNombre) {
+    const suya = unidadPorNombre(crudo);
+    if (suya && suya.cat === 'autobus') {
+      e.unidad = 'autobus'; e.unidadNombre = suya.name; e.unidadId = suya.id; algo = true;
+    }
+  }
   if (l.destino && !e.destino) { e.destino = limpiaDestino(l.destino); algo = true; }
-  if (l.origen && !e.origen && !pareceDireccion(l.origen)) { e.origen = l.origen; algo = true; }
+  /* Como ciudad, no como lo tecleó: «de gdl» quedaba en «gdl» y así
+     viajaba al ticket y al contrato. */
+  if (l.origen && !e.origen && !pareceDireccion(l.origen)) { e.origen = comoCiudad(l.origen); algo = true; }
   if (!algo) return null;
   return l.gente ? 'Son *' + l.gente + '*, anotado 👍'
     : l.destino ? '*' + e.destino + '*, va 📍'
@@ -4248,12 +4273,35 @@ function respuestaBase(mensaje, estado, hoy) {
   }
 
   /* ---- «quiero cotizar», sin más ---- */
+  /* «Ocupo» es como se dice «necesito» en Jalisco, y no estaba: «ocupo
+     una camioneta» caía en «déjame checarte eso bien tantito». Igual
+     «quiero una» —solo estaba «quiero un»— y «ando buscando»
+     (11-sep-2026). */
   if (tiene(t, ['cotizar', 'cotizame', 'cotizacion', 'quiero rentar', 'necesito rentar',
-    'quiero un', 'necesito un', 'rentar'])) {
+    'quiero un', 'quiero una', 'necesito un', 'necesito una', 'rentar',
+    'ocupo', 'ocupamos', 'ando buscando', 'estoy buscando', 'busco un', 'busco una'])) {
+    /* ------------------------------------------------------------
+       SI YA DIJO «CAMIÓN», ESO NO SE TIRA
+       ------------------------------------------------------------
+       Esto contestaba sin devolver estado, o sea que el bot se quedaba
+       en blanco: «quiero un camión» → «¿cuántas personas viajan?» y el
+       mensaje siguiente empezaba de cero, sin saber que ya había pedido
+       un camión. Con la IA apagada se veía entero — el cliente decía «el
+       20 de diciembre» y el bot contestaba «déjame checarte eso bien
+       tantito» (corrida del 11-sep-2026).
+
+       Y es la regla que el dueño dictó en mayúsculas: cuando el cliente
+       dice que quiere camión, eso manda. Perderlo es justo lo contrario.
+       ------------------------------------------------------------ */
+    const dijoCamion = /\b(camion|camiones|autobus|autobuses|bus)\b/.test(t);
+    const dijoSprinter = /\b(sprinter|camioneta|van)\b/.test(t);
+    const estado = (dijoCamion || dijoSprinter)
+      ? { paso: 'destino', unidad: dijoCamion ? 'autobus' : 'sprinter' }
+      : undefined;
     return {
       texto: 'Va 🚐 ¿Cuántas personas viajan?\n\nSi son *20 o menos* te saco el precio ' +
         'aquí mismo.',
-      pasa: false, opciones: []
+      pasa: false, estado: estado, opciones: []
     };
   }
 
