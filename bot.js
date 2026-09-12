@@ -4002,7 +4002,15 @@ function unidadDelResumen(r) {
    Y se hereda: si dijo «pax» en el primer mensaje, sigue siendo
    agencia aunque despues escriba como cualquiera.
    ------------------------------------------------------------ */
+/* Se guarda para que `noSeAtore` pueda decir QUÉ frase fue la que no se
+   entendió. Sin eso, el aviso de atorado dice el paso y nada más, y
+   saber que un cliente se atoró en la fecha sin saber qué escribió no
+   sirve para arreglar nada — que es media sesión de trabajo perdida
+   adivinando (11-sep-2026, fase 4). */
+let ultimoQueDijo = '';
+
 function respuestaA(mensaje, estado, hoy) {
+  ultimoQueDijo = String(mensaje == null ? '' : mensaje).slice(0, 120);
   const esDeAgencia = (estado && estado.agencia === true) ||
     esAgencia(mensaje, normaliza(mensaje));
 
@@ -4095,7 +4103,26 @@ function noSeAtore(r, estadoQueEntro) {
     texto: 'Déjame revisarlo bien y te confirmo en un momento 🙏',
     pasa: true,
     estado: e,
-    opciones: []
+    opciones: [],
+    /* ------------------------------------------------------------
+       EL RASTRO DE DÓNDE SE ATORÓ — 11-sep-2026 (fase 4)
+       ------------------------------------------------------------
+       Hasta hoy, cuando el bot se rendía y llamaba a una persona, no
+       quedaba escrito POR QUÉ. El vendedor entraba a una conversación
+       trabada sin saber qué frase no se pudo leer, y quien arregla el
+       bot tenía que adivinar qué habían escrito.
+
+       Esta sesión entera —treinta y tantos defectos— salió de hablarle
+       al bot a mano buscando justo esto. Con el rastro puesto, los
+       encuentra la producción: cada cliente que se atora deja escrito
+       el paso y la frase exacta.
+
+       Va en la respuesta, no en un `console.log`: el motor informa y
+       quien sabe registrar es el webhook. Así la página no escribe en
+       la consola del cliente y la prueba puede comprobarlo sin tener
+       que atrapar la consola.
+       ------------------------------------------------------------ */
+    atorado: { paso: e.paso || 'sin paso', dijo: ultimoQueDijo }
   };
 }
 
