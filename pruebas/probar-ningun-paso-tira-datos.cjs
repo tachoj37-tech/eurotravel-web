@@ -98,6 +98,40 @@ titulo('y guardarlo no es tragárselo en silencio');
   ok('cambiar cuántos son se dice en voz alta', /33/.test(g.texto || ''));
 }
 
+titulo('lo que salió de la corrida con el modelo real (11-sep-2026)');
+{
+  /* Conversación de verdad, del escenario bi. El cliente contestó con
+     puras palabras sueltas —«vallarta», «45», «diciembre», «20», «22»,
+     «guadalajara»— y el bot terminó preguntándole cuántos van DESPUÉS
+     de que él ya lo había dicho, y se atoró ahí hasta rendirse. */
+  function corrido(msgs) {
+    let e = null;
+    for (const m of msgs) { e = (conv.respuestaA(m, e, HOY).estado) || {}; }
+    return e;
+  }
+
+  /* «45» contestando «¿qué día salen?» no puede ser un día: no existe
+     el 45 del mes. Y si falta cuántos son, eso es lo que es. */
+  const a = corrido(['hola', 'vallarta', '45']);
+  ok('un número imposible como día es cuántos son', Number(a.gente) === 45);
+
+  /* Y el que sí puede ser un día se respeta como día: ahí el candado
+     tiene que seguir puesto o el viaje cambia de fecha solo. */
+  const b = corrido(['hola', 'vallarta', '20']);
+  ok('un número que SÍ puede ser día sigue siendo día', !!b.salida && !b.gente);
+
+  /* La ciudad pelada, sin «de» ni «desde», es como contesta la gente. */
+  const c = corrido(['hola', 'vallarta', '45', 'diciembre', '20', '22', 'guadalajara']);
+  ok('la ciudad sola es el origen cuando falta', c.origen === 'Guadalajara');
+  ok('  y el viaje llegó completo', !!c.destino && !!c.gente && !!c.salida && !!c.regreso);
+
+  /* Pero no al revés: si el destino es lo que falta, la ciudad sola es
+     el destino, no el origen. */
+  const d = corrido(['hola', 'chapala']);
+  ok('con el destino vacío, la ciudad sola es el destino', d.destino === 'Chapala');
+  ok('  y no se guarda también como origen', !d.origen);
+}
+
 titulo('lo que NO debe absorberse');
 {
   /* El «sí» de la confirmación es una respuesta, no un dato suelto: si

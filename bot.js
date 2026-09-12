@@ -2334,6 +2334,29 @@ function absorbeLoDemas(e, crudo, hoy) {
      Y al cambiar el número, la unidad que había puede dejar de servir:
      se revisa igual que en `pegaDatos` (11-sep-2026).
      ------------------------------------------------------------ */
+  /* ------------------------------------------------------------
+     UN NÚMERO QUE NO PUEDE SER UN DÍA
+     ------------------------------------------------------------
+     El candado de siempre —un número solo puede ser una fecha, así que
+     no se lee como gente sin una palabra que hable de personas— es
+     correcto para el 20 y para el 12. Para el 45 no: no existe el 45
+     del mes. Si además falta cuántos son, eso es lo único que puede
+     ser.
+
+     Salió de la corrida con el modelo real del 11-sep-2026: el cliente
+     contestó «45» a «¿qué día salen?», el bot lo tiró, y al final le
+     preguntó cuántos van — a alguien que ya lo había dicho. Se atoró
+     ahí hasta rendirse y entregar la conversación.
+
+     El tope de arriba es el de la unidad más grande que hay; más que
+     eso no es un grupo, es un error de dedo, y ése sí se pregunta.
+     ------------------------------------------------------------ */
+  if (!l.gente && !e.gente) {
+    const solo = /^\s*(\d{1,3})\s*$/.exec(String(crudo || '').trim());
+    const n = solo ? Number(solo[1]) : 0;
+    if (n > 31 && n <= 60) l.gente = n;
+  }
+
   if (l.gente && Number(l.gente) !== Number(e.gente || 0)) {
     e.gente = l.gente; algo = true;
     delete e.sinCuenta;
@@ -2393,6 +2416,42 @@ function absorbeLoDemas(e, crudo, hoy) {
   if (l.origen) {
     const suyo = comoOrigen(l.origen);
     if (suyo && suyo !== e.origen) {
+      e.origen = suyo; algo = true; if (!cambioLugar) cambioLugar = 'origen';
+    }
+  }
+  /* ------------------------------------------------------------
+     LA CIUDAD PELADA, SIN «DE» NI «DESDE»
+     ------------------------------------------------------------
+     `origenDeLaFrase` pide la preposición, con razón: en una frase
+     larga, un lugar sin «de» es el destino. Pero cuando el mensaje
+     ENTERO es un nombre de ciudad, el cliente está contestando de
+     dónde salen — que es como contesta la gente.
+
+     Corrida con el modelo real del 11-sep-2026: «vallarta», «45»,
+     «diciembre», «20», «22», «guadalajara» — y ese «guadalajara» se
+     tiraba. El viaje llegaba al final sin origen, que es el dato que
+     decide el recargo de salida.
+
+     Con tres candados, y los tres hacen falta:
+
+       · Solo si el origen falta.
+       · Solo si el destino ya está: con el destino vacío, una ciudad
+         sola es el destino, y ése es el orden en que se pregunta.
+       · Solo si el mensaje son UNA O DOS PALABRAS. `comoOrigen` sabe
+         rechazar asentimientos, fechas y direcciones, pero no una
+         frase cualquiera: sin este candado, «cuando se pueda» y «el
+         que sigue del puente» se guardaban como ciudad de salida — que
+         es exactamente el defecto de «Salen de *si esta bien*» que ya
+         se había tapado, entrando por otra puerta.
+
+     Un origen de más de dos palabras —«san juan de los lagos»— se
+     sigue diciendo con «de», que es como se dice, y ése lo lee
+     `origenDeLaFrase` de siempre.
+     ------------------------------------------------------------ */
+  if (!e.origen && e.destino && cambioLugar !== 'destino' &&
+      palabrasDe(normaliza(crudo)).length <= 2) {
+    const suyo = comoOrigen(crudo);
+    if (suyo && suyo !== e.destino) {
       e.origen = suyo; algo = true; if (!cambioLugar) cambioLugar = 'origen';
     }
   }
