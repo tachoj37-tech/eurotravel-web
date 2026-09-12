@@ -2484,8 +2484,35 @@ async function loQueDiceElAgente(envio) {
        del 24?») y el viaje se quedaba sin fecha (corrida real del
        9-sep-2026). */
     if (antes.destino && !antes.salida) {
+      /* ------------------------------------------------------------
+         UN DÍA SUELTO SE ANCLA AL MES QUE YA SE DIJO
+         ------------------------------------------------------------
+         Corrida real del 11-sep-2026 (escenario bk): el cliente escribió
+         «diciembre» y en el mensaje siguiente «20». Aquí se leía el «20»
+         solo, sin el mes, y `fechaDe` lo resolvía al 20 más cercano
+         desde hoy: **20 de septiembre**. El modelo, que sí tenía la
+         plática, le contestó «Listo, 20 de diciembre».
+
+         O sea: el bot decía diciembre y el sistema guardaba septiembre.
+         De ahí salen el precio, el calendario y el contrato. Es el peor
+         tipo de error que hay aquí — el que no se ve hasta que el camión
+         no llega.
+
+         Se busca el mes en los últimos turnos y se le pega al día antes
+         de leerlo. Si no hay mes en la plática, se lee como siempre.
+         ------------------------------------------------------------ */
+      const soloDia = /^\s*(?:el\s+)?(\d{1,2})\s*$/.exec(String(texto || '').trim());
+      let paraLeer = texto;
+      if (soloDia) {
+        const MESES = 'ene|feb|mar|abr|may|jun|jul|ago|sep|set|oct|nov|dic';
+        const ultimos = agente.historialDe(cliente).slice(-4)
+          .map(function (t) { return String(t.texto || ''); }).join(' ');
+        const m = new RegExp('\\b(' + MESES + ')[a-z]*\\b', 'i')
+          .exec(conversacion.normaliza(ultimos));
+        if (m) paraLeer = soloDia[1] + ' de ' + m[1];
+      }
       let laFecha = null;
-      try { laFecha = conversacion.fechaDe(texto, hoy); } catch (e) { laFecha = null; }
+      try { laFecha = conversacion.fechaDe(paraLeer, hoy); } catch (e) { laFecha = null; }
       if (laFecha) {
         console.error('[agente] viaje conocido sin fecha: «' + String(texto).slice(0, 40) + '» fija la salida en ' + laFecha);
         antes = Object.assign({}, antes, { salida: laFecha }); cambio = true;
@@ -2923,8 +2950,25 @@ async function loQueDiceElAgente(envio) {
       return u.cat !== 'autobus' && new RegExp('\\b' + conversacion.normaliza(u.name).split(/\s+/)[0] + '\\b', 'i').test(conversacion.normaliza(r));
     })[0];
     if (nombrada && /\b(caben|cabe|entran|le\s+caben|van\s+bien|van\s+c[oó]modos)\b/i.test(r)) {
+      /* ------------------------------------------------------------
+         CUÁNTOS SON LO SABE EL SISTEMA, NO EL TEXTO DEL MODELO
+         ------------------------------------------------------------
+         Esto sacaba el número más grande de la respuesta del modelo y lo
+         trataba como el tamaño del grupo. Pero el modelo también escribe
+         CAPACIDADES —«el i6S es de 51», «la Sprinter lleva 20»— y ésas
+         se colaban.
+
+         Corrida real del 11-sep-2026 (escenario bf): el grupo era de 45,
+         el modelo nombró un camión de 51, y el bot le contestó al
+         cliente «para 51 ya es autobús» y le enseñó la lista de 51. Un
+         número que el cliente nunca dijo, y la lista equivocada.
+
+         La ficha ya sabe cuántos son. Ése manda; el texto solo se
+         rasca cuando no se sabe.
+         ------------------------------------------------------------ */
       const nums = (r.match(/\b\d{1,3}\b/g) || []).map(Number).filter(function (x) { return x >= 5 && x <= 90; });
-      const mayor = nums.length ? Math.max.apply(null, nums) : 0;
+      const loQueSeSabe = Number(nuevo.gente) || 0;
+      const mayor = loQueSeSabe || (nums.length ? Math.max.apply(null, nums) : 0);
       if (mayor > Number(nombrada.max)) {
         console.error('[agente] dijo que ' + mayor + ' caben en ' + nombrada.name + ' (es hasta ' + nombrada.max + '): se corrige');
         dicho.accion = 'seguir';
@@ -2955,6 +2999,71 @@ async function loQueDiceElAgente(envio) {
         dicho.accion = 'seguir';
         dicho.respuesta = 'Los de arriba son todos los que tenemos 🙌 Dime cuál te late y te mando sus fotos, ' +
           'o si quieres te recomiendo uno.';
+      }
+    }
+  }
+
+  /* ------------------------------------------------------------
+     EL CATÁLOGO SE MANDA COMPLETO, O SE MANDA EL DEL MOTOR
+     ------------------------------------------------------------
+     Corrida real del 11-sep-2026 (escenario az): el motor le pasó al
+     modelo la lista de los SIETE autobuses que le caben a un grupo de
+     45, con la instrucción de mandarla «TAL CUAL». El modelo la
+     reescribió con sus palabras —«Para 45 les caben estos»— y en el
+     camino **se comió el Irizar i6 51**. También convirtió el Century
+     de «47 a 49 asientos» en «47».
+
+     Un camión que no aparece en la lista es un camión que no se vende.
+     Y el que se cayó fue el que se acababa de dar de alta, o sea el que
+     nadie iba a echar de menos.
+
+     El guardia de arriba no lo veía: `ES_CATALOGO` reconoce el texto
+     literal del motor, y esto ya no lo era.
+
+     Se comprueba lo único que importa —que estén TODOS— y si falta uno
+     se manda la lista del motor. No se corrige el estilo: un catálogo
+     bien escrito al que le falta una unidad es peor que uno feo
+     completo.
+
+     Los nombres se buscan del más largo al más corto y se van tachando:
+     «Irizar i6» es un pedazo de «Irizar i6 51» y de «Irizar i6S», así
+     que al revés se daría por presente uno que no está.
+
+     OJO CON EL ALCANCE, que la primera versión lo tuvo mal: esto solo
+     vale cuando el modelo está presentando LA LISTA —renglones con su
+     nombre y sus asientos—, no cuando nombra unos cuantos de pasada.
+     «Tenemos el Marcopolo, el i6S y el Neobus, entre otros» es una
+     respuesta buena y completa a su manera, y hay una regla del dueño
+     que dice que ésa se respeta. Con el alcance mal, este guardia la
+     pisaba.
+     ------------------------------------------------------------ */
+  {
+    const r = String(dicho.respuesta || '');
+    /* La forma de un renglón del catálogo: «Nombre — Categoría — N
+       asientos». Con dos o más, esto es una lista y no una mención. */
+    const renglones = r.split('\n').filter(function (l) { return /—.*asientos/.test(l); }).length;
+    const autobuses = renglones >= 2
+      ? (conversacion.UNIDADES || []).filter(function (u) { return u.cat === 'autobus'; })
+      : [];
+    let resto = r;
+    const presentes = {};
+    autobuses.slice().sort(function (a, b) { return b.name.length - a.name.length; })
+      .forEach(function (u) {
+        if (resto.indexOf(u.name) === -1) return;
+        presentes[u.id] = true;
+        resto = resto.split(u.name).join(' ');
+      });
+    if (Object.keys(presentes).length >= 2) {
+      const cuantos = Number(nuevo.gente) || 0;
+      const deberian = autobuses.filter(function (u) { return !cuantos || cuantos <= Number(u.max); });
+      const faltan = deberian.filter(function (u) { return !presentes[u.id]; });
+      if (faltan.length) {
+        console.error('[agente] la lista de autobuses iba incompleta (faltó ' +
+          faltan.map(function (u) { return u.name; }).join(', ') + '): se manda la del motor');
+        dicho.accion = 'seguir';
+        dicho.respuesta = cuantos
+          ? conversacion.mensajeDeAutobuses(cuantos)
+          : conversacion.mensajeDeTodosLosAutobuses();
       }
     }
   }

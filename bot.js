@@ -962,6 +962,29 @@ function esAliasDeDestino(texto) {
 const NO_ES_CIUDAD = /^(?:si|s[ií]|sip|sale|va|vale|ok|okey|oki|dale|claro|correcto|exacto|asi es|as[ií] es|perfecto|aja|ajá|bien|esta bien|est[aá] bien|si esta bien|s[ií] est[aá] bien|no|nop|gracias|listo|de acuerdo)$/;
 
 /* ------------------------------------------------------------
+   UNA DIRECCIÓN NO ES UNA CIUDAD — 11-sep-2026
+   ------------------------------------------------------------
+   Corrida real (escenario bh): «nos recogen en hidalgo 45 a las 6 de la
+   mañana» y el viaje quedó con el origen en **«Hidalgo 45»**. El
+   resumen decía «📍 Hidalgo 45 → Tequila», el bot ya no preguntó de qué
+   ciudad salían, y esa cadena habría viajado al contrato.
+
+   Y cuesta dinero: el origen decide el recargo de salida. Una dirección
+   no empata con ninguna zona, así que un grupo de Ocotlán que da su
+   calle se cotiza como si saliera de Guadalajara.
+
+   La regla es de las fáciles: **una ciudad no lleva números**. La
+   dirección exacta sí se le pide después, en los datos del contrato,
+   que es donde sirve.
+   ------------------------------------------------------------ */
+function pareceDireccion(texto) {
+  const t = normaliza(texto || '');
+  if (!t) return false;
+  if (/\d/.test(t)) return true;
+  return /^(av|avda|avenida|calle|calz|calzada|blvd|bulevar|boulevard|privada|priv|andador|prolongacion|prol|circuito|glorieta|cerrada|retorno|col|colonia|fracc|fraccionamiento|manzana|lote)\b/.test(t);
+}
+
+/* ------------------------------------------------------------
    CÓMO NOMBRA LA GENTE UN CAMIÓN — 10-sep-2026
    ------------------------------------------------------------
    El bot enseña la lista y pregunta «¿en cuál los acomodo?». Antes,
@@ -1387,6 +1410,10 @@ const NO_SE_MUEVEN = /\b(solo|nomas|nada mas|unicamente|puro) (nos |que nos )?(l
    en otra fecha —«salimos el 20 y volvemos el 22, ida y vuelta»— y
    darle el mismo día sería inventarle el regreso. */
 const MISMO_DIA = /\bmismo dia\b|\bese mismo dia\b|\bsolo un dia\b|\bun solo dia\b|\bde ida y vuelta el mismo\b/;
+
+/* Un mes dicho solo, sin día: «diciembre», «en diciembre», «para enero».
+   No es una fecha todavía, pero es la mitad de una. */
+const SOLO_UN_MES = /^(?:en |para |el mes de |a mediados de |a principios de |a fines de )?(enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|setiembre|octubre|noviembre|diciembre)$/;
 
 const SOLO_IDA = /\b(solo|nada mas|nomas|unicamente) (de |la )?ida\b|\bviaje sencillo\b|\bsencillo (de )?ida\b|\bida sencilla\b|\bsin regreso\b/;
 /* ¿El cliente pidió un viaje de una sola ida? Vive aparte de `leeDeUnJalon`
@@ -1837,13 +1864,54 @@ const REPREGUNTA = {
    Solo si no había NADA legible, entra la IA. Así la IA queda donde
    la quiere el dueño: «nomás cuando no entienda algo».
    ------------------------------------------------------------ */
+/* ¿Le caben `n` personas a la unidad que trae el viaje? La unidad puede
+   venir por id, por NOMBRE o por categoría —la ficha guarda «Sprinter»,
+   que es el nombre— y hay que buscarla de las tres formas: por no hacerlo,
+   un grupo de 22 pasó como bueno en una Sprinter de 20 (9-sep-2026). */
+function cabenEnLaUnidad(e, n) {
+  const cat = String(e.unidad || '').toLowerCase();
+  const bus = (e.unidadId ? UNIDADES.find(function (u) { return u.id === e.unidadId; }) : null) ||
+    (e.unidadNombre ? porNombre(e.unidadNombre) : null) ||
+    (cat !== 'autobus' ? porNombre(e.unidad) : null);
+  if (bus && Number(bus.max) < n) return false;
+  if (cat === 'sprinter' && n > 20) return false;
+  if (cat === 'suburban' && n > 6) return false;
+  if (cat === 'autobus' && n <= 20) return false;
+  return true;
+}
+
 function absorbeLoDemas(e, crudo, hoy) {
   const l = leeDeUnJalon(crudo, hoy);
   let algo = false;
-  if (l.gente && !e.gente) { e.gente = l.gente; algo = true; }
+  /* ------------------------------------------------------------
+     CUÁNTOS SON SE CORRIGE, NO SE LLENA UNA SOLA VEZ
+     ------------------------------------------------------------
+     Esto decía `!e.gente`: el número solo entraba si el hueco estaba
+     vacío. Así que «somos 40» y luego «perdón somos 12» dejaba el viaje
+     en 40, y el bot ni acusaba el cambio — seguía preguntando la fecha
+     como si nada.
+
+     Es el defecto que el dueño ha reportado más veces con sus palabras:
+     «se clava con el número de personas». Vivía en el guion mientras que
+     `pegaDatos` —el camino de la IA— sí lo corregía desde siempre.
+
+     Sobrescribir es seguro porque `cuantaGente` pide una señal de que se
+     habla de gente («somos 12», «12 personas»): si dispara, el cliente
+     está diciendo cuántos son, no mencionando un número cualquiera.
+
+     Y al cambiar el número, la unidad que había puede dejar de servir:
+     se revisa igual que en `pegaDatos` (11-sep-2026).
+     ------------------------------------------------------------ */
+  if (l.gente && Number(l.gente) !== Number(e.gente || 0)) {
+    e.gente = l.gente; algo = true;
+    delete e.sinCuenta;
+    if (e.unidad && !cabenEnLaUnidad(e, Number(l.gente))) {
+      delete e.unidad; delete e.unidadNombre; delete e.unidadId;
+    }
+  }
   if (l.unidad && !e.unidad) { e.unidad = l.unidad; algo = true; }
   if (l.destino && !e.destino) { e.destino = limpiaDestino(l.destino); algo = true; }
-  if (l.origen && !e.origen) { e.origen = l.origen; algo = true; }
+  if (l.origen && !e.origen && !pareceDireccion(l.origen)) { e.origen = l.origen; algo = true; }
   if (!algo) return null;
   return l.gente ? 'Son *' + l.gente + '*, anotado 👍'
     : l.destino ? '*' + e.destino + '*, va 📍'
@@ -2470,7 +2538,7 @@ function pasoDeCotizacion(t, crudo, estado, hoy) {
     if (leido.salida) e.salida = leido.salida;
     if (leido.regreso) e.regreso = leido.regreso;
     /* El origen no se pisa: si ya venía de antes, ése es el bueno. */
-    if (leido.origen && !e.origen) e.origen = leido.origen;
+    if (leido.origen && !e.origen && !pareceDireccion(leido.origen)) e.origen = leido.origen;
 
     if (!leido.destino && (leido.gente || leido.salida || leido.unidad)) {
       if (leido.gente) e.gente = leido.gente;
@@ -2580,6 +2648,16 @@ function pasoDeCotizacion(t, crudo, estado, hoy) {
         opciones: e.paso === 'origen' ? pregunta(e).opciones : []
       };
     }
+    /* La dirección exacta se pide después, en los datos del contrato. Aquí
+       hace falta la CIUDAD, que es la que decide el recargo de salida. */
+    if (pareceDireccion(dicho)) {
+      return {
+        texto: 'Ésa es la dirección 👌 La calle exacta te la pido luego.\n\n' +
+          '¿De qué *ciudad* salen?',
+        pasa: false, estado: e,
+        opciones: e.paso === 'origen' ? pregunta(e).opciones : []
+      };
+    }
     /* «gdl», «cdmx»: las mismas abreviaturas que en el destino. Y se le
        quita la preposición: «de guadalajara» se guardaba con el «de»
        pegado y así salía impreso —«Salen de *de guadalajara*»— y así
@@ -2595,7 +2673,31 @@ function pasoDeCotizacion(t, crudo, estado, hoy) {
 
   /* ---- cuándo ---- */
   if (e.paso === 'salida') {
-    const f = fechaDe(crudo, hoy);
+    /* ------------------------------------------------------------
+       UN DÍA SUELTO SE ANCLA AL MES QUE YA DIJO
+       ------------------------------------------------------------
+       Corrida real del 11-sep-2026 (escenario bk): el cliente escribió
+       «diciembre» y en el mensaje siguiente «20». El «20» se leía solo,
+       sin el mes, y se resolvía al 20 más cercano desde hoy: **20 de
+       septiembre**. Tres meses de diferencia, sin que nada truene.
+
+       De ahí salen el precio, el calendario y el contrato. Es el peor
+       tipo de error que hay aquí: el que no se ve hasta que el camión no
+       llega el día que era.
+
+       Así que un mes dicho sin día no se tira — se guarda y espera al
+       día. Dos mensajes que juntos son una fecha.
+       ------------------------------------------------------------ */
+    const mesSolo = SOLO_UN_MES.exec(normaliza(crudo));
+    if (mesSolo && !fechaDe(crudo, hoy)) {
+      e.mesDicho = mesSolo[1];
+      return { texto: '¿Qué día de ' + mesSolo[1] + '? 📅',
+        pasa: false, estado: e, opciones: [] };
+    }
+    const diaSolo = /^\s*(?:el\s+)?(\d{1,2})\s*$/.exec(String(crudo || '').trim());
+    const conElMes = (diaSolo && e.mesDicho) ? diaSolo[1] + ' de ' + e.mesDicho : crudo;
+
+    const f = fechaDe(conElMes, hoy);
     if (!f) {
       const acuse = absorbeLoDemas(e, crudo, hoy);
       if (acuse) return siguiente(e, acuse);
@@ -4141,7 +4243,8 @@ function continuaCon(estado, datos, hoy) {
       normaliza(limpiaDestino(datos.destino)) !== normaliza(e.destino)) {
     e.destino = limpiaDestino(datos.destino); pego = true;
   }
-  if (datos.origen && !e.origen) { e.origen = datos.origen; pego = true; }
+  /* Una direccion no es una ciudad: ver `pareceDireccion` (11-sep-2026). */
+  if (datos.origen && !e.origen && !pareceDireccion(datos.origen)) { e.origen = datos.origen; pego = true; }
   if (datos.gente && !e.gente) { e.gente = datos.gente; pego = true; }
   if (datos.unidad && !e.unidad) { e.unidad = datos.unidad; pego = true; }
   if (datos.ocasion && !e.ocasion) { e.ocasion = datos.ocasion; pego = true; }
@@ -4293,7 +4396,7 @@ function aplicaEntendido(datos, hoy) {
   if (datos.ocasion) e.ocasion = datos.ocasion;
   if (datos.agencia) e.agencia = true;
   if (datos.destino) e.destino = limpiaDestino(datos.destino);
-  if (datos.origen) e.origen = datos.origen;
+  if (datos.origen && !pareceDireccion(datos.origen)) e.origen = datos.origen;
   if (datos.salida) e.salida = datos.salida;
   if (datos.regreso) e.regreso = datos.regreso;
 
@@ -4382,7 +4485,10 @@ function pegaDatos(estado, datos) {
     if (!e.destino || destinoFlojo(e.destino) || e.paso === 'destino' ||
         normaliza(limpio) !== normaliza(e.destino)) e.destino = limpio;
   }
-  if (d.origen) {
+  /* Una dirección no es una ciudad, y aquí es por donde entra la que lee
+     la IA: «nos recogen en hidalgo 45» dejaba el origen en «Hidalgo 45»
+     (11-sep-2026). Ver `pareceDireccion`. */
+  if (d.origen && !pareceDireccion(d.origen)) {
     /* «Guadalajara norte», «zapopan», «gdl centro»: para cotizar es la
        ciudad; la zona y la colonia van al contrato, no aquí. */
     const o = normaliza(d.origen);

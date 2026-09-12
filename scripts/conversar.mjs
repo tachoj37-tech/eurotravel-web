@@ -577,7 +577,86 @@ const escenarios = {
      cliente a media plática. No se debe romper ni mandar cosas raras. */
   ay: ['hola, quiero información',
     boton('cuenta'),
-    'a tequila el 17 de octubre', boton('contrato'), 'somos 18']
+    'a tequila el 17 de octubre', boton('contrato'), 'somos 18'],
+
+  /* ============================================================
+     LA TANDA DEL CLIENTE DIFÍCIL — 11-sep-2026
+     ============================================================
+     Dictado del dueño, palabra por palabra: «encuentra preguntas
+     repetidas, encuentra olvidadas, se le olvidan las cosas, encuentra
+     que se clave en el número de personas… ponte en modo tonto cuando
+     le hables al chatbot para probarlo».
+
+     Cada uno está hecho para romper UNA cosa. No son conversaciones
+     bonitas: son las que de verdad llegan.
+     ============================================================ */
+
+  /* az · SE CONTRADICE. Dice un número, luego otro, luego otro. Lo que
+     se vigila: que el último gane y que no quede el primero pegado. */
+  az: ['hola quiero cotizar a vallarta', 'somos 45', 'no perdón somos 15',
+    'ah no, al final sí somos 45', '20 de noviembre', '22 de noviembre',
+    'de guadalajara', 'no nos movemos', 'sí'],
+
+  /* ba · CONTESTA CON PREGUNTAS, nunca con datos. El clásico que agota
+     al bot hasta que se rinde. */
+  ba: ['buenas', 'oye y ustedes son de guadalajara?', 'y cuántos años tienen?',
+    'y tienen seguro?', 'ah ok, y cuánto me cobras a vallarta?',
+    'y eso incluye casetas?', 'a ver, somos 40, el 15 de diciembre al 17',
+    'de guadalajara', 'no nos movemos', 'sí'],
+
+  /* bb · EL QUE NO SABE NADA y lo dice todo al revés. La fecha antes
+     que el destino, la unidad antes que la gente. */
+  bb: ['quiero un camion', 'el 20 de diciembre', 'no sé a dónde todavía',
+    'a mazatlán', 'no sé cuántos vamos', 'como 45 creo', 'el i6s',
+    'de guadalajara', 'regresamos el 23', 'no nos movemos', 'sí'],
+
+  /* bc · TODO EN MAYÚSCULAS, SIN ACENTOS Y CON FALTAS. Así escribe la
+     mitad de la gente desde el celular. */
+  bc: ['KIERO KOTIZAR UN VIAGE', 'A PTO VAYARTA', 'SOMO 40', 'EL 20 D DICIEMBRE',
+    'REGRESAMO EL 22', 'DE GDL', 'NO NOS MOVEMO', 'SI'],
+
+  /* bd · SE VA POR LA TANGENTE a media cotización y luego vuelve. Lo
+     que se vigila: que NO se le olvide lo que ya dijo. */
+  bd: ['hola, a chapala el 10 de octubre', 'somos 12',
+    'oye espérame, ¿ustedes manejan camionetas para mudanza?',
+    'ah ok no. bueno, ¿en qué íbamos?', 'de guadalajara',
+    'regresamos el mismo día', 'no nos movemos', 'sí'],
+
+  /* be · DICE «SÍ» A TODO, que es lo que hace quien no está leyendo. */
+  be: ['hola', 'sí', 'sí', 'a tequila', 'sí', 'sí', 'somos 20', 'sí', 'sí'],
+
+  /* bf · MANDA EL VIAJE COMPLETO DE UN JALÓN y luego lo cambia entero.
+     Es el caso que más veces se ha roto. */
+  bf: ['a vallarta del 20 al 22 de noviembre, somos 18, de guadalajara, sin movimientos',
+    'ah espérame, mejor a mazatlán', 'y somos 45 no 18', 'y del 1 al 3 de diciembre',
+    'sí', 'de guadalajara', 'no nos movemos', 'sí'],
+
+  /* bg · PREGUNTA EL PRECIO ANTES DE DAR NADA, tres veces seguidas. */
+  bg: ['cuánto cuesta un camión?', 'pero más o menos cuánto?',
+    'dame un aproximado no seas así', 'ok, a vallarta, somos 45',
+    '20 de diciembre al 22', 'de guadalajara', 'no nos movemos', 'sí'],
+
+  /* bh · NÚMEROS QUE NO SON GENTE. Direcciones, horas, teléfonos.
+     Lo que se vigila: que no los tome como pasajeros. */
+  bh: ['hola, nos recogen en hidalgo 45 a las 6 de la mañana',
+    'vamos a tequila', 'somos 12', 'el 20 de octubre', 'el mismo día',
+    'de guadalajara', 'no nos movemos', 'sí'],
+
+  /* bi · EL QUE SE TARDA Y VUELVE. Silencio y luego retoma sin contexto. */
+  bi: ['hola quiero cotizar', 'a vallarta', 'somos 30',
+    'ahorita te digo las fechas', 'ya estoy, del 10 al 12 de enero',
+    'de guadalajara', 'el marcopolo', 'no nos movemos', 'sí'],
+
+  /* bj · PIDE COSAS QUE EL BOT NO DEBE CONTESTAR, mezcladas con el viaje. */
+  bj: ['hola, quiero un camión a vallarta para 45',
+    'me lo dejas en 25 mil?', 'y si pago en efectivo me haces descuento?',
+    'oye y el chofer quién es?', 'del 20 al 22 de diciembre',
+    'de guadalajara', 'no nos movemos', 'sí'],
+
+  /* bk · UNA SOLA PALABRA POR MENSAJE, como quien escribe desde el
+     camión. Lo que se vigila: que no se pierda ni repita. */
+  bk: ['hola', 'vallarta', '45', 'diciembre', '20', '22', 'guadalajara',
+    'no', 'sí']
 };
 const pedidos = process.argv.slice(2).filter((x) => escenarios[x]);
 for (const k of (pedidos.length ? pedidos : Object.keys(escenarios))) {
@@ -586,7 +665,10 @@ for (const k of (pedidos.length ? pedidos : Object.keys(escenarios))) {
     af: '32', ag: '33', ah: '34', ai: '35', aj: '36', ak: '37',
     al: '38', am: '39', an: '40', ao: '41', ap: '42', aq: '43',
     ar: '44', as: '45', at: '46', au: '47',
-    av: '48', aw: '49', ax: '50', ay: '51' }[k];
+    av: '48', aw: '49', ax: '50', ay: '51',
+    /* La tanda del cliente difícil, 11-sep-2026. */
+    az: '52', ba: '53', bb: '54', bc: '55', bd: '56', be: '57',
+    bf: '58', bg: '59', bh: '60', bi: '61', bj: '62', bk: '63' }[k];
   const guion = escenarios[k].map((p) => (typeof p === 'function' && p.length === 0 && k === 'e') ? p : p);
   await corre('Escenario ' + k, C, guion);
   console.log('\n(gastado hasta aquí: $' + gastado.toFixed(3) + ' USD)');
