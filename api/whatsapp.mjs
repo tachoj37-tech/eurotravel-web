@@ -4599,7 +4599,28 @@ async function envioDelToque(f, d) {
         unidad: v.unidadNombre || v.unidad || null
       }
     }).catch(function () { return null; });
-    if (suyo) return Object.assign(base, { texto: suyo });
+    /* ------------------------------------------------------------
+       Y CON SUS SALIDAS — 12-sep-2026
+       ------------------------------------------------------------
+       El toque es el ÚNICO mensaje que el bot le manda a alguien que ya
+       tiene precio y no ha contestado. Preguntarle «¿te llegó bien?» y
+       no darle por dónde salir es pedirle que teclee justo al que ya
+       lleva un día sin ganas de teclear.
+
+       Los tres están comprobados uno por uno —la lección del día: un
+       botón que no se entiende es peor que no ponerlo— y los tres caben
+       en los 20 caracteres de Meta:
+
+         «Apártamelo»         → «Va, te la aparto 🙌» y pasa al vendedor
+         «Tengo una duda»     → pasa al vendedor
+         «Hablar con alguien» → pasa al vendedor
+
+       El de apartar va primero a propósito: es el que vende, y el orden
+       de los botones es el orden en que se leen.
+       ------------------------------------------------------------ */
+    const salidas = ['Apártamelo', 'Tengo una duda', 'Hablar con alguien'];
+
+    if (suyo) return Object.assign(base, { texto: suyo, opciones: salidas });
 
     const texto = recordatorios.recordatorio(d.toque, {
       cliente: f.cliente,
@@ -4611,7 +4632,7 @@ async function envioDelToque(f, d) {
          que la fecha está libre. */
       fechaLibre: false
     });
-    return texto ? Object.assign(base, { texto: texto }) : null;
+    return texto ? Object.assign(base, { texto: texto, opciones: salidas }) : null;
   }
   /* ------------------------------------------------------------
      LAS PLANTILLAS DE META SE PAGAN, Y AQUÍ ESTÁN APAGADAS

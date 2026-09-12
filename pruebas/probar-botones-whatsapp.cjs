@@ -109,6 +109,32 @@ titulo('los botones que el bot ofrece de verdad sí caben');
     (largas.length ? largas.join(' ') : ''), largas.length === 0);
 }
 
+titulo('el toque del seguimiento lleva sus salidas');
+{
+  /* El toque es el ÚNICO mensaje que el bot le manda a alguien que ya
+     tiene precio y no ha contestado. Preguntarle «¿te llegó bien?» sin
+     darle por dónde salir es pedirle que teclee justo al que ya lleva un
+     día sin ganas de teclear. */
+  const SALIDAS = ['Apártamelo', 'Tengo una duda', 'Hablar con alguien'];
+
+  ok('el seguimiento ofrece salidas', /const salidas = \[/.test(codigo));
+  ok('  y van con el texto redactado por la IA',
+    /texto: suyo, opciones: salidas/.test(codigo));
+  ok('  y también con el texto fijo de respaldo',
+    /texto: texto, opciones: salidas/.test(codigo));
+
+  ok('las tres caben en un mensaje con botones',
+    comoSeManda('¿Te llegó bien la cotización de Puerto Vallarta?', SALIDAS) === 'interactive');
+
+  /* Y lo que se aprendió hoy: un botón que no se entiende es peor que no
+     ponerlo. Los tres tienen que llevar a algún lado. */
+  const conv = require(path.join(RAIZ, 'bot.js'));
+  for (const b of SALIDAS) {
+    const r = conv.respuestaA(b, null, '2026-09-12');
+    ok('«' + b + '» lleva al vendedor', r && r.pasa === true);
+  }
+}
+
 titulo('el envío lleva las opciones hasta el final');
 {
   /* El eslabón que faltaba: el webhook las tenía y no las copiaba al

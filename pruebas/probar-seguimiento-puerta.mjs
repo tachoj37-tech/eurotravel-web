@@ -67,7 +67,10 @@ function ok(que, dio, esperaba) {
 }
 function okQue(que, condicion) { ok(que, !!condicion, true); }
 const AL_DUENO = '523319153931';
-const textoDe = (m) => ((m.cuerpo.text || {}).body || '');
+/* El texto puede venir en dos sitios desde el 12-sep-2026: `text.body` de
+   siempre, o `interactive.body.text` cuando el mensaje lleva botones. */
+const textoDe = (m) => ((m.cuerpo.text || {}).body ||
+  (((m.cuerpo.interactive || {}).body || {}).text) || '');
 
 /* ---- la base y WhatsApp de mentiras ---- */
 let mandados = [];
@@ -224,7 +227,13 @@ console.log('\n== A LAS 22 H, CON LA VENTANA ABIERTA, VA TEXTO LIBRE SIN PLANTIL
   mandados = []; upserts = []; marcas = [];
   const cuenta = await (await GET(LLAVE)).json();
   ok('a las 22 h se manda el primero', cuenta.mandados, 1);
-  ok('  como texto libre, no plantilla', mandados[0].cuerpo.type, 'text');
+  /* CAMBIÓ DE LADO EL 12-sep-2026. Pedía `type: 'text'` y ahora el toque
+     lleva sus tres botones, así que va como `interactive`. Lo que esta
+     línea cuida —que NO sea una plantilla, que es lo que Meta cobra—
+     sigue igual de vigilado: los interactivos son gratis dentro de la
+     ventana de 24 h, como el texto. Se pide lo que de verdad importa. */
+  okQue('  gratis: texto o botones, nunca plantilla',
+    mandados[0].cuerpo.type !== 'template');
   ok('  al cliente, no al dueño', mandados[0].cuerpo.to, '523355555555');
   okQue('  con el texto del primer toque (¿te llegó bien?)', /lleg|ver|cotizaci|duda|sigo/i.test(textoDe(mandados[0])));
   ok('  y sin costo de plantilla (alDueno 0)', cuenta.alDueno, 0);
