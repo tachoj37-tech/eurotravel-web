@@ -178,10 +178,133 @@ titulo('se contradice con el número de personas (escenario az)');
 
   /* Y si con el número nuevo ya no cabe la unidad que había, se suelta:
      un autobús para doce personas es tan malo como una van para cuarenta. */
+  /* Desde el 11-sep-2026 no solo se suelta la que no cabe: si con el
+     número nuevo la unidad es UNA sola —de 7 a 20 es la Sprinter y no
+     hay de otra— se anota, para que el viaje no llegue a la
+     confirmación sin decirle al cliente en qué se va. Arriba de 20 no
+     se escoge por él: ahí está el paso de elegir camión. */
   const t = corre(['a vallarta somos 45', '20 de octubre', 'perdón somos 12']);
-  ok('el autobús se suelta cuando bajan a 12', !t.estado.unidad);
+  ok('el autobús se suelta cuando bajan a 12', t.estado.unidad !== 'autobus');
+  ok('  y queda la Sprinter, que es la única que puede ser', t.estado.unidad === 'sprinter');
   const u = corre(['a vallarta somos 12', '20 de octubre', 'perdón somos 45']);
   ok('y la Sprinter se suelta cuando suben a 45', u.estado.unidad !== 'sprinter');
+}
+
+/* ============================================================
+   LA VUELTA DEL 11-sep-2026 POR LA TARDE
+   ------------------------------------------------------------
+   Ya no con guiones escritos, sino hablándole al bot turno por turno y
+   decidiendo cada mensaje según lo que contestaba — que es como lo
+   prueba el dueño. Seis defectos más, y cuatro salieron en los primeros
+   cinco mensajes.
+   ============================================================ */
+
+titulo('ni una temporada ni una parrafada son un destino');
+{
+  /* Primer mensaje de esa vuelta: «pues todavía no sé, qué me
+     recomiendas para un fin de semana» → «*Un Fin de Semana*, va 📍».
+     Y al taparlo, se quedaba con la frase ENTERA: «*Pues Todavia No Se,
+     Que Me Recomiendas Para Un Fin de Semana*, va 📍». */
+  function comoDestino(t) {
+    let e = conv.respuestaA('hola', null, HOY).estado;
+    return conv.respuestaA(t, e, HOY).estado.destino;
+  }
+  for (const t of ['pues todavia no se, que me recomiendas para un fin de semana',
+    'para un fin de semana', 'un puente', 'en semana santa', 'no se todavia']) {
+    ok('«' + t + '» no es destino', !comoDestino(t));
+  }
+
+  /* Y los de verdad no se tocaron. */
+  const buenos = [['a chapala', 'Chapala'], ['playa del carmen', 'Playa del Carmen'],
+    ['san juan de los lagos', 'San Juan de los Lagos'], ['barra de navidad', 'Barra de Navidad'],
+    ['el manto', 'El Manto'], ['la barca', 'La Barca'], ['valle de bravo', 'Valle de Bravo']];
+  for (const [dice, espera] of buenos) {
+    ok('«' + dice + '» sigue siendo ' + espera, comoDestino(dice) === espera);
+  }
+}
+
+titulo('la muletilla del final no es parte del nombre');
+{
+  /* «a tequila entonces» → «*Tequila Entonces*, va 📍». Nadie se llama
+     así, y ese texto es el que sale en el ticket y en el contrato. */
+  function comoDestino(t) {
+    let e = conv.respuestaA('hola', null, HOY).estado;
+    return conv.respuestaA(t, e, HOY).estado.destino;
+  }
+  ok('«a tequila entonces» es Tequila', comoDestino('a tequila entonces') === 'Tequila');
+  ok('«a chapala porfa» es Chapala', comoDestino('a chapala porfa') === 'Chapala');
+  ok('«a vallarta pues» es Puerto Vallarta', comoDestino('a vallarta pues') === 'Puerto Vallarta');
+  ok('«a chapala pues porfa» también', comoDestino('a chapala pues porfa') === 'Chapala');
+}
+
+titulo('«el» y «del» solo cortan cuando lo que sigue es fecha');
+{
+  /* «a playa del carmen» quedaba en «Playa» y «a barrancas del cobre» en
+     «Barrancas» — y ése ya no lo encuentra el catálogo, o sea que cobra
+     otro precio. El corte estaba para «a Tequila el 12» y se llevaba de
+     paso a los destinos que traen «del» en el nombre. */
+  ok('«a playa del carmen» entero', conv.destinoDeLaFrase('a playa del carmen') === 'Playa del Carmen');
+  ok('«a barrancas del cobre» entero', conv.destinoDeLaFrase('a barrancas del cobre') === 'Barrancas del Cobre');
+  /* Y el corte por fecha sigue haciendo su trabajo. */
+  ok('«a tequila el 12» corta en la fecha', conv.destinoDeLaFrase('a tequila el 12') === 'Tequila');
+  ok('«a chapala del 20 al 22» también', conv.destinoDeLaFrase('a chapala del 20 al 22') === 'Chapala');
+  ok('«a mazatlan el sabado» también', conv.destinoDeLaFrase('a mazatlan el sabado') === 'Mazatlan');
+}
+
+titulo('«sábado 19» — el formato que el propio bot pide');
+{
+  /* Al repreguntar la fecha el bot dice «por ejemplo *sábado 12*». Y
+     «sabado 19» devolvía null: el cliente hacía justo lo que le pidieron
+     y recibía la misma pregunta otra vez. */
+  ok('«sabado 19» se entiende', conv.fechaDe('sabado 19', HOY) === '2026-09-19');
+  ok('«sábado 12» con acento también', conv.fechaDe('sábado 12', HOY) === '2026-09-12');
+  ok('«viernes 20» también', conv.fechaDe('viernes 20', HOY) === '2026-09-20');
+  ok('«sabado 19 de diciembre» lleva su mes', conv.fechaDe('sabado 19 de diciembre', HOY) === '2026-12-19');
+  /* Y el candado que protegía el «el» sigue puesto: un número suelto en
+     medio de una frase NO es una fecha. */
+  ok('«somos 12» NO es el día 12', conv.fechaDe('somos 12', HOY) === null);
+  ok('«somos 45 personas» tampoco', conv.fechaDe('somos 45 personas', HOY) === null);
+}
+
+titulo('a media lista de camiones, lo demás no se tira');
+{
+  /* Todo grupo de más de 20 pasa por el paso de escoger camión, y ahí
+     solo se guardaban destino, fecha y gente. Quien contestaba «de gdl»
+     o «nomás ir y venir» recibía «¿Cuál de esos te late? 🚌» y su dato
+     se perdía. */
+  const base = ['a tequila', 'somos 45', 'sabado 19', 'mismo dia'];
+  const conOrigen = corre(base.concat(['de gdl']));
+  ok('«de gdl» se guarda, y como Guadalajara', conOrigen.estado.origen === 'Guadalajara');
+
+  const sinMover = corre(['a vallarta', 'somos 45', '20 de octubre', '22 de octubre', 'nomas ir y venir']);
+  ok('«nomás ir y venir» son 0 recorridos', sinMover.estado.recorridos === 0);
+
+  /* Y sigue sin escoger camión por él. */
+  ok('  y el camión sigue sin escogerse solo', !conOrigen.estado.unidad);
+}
+
+titulo('«de gdl» a secas es de dónde salen');
+{
+  ok('«de gdl»', conv.origenDeLaFrase('de gdl') === 'gdl');
+  ok('«desde ocotlan»', conv.origenDeLaFrase('desde ocotlan') === 'ocotlan');
+  /* Lo que empieza con «de» y no es lugar: «de ida y vuelta» se estaba
+     guardando como ciudad de origen. */
+  ok('«de ida y vuelta» NO es un lugar', !conv.origenDeLaFrase('de ida y vuelta'));
+  ok('«de regreso» tampoco', !conv.origenDeLaFrase('de regreso'));
+  /* Y en medio de una frase el «de» no cuenta: aparece por todos lados. */
+  ok('«barra de navidad» no da origen', !conv.origenDeLaFrase('barra de navidad'));
+}
+
+titulo('el viaje no llega a confirmar sin decir en qué se va');
+{
+  /* Con 20 personas la confirmación salía sin unidad: el cliente decía
+     que sí a un resumen que no le decía en qué se iba. */
+  const r = corre(['a tequila', 'somos 20', 'sabado 19', 'mismo dia', 'de gdl']);
+  ok('con 20 queda la Sprinter', r.estado.unidad === 'sprinter');
+  ok('  y la confirmación la nombra', /Sprinter/.test(r.ultimo.texto));
+  ok('  con sus pasajeros', /20 pasajeros/.test(r.ultimo.texto));
+  /* Arriba de 20 NO se escoge por él: ése es el paso de elegir camión. */
+  ok('con 45 no se escoge solo', !corre(['a tequila', 'somos 45', 'sabado 19', 'mismo dia']).estado.unidad);
 }
 
 console.log('\n' + buenas + ' buenas, ' + malas + ' malas');

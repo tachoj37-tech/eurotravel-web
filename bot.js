@@ -358,7 +358,20 @@ function fechaDe(texto, hoy) {
      ------------------------------------------------------------ */
   const DIAS_SEMANA = 'lunes|martes|miercoles|jueves|viernes|sabado|domingo';
   m = t.match(/^(?:el\s*)?(\d{1,2})$/) ||
-    t.match(new RegExp('\\b(?:el|dia)\\s+(?:' + DIAS_SEMANA + ')?\\s*(\\d{1,2})\\b'));
+    t.match(new RegExp('\\b(?:el|dia)\\s+(?:' + DIAS_SEMANA + ')?\\s*(\\d{1,2})\\b')) ||
+    /* ------------------------------------------------------------
+       Y EL DÍA DE LA SEMANA HACE DE CANDADO IGUAL QUE EL «EL»
+       ------------------------------------------------------------
+       «sábado 19», sin el «el» de adelante. No es un capricho: es el
+       ejemplo que da el PROPIO BOT al repreguntar — «Dime la fecha de
+       salida, por ejemplo *sábado 12*»— y devolvía null. El cliente
+       escribía exactamente lo que le pidieron y recibía la misma
+       pregunta otra vez (cazado el 11-sep-2026 hablándole al bot).
+
+       Es igual de seguro que el «el»: «somos 12» no trae día de la
+       semana, así que el candado sigue puesto.
+       ------------------------------------------------------------ */
+    t.match(new RegExp('\\b(?:' + DIAS_SEMANA + ')\\s+(\\d{1,2})\\b'));
   if (m) {
     const dia = Number(m[1]);
     const mesHoy = Number(base.slice(5, 7));
@@ -892,7 +905,12 @@ const PASEOS_POR_DESTINO = [
    más un destino feo que uno mutilado.
    ------------------------------------------------------------ */
 const ARRANQUES = /^(?:nos\s+)?(?:vamos|queremos\s+ir|quiero\s+ir|iremos|vamonos|nos\s+vamos|es|seria|ser[ií]a|ir)\s+(?:a|al|para|hacia|hasta)\s+|^(?:para|hacia|rumbo\s+a|a|al)\s+/i;
-const COLAS_DE_OCASION = /\s+(?:de|por|para)\s+(?:despedida|boda|bodas|xv|quince|quincea[nñ]era|graduaci[oó]n|generaci[oó]n|peregrinaci[oó]n|romer[ií]a|cumplea[nñ]os|convivencia|paseo|excursi[oó]n|viaje|placer|trabajo|negocios)\b.*$/i;
+
+/* Muletillas que la gente pega al final y que no son parte del nombre:
+   «a tequila entonces», «a chapala porfa», «a vallarta pues». */
+const COLAS_DE_RELLENO = /\s+(entonces|pues|porfa|porfis|por\s+favor|plis|please|gracias|va|ok|okey|[aá]ndale|sale|creo|tal\s+vez|quiz[aá]s|mejor|ahora\s+s[ií])[\s.,!¡?¿]*$/i;
+
+const COLAS_DE_OCASION =/\s+(?:de|por|para)\s+(?:despedida|boda|bodas|xv|quince|quincea[nñ]era|graduaci[oó]n|generaci[oó]n|peregrinaci[oó]n|romer[ií]a|cumplea[nñ]os|convivencia|paseo|excursi[oó]n|viaje|placer|trabajo|negocios)\b.*$/i;
 
 function limpiaDestino(texto) {
   const original = String(texto || '').trim();
@@ -909,6 +927,23 @@ function limpiaDestino(texto) {
   }
 
   d = d.replace(COLAS_DE_OCASION, '').replace(/[\s,;.]+$/, '').trim();
+  /* ------------------------------------------------------------
+     LA MULETILLA DEL FINAL NO ES PARTE DEL NOMBRE
+     ------------------------------------------------------------
+     Cazado hablándole al bot el 11-sep-2026: «a tequila entonces» →
+     «*Tequila Entonces*, va 📍». Nadie se llama así, y ese texto es el
+     que sale en el resumen, en el ticket y en el contrato.
+
+     Se quitan de atrás hacia adelante y varias veces: «a chapala pues
+     porfa» trae dos pegadas. Y si el recorte deja menos de tres
+     letras, no se recorta — vale más un destino feo que uno mutilado,
+     que es la misma regla que usa el resto de esta función.
+     ------------------------------------------------------------ */
+  for (let i = 0; i < 3; i++) {
+    const recortado = d.replace(COLAS_DE_RELLENO, '').replace(/[\s,;.]+$/, '').trim();
+    if (recortado === d || recortado.length < 3) break;
+    d = recortado;
+  }
 
   /* Las abreviaturas de siempre. Un cliente real escribió «a vta» y el bot
      le contestó «Vta, va» (5-sep-2026). Se comparan sin acentos ni
@@ -931,6 +966,16 @@ function limpiaDestino(texto) {
    Guadalajara» es una ciudad con un asentimiento delante.
    ------------------------------------------------------------ */
 const ARRANQUE_DE_ORIGEN = /^(?:s[ií]|claro|va|ok|bien|correcto|as[ií] es)[,;.]?\s+|^(?:nos\s+)?(?:salimos|partimos|venimos|vamos)\s+(?:de|desde)\s+|^(?:de|desde)\s+/i;
+
+/* El nombre de la ciudad como se debe escribir: resuelve la abreviatura
+   —«gdl» → «Guadalajara»— y si no la hay, lo limpia y lo capitaliza. Es
+   lo que hace el paso del origen, puesto aparte para que los demás
+   caminos lo hagan igual y no cada uno a su modo. */
+function comoCiudad(texto) {
+  return esAliasDeDestino(texto)
+    ? ALIAS_DESTINO[claveDeAlias(texto)]
+    : limpiaOrigen(texto).slice(0, 120);
+}
 
 function limpiaOrigen(texto) {
   let d = String(texto || '').trim();
@@ -1309,6 +1354,22 @@ function fragmentosDeFecha(t) {
     return { salida: 'el ' + rango[1] + mesIda, regreso: 'el ' + rango[3] + mesVuelta };
   }
 
+  /* ------------------------------------------------------------
+     «SÁBADO 19» — EL FORMATO QUE EL PROPIO BOT PIDE
+     ------------------------------------------------------------
+     Cazado hablándole al bot el 11-sep-2026. Al repreguntar la fecha
+     dice, con esas palabras: «Dime la fecha de salida — por ejemplo
+     *sábado 12* o *12/10*». Y «sabado 19» devolvía null.
+
+     Pedirle al cliente un formato y luego no entenderlo es de lo peor
+     que puede hacer: el cliente hace justo lo que le pidieron y el bot
+     le contesta lo mismo otra vez. «El sábado 19» sí funcionaba — se
+     caía solo cuando no llevaba el «el» de adelante, que es como se
+     escribe de verdad.
+     ------------------------------------------------------------ */
+  const diaConNumero = t.match(/\b(?:lunes|martes|miercoles|jueves|viernes|sabado|domingo)\s+(\d{1,2})(\s+de\s+[a-zñ]{3,10})?\b/);
+  if (diaConNumero) mete('el ' + diaConNumero[1] + (diaConNumero[2] || ''));
+
   /* «el 12 de septiembre», «el 12» */
   const conEl = t.match(/\bel\s+(\d{1,2})(\s+de\s+[a-zñ]+)?\b/);
   if (conEl) mete('el ' + conEl[1] + (conEl[2] || ''));
@@ -1333,7 +1394,28 @@ function fragmentosDeFecha(t) {
 /* Lo que el cliente contesta cuando lo que trae en la cabeza es CUÁNDO,
    no a dónde. Va anclado a propósito: «Domingo Arenas» o «El Salto de
    mañana» tienen que seguir pasando. */
-const SOLO_ES_FECHA = /^(?:el |este |la |los )?(hoy|hoy mismo|manana|pasado manana|ayer|ya|ahorita|ahora|urgente|mismo dia|fin|finde|fin de semana|lunes|martes|miercoles|jueves|viernes|sabado|domingo|proxima semana|semana que entra|proximo mes|otro fin)$/;
+/* ------------------------------------------------------------
+   NI UNA FECHA NI UNA TEMPORADA SON UN DESTINO
+   ------------------------------------------------------------
+   Cazado hablándole al bot el 11-sep-2026, al SEGUNDO mensaje:
+
+     «pues todavía no sé, qué me recomiendas para un fin de semana»
+     → «*Un Fin de Semana*, va 📍»
+
+   El «para …» lo lee como destino. Ya estaba la lista de fechas
+   sueltas —de cuando «quiero para hoy mismo» salía como «a Hoy
+   Mismo»— pero pedía el artículo «el/este/la»; con «un fin de semana»
+   se colaba. Y faltaban las temporadas, que es como habla quien
+   todavía no decidió: «un puente», «Semana Santa», «vacaciones».
+
+   Quien dice eso está diciendo CUÁNDO, no a dónde — y casi siempre
+   viene pegado a un «todavía no sé».
+   ------------------------------------------------------------ */
+/* «Todavía no sé», «no sabemos», «apenas estamos viendo». Quien lo dice
+   está diciendo que NO tiene el dato — nunca es el dato. */
+const TODAVIA_NO_SABE = /\bno (lo )?(se|sabemos|sabria|hemos decidido|hemos visto)\b|\btodavia no\b|\baun no\b|\bapenas (estamos|ando|andamos)\b|\bni idea\b|\bno estoy seguro\b/;
+
+const SOLO_ES_FECHA = /^(?:el |la |los |las |este |esta |un |una |algun |alg[uú]n )?(hoy|hoy mismo|manana|pasado manana|ayer|ya|ahorita|ahora|urgente|mismo dia|fin|finde|fin de semana|finde largo|puente|dia festivo|vacaciones|semana santa|navidad|ano nuevo|a[nñ]o nuevo|verano|invierno|lunes|martes|miercoles|jueves|viernes|sabado|domingo|proxima semana|semana que entra|proximo mes|otro fin|dia|fecha)$/;
 
 function destinoDeLaFrase(crudo) {
   const m = String(crudo || '').match(
@@ -1360,7 +1442,14 @@ function destinoDeLaFrase(crudo) {
      dejaba el destino en «Chapala Manana», que el catálogo ya no
      encuentra — y lo que no se encuentra cobra otro precio. */
   let d = m[2]
-    .split(/\s+(?:el|somos|para|con|y|de\s+ida|ida|manana|ma[nñ]ana|hoy|pasado|lunes|martes|miercoles|mi[eé]rcoles|jueves|viernes|sabado|s[aá]bado|domingo|del)\s+/i)[0]
+    /* «el» y «del» SOLO cortan cuando lo que sigue es un número, que es
+       para lo que estaban: «a Tequila el 12», «a Chapala del 20 al 22».
+       Sin esa condición se llevaban medio nombre de los destinos que la
+       traen adentro — «a Playa del Carmen» quedaba en «Playa» y «a
+       Barrancas del Cobre» en «Barrancas», y ése ya no lo encuentra el
+       catálogo, o sea que cobra otro precio (cazado el 11-sep-2026
+       hablándole al bot). */
+    .split(/\s+(?:(?:del|el)(?=\s+(?:\d|lunes|martes|miercoles|mi[eé]rcoles|jueves|viernes|sabado|s[aá]bado|domingo|proximo|pr[oó]ximo|fin|finde|puente|dia|d[ií]a))|somos|para|con|y|de\s+ida|ida|manana|ma[nñ]ana|hoy|pasado|lunes|martes|miercoles|mi[eé]rcoles|jueves|viernes|sabado|s[aá]bado|domingo)\s+/i)[0]
     .replace(/\s+(?:manana|ma[nñ]ana|hoy)$/i, '')
     .split(/\s+\d/)[0]
     .trim();
@@ -1406,6 +1495,28 @@ function destinoDeLaFrase(crudo) {
    «de» suelto no basta: en «vamos de despedida a Tequila» diría que
    salen «de despedida». */
 function origenDeLaFrase(crudo) {
+  /* ------------------------------------------------------------
+     «DE GDL», A SECAS, TAMBIÉN ES DE DÓNDE SALEN
+     ------------------------------------------------------------
+     Hacía falta un verbo —«salimos de…»— o un «desde». Pero a la
+     pregunta «¿de dónde salen?» la gente contesta «de gdl» y ya, y eso
+     se perdía: el dato no entraba y el bot volvía a preguntar
+     (11-sep-2026, hablándole al bot).
+
+     Solo cuando el mensaje es ESO y nada más. En medio de una frase,
+     «de» aparece por todos lados —«barra de navidad», «de ida y
+     vuelta»— y tomarlo ahí sería inventar un origen.
+     ------------------------------------------------------------ */
+  const soloDe = String(crudo || '').trim()
+    .match(/^(?:de|desde)\s+([A-Za-zÁÉÍÓÚÑáéíóúñ][A-Za-zÁÉÍÓÚÑáéíóúñ\s.]{1,30})$/i);
+  if (soloDe) {
+    const o = soloDe[1].trim();
+    /* «De ida y vuelta» empieza igual y NO es un lugar. Lo mismo «de
+       ida», «de regreso», «de un día». */
+    if (NO_ES_UN_LUGAR.test(normaliza(o))) return null;
+    return o.length >= 3 ? o : null;
+  }
+
   const m = String(crudo || '').match(
     /\b(?:salimos|saliendo|salgo|salen|partimos|arrancamos)\s+de\s+([A-Za-zÁÉÍÓÚÑáéíóúñ][^,;.!?]{2,40})|\bdesde\s+([A-Za-zÁÉÍÓÚÑáéíóúñ][^,;.!?]{2,40})/i);
   if (!m) return null;
@@ -1424,7 +1535,12 @@ const NO_SABE_CUANTOS = /\b(no s[eé]|no sabemos|no tengo|todav[ií]a no|a[uú]n
 
 /* «No nos movemos allá», dicho al guion. Misma expresión que usa
    `whatsapp.mjs`, escrita aquí para que el motor la entienda sin IA. */
-const NO_SE_MUEVEN = /\b(solo|nomas|nada mas|unicamente|puro) (nos |que nos )?(lleven|llevan|llevar|traigan|traen|dejen|dejan)\b|\bllevar y traer\b|\bnos llevan y (nos )?traen\b|\bnos dejan y (nos )?recogen\b|\bno (nos vamos a|vamos a|nos) mover\b|\bsin recorridos\b|\bida y vuelta nada mas\b/;
+const NO_SE_MUEVEN = /\b(solo|nomas|nada mas|unicamente|puro) (nos |que nos )?(lleven|llevan|llevar|traigan|traen|dejen|dejan)\b|\bllevar y traer\b|\bnos llevan y (nos )?traen\b|\bnos dejan y (nos )?recogen\b|\bno (nos vamos a|vamos a|nos) mover\b|\bsin recorridos\b|\bida y vuelta nada mas\b|\b(ir|solo ir|nomas ir|nada mas ir) y (venir|volver|regresar)\b/;
+
+/* Lo que empieza con «de» y NO es un lugar: «de ida y vuelta», «de
+   regreso», «de un día». Sin esto, «de ida y vuelta» se guardaba como
+   ciudad de origen (11-sep-2026). */
+const NO_ES_UN_LUGAR = /^(un fin de semana|fin de semana|un puente|puente|en semana santa|semana santa|vacaciones|ida|ida y vuelta|vuelta|regreso|un dia|dos dias|paso|paseo|dia|noche|ahi|aqui|alla)$/;
 
 /* «Ida y vuelta el mismo día», dicho en el renglón de la SALIDA. A
    propósito más apretada que la del paso de regreso: aquí no entra
@@ -1930,6 +2046,14 @@ function absorbeLoDemas(e, crudo, hoy) {
     if (e.unidad && !cabenEnLaUnidad(e, Number(l.gente))) {
       delete e.unidad; delete e.unidadNombre; delete e.unidadId;
     }
+    /* Y si con ese número la unidad es una sola —de 7 a 20 es la
+       Sprinter y no hay de otra—, se anota. Sin esto el viaje llegaba a
+       la confirmación SIN unidad: el cliente decía que sí a un resumen
+       que no le decía en qué se iba, y el ticket tampoco lo decía
+       (11-sep-2026). Arriba de 20 no se escoge por él: ahí está el paso
+       de elegir camión, y abajo de 7 puede ser Suburban. */
+    const n = Number(l.gente);
+    if (!e.unidad && n > Number(SUBURBAN.max) && n <= Number(SPRINTER.max)) e.unidad = 'sprinter';
   }
   if (l.unidad && !e.unidad) { e.unidad = l.unidad; algo = true; }
   if (l.destino && !e.destino) { e.destino = limpiaDestino(l.destino); algo = true; }
@@ -2455,11 +2579,26 @@ function pasoDeCotizacion(t, crudo, estado, hoy) {
          nombre de un lugar. La gente no contesta la pregunta que le
          hiciste, contesta lo que trae en la cabeza. */
       const otro = leeDeUnJalon(crudo, hoy);
-      if (otro.destino || otro.salida || otro.gente) {
+      /* ------------------------------------------------------------
+         AQUÍ TAMBIÉN CUENTA EL ORIGEN Y LOS RECORRIDOS
+         ------------------------------------------------------------
+         Esto solo miraba destino, fecha y gente, así que un cliente que
+         a media lista de camiones contesta «de gdl» o «nomás ir y
+         venir» recibía «¿Cuál de esos te late? 🚌» y su dato se perdía
+         — tenía que volver a decirlo más adelante.
+
+         Cazado hablándole al bot el 11-sep-2026. Todo grupo de más de
+         20 pasa por este paso, así que le toca a la mitad de las
+         conversaciones de autobús.
+         ------------------------------------------------------------ */
+      const noSeMueve = NO_SE_MUEVEN.test(t);
+      if (otro.destino || otro.salida || otro.gente || otro.origen || noSeMueve) {
         if (otro.destino && !e.destino) e.destino = otro.destino;
         if (otro.salida && !e.salida) e.salida = otro.salida;
         if (otro.regreso && !e.regreso) e.regreso = otro.regreso;
         if (otro.gente) e.gente = otro.gente;
+        if (otro.origen && !e.origen && !pareceDireccion(otro.origen)) e.origen = comoCiudad(otro.origen);
+        if (noSeMueve && e.recorridos === undefined) e.recorridos = 0;
         alSiguienteHueco(e);
         return siguiente(e, 'Anotado 👍');
       }
@@ -2593,6 +2732,49 @@ function pasoDeCotizacion(t, crudo, estado, hoy) {
        párrafo, y ahí es donde la gente escribe. Se le pasa igual por
        encima para que un lugar que no está en el catálogo se siga
        viendo bien escrito. */
+    /* ------------------------------------------------------------
+       UNA FRASE LARGA SIN LUGAR NO ES UN DESTINO
+       ------------------------------------------------------------
+       Cazado hablándole al bot el 11-sep-2026, al segundo mensaje:
+
+         «pues todavía no sé, qué me recomiendas para un fin de semana»
+         → «*Pues Todavia No Se, Que Me Recomiendas Para Un Fin de
+            Semana*, va 📍»
+
+       Cuando el buscador de lugares no encuentra nada, esto se quedaba
+       con la frase ENTERA. Y de ahí en adelante todo sale mal: ese
+       texto va al resumen, al ticket y al contrato, y el bot ya no
+       vuelve a preguntar a dónde van porque cree que ya lo sabe.
+
+       Es el mismo defecto que el dueño cazó con «somos 50» —que
+       quedaba como destino— pero por el otro lado: aquel era una
+       respuesta corta, éste es una parrafada.
+
+       La regla: si no se encontró lugar Y lo que escribió es una frase
+       larga o un «todavía no sé», no es un destino. Se vuelve a
+       preguntar sin regañar. Un destino de verdad cabe en pocas
+       palabras, y si trae más, el buscador lo encuentra adentro.
+       ------------------------------------------------------------ */
+    const palabras = normaliza(dicho).split(/\s+/).filter(Boolean).length;
+    /* Y una temporada tampoco: «para un fin de semana», «un puente», «en
+       semana santa». `destinoDeLaFrase` ya las frena, pero cuando no
+       encuentra lugar el paso se quedaba con lo que hubiera, y esas
+       frases son cortas —no las caza el tope de palabras— y no llevan un
+       «no sé». Se comprueba sobre lo ya limpio, que es donde «para un
+       fin de semana» queda en «un fin de semana» (11-sep-2026). */
+    const candidato = normaliza(limpiaDestino(dicho));
+    if (!leido.destino && (SOLO_ES_FECHA.test(candidato) || NO_ES_UN_LUGAR.test(candidato))) {
+      return {
+        texto: '¿A qué ciudad o pueblo van? 📍 Con el nombre del lugar me arranco.',
+        pasa: false, estado: e, opciones: [], noEntendio: true
+      };
+    }
+    if (!leido.destino && (palabras > 5 || TODAVIA_NO_SABE.test(normaliza(dicho)))) {
+      return {
+        texto: '¿A qué ciudad o pueblo van? 📍 Con el nombre del lugar me arranco.',
+        pasa: false, estado: e, opciones: [], noEntendio: true
+      };
+    }
     e.destino = (leido.destino
       ? limpiaDestino(leido.destino)
       : limpiaDestino(dicho)).slice(0, 120);
