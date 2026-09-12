@@ -5179,11 +5179,23 @@ function respuestaBase(mensaje, estado, hoy) {
          las pruebas no bailen— porque dos clientes que se comparan el
          chat no deben ver la misma frase calcada. */
       texto: saludo(VENDEDOR, mensaje) +
-        /* La segunda frase va PEGADA a la pregunta, no en su propio
-           renglón: el guion no manda mensajes de más de tres líneas y el
-           saludo ya usa dos. Lo caza `probar-conversacion.cjs`. */
-        '\n\n¿A dónde van? Y si ya cotizaste con nosotros, dale a ' +
-        '*Hablar con alguien* y ahí la vemos.',
+        /* ------------------------------------------------------------
+           SE PREGUNTA QUÉ NECESITA, NO A DÓNDE VA — 12-sep-2026
+           ------------------------------------------------------------
+           Aquí decía «¿A dónde van? Y si ya cotizaste con nosotros, dale
+           a *Hablar con alguien* y ahí la vemos». El dueño lo mandó
+           quitar: era explicarle al cliente cómo usar los botones, y un
+           botón que necesita instrucciones está mal puesto.
+
+           Ahora la pregunta nombra los dos caminos y ya: los botones
+           dicen lo mismo, así que quien lee el texto y quien solo mira
+           los botones entienden igual.
+
+           Va en un solo renglón porque el saludo ya usa dos y el guion
+           no manda mensajes de más de tres. Lo caza
+           `probar-conversacion.cjs`.
+           ------------------------------------------------------------ */
+        '\n\n¿Qué necesitas: cotizar un viaje o hablar con alguien?',
       pasa: false,
       estado: { paso: 'destino' },
       /* ------------------------------------------------------------

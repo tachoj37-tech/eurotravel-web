@@ -55,9 +55,18 @@ titulo('el saludo ofrece por dónde empezar');
     ops.every(function (o) { return o.length <= 20; }));
   ok('  y no son más de tres', ops.length <= 3);
 
-  /* Lo que no cabe en el botón se dice en el mensaje. */
-  ok('el mensaje explica que ahí también se ven las cotizaciones',
-    /ya cotizaste/i.test(r.texto) && /hablar con alguien/i.test(r.texto));
+  /* CAMBIÓ DE LADO EL 12-sep-2026, y por una buena razón del dueño.
+     Aquí se exigía que el mensaje explicara «si ya cotizaste, dale a
+     Hablar con alguien». Mandó quitar esa frase: era enseñarle al
+     cliente a usar los botones, y un botón que necesita instrucciones
+     está mal puesto.
+
+     Lo que se pide ahora es que la pregunta NOMBRE los dos caminos, para
+     que quien lee el texto y quien solo mira los botones entiendan lo
+     mismo. */
+  ok('la pregunta nombra los dos caminos',
+    /cotizar un viaje/i.test(r.texto) && /hablar con alguien/i.test(r.texto));
+  ok('  y ya no explica cómo usar los botones', !/dale a \*/i.test(r.texto));
 
   /* La regla de forma del guion: nada de más de tres renglones. */
   const renglones = r.texto.split('\n').filter(function (l) { return l.trim(); });

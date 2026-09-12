@@ -736,7 +736,13 @@ console.log('\n== LA IA: SOLO CUANDO EL BOT SE RINDIO ==');
        y que renta antes de preguntar. Lo que esta prueba cuida no
        cambia: que la intencion «saludo» use LA MISMA respuesta escrita
        y no una improvisada por la IA. */
-    ['saludo', /a donde van/]]
+    /* 12-sep-2026: y cambió otra vez. El dueño mandó quitar «¿a dónde
+       van?» del saludo; ahora pregunta «¿qué necesitas: cotizar un viaje
+       o hablar con alguien?», que son los dos botones. La regla que esta
+       prueba cuida sigue intacta —que la intención «saludo» use la
+       respuesta ESCRITA y no una que improvise la IA— y para eso sirve
+       igual de bien la frase nueva. */
+    ['saludo', /que necesitas/]]
     .filter(function (c) {
       const r = conv.aplicaEntendido({ intencion: c[0] }, HOY);
       return !r || !c[1].test(conv.normaliza(r.texto));
