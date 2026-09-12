@@ -68,7 +68,27 @@ dejar rastro.
 
 ## Las fases
 
-### Fase 0 · La limpia (lo primero que pidió)
+### Fase 0 · La limpia (lo primero que pidió) — **HECHA el 12-sep-2026**
+
+> El recorrido completo y lo que encontró está en
+> **`docs/FASE-0-RECORRIDO.md`**. La batería que lo vigila es
+> **`pruebas/probar-recorrido.cjs`** (31 comprobaciones).
+>
+> **Cuatro cosas rotas, arregladas:** dos unidades con la foto rota —el G8
+> y el Century, y las fotos sí existían—; los tres «Cotizar esta unidad»
+> del inicio que abrían el cotizador vacío; los dos «Entrar» que con los
+> campos vacíos contestaban «Ese correo o esa contraseña no son»; y el
+> código del correo que se mandaba a medias y gastaba uno de los cinco
+> intentos.
+>
+> **Una decisión espera al dueño:** la banda de «Renta de autobuses» habla
+> de cuatro modelos y hubo que escoger con cuál abre el cotizador. Va el
+> **G8**. Si prefiere otro, es cambiar un atributo.
+>
+> **Lo que se dejó anotado a propósito:** el paso de *Tus datos* acepta un
+> teléfono de dos dígitos y un correo sin arroba. Hoy no truena; en la
+> fase 2 sí, porque ahí ese teléfono se vuelve el único hilo con el
+> cliente. Se arregla allá, junto con el formato que haya que exigir.
 
 Recorrer la página entera con el navegador y dejarlo escrito como batería,
 para que no haya que volver a recorrerla a mano:
@@ -85,7 +105,26 @@ para que no haya que volver a recorrerla a mano:
 **Entregable:** un reporte de lo que esté roto y la batería que lo vigila.
 Nada se arregla en esta fase salvo lo que esté roto de verdad.
 
-### Fase 1 · El cotizador no inventa precios
+### Fase 1 · El cotizador no inventa precios — **HECHA el 12-sep-2026**
+
+> El detalle está en **`docs/FASE-1-SOLO-DEL-CRITERIO.md`**. La batería es
+> **`pruebas/probar-solo-del-criterio.cjs`** (123 comprobaciones), con los
+> 50 destinos de la lista congelados en cuatro duraciones cada uno.
+>
+> La regla se llama **R46** y vive en `api/_tarifa.js`. Las dos puertas
+> públicas —`/api/cotizar` y `/api/pagar`— piden `soloDelCriterio`; el bot y
+> la pantalla del dueño no, y ahí la fórmula sigue viva. La opción es un
+> argumento del servidor, no un campo del cuerpo: el cliente no la puede
+> apagar.
+>
+> **Lo que el dueño tiene que ver:** de los 79 destinos que ofrece el
+> buscador, **43 siguen cotizando solos y 36 pasan a un vendedor**. Entre
+> esos 36 están los traslados locales —aeropuerto, Expo, Akron, Auditorio
+> Telmex, la zona metropolitana—, que son de los más pedidos. Ponerles
+> renglón en el Excel los devuelve al cotizador sin tocar código.
+>
+> **De paso:** un destino de fuera ya no le cuesta dos llamadas de pago a
+> Google, y sin la llave configurada deja de contestar 503.
 
 La regla, dicha como la dijo el dueño: **si el precio no sale del criterio,
 no se da precio.**
@@ -101,7 +140,15 @@ a un cliente.
 > exactamente el mismo número que hoy, uno por uno. Si alguno cambia un
 > peso, la prueba lo caza.
 
-### Fase 2 · Cuando no hay precio, se queda con el cliente
+### Fase 2 · Cuando no hay precio, se queda con el cliente — **HECHA el 12-sep-2026**
+
+> Lo que se hizo está en **`docs/FASE-2-3-NO-SE-PIERDE.md`**, con la fase 3.
+> Lo vigilan `pruebas/probar-solicitud.cjs` (66) y `pruebas/probar-captura.cjs` (37).
+>
+> **Salió mejor de lo planeado en una cosa:** la caja no sale solo cuando el
+> destino está fuera del criterio, sino en **los tres caminos sin precio** —y
+> el que faltaba era el más transitado de todos, el de los camiones, que ni
+> siquiera enseñaba caja—.
 
 Hoy se pierde. Lo que va en su lugar:
 
@@ -117,7 +164,26 @@ Hoy se pierde. Lo que va en su lugar:
   a dónde, cuándo, cuántos, qué unidad
 - Al mandar: **acuse en la misma pantalla**, no un mensaje que quizá no llega
 
-### Fase 3 · El mensaje que le llega a él, y el que le llega al vendedor
+### Fase 3 · El mensaje que le llega a él, y el que le llega al vendedor — **HECHA A MEDIAS el 12-sep-2026**
+
+> **Lo que sí quedó:** los dos mensajes escritos, la ficha del vendedor armada
+> con `_tickets.armaTicket` —el mismo del bot, con sus mismos botones— y los
+> dos saliendo **por correo**.
+>
+> **Lo que falta, y por qué:** mandarlos por WhatsApp. La única puerta de
+> salida a WhatsApp está en `api/whatsapp.mjs` y lleva tres candados que
+> costaron caro —el filtro de salida, el freno de la CLABE ajena y la lista
+> blanca del teléfono del dueño—. Abrir una segunda salida sin ellos sería un
+> hueco, y copiarlos sería peor: dos copias son dos copias hasta que alguien
+> toca una.
+>
+> **Le toca a la rama del bot**, que es donde vive esa puerta: llamar a
+> `_solicitud.paraWhatsApp()` y mandar los dos mensajes. La ficha ya sale
+> hecha. Son pocas líneas allá y cero riesgo aquí.
+>
+> Y la decisión de abajo —a qué número escribe la página— **quedó contestada
+> sola**: la página no manda a ningún número, así que no tiene que saber si
+> hoy es Dualhook o mañana Kommo. Quien lo sepa es el bot, como debe ser.
 
 **Al cliente**, por WhatsApp (o correo, según lo que haya dejado):
 

@@ -419,25 +419,64 @@ titulo('con 50 nunca se ofrece un autobús de 47 (7-sep-2026)');
   okQue('primero van los que caben (G8, i6S, Neobus)', /G8/.test(antesDelCorte) && /i6S/.test(antesDelCorte) && /Neobus/.test(antesDelCorte));
   okQue('  y dice que se ajustan a la capacidad / que son los que les caben', /se ajustan a la capacidad/.test(antesDelCorte) && /porque son los que les caben/.test(antesDelCorte));
   okQue('el i6 de 47 NO va entre los que caben', !/Irizar i6 —/.test(antesDelCorte));
-  okQue('el Century NO va entre los que caben', !/Century/.test(antesDelCorte));
-  okQue('  pero los dos sí salen al final, como otras opciones', /Irizar i6 —/.test(despuesDelCorte) && /Century/.test(despuesDelCorte));
-  okQue('  y el Century se anuncia como «47 a 49 asientos»', /Century — Clásico — 47 a 49 asientos/.test(despuesDelCorte));
+  okQue('el Century de 47 NO va entre los que caben', !/Irizar Century —/.test(antesDelCorte));
+  okQue('  pero los dos sí salen al final, como otras opciones',
+    /Irizar i6 —/.test(despuesDelCorte) && /Irizar Century —/.test(despuesDelCorte));
+  /* CAMBIÓ EL 12-sep-2026: decía «47 a 49 asientos», que era el rótulo de
+     cuando los dos Centurys eran una sola unidad. Ahora cada uno anuncia
+     los suyos. */
+  okQue('  y el Century de 47 se anuncia con sus 47 asientos',
+    /Irizar Century — Clásico — 47 asientos/.test(despuesDelCorte));
   okQue('  cierra preguntando cuál', /¿Cuál te late\?/.test(lista));
 }
 
 /* ============================================================ */
-titulo('el Century cuenta como 49: con 48 se ofrece, con 49 no, con 46 también (7-sep-2026)');
+titulo('los dos Centurys: cada grupo cae en el que le toca (12-sep-2026)');
 {
   const bot = (await import(pathToFileURL(path.join(RAIZ, 'bot.js')).href)).default;
   const caben = function (n) { return bot.autobusesPara(n).caben.join('\n'); };
   const noCaben = function (n) { return bot.autobusesPara(n).noCaben.join('\n'); };
-  okQue('con 48, el Century cabe («caben en el de 49»)', /Century/.test(caben(48)) && !/Century/.test(noCaben(48)));
-  okQue('con 49, el Century NO se ofrece', !/Century/.test(caben(49)) && /Century/.test(noCaben(49)));
-  okQue('con 46, el Century cabe («caben también en el de 47»)', /Century/.test(caben(46)));
+
+  /* ------------------------------------------------------------
+     CAMBIÓ DE LADO EL 12-sep-2026, Y LO CAMBIÓ EL DUEÑO
+
+     Decía «el Century cuenta como 49: con 48 se ofrece, con 49 no». Era
+     UN Century con `max` 48 —el asiento de margen de su dictado del
+     7-sep— cubriendo las dos columnas del Excel.
+
+     Él lo partió: «irizar century 47 es uno, irizar century de 49 es
+     otro… son unidades con diferentes precios, no los pongas en una misma
+     unidad». Y el Excel le da la razón: Mazatlán son $38,000 en la columna
+     del de 47 y $40,000 en la del de 49.
+
+     Ahora no hay que elegir un `max` de compromiso: cada uno tiene su
+     capacidad real, y el grupo cae en el que le toca. El margen que daba
+     el 48 sale solo — con 48 personas se ofrece el de 49, no el de 47.
+
+     OJO: `unidades.js` lo comparten la página y el bot, así que esto
+     también cambia lo que el bot ofrece por WhatsApp. No se tocó `bot.js`
+     —el catálogo es uno solo y así debe ser—, pero el efecto es de los dos
+     lados y conviene saberlo.
+     ------------------------------------------------------------ */
+  const century47 = /Irizar Century —/;      // el nombre va seguido de « — 47 pasajeros»
+  const century49 = /Irizar Century 49/;
+
+  okQue('con 46 caben los dos Centurys',
+    century47.test(caben(46)) && century49.test(caben(46)));
+  okQue('con 48 cabe SOLO el de 49',
+    century49.test(caben(48)) && !century47.test(caben(48)));
+  okQue('  y el de 47 queda entre los que no caben', century47.test(noCaben(48)));
+  okQue('con 49 sigue cabiendo el de 49',
+    century49.test(caben(49)) && !century47.test(caben(49)));
+  okQue('con 50 ya no cabe ninguno de los dos',
+    !century47.test(caben(50)) && !century49.test(caben(50)));
+
   okQue('con 46 también caben el i6 y el PB', /Irizar i6 —/.test(caben(46)) && /Irizar PB/.test(caben(46)));
   okQue('con 48, el i6 y el PB (47) ya no caben', /Irizar i6 —/.test(noCaben(48)) && /Irizar PB/.test(noCaben(48)));
   okQue('con 50 caben G8, i6S y Neobus', /G8/.test(caben(50)) && /i6S/.test(caben(50)) && /Neobus/.test(caben(50)));
-  okQue('  y no caben i6, PB ni Century', /Irizar i6 —/.test(noCaben(50)) && /Irizar PB/.test(noCaben(50)) && /Century/.test(noCaben(50)));
+  okQue('  y no caben i6, PB ni los Centurys',
+    /Irizar i6 —/.test(noCaben(50)) && /Irizar PB/.test(noCaben(50)) &&
+    century47.test(noCaben(50)) && century49.test(noCaben(50)));
   okQue('con 52 no cabe ninguno y se ofrecen dos unidades', bot.autobusesPara(52).caben.length === 0 && /dos unidades/.test(bot.mensajeDeAutobuses(52)));
   const m = bot.mensajeDeAutobuses(50);
   okQue('el mensaje de 50 pone los que caben ANTES de «no caben»', m.indexOf('G8') < m.indexOf('no caben') && m.indexOf('Neobus') < m.indexOf('no caben'));

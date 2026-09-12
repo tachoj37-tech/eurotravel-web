@@ -58,8 +58,26 @@ titulo('está en el catálogo, y con sus dos banderas');
   ok('existe', !!elDe51);
   ok('es de 51 pasajeros', elDe51 && elDe51.max === 51);
   ok('es autobús', elDe51 && elDe51.cat === 'autobus');
-  ok('lleva `soloBot`: fuera de la página', elDe51 && elDe51.soloBot === true);
-  ok('lleva `sinFotos`: todavía no tiene', elDe51 && elDe51.sinFotos === true);
+  /* ------------------------------------------------------------
+     CAMBIÓ DE LADO EL 12-sep-2026 · YA ENTRÓ A LA PÁGINA
+
+     Decía «lleva `soloBot`: fuera de la página», y así estaba: el
+     pendiente eran las fotos propias, que nunca llegaron.
+
+     El dueño resolvió el pendiente sin fotos: «no necesito que agregues
+     fotos… sigue enseñando las mismas», y «deben mostrarse en el
+     cotizador». Así que cambió a `soloCotizador`: entra al selector del
+     cotizador —donde lo que se elige es cuánta gente cabe— y sigue sin
+     tarjeta propia en la galería, porque es el mismo camión y las mismas
+     fotos que el i6 de 47. La ficha del de 47 anuncia que existe.
+
+     `sinFotos` NO se quitó, y no debe quitarse: sigue sin fotos suyas y
+     el bot tiene que seguir diciéndolo cuando presta las del otro.
+     ------------------------------------------------------------ */
+  ok('ya no lleva `soloBot`', elDe51 && !elDe51.soloBot);
+  ok('lleva `soloCotizador`: en el cotizador sí, en la galería no',
+    elDe51 && elDe51.soloCotizador === true);
+  ok('lleva `sinFotos`: sigue sin fotos suyas', elDe51 && elDe51.sinFotos === true);
   ok('NO se cotiza solo en línea', elDe51 && elDe51.cotizadorAutomatico === false);
   /* El i6 de 47 no se tocó. */
   ok('el i6 de 47 sigue ahí, de 47', elDe47 && elDe47.max === 47);
@@ -75,13 +93,19 @@ titulo('los nombres no chocan');
   ok('el de 51 lleva el 51 en el nombre', elDe51 && /51/.test(elDe51.name));
 }
 
-titulo('la página lo deja fuera, el bot no');
+titulo('la galería lo deja fuera, el cotizador y el bot no');
 {
-  /* La galería y el selector del cotizador se arman de la MISMA lista,
-     así que el filtro va una sola vez y cubre a los dos. */
+  /* Desde el 12-sep-2026 son DOS listas y no una: `UNITS` —todo lo que no
+     es `soloBot`— arma el selector del cotizador, y `EN_GALERIA` le quita
+     además lo `soloCotizador` para armar las tarjetas. Si alguien las
+     volviera a juntar, el i6 de 51 saldría como tarjeta repetida del de 47.
+     El reparto completo lo cuida `probar-capacidades.cjs`. */
   const html = fs.readFileSync(path.join(RAIZ, 'index.html'), 'utf8');
-  ok('index.html filtra las unidades `soloBot`',
+  ok('index.html sigue filtrando las unidades `soloBot`',
     /window\.UNIDADES \|\| \[\]\)\.filter\(function \(u\) \{ return !u\.soloBot; \}\)/.test(html));
+  ok('y la galería le quita además las `soloCotizador`',
+    /EN_GALERIA = UNITS\.filter\(function \(u\) \{ return !u\.soloCotizador; \}\)/.test(html));
+  ok('la galería se arma de esa lista', /EN_GALERIA\.forEach/.test(html));
 
   /* Y el bot sí lo ofrece: a un grupo de 50 tiene que aparecer. */
   let e = null, r = null;
@@ -144,13 +168,25 @@ titulo('los demás camiones se siguen escogiendo igual');
     ['Irizar i6 51', 'Irizar i6 51'], ['Irizar i6', 'Irizar i6'],
     ['el pb', 'Irizar PB'], ['el neobus', 'Neobus'],
     ['el marcopolo', 'Marcopolo Paradiso G8'], ['el g8', 'Marcopolo Paradiso G8'],
-    ['el century', 'Irizar Century']
+    /* CAMBIÓ DE LADO EL 12-sep-2026: «el century» escogía, porque había uno
+       solo. Ahora hay dos —el de 47 y el de 49, que el dueño separó porque
+       tienen precios distintos en el Excel— y «century» es palabra de los
+       dos, así que ya no escoge: pregunta. Es la misma regla que hace que
+       «el i6» tampoco escoja, y se comprueba abajo. */
+    ['el century de 47', 'Irizar Century'], ['el century de 49', 'Irizar Century 49']
   ];
   for (const [dice, espera] of casos) {
     ok('«' + dice + '» → ' + espera, escoge(dice, 45).estado.unidadNombre === espera);
   }
-  /* «el irizar» le queda a cinco: se sigue preguntando. */
+  /* «el irizar» le queda a seis: se sigue preguntando. */
   ok('«el irizar» no escoge ninguno', !escoge('el irizar', 45).estado.unidadNombre);
+  /* Y «el century» a secas tampoco, por la misma razón que «el i6». */
+  {
+    const r = escoge('el century', 45);
+    ok('«el century» a secas no escoge ninguno', !r.estado.unidadNombre);
+    ok('  y pregunta nombrando los dos',
+      /Irizar Century\* — 47/.test(r.texto) && /Irizar Century 49\* — 49/.test(r.texto));
+  }
 }
 
 titulo('las fotos son prestadas, y se dice de quién');

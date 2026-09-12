@@ -68,6 +68,15 @@ window.UNIDADES = [
      el mismo camión, y el bot los estaba ofreciendo como si uno fuera
      mejor que el otro. */
   { id: 'irizar-i6', cat: 'autobus', cotizadorAutomatico: false, tag: 'Autobús · Premium', name: 'Irizar i6', cap: '47 pasajeros', max: 47, modelo: 2017, img: 'i6', full: 'hero1',
+    /* El dueño tiene DOS i6: éste de 47 y el de 51, y son UNIDADES DISTINTAS
+       —cada una con su columna del Excel, «PB/i6 47 pax» y «NEOBUS/i6 50/51
+       PAX»—. Comparten fotos, no precio. Por eso en la galería va una sola
+       tarjeta y aquí se dice que existe la otra, diciendo que su precio es
+       otro. Dictado del 12-sep-2026: «son unidades con diferentes precios,
+       no los pongas en una misma unidad». */
+    /* Mismo «y» que el Century, y aquí el dueño lo había dictado antes con
+       todas sus letras: «no hay alternativas de 48, 49 y 50, solo 47 y 51». */
+    alternativa: 'Hay dos i6: uno de 47 y otro de 51 pasajeros —no hay de 48, 49 ni 50—. Son unidades distintas, con su propio precio; se eligen en el cotizador.',
     desc: 'La misma línea premium del i6S: espacio, silencio de marcha y equipamiento completo para trayectos largos.',
     amen: ['Aire acondicionado', 'Baño a bordo', 'Pantallas', 'Audio'],
     spec: [['i-users', '47 pasajeros'], ['i-snow', 'Aire acondicionado'], ['i-wc', 'Baño a bordo'], ['i-tv', 'Pantallas y sistema de audio'], ['i-seat', 'Asientos reclinables'], ['i-bag', 'Cajuela amplia'], ['i-shield', 'Seguro de viajero incluido'], ['i-pin', 'Monitoreo GPS']] },
@@ -79,11 +88,19 @@ window.UNIDADES = [
      «NEOBUS/i6 50/51 PAX» nombraba un i6 de 51 que no existía en el
      catálogo.
 
-     `soloBot` lo deja FUERA de la página —de la galería y del selector
-     del cotizador— pero dentro del catálogo, para que el bot sí lo
-     ofrezca. Dictado suyo: «en el bot sí va, solo en la página déjalo
-     como pendiente». El pendiente son las FOTOS: de éste no hay. Cuando
-     las haya, se quita esta bandera y entra a la página como los demás.
+     YA ENTRÓ A LA PÁGINA — 12-sep-2026. Estaba con `soloBot`, fuera de
+     la galería y del selector, esperando fotos propias. El dueño resolvió
+     el pendiente sin fotos: «no necesito que agregues fotos… sigue
+     enseñando las mismas», y «deben mostrarse en el cotizador».
+
+     Así que ahora lleva `soloCotizador`: SÍ está en el selector del
+     cotizador —que es donde importa cuánta gente cabe— y NO tiene tarjeta
+     propia en la galería. Su lugar en la galería es la ficha del i6 de 47,
+     que anuncia la versión de 51 con el campo `alternativa`: es el mismo
+     camión y las mismas fotos, y dos tarjetas idénticas solo confundirían.
+
+     Las fotos son las del i6 de 47, dichas como prestadas: ver
+     `medios-unidades.js`, que ya lo traía resuelto.
 
      EL NOMBRE LLEVA EL 51 A PROPÓSITO. Dos unidades llamadas «Irizar
      i6» romperían dos cosas a la vez: la elección de camión en `bot.js`
@@ -95,7 +112,7 @@ window.UNIDADES = [
      Su precio es el de la columna «NEOBUS/i6 50/51 PAX», no el del i6
      de 47: ver `COLUMNA_DE_UNIDAD` en `api/_destinos.js`.
      ------------------------------------------------------------ */
-  { id: 'irizar-i6-51', cat: 'autobus', cotizadorAutomatico: false, soloBot: true, sinFotos: true,
+  { id: 'irizar-i6-51', cat: 'autobus', cotizadorAutomatico: false, soloCotizador: true, sinFotos: true,
     tag: 'Autobús · Premium', name: 'Irizar i6 51', cap: '51 pasajeros', max: 51, img: 'i6',
     desc: 'La misma línea premium del i6, en su versión de 51 asientos: espacio, silencio de marcha y equipamiento completo para trayectos largos.',
     amen: ['Aire acondicionado', 'Baño a bordo', 'Pantallas', 'Audio'],
@@ -150,18 +167,68 @@ window.UNIDADES = [
      acabe la animación — pasó la primera vez que se leyó, y por eso
      el número se saca del texto y no del contador.
 
-     HAY CENTURYS DE 47 Y DE 49. Se ofrece como «47 a 49 pasajeros»
-     (dictado del dueño, 7-sep-2026), y `max` es 48 a propósito: con
-     48 personas sí se ofrece («caben en el de 49»), con 49 ya no. Es
-     su regla textual: «Si son 48, lo ofreces. Si son 49, no lo
-     ofreces. Si son 46, caben también en el de 47». Un lugar de
-     margen para que nadie se quede parado el día del viaje.
-     `asientos` es el texto que ve el cliente en la lista del bot.
+     SON DOS CENTURYS, Y SON DOS UNIDADES — 12-sep-2026
+     ------------------------------------------------------------
+     Estaban en un solo renglón, «47 a 49 pasajeros», cubriendo las DOS
+     columnas del Excel. El dueño lo corrigió:
+
+       «irizar century 47 es uno, irizar century de 49 es otro, lo mismo
+        con el i6 de 47 y 51, son unidades con diferentes precios, no los
+        pongas en una misma unidad»
+
+     Y tenía razón con el Excel en la mano. No es un matiz de conteo: son
+     precios distintos, renglón por renglón.
+
+       | destino          | «BUS N C 47 PAX» | «BUS 48/49 PAX» |
+       |------------------|------------------|-----------------|
+       | Puerto Vallarta  |          $32,000 |         $33,000 |
+       | Tequila          |          $12,000 |         $13,000 |
+       | Mazatlán         |          $38,000 |         $40,000 |
+
+     Con las dos columnas colgando de una sola unidad, el precio que se
+     enseñaba dependía de cuál se leyera primero — y en Mazatlán eso son
+     dos mil pesos.
+
+     Ahora cada uno tiene SU renglón y SU columna (`COLUMNA_DE_UNIDAD` en
+     `api/_destinos.js`). Y el margen de asientos que el dueño pidió el
+     7-sep sale solo: un grupo de 48 no cabe en el de 47 y sí en el de 49,
+     sin tener que escribir un `max` a mano que no es la capacidad real.
+
+     EL NÚMERO VA SOLO EN EL NOMBRE DE LA VARIANTE, igual que los dos i6:
+     «Irizar Century» es el de 47 y «Irizar Century 49» el otro. Dos
+     unidades con el mismo nombre romperían la elección de camión del bot y
+     mezclarían los precios aprendidos, que se guardan por nombre.
+
+     Y EL DE 47 NO LLEVA SU NÚMERO A PROPÓSITO. Se probó al revés —
+     «Irizar Century 47»— y se rompió algo peor: el bot escoge por «una
+     palabra que sea SUYA y de nadie más», así que el «47» del nombre se
+     volvió palabra exclusiva del Century y **«el i6 de 47» pasaba a
+     escoger un Century**. Un cliente pidiendo un i6 y cotizándosele otro
+     camión, con otro precio: $34,000 contra $32,000 en Vallarta.
+
+     La capacidad se ve igual en la pantalla: el selector del cotizador
+     enseña «nombre · capacidad», o sea «Irizar Century · 47 pasajeros».
      ------------------------------------------------------------ */
-  { id: 'irizar', cat: 'autobus', cotizadorAutomatico: false, tag: 'Autobús · Clásico', name: 'Irizar Century', cap: '47 a 49 pasajeros', max: 48, asientos: '47 a 49', img: 'irizar',
+  { id: 'irizar', cat: 'autobus', cotizadorAutomatico: false, tag: 'Autobús · Clásico', name: 'Irizar Century', cap: '47 pasajeros', max: 47, asientos: '47', img: 'irizar',
+    /* El de 49 no tiene tarjeta propia en la galería —son las mismas fotos—,
+       así que se anuncia aquí. Y se dice que el precio cambia: no es la
+       misma unidad con más asientos, es otra unidad. */
+    /* «Y», NO «A» — dictado del dueño, 12-sep-2026: «century e i6 que tienen
+       dos variantes ponlas con "y"». «47 a 49» hace creer que existe uno de
+       48, y no existe: hay uno de 47 y otro de 49, punto. Él ya lo había
+       precisado para el i6 —«no hay alternativas de 48, 49 y 50, solo 47 y
+       51»— y aquí lo extendió al Century. */
+    alternativa: 'Hay dos Centurys: uno de 47 y otro de 49 pasajeros —no hay de 48—. Son unidades distintas, con su propio precio; se eligen en el cotizador.',
     desc: 'Autobús completo y de trato sencillo: el que mejor se ajusta cuando el presupuesto del grupo es corto, sin recortar lo que importa — aire, baño y seguro de viajero.',
     amen: ['Aire acondicionado', 'Baño a bordo', 'Asientos reclinables', 'Cajuela amplia'],
-    spec: [['i-users', '47 a 49 pasajeros'], ['i-snow', 'Aire acondicionado'], ['i-wc', 'Baño a bordo'], ['i-seat', 'Asientos reclinables'], ['i-bag', 'Cajuela amplia'], ['i-shield', 'Seguro de viajero incluido'], ['i-route', 'Sirve igual para un día que para varios']] },
+    spec: [['i-users', '47 pasajeros'], ['i-snow', 'Aire acondicionado'], ['i-wc', 'Baño a bordo'], ['i-seat', 'Asientos reclinables'], ['i-bag', 'Cajuela amplia'], ['i-shield', 'Seguro de viajero incluido'], ['i-route', 'Sirve igual para un día que para varios']] },
+  /* El segundo Century. Mismas fotos y mismo equipamiento que el de 47 —por
+     eso `soloCotizador` y `sinFotos`—, pero su propia columna del Excel. */
+  { id: 'irizar-49', cat: 'autobus', cotizadorAutomatico: false, soloCotizador: true, sinFotos: true,
+    tag: 'Autobús · Clásico', name: 'Irizar Century 49', cap: '49 pasajeros', max: 49, asientos: '49', img: 'irizar',
+    desc: 'El mismo Century, en su versión de 49 asientos: autobús completo y de trato sencillo, para el grupo que no cabe en el de 47.',
+    amen: ['Aire acondicionado', 'Baño a bordo', 'Asientos reclinables', 'Cajuela amplia'],
+    spec: [['i-users', '49 pasajeros'], ['i-snow', 'Aire acondicionado'], ['i-wc', 'Baño a bordo'], ['i-seat', 'Asientos reclinables'], ['i-bag', 'Cajuela amplia'], ['i-shield', 'Seguro de viajero incluido'], ['i-route', 'Sirve igual para un día que para varios']] },
   { id: 'sprinter', cat: 'sprinter', cotizadorAutomatico: true, tag: 'Sprinter · Grupos pequeños', name: 'Sprinter', cap: '20 pasajeros', max: 20, img: 'sprinter',
     desc: 'Moderna, segura y funcional. Diseño compacto y elegante para moverse igual de bien en ciudad que en carretera: traslados ejecutivos, eventos y excursiones familiares.',
     amen: ['Aire acondicionado', 'Asientos reclinables', 'Audio', 'Pantalla'],

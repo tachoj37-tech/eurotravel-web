@@ -90,6 +90,52 @@
   }
 
   .lede { color: var(--muted); line-height: 1.7; }
+  /* ============================================================
+     LA CAPTURA DEL VIAJE SIN PRECIO (fase 2)
+     ------------------------------------------------------------
+     Se ve como la continuación natural del aviso de arriba y no
+     como un formulario aparte: quien acaba de leer «te lo cotiza
+     un vendedor» tiene que encontrar el campo sin buscarlo.
+     ============================================================ */
+  .captura {
+    margin-top: 18px; padding: 22px; border-radius: var(--radius);
+    background: var(--soft); border: 1px solid var(--line);
+  }
+  .captura h3 { margin: 0; font-size: 19px; line-height: 1.35; }
+  .captura-ficha { margin: 6px 0 0; color: var(--muted); font-size: 14px; }
+  .captura label {
+    display: block; margin: 16px 0 7px; font-size: 12px; letter-spacing: .04em;
+    text-transform: uppercase; color: var(--muted);
+  }
+  .captura-fila { display: flex; gap: 10px; flex-wrap: wrap; }
+  .captura-fila input {
+    flex: 1 1 220px; min-width: 0; height: var(--alto-campo);
+    padding: 0 14px; font-size: 16px;     /* 16px o el teléfono hace zoom al enfocar */
+    border: 1px solid var(--line); border-radius: var(--radius-sm);
+    background: #fff; color: var(--ink);
+  }
+  .captura-fila input:focus { outline: 2px solid var(--red); outline-offset: 1px; }
+  .captura-fila .btn { height: var(--alto-campo); flex: 0 0 auto; }
+  .captura .enlace-sec { margin-top: 10px; }
+  .captura-error { margin: 10px 0 0; color: var(--red); font-size: 14px; min-height: 1px; }
+  .captura.mal .captura-fila input { border-color: var(--red); }
+
+  .captura-listo {
+    display: flex; gap: 12px; align-items: flex-start;
+    margin-top: 16px; padding: 14px 16px; border-radius: var(--radius-sm);
+    background: #eef8f0; border: 1px solid #cfe9d6;
+  }
+  .captura-listo svg { width: 22px; height: 22px; flex: 0 0 auto; color: #1b7f3b; margin-top: 1px; }
+  .captura-listo b { display: block; color: #14682f; }
+  .captura-listo span { display: block; margin-top: 3px; color: var(--ink-2); font-size: 14px; }
+
+  /* «También la hay de 51 pasajeros»: la otra capacidad de la misma unidad,
+     dentro de su ficha. Se lee como un dato, no como una advertencia. */
+  .unit-alterna {
+    margin: 12px 0 0; padding: 10px 12px; border-radius: 10px;
+    background: var(--soft); border-left: 3px solid var(--red);
+    color: var(--ink); font-size: 14px; line-height: 1.55;
+  }
 
   /* ================= INTRO ================= */
   #intro {
@@ -2099,6 +2145,25 @@ window.IMGS = {
   "i6": "img/i6.jpg",
   "pb": "img/pb.jpg",
   "neobus": "img/neobus.jpg",
+  /* EL G8 Y EL CENTURY SE QUEDARON SIN RENGLÓN, y salían rotos.
+     ------------------------------------------------------------
+     Se dieron de alta en `unidades.js` con `img: 'g8'` e
+     `img: 'irizar'`, pero nadie los puso aquí. La página arma la foto
+     con `I[u.img] || ''`, así que lo que se dibujaba era un `src=""`:
+     el ícono de imagen rota —en la tarjeta de la galería, en la ficha
+     que abre al picarla y en la tarjeta del resultado del cotizador—,
+     y encima el navegador vuelve a pedir la página entera creyendo
+     que es una imagen.
+
+     Las fotos SÍ existían, en `img/unidades/`. Las demás unidades
+     tienen su recorte suelto en `img/`; éstas dos no, así que apuntan
+     a la primera de su carpeta. La `01` del G8 es el exterior de tres
+     cuartos, escogido a propósito (ver `medios-unidades.js`).
+
+     `probar-recorrido.cjs` cuida que ninguna unidad vuelva a quedarse
+     sin renglón. */
+  "g8": "img/unidades/g8/g8-01.jpg",
+  "irizar": "img/unidades/irizar/irizar-01.jpg",
   "sprinter": "img/sprinter.jpg",
   "suburban": "img/suburban.jpg",
   "interior": "img/interior.jpg",
@@ -2347,7 +2412,12 @@ window.IMGS = {
             <li>Amplio espacio para equipaje</li>
           </ul>
           <p class="linea-nota">Baño, USB y pantallas según la unidad.</p>
-          <button type="button" class="linea-cta" data-go="cotizar">Cotizar esta unidad <svg width="13" height="12" viewBox="0 0 13 12" aria-hidden="true"><use href="#ei-flecha"/></svg></button>
+          <!-- Esta banda habla de cuatro modelos, así que hay que escoger con
+               cuál se abre el cotizador. Va el G8 por ser el primero del
+               catálogo y el más nuevo del parque; el cliente lo cambia en el
+               selector si no es el suyo. SI EL DUEÑO PREFIERE OTRO, se cambia
+               este atributo y ya: no hay nada más que tocar. -->
+          <button type="button" class="linea-cta" data-go="cotizar" data-unidad="g8">Cotizar esta unidad <svg width="13" height="12" viewBox="0 0 13 12" aria-hidden="true"><use href="#ei-flecha"/></svg></button>
         </div>
       </article>
 
@@ -2368,7 +2438,7 @@ window.IMGS = {
             <li>Amplio espacio para equipaje</li>
             <li>Chofer capacitado</li>
           </ul>
-          <button type="button" class="linea-cta" data-go="cotizar">Cotizar esta unidad <svg width="13" height="12" viewBox="0 0 13 12" aria-hidden="true"><use href="#ei-flecha"/></svg></button>
+          <button type="button" class="linea-cta" data-go="cotizar" data-unidad="sprinter">Cotizar esta unidad <svg width="13" height="12" viewBox="0 0 13 12" aria-hidden="true"><use href="#ei-flecha"/></svg></button>
         </div>
       </article>
 
@@ -2389,7 +2459,7 @@ window.IMGS = {
             <li>Aire acondicionado</li>
             <li>Amplio espacio para equipaje</li>
           </ul>
-          <button type="button" class="linea-cta" data-go="cotizar">Cotizar esta unidad <svg width="13" height="12" viewBox="0 0 13 12" aria-hidden="true"><use href="#ei-flecha"/></svg></button>
+          <button type="button" class="linea-cta" data-go="cotizar" data-unidad="suburban">Cotizar esta unidad <svg width="13" height="12" viewBox="0 0 13 12" aria-hidden="true"><use href="#ei-flecha"/></svg></button>
         </div>
       </article>
     </div>
@@ -2675,6 +2745,41 @@ window.IMGS = {
           </div>
           <div id="res-list"></div>
           <div class="precio" id="precio"></div>
+
+          <!-- ===== EL CLIENTE QUE NO SE PUEDE IR SIN DEJAR RASTRO =====
+               Fase 2 del plan. Cuando el viaje no lleva precio, esto es lo
+               único que queda entre una venta y un cliente perdido.
+
+               UN SOLO CAMPO, no dos. «Cada campo de más es gente que se va»:
+               con su WhatsApp o con su correo basta, y la pantalla no le
+               pide ninguno de los otros datos del formulario largo —nombre,
+               punto exacto de salida— porque para mandarle un precio no
+               hacen falta.
+
+               Nace escondido: solo lo enseña la rama de `requiereAsesor`. -->
+          <div class="captura" id="captura" style="display: none">
+            <h3 id="captura-titulo">Para este viaje te paso el precio a la medida.</h3>
+            <p class="captura-ficha" id="captura-ficha"></p>
+            <label for="captura-dato" id="captura-label">¿A qué número te lo mando?</label>
+            <div class="captura-fila" id="captura-fila-caja">
+              <input id="captura-dato" type="text" inputmode="tel" autocomplete="tel"
+                     placeholder="33 1234 5678" maxlength="120" />
+              <button class="btn btn-red" type="button" id="captura-ir">Mándamelo</button>
+            </div>
+            <button class="enlace-sec" type="button" id="captura-cambia">Mejor mándamelo por correo</button>
+            <p class="captura-error" id="captura-error"></p>
+
+            <!-- El acuse va AQUÍ, en la misma pantalla, y no en un mensaje
+                 que quizá no llega. Es lo que pidió el plan con todas sus
+                 letras. -->
+            <div class="captura-listo" id="captura-listo" style="display: none">
+              <svg aria-hidden="true"><use href="#i-check" /></svg>
+              <div>
+                <b id="captura-listo-titulo">Listo, ya vamos en camino</b>
+                <span id="captura-listo-nota"></span>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -3130,6 +3235,12 @@ window.IMGS = {
       <span class="eyebrow" id="m-tag"></span>
       <h3 id="m-title" style="margin-top: 8px"></h3>
       <p class="lede" id="m-desc" style="margin-top: 12px"></p>
+      <!-- «También la hay de 51 pasajeros». Las unidades que existen en dos
+           capacidades —el i6 y el Century— llevan una sola tarjeta en la
+           galería, porque son el mismo camión y las mismas fotos, y aquí se
+           dice que hay otra medida. Nace escondida: solo la enseñan las que
+           traen `alternativa` en el catálogo. -->
+      <p class="unit-alterna" id="m-alterna" style="display: none"></p>
       <div class="spec" id="m-spec"></div>
       <div class="seatmap" id="m-seat" style="display: none"><b>Distribución de asientos</b><img id="m-seat-img" alt="Mapa de asientos" /></div>
       <button class="btn btn-red" id="m-book" type="button" style="margin-top: 24px">Cotizar esta unidad <svg class="arw" aria-hidden="true"><use href="#i-arrow" /></svg></button>
@@ -3464,6 +3575,17 @@ window.IMGS = {
       var el = e.target.closest ? e.target.closest('[data-go]') : null;
       if (!el) return;
       e.preventDefault();
+      /* Un botón que diga «cotizar ESTA unidad» tiene que llevarla puesta.
+         Los tres del inicio —autobuses, Sprinter y Suburban— abrían el
+         cotizador con el selector vacío: el cliente leía media pantalla
+         sobre una unidad, picaba, y llegaba a elegirla otra vez. El de la
+         ficha de la galería sí la llevaba, así que el mismo texto hacía
+         dos cosas distintas.
+
+         `setUnidad` está declarada más abajo, en este mismo bloque: las
+         funciones se izan y esto solo corre cuando alguien pica. */
+      var unidad = el.getAttribute('data-unidad');
+      if (unidad) setUnidad(unidad);
       go(el.getAttribute('data-go'));
     });
 
@@ -3515,17 +3637,25 @@ window.IMGS = {
     if (!reduce && slides.length) restart();
 
     /* ================= flota ================= */
-    /* `soloBot` deja una unidad FUERA de la página — de la galería y del
-       selector del cotizador, que se arman los dos desde esta lista— sin
-       sacarla del catálogo, para que el bot de WhatsApp sí la pueda
-       ofrecer. Hoy la usa el Irizar i6 de 51, del que todavía no hay
-       fotos: dictado del dueño el 10-sep-2026, «en el bot sí va, solo en
-       la página déjalo como pendiente». */
+    /* DOS BANDERAS, DOS LISTAS, Y NO SON LA MISMA
+       ------------------------------------------------------------
+       `soloBot` deja una unidad fuera de la página ENTERA —galería y
+       cotizador— sin sacarla del catálogo, para que el bot de WhatsApp
+       sí la pueda ofrecer. Hoy no la usa nadie.
+
+       `soloCotizador` la deja fuera SOLO de la galería. Es para las
+       unidades que existen en dos capacidades —el i6 de 47 y el de 51—:
+       son el mismo camión y las mismas fotos, así que dos tarjetas
+       idénticas en la galería nada más confundirían. En el cotizador sí
+       van las dos, porque ahí lo que se elige es cuánta gente cabe, y en
+       la ficha del modelo se anuncia la otra medida con `alternativa`.
+       Dictado del dueño el 12-sep-2026. */
     var UNITS = (window.UNIDADES || []).filter(function (u) { return !u.soloBot; });
+    var EN_GALERIA = UNITS.filter(function (u) { return !u.soloCotizador; });
 
     var fleetEl = byId('fleet');
 
-    UNITS.forEach(function (u) {
+    EN_GALERIA.forEach(function (u) {
       var card = document.createElement('button');
       card.type = 'button';
       card.className = 'unit';
@@ -3568,6 +3698,12 @@ window.IMGS = {
       byId('m-tag').textContent = u.tag;
       byId('m-title').textContent = u.name;
       byId('m-desc').textContent = u.desc;
+
+      /* La otra capacidad de la misma unidad, si la tiene. */
+      var alterna = byId('m-alterna');
+      alterna.textContent = u.alternativa || '';
+      alterna.style.display = u.alternativa ? '' : 'none';
+
       byId('m-spec').innerHTML = u.spec.map(function (s) {
         return '<div><svg aria-hidden="true"><use href="#' + esc(s[0]) + '"/></svg><span>' + esc(s[1]) + '</span></div>';
       }).join('');
@@ -4395,7 +4531,15 @@ window.IMGS = {
       /* ---- entrar ---- */
       byId('ent-entrar').addEventListener('click', function () {
         var error = byId('ent-error'), boton = byId('ent-entrar');
-        error.textContent = ''; boton.disabled = true; boton.textContent = 'Entrando…';
+
+        error.textContent = '';
+        /* Lo mismo que el «Entrar» del modal de la barra: sin correo o sin
+           contraseña no se manda nada, y se dice qué falta en vez de
+           contestar que están mal. */
+        if (!(byId('ent-correo').value || '').trim()) { error.textContent = 'Escribe tu correo.'; return; }
+        if (!byId('ent-clave').value) { error.textContent = 'Escribe tu contraseña.'; return; }
+
+        boton.disabled = true; boton.textContent = 'Entrando…';
 
         pideCuenta('entrar', {
           correo: (byId('ent-correo').value || '').trim(),
@@ -4477,7 +4621,16 @@ window.IMGS = {
         byId('cod-confirmar').addEventListener('click', function () {
           var error = byId('cod-error'), boton = byId('cod-confirmar');
           var correo = (byId('f-mail').value || byId('ent-correo').value || '').trim();
-          error.textContent = ''; boton.disabled = true; boton.textContent = 'Confirmando…';
+
+          error.textContent = '';
+          /* EL CÓDIGO A MEDIAS NO SE MANDA. El servidor aguanta cinco
+             intentos y después cierra (`probar-acceso.cjs`). Con tres
+             dígitos tecleados, esto mandaba «123» y el servidor gastaba uno
+             de esos cinco: un intento perdido sin que el cliente se hubiera
+             equivocado de código. */
+          if (leido().length !== 6) { error.textContent = 'Faltan dígitos del código.'; return; }
+
+          boton.disabled = true; boton.textContent = 'Confirmando…';
 
           pideCuenta('confirmar', { correo: correo, codigo: leido() }).then(function (r) {
             boton.disabled = false; boton.textContent = 'Confirmar';
@@ -4712,7 +4865,18 @@ window.IMGS = {
         byId('cta-e-entrar').addEventListener('click', function () {
           var error = byId('cta-e-error'), boton = byId('cta-e-entrar');
           var correo = (byId('cta-e-correo').value || '').trim();
-          error.textContent = ''; boton.disabled = true; boton.textContent = 'Entrando…';
+
+          error.textContent = '';
+          /* Con los dos campos vacíos, esto mandaba la petición y contestaba
+             «Ese correo o esa contraseña no son». No escribió ninguno de los
+             dos: el mensaje era falso —le echaba la culpa de un error que no
+             cometió— y de paso gastaba una petición del freno por IP, que es
+             el mismo que frena a quien de verdad está adivinando contraseñas.
+             Crear cuenta y «olvidé mi contraseña» ya avisaban así. */
+          if (!correo) { error.textContent = 'Escribe tu correo.'; return; }
+          if (!byId('cta-e-clave').value) { error.textContent = 'Escribe tu contraseña.'; return; }
+
+          boton.disabled = true; boton.textContent = 'Entrando…';
 
           pideCuenta('entrar', { correo: correo, contrasena: byId('cta-e-clave').value })
             .then(function (r) {
@@ -4775,7 +4939,13 @@ window.IMGS = {
         /* ---- el código ---- */
         byId('cta-c-confirmar').addEventListener('click', function () {
           var error = byId('cta-c-error'), boton = byId('cta-c-confirmar');
-          error.textContent = ''; boton.disabled = true; boton.textContent = 'Confirmando…';
+
+          error.textContent = '';
+          /* Mismo cuidado que en la pantalla de pago: un código a medias
+             gasta uno de los cinco intentos del servidor. */
+          if (CAS.leido().length !== 6) { error.textContent = 'Faltan dígitos del código.'; return; }
+
+          boton.disabled = true; boton.textContent = 'Confirmando…';
 
           pideCuenta('confirmar', { correo: correoEnCurso, codigo: CAS.leido() }).then(function (r) {
             boton.disabled = false; boton.textContent = 'Confirmar';
@@ -4869,7 +5039,13 @@ window.IMGS = {
 
         byId('cta-n-guardar').addEventListener('click', function () {
           var error = byId('cta-n-error'), boton = byId('cta-n-guardar');
-          error.textContent = ''; boton.disabled = true; boton.textContent = 'Guardando…';
+
+          error.textContent = '';
+          /* Aquí el código también es de un solo uso y con intentos contados
+             (`probar-olvide.cjs`): mandarlo a medias es regalar uno. */
+          if (CASN.leido().length !== 6) { error.textContent = 'Faltan dígitos del código.'; return; }
+
+          boton.disabled = true; boton.textContent = 'Guardando…';
 
           pideCuenta('clave-nueva', {
             correo: correoAOlvidar, codigo: CASN.leido(), nueva: byId('cta-n-nueva').value
@@ -5383,6 +5559,193 @@ window.IMGS = {
       caja.innerHTML = html;
     }
 
+    /* ============================================================
+       FASE 2 · EL VIAJE SIN PRECIO NO SE PIERDE
+       ------------------------------------------------------------
+       Antes, cuando el servidor no daba precio, la pantalla decía
+       «te contactamos» y ahí se acababa: el cliente que no escribía
+       por su cuenta se iba sin dejar rastro.
+
+       Aquí se le pide UN dato —su WhatsApp o su correo, no los dos—
+       y con lo que ya llenó arriba se arma la ficha del viaje. Los
+       demás campos del formulario largo no se le piden: para
+       mandarle un precio no hacen falta, y cada campo de más es
+       gente que se va.
+
+       El acuse sale en ESTA pantalla. Un mensaje que quizá no llega
+       no es un acuse.
+       ============================================================ */
+    var CAPTURA_POR = 'whatsapp';        // o 'correo'
+
+    function capturaTextos() {
+      var esWhats = CAPTURA_POR === 'whatsapp';
+      return {
+        label: esWhats ? '¿A qué número te lo mando?' : '¿A qué correo te lo mando?',
+        placeholder: esWhats ? '33 1234 5678' : 'tucorreo@ejemplo.com',
+        modo: esWhats ? 'tel' : 'email',
+        autocompletar: esWhats ? 'tel' : 'email',
+        cambiar: esWhats ? 'Mejor mándamelo por correo' : 'Mejor mándamelo por WhatsApp'
+      };
+    }
+
+    function pintaCaptura() {
+      var t = capturaTextos();
+      var campo = byId('captura-dato');
+      byId('captura-label').textContent = t.label;
+      campo.placeholder = t.placeholder;
+      campo.setAttribute('inputmode', t.modo === 'tel' ? 'tel' : 'email');
+      campo.setAttribute('type', t.modo === 'tel' ? 'text' : 'email');
+      campo.setAttribute('autocomplete', t.autocompletar);
+      byId('captura-cambia').textContent = t.cambiar;
+    }
+
+    /* La ficha que se le enseña al cliente, para que vea que lo que se va a
+       mandar es su viaje y no otro. Sale de lo que ya escogió arriba. */
+    function fichaLegible() {
+      var partes = [];
+      if (LOC.origen && LOC.destino) {
+        partes.push(LOC.origen.place[0] + ' → ' + LOC.destino.place[0]);
+      }
+      if (VIAJE.salida) {
+        partes.push(fmtFechaHora(VIAJE.salida) +
+          (VIAJE.regreso ? ' → ' + fmtFechaHora(VIAJE.regreso) : ' · solo ida'));
+      }
+      if (VIAJE.unidad) partes.push(VIAJE.unidad.name);
+      return partes.join('  ·  ');
+    }
+
+    function abreCaptura() {
+      var caja = byId('captura');
+      caja.style.display = '';
+      caja.classList.remove('mal');
+      byId('captura-ficha').textContent = fichaLegible();
+      byId('captura-error').textContent = '';
+
+      /* SE VUELVE A ARMAR ENTERA, y no es por gusto: al mandar, el campo y
+         sus dos botones se esconden para que nadie mande dos veces. Si el
+         cliente cambia una fecha después y vuelve a cotizar, sin esto la
+         caja reaparecería sin dónde escribir — un callejón sin salida.
+
+         Lo que NO se borra es lo que ya tecleó: cambiar de fecha no es
+         motivo para hacerle escribir su número otra vez. */
+      byId('captura-listo').style.display = 'none';
+      byId('captura-label').style.display = '';
+      byId('captura-fila-caja').style.display = '';
+      byId('captura-cambia').style.display = '';
+      byId('captura-titulo').textContent = 'Para este viaje te paso el precio a la medida.';
+      pintaCaptura();
+    }
+
+    function cierraCaptura() {
+      byId('captura').style.display = 'none';
+    }
+
+    byId('captura-cambia').addEventListener('click', function () {
+      CAPTURA_POR = CAPTURA_POR === 'whatsapp' ? 'correo' : 'whatsapp';
+      byId('captura').classList.remove('mal');
+      byId('captura-error').textContent = '';
+      byId('captura-dato').value = '';
+      pintaCaptura();
+      byId('captura-dato').focus();
+    });
+
+    byId('captura-dato').addEventListener('input', function () {
+      byId('captura').classList.remove('mal');
+      byId('captura-error').textContent = '';
+    });
+
+    function mandaSolicitud() {
+      var caja = byId('captura');
+      var campo = byId('captura-dato');
+      var error = byId('captura-error');
+      var boton = byId('captura-ir');
+      var dato = (campo.value || '').trim();
+
+      error.textContent = '';
+      caja.classList.remove('mal');
+
+      /* Se revisa aquí ANTES de mandar, y el servidor lo vuelve a revisar
+         por su cuenta: el navegador no es una defensa, es una cortesía para
+         no hacerle dar un viaje de ida y vuelta a quien se equivocó de
+         tecla. La lección es de la fase 0, donde «12» pasaba por teléfono. */
+      if (!dato) {
+        caja.classList.add('mal');
+        error.textContent = CAPTURA_POR === 'whatsapp'
+          ? 'Escribe tu WhatsApp, a diez dígitos.'
+          : 'Escribe tu correo.';
+        campo.focus();
+        return;
+      }
+      if (CAPTURA_POR === 'whatsapp' && dato.replace(/\D/g, '').replace(/^521?/, '').length !== 10) {
+        caja.classList.add('mal');
+        error.textContent = 'Un WhatsApp de México son diez dígitos. Revísalo, por favor.';
+        campo.focus();
+        return;
+      }
+      if (CAPTURA_POR === 'correo' && !/^[^\s@]+@[^\s@.]+(\.[^\s@.]+)+$/.test(dato)) {
+        caja.classList.add('mal');
+        error.textContent = 'Ese correo no se entiende. Revisa que lleve arroba y punto.';
+        campo.focus();
+        return;
+      }
+
+      boton.disabled = true;
+      boton.textContent = 'Mandando…';
+
+      fetch('/api/cotizar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          accion: 'solicitud',
+          telefono: CAPTURA_POR === 'whatsapp' ? dato : '',
+          correo: CAPTURA_POR === 'correo' ? dato : '',
+          /* El destino va como TEXTO: esta puerta no cotiza, solo escribe la
+             ficha que va a leer una persona. */
+          origen: LOC.origen ? LOC.origen.place[0] : '',
+          destino: LOC.destino ? LOC.destino.place[0] : '',
+          salida: VIAJE.salida,
+          regreso: VIAJE.regreso,
+          /* Los días NO se mandan: los cuenta el servidor con el mismo
+             contador del cotizador y del cobro. */
+          unidad: VIAJE.unidad ? VIAJE.unidad.name : '',
+          nombre: (byId('f-nombre').value || '').trim()
+        })
+      }).then(function (r) {
+        return r.json().then(function (j) { return { status: r.status, datos: j || {} }; });
+      }).then(function (r) {
+        boton.disabled = false;
+        boton.textContent = 'Mándamelo';
+
+        if (r.status !== 200 || !r.datos.recibida) {
+          caja.classList.add('mal');
+          error.textContent = r.datos.aviso ||
+            'No se pudo mandar. Inténtalo otra vez en un momento.';
+          return;
+        }
+
+        /* El acuse. Se esconde el campo para que no quede duda de que ya se
+           mandó: un formulario que sigue ahí invita a mandarlo otra vez. */
+        byId('captura-label').style.display = 'none';
+        byId('captura-fila-caja').style.display = 'none';
+        byId('captura-cambia').style.display = 'none';
+        byId('captura-titulo').textContent = 'Ya quedó: tu solicitud está con un vendedor.';
+        byId('captura-listo-nota').textContent = r.datos.contacto === 'whatsapp'
+          ? 'Te escribimos por WhatsApp con tu precio, el mismo día hábil.'
+          : 'Te mandamos tu precio por correo, el mismo día hábil.';
+        byId('captura-listo').style.display = '';
+      }).catch(function () {
+        boton.disabled = false;
+        boton.textContent = 'Mándamelo';
+        caja.classList.add('mal');
+        error.textContent = 'No hubo conexión. Inténtalo en un momento.';
+      });
+    }
+
+    byId('captura-ir').addEventListener('click', mandaSolicitud);
+    byId('captura-dato').addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') { e.preventDefault(); mandaSolicitud(); }
+    });
+
     function dias(n) { return n + (n === 1 ? ' día' : ' días'); }
 
     /* ¿el punto que eligió es exacto, o nomás el nombre de la ciudad?
@@ -5404,13 +5767,30 @@ window.IMGS = {
          hoy mismo.
          ------------------------------------------------------------ */
       if (c.requiereAsesor) {
+        /* R46 · La tarjeta de arriba prometía «cotización en línea disponible»
+           —eso es de la unidad, y se pintó antes de preguntar—. Con el destino
+           fuera del criterio deja de ser cierto para ESTE viaje, y una tarjeta
+           que se contradice a sí misma se lee como un error de la página. */
+        var nota = byId('res-nota');
+        if (nota) {
+          nota.className = 'fit no';
+          nota.innerHTML = '<svg aria-hidden="true"><use href="#i-mail"/></svg>' +
+            'Este destino se cotiza a la medida: te respondemos el mismo día hábil';
+        }
         /* R45 · Se PROMETE el contacto, no se le pide al cliente que llame.
            Dictado el 1-sep-2026: «le dices que un vendedor lo va a
            contactar». La diferencia importa: quien tiene que moverse es
            nosotros, no él. */
         precioNoDisponible('Este viaje lo cotiza un vendedor: te contacta hoy mismo con tu precio.');
+        /* FASE 2 · Y aquí es donde se le pide su contacto, que es lo único
+           que separa este viaje de un cliente perdido. */
+        abreCaptura();
         return;
       }
+
+      /* Con precio en pantalla la captura estorba: el camino de este cliente
+         es apartar, no esperar a que le escriban. */
+      cierraCaptura();
 
       /* Aquí NO se pinta ni el kilometraje ni la tarifa por kilómetro.
          Con los kilómetros y el total a la vista, cualquiera saca el precio
@@ -5477,11 +5857,16 @@ window.IMGS = {
     /* Al cliente solo se le enseña lo que le sirve. Los motivos técnicos
        —clave sin configurar, tope alcanzado— se quedan del lado del servidor. */
     function precioNoDisponible(aviso) {
+      /* La invitación de la cola cambió con la fase 2. Decía «Continúa con
+         tus datos», que mandaba al formulario largo —nombre, teléfono, punto
+         exacto de salida— cuando lo único que hace falta para mandarle un
+         precio es un dato de contacto. Ese formulario sigue ahí para quien
+         quiera apartar; el camino corto es la caja de abajo. */
       pintaPrecio(
         '<div class="precio-cifra"><span class="eyebrow">Tarifa</span>' +
           '<b style="font-size:22px">Te la enviamos hoy mismo</b></div>' +
         '<p class="precio-nota">' + esc(aviso || 'No pudimos calcular la distancia en este momento.') +
-        ' Continúa con tus datos y te respondemos el mismo día hábil con la tarifa cerrada.</p>'
+        ' Déjanos aquí abajo tu WhatsApp o tu correo y te llega el mismo día hábil, con la tarifa cerrada.</p>'
       );
     }
 
@@ -5497,6 +5882,12 @@ window.IMGS = {
         /* las unidades que no cotizan en línea no muestran caja: ya lo dice la tarjeta */
         byId('precio').className = 'precio';
         byId('precio').innerHTML = '';
+        /* FASE 2 · PERO SÍ SE LE PIDE SU CONTACTO.
+           Éste es el camino de los camiones y la Suburban, que es el más
+           transitado de todos los que no llevan precio: nada más la Sprinter
+           cotiza sola. Antes, este cliente veía «se cotiza a la medida» y se
+           iba sin que nadie supiera que había estado. */
+        abreCaptura();
         return Promise.resolve({ tipo: 'manual' });
       }
 
@@ -5506,6 +5897,9 @@ window.IMGS = {
         if (v.tipo === 'tarde') return v;         // llegó después de otra búsqueda
         if (v.tipo === 'listo') { pintaPrecioListo(v.cotizacion); return v; }
         precioNoDisponible(v.aviso);
+        /* Y aquí igual: si la medición falló o el servidor se cayó, el
+           cliente no tiene la culpa y tampoco se puede ir sin dejar rastro. */
+        abreCaptura();
         return v;
       });
     }
@@ -5545,9 +5939,22 @@ window.IMGS = {
       byId('res-meta').textContent =
         fmtFechaHora(VIAJE.salida) + (VIAJE.regreso ? '  →  ' + fmtFechaHora(VIAJE.regreso) : ' · solo ida');
 
-      var nota = u.cotizadorAutomatico
-        ? '<span class="fit"><svg aria-hidden="true"><use href="#i-check"/></svg>Cotización en línea disponible para esta unidad</span>'
-        : '<span class="fit no"><svg aria-hidden="true"><use href="#i-mail"/></svg>Esta unidad se cotiza a la medida: te respondemos el mismo día hábil</span>';
+      /* Esta línea habla de la UNIDAD, y se pinta antes de que el servidor
+         conteste. Si el destino resulta no tener precio del criterio, la
+         corrige `pintaPrecioListo`: decir «cotización en línea disponible»
+         justo encima de «te la enviamos hoy mismo» son dos cosas contrarias
+         en la misma tarjeta, y la que se lee primero es la de arriba. */
+      /* El `id` va UNA sola vez, fuera del ternario. Escrito en las dos
+         ramas quedaba dos veces en el archivo —aunque solo una llegara al
+         DOM— y `probar-pantallas.cjs` lo caza: esa prueba nació justamente
+         de un id repetido, porque `getElementById` devuelve el primero que
+         encuentra y eso no truena, solo se equivoca en silencio. */
+      var auto = u.cotizadorAutomatico;
+      var nota = '<span class="fit' + (auto ? '' : ' no') + '" id="res-nota">' +
+        '<svg aria-hidden="true"><use href="' + (auto ? '#i-check' : '#i-mail') + '"/></svg>' +
+        (auto ? 'Cotización en línea disponible para esta unidad'
+              : 'Esta unidad se cotiza a la medida: te respondemos el mismo día hábil') +
+        '</span>';
 
       byId('res-list').innerHTML =
         '<div class="opt">' +

@@ -187,8 +187,28 @@ function seSabeCotizar(unidad) { return claveDeUnidad(unidad) !== null; }
    a la metadata del contrato y la oficina lo lee ahí. Se mide una
    vez, al comprometer el dinero, no en cada tecleo.
    ------------------------------------------------------------ */
-function necesitaMedirse(destino, unidad) {
-  return !destinos.precioDeLista(destino, claveDeUnidad(unidad) || 'sprinter');
+function necesitaMedirse(destino, unidad, opciones) {
+  if (destinos.precioDeLista(destino, claveDeUnidad(unidad) || 'sprinter')) return false;
+
+  /* ------------------------------------------------------------
+     CON `soloDelCriterio` NUNCA HACE FALTA MEDIR
+     ------------------------------------------------------------
+     Si el destino no está en la lista y quien pregunta es una puerta
+     pública, ya sabemos la respuesta: no hay precio que dar. Medir
+     serían dos llamadas de pago a Google para tirar el resultado.
+
+     El dominical tampoco necesita kilómetros —su renglón del Excel
+     es un precio completo—, así que no hay ningún caso que se pierda
+     por no medir.
+
+     Y hay un segundo efecto, que se ve al probarlo sin llave: antes,
+     un destino de fuera contestaba 503 «Cotizador en línea no
+     configurado» y el cliente veía un error donde debía ver «te
+     contacta un vendedor».
+     ------------------------------------------------------------ */
+  if (opciones && opciones.soloDelCriterio) return false;
+
+  return true;
 }
 
 /* ------------------------------------------------------------
@@ -258,7 +278,7 @@ function precioPorDuracion(enLista, dias) {
   return tabla[base] + (d - base) * extra;
 }
 
-function trasladoDe(kmTotal, destino, unidad, dias, dominical) {
+function trasladoDe(kmTotal, destino, unidad, dias, dominical, opciones) {
   const km = Math.max(0, Number(kmTotal) || 0);
 
   /* ------------------------------------------------------------
@@ -312,6 +332,37 @@ function trasladoDe(kmTotal, destino, unidad, dias, dominical) {
       movimientosIncluidos: enLista.movimientosIncluidos || 0,
       precioConMovimientos: enLista.conMovimientos || null
     };
+  }
+
+  /* ------------------------------------------------------------
+     R46 · LA PÁGINA NO DA UN PRECIO QUE NO SALIÓ DEL CRITERIO
+     ------------------------------------------------------------
+     Dictado del dueño, 11-sep-2026: «No me gustaría que el cotizador
+     pueda cotizar si el cotizador NO tiene el precio desde el
+     criterio de precios».
+
+     Aquí abajo empieza la fórmula por kilómetros. Es un número que
+     no salió del Excel de nadie, y es justo el que él no quiere que
+     vea un cliente. Con `soloDelCriterio` el camino se corta antes:
+     si el destino no tuvo renglón —ni de lista ni dominical, que se
+     resolvieron arriba—, no hay precio y pasa al vendedor.
+
+     ESTO NO BORRA LA FÓRMULA. Sigue viva para quien NO pide la
+     opción: el bot de WhatsApp, que la usa para estimar, y la
+     pantalla del dueño en `pendiente/prueba-cotizador-api.js`, donde
+     él revisa de dónde sale un costo. Lo que se apagó son las dos
+     puertas públicas —`/api/cotizar` y `/api/pagar`—, que la piden.
+
+     Y va como ARGUMENTO de quien llama, no como campo del cuerpo de
+     la petición: el cuerpo lo escribe el navegador, y el navegador es
+     del cliente. Si se leyera de ahí, bastaría mandar `false` para
+     volver a los precios de fórmula.
+
+     Lo cuida `probar-solo-del-criterio.cjs`, que además congela los
+     50 precios de la lista para que esto no mueva ninguno.
+     ------------------------------------------------------------ */
+  if (opciones && opciones.soloDelCriterio) {
+    return { requiereAsesor: true, porQue: 'fuera del criterio', km: km, total: 0, porKm: null };
   }
 
   /* ------------------------------------------------------------
@@ -991,7 +1042,10 @@ function calcula(kmTotal, dias, extras) {
   const origenDominical = esDom
     ? { desdeOcotlan: (origenes.buscaOrigen(extras.origen) || {}).nombre === 'Ocotlán' }
     : null;
-  const km = trasladoDe(kmTotal, extras.destino, extras.unidad, dias, origenDominical);
+  /* R46 · `soloDelCriterio` viaja en los extras porque quien lo pone es la
+     puerta —`/api/cotizar` y `/api/pagar`—, no el cálculo. Ver `trasladoDe`. */
+  const km = trasladoDe(kmTotal, extras.destino, extras.unidad, dias, origenDominical,
+    { soloDelCriterio: !!extras.soloDelCriterio });
 
   /* ----------------------------------------------------------
      ARRIBA DEL TOPE NO HAY PRECIO — Y NO ES LO MISMO QUE UNO BAJO

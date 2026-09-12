@@ -281,32 +281,51 @@ function dia(fecha, inicio, fin) {
   igual('el desglose tampoco delata el kilometraje',
     JSON.stringify(rm.cotiza).match(/km|tarifa|tramo|(^|[^0-9])(1210|610)([^0-9]|$)/i), null);
 
-  /* Las cuentas del caso completo, a mano. Tequisquiapan NO esta en la lista,
-     asi que contesta la formula de respaldo:
-       6,500 + 1,210 × 22 = 33,120
-       minimo 8 dias × 3,000 = 24,000, no gana
-       corte a la centena ................................. traslado 33,100
-       CAMBIO DE LADO el 26-ago-2026: antes, por haber movimientos, se
-       cobraban los 8 dias de estadia (8,000) y el total daba 50,100. El
-       dueño corrigio que las 3 noches incluidas NO se pierden por moverse:
-       de 7 noches, solo 4 pasan de tres.
-       4 noches extra × 1,000 ................................ +  4,000
-       10 h -> 4,000 y 13 h -> 5,000 ......................... +  9,000
-                                                               --------
-                                                                 46,100 */
-  igual('el caso completo da 46,100 (antes cobraba 50,100)', rm.cotiza.total, 46100);
-  /* Al cliente le llegan DOS numeros: traslado y estadia juntos (33,100 +
-     4,000 = 37,100) y los movimientos aparte. Partirlos diria cuanto cuesta
-     la noche. */
+  /* ------------------------------------------------------------
+     CAMBIÓ DE LADO EL 12-sep-2026 · R46
+
+     Este caso era Tequisquiapan —que NO está en la lista— y probaba la
+     aritmética de la fórmula de respaldo:
+       6,500 + 1,210 × 22 = 33,120, corte a la centena → 33,100
+       + 4 noches extra (4,000) + movimientos (9,000) = 46,100
+
+     El dueño dictó el 11-sep-2026 que la página no dé un precio que no
+     salió del criterio. `/api/cotizar` pide ahora `soloDelCriterio`, así
+     que Tequisquiapan ya no cotiza: contesta «lo cotiza un vendedor».
+
+     La aritmética de la fórmula NO se quedó sin prueba: sigue viva donde
+     sigue sirviendo —el bot y la pantalla del dueño— y la cuida
+     `probar-tarifa.cjs`, que llama a `calcula` directo y sin la opción.
+     Lo que se prueba AQUÍ es lo de esta puerta: que ya no da número.
+     ------------------------------------------------------------ */
+  igual('el caso completo, fuera del criterio, ya no da precio',
+    [rm.cotiza.requiereAsesor, rm.cotiza.total, rm.cotiza.anticipo], [true, 0, 0]);
+  igual('y el cobro lo rechaza igual que el cotizador',
+    [rm.estados[1], rm.cobra && rm.cobra.error], [422, 'requiere asesor']);
+
+  /* Y el mismo viaje —ocho días, dos días de movimientos— sobre un destino
+     que SÍ está en la lista, para que el desglose siga teniendo quien lo
+     cuide: es lo que de verdad se le enseña al cliente.
+       Vallarta 8 días ........................ 23,000 (traslado y estadía)
+       10 h -> 4,000 y 13 h -> 5,000 .......... + 9,000
+                                                --------
+                                                  32,000 */
+  const rl = await corre(610000, 600000, '2026-09-03T08:00', '2026-09-10T18:00',
+    [dia('2026-09-04', '08:00', '18:00'), dia('2026-09-05', '08:00', '21:00')],
+    { direccion: 'Puerto Vallarta, Jalisco, México' });
+  igual('de lista, con movimientos, da 32,000', rl.cotiza.total, 32000);
+  /* Al cliente le llegan DOS numeros: traslado y estadia juntos y los
+     movimientos aparte. Partirlos diria cuanto cuesta la noche. */
   igual('y su desglose lo explica sin delatar la tarifa por noche',
-    [rm.cotiza.desglose.servicio, rm.cotiza.desglose.importeMovimientos],
-    [37100, 9000]);
+    [rl.cotiza.desglose.servicio, rl.cotiza.desglose.importeMovimientos],
+    [23000, 9000]);
   igual('los dos numeros suman el total',
-    rm.cotiza.desglose.servicio + rm.cotiza.desglose.importeMovimientos, rm.cotiza.total);
-  /* Cambió con R51 (2-sep-2026): el 20% de 46,100 son 9,220 y ahora sube al
-     medio millar, 9,500. Lo que esta prueba cuida no es la cifra sino que
-     cotizar y cobrar den lo MISMO — y siguen dándolo. */
-  igual('el anticipo sube al medio millar (R51)', rm.cotiza.anticipo, 9500);
+    rl.cotiza.desglose.servicio + rl.cotiza.desglose.importeMovimientos, rl.cotiza.total);
+  /* Cambió con R51 (2-sep-2026): el 20% sube al medio millar. Y cambió de
+     destino con R46 (12-sep-2026), porque el de antes ya no da precio: el
+     20% de 32,000 son 6,400 y suben a 6,500. Lo que esta prueba cuida no es
+     la cifra sino que cotizar y cobrar den lo MISMO — y siguen dándolo. */
+  igual('el anticipo sube al medio millar (R51)', rl.cotiza.anticipo, 6500);
 
   /* LA HUASTECA, POR LOS DOS ENDPOINTS.
      Es el caso donde mas facil se separarian: si uno reconociera el destino y
@@ -525,16 +544,34 @@ function dia(fecha, inicio, fin) {
        modelo inventado de noches gratis. 22,000 + 4×1,000 = 26,000. */
     igual('y cobra sus 22,000 más los 4 días de estadía', cdmx.json.total, 26000);
 
-    /* El que NO está en la lista sí se mide: sin kilómetros no hay fórmula. */
-    const bernal = await cotizaContando({ direccion: 'Bernal, Querétaro, México' });
-    igual('el que no está en la lista SÍ se mide', bernal.llamadas, 2);
-    igual('y se cotiza por fórmula', bernal.json.total > 0, true);
+    /* ------------------------------------------------------------
+       CAMBIÓ DE LADO EL 12-sep-2026 · R46
 
-    /* Solo ida y fuera de la lista: DOS llamadas, no una.
-       Cambió de lado el 26-ago-2026. Antes un solo-ida medía solo la ida y
-       cobraba medio viaje. El dueño dictó que un solo-ida cuesta el 65% del
-       precio REDONDO de un día — y ese precio redondo necesita la vuelta.
-       Así que ahora se mide también la vuelta, y son dos llamadas. */
+       Bernal NO está en la lista. Antes se medía —dos llamadas de pago a
+       Google— y se cotizaba por fórmula. Ahora la puerta pública pide
+       `soloDelCriterio`, y con eso ya sabemos la respuesta antes de medir:
+       no hay precio que dar.
+
+       Así que las dos llamadas se vuelven CERO. No es solo un ahorro: es
+       la señal de que la fórmula ya no se está calculando para el público.
+       Si algún día vuelven a ser dos, es que alguien quitó la opción de la
+       puerta y la página está otra vez inventando precios.
+       ------------------------------------------------------------ */
+    const bernal = await cotizaContando({ direccion: 'Bernal, Querétaro, México' });
+    igual('el que no está en la lista ya NO se mide', bernal.llamadas, 0);
+    igual('y no da precio: lo cotiza un vendedor',
+      [bernal.status, bernal.json.requiereAsesor, bernal.json.total], [200, true, 0]);
+
+    /* Solo ida y fuera de la lista: también cero llamadas y sin precio.
+       Cambió dos veces, y las dos quedan escritas porque explican el
+       número de hoy. El 26-ago-2026: antes un solo-ida medía solo la ida y
+       cobraba medio viaje; el dueño dictó que cuesta el 65% del precio
+       REDONDO de un día, y ese precio necesita la vuelta, así que pasaron a
+       ser dos llamadas. El 12-sep-2026 (R46): fuera del criterio no hay
+       precio, ni redondo ni de un sentido, así que ya no se mide nada.
+
+       El 65% sigue probado donde sigue vivo: en `probar-tarifa.cjs`, y en
+       esta misma prueba con los destinos de lista. */
     METROS_IDA = 311400; METROS_VUELTA = 288000;
     const espia = conteoDeGoogle();
     const soloIda = res();
@@ -544,14 +581,10 @@ function dia(fecha, inicio, fin) {
                                             direccion: 'Bernal, Querétaro, México' }),
       salida: '2026-09-03T08:00', regreso: '', redondo: false } }, soloIda);
     const nIda = espia.cuantas(); espia.suelta();
-    igual('solo ida fuera de la lista: dos llamadas (necesita el redondo)', nIda, 2);
-    /* y el precio es el 65% del redondo de un día, no medio viaje */
-    igual('solo ida cobra el 65% del redondo, redondeado a favor del cliente',
-      soloIda._json && soloIda._json.total, (function () {
-        const kmRedondo = (311400 + 288000) / 1000;
-        const redondo1dia = Math.floor((6500 + 22 * kmRedondo) / 100) * 100;
-        return Math.floor(0.65 * redondo1dia / 100) * 100;
-      })());
+    igual('solo ida fuera de la lista: tampoco se mide', nIda, 0);
+    igual('y tampoco da precio',
+      [soloIda._json && soloIda._json.requiereAsesor, soloIda._json && soloIda._json.total],
+      [true, 0]);
 
     /* ---- Y SIN CLAVE DE GOOGLE, la lista sigue cotizando ----
        Antes /api/cotizar contestaba 503 antes de mirar nada. Ahora la clave
@@ -561,8 +594,14 @@ function dia(fecha, inicio, fin) {
     const sinClave = await cotizaContando({ direccion: 'Puerto Vallarta, Jalisco, México' });
     igual('sin clave de Google, un destino de lista se cotiza igual', sinClave.status, 200);
     igual('a su precio de siempre', sinClave.json.total, 19000);
+    /* CAMBIÓ DE LADO EL 12-sep-2026 · R46. Éste daba 503 «Cotizador en línea
+       no configurado»: había que medir y no había con qué. Ahora ya no hay
+       nada que medir, así que la falta de clave dejó de importar y el
+       cliente ve lo que tiene que ver —«te contacta un vendedor»— en vez de
+       un error del servidor. */
     const sinClaveFormula = await cotizaContando({ direccion: 'Bernal, Querétaro, México' });
-    igual('pero el que hay que medir, no', sinClaveFormula.status, 503);
+    igual('y el de fuera contesta «te contactamos», no un 503',
+      [sinClaveFormula.status, sinClaveFormula.json.requiereAsesor], [200, true]);
     process.env.GOOGLE_ROUTES_KEY = clave;
   }
 

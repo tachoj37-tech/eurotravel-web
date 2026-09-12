@@ -157,8 +157,23 @@ titulo('el catálogo se manda completo (escenario az)');
     .map(function (u) { return u.name; });
   ok('y la lista completa también', faltan2.length === 0);
 
-  /* El Century dice su rango de verdad, no un número redondeado. */
-  ok('el Century dice «47 a 49», no «47»', /47 a 49/.test(lista));
+  /* ------------------------------------------------------------
+     CAMBIÓ DE LADO EL 12-sep-2026
+
+     Decía «el Century dice "47 a 49", no "47"», y tenía razón mientras
+     fuera UNA unidad: redondearlo a 47 le habría escondido dos asientos
+     al cliente.
+
+     Ahora son DOS unidades —el dueño las separó porque tienen precios
+     distintos en el Excel— y cada una dice su número exacto. El rango
+     desapareció porque desapareció la ambigüedad que lo hacía falta: ya
+     no hay «un Century» de capacidad incierta, hay uno de 47 y otro de 49.
+
+     Lo que se cuida ahora es que los DOS estén en la lista con su número:
+     si uno se cayera, el cliente dejaría de ver una unidad que existe.
+     ------------------------------------------------------------ */
+  ok('el Century de 47 dice sus 47', /Irizar Century — Clásico — 47 asientos/.test(lista));
+  ok('y el de 49 dice sus 49', /Irizar Century 49 — Clásico — 49 asientos/.test(lista));
 }
 
 titulo('se contradice con el número de personas (escenario az)');

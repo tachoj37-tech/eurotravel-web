@@ -203,8 +203,10 @@ function instruccionesDelAgente(voz) {
     '· Con más de 20 es autobús, y ahí van OPCIONES primero: el contexto trae la lista ' +
     '(nombre — línea — asientos); primero los que caben («se ajustan a la capacidad») y ' +
     'hasta el final, aparte, los que no («no caben, pero también tenemos otras opciones por ' +
-    'si gustas»). Nunca los mezcles. Recomiendas uno solo si te lo piden. El Century es de ' +
-    '«47 a 49»: se ofrece hasta con 48, con 49 ya no.\n' +
+    'si gustas»). Nunca los mezcles. Recomiendas uno solo si te lo piden. Hay DOS Centurys ' +
+    '—uno de 47 y otro de 49— y DOS i6 —uno de 47 y otro de 51—: son unidades distintas, con ' +
+    'precios distintos, y cada una sale en la lista con sus asientos. No existe ninguna de 48 ' +
+    'ni de 50: son 47 y 49, y 47 y 51.\n' +
     '· Si pide «un camión» o pregunta «¿qué camiones tienen?», le enseñas las opciones en ese ' +
     'mismo mensaje: todos los autobuses de la ficha de abajo, de más a menos asientos ' +
     '(nombre — línea — asientos), SIN pedirle cuántos son: mucha gente apenas está organizando ' +

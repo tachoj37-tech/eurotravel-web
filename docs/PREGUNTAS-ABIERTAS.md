@@ -1,6 +1,16 @@
 # Lo que no tengo claro
 
-**Quedan dos, y las dos son decisión suya, no código.**
+**Quedan cuatro: tres son decisión suya y una es un pendiente de la rama del
+bot.** Las dos últimas salieron del trabajo de la página del 12-sep-2026
+—fases 0, 1, 2 y 3, y las capacidades nuevas—; las dos primeras venían de
+antes.
+
+Ese mismo día se cerraron dos más, y las dos las contestó él:
+
+| | qué preguntaba | qué contestó |
+|---|---|---|
+| **Los servicios locales** | si el aeropuerto, la central, la Expo, el Akron y la zona metropolitana debían entrar al cotizador | *«los servicios locales mándalos con vendedor»* — se quedan con el vendedor, como ya los dejó la fase 1 |
+| **Cómo se lee el Century** | si un renglón «47 a 49» bastaba | *«irizar century 47 es uno, irizar century de 49 es otro… son unidades con diferentes precios, no los pongas en una misma unidad»* — se partieron en dos, y lo mismo los i6 |
 
 Es el estado más limpio desde que existe este archivo. El 1-sep-2026 se
 cerraron **veintiséis preguntas** en una sola sesión —las 17 de la primera
@@ -45,6 +55,38 @@ pedir y le pone precio.
 > incluidos.
 
 Él pidió que se le recordara el 2-sep-2026. **El recordatorio está puesto.**
+
+---
+
+## 3 · El asiento de margen del Century (12-sep-2026)
+
+El 7-sep dictó: *«Si son 48, lo ofreces. Si son 49, no lo ofreces»*. Era un
+lugar de margen para que nadie se quedara parado el día del viaje.
+
+Al separar los dos Centurys, ese margen **sale solo para los grupos de 48**
+—no caben en el de 47 y sí en el de 49, con un asiento libre—, pero **no para
+los de 49**: ésos van llenos.
+
+> **La pregunta:** ¿un grupo de 49 debe poder pedir el Century de 49, o
+> prefiere que también ahí quede un asiento de sobra? Es cambiar un número.
+
+## 4 · El acuse por WhatsApp lo tiene que mandar el bot (12-sep-2026)
+
+La fase 3 quedó a medias a propósito. Los dos mensajes están escritos y la
+ficha del vendedor se arma con el mismo ticket del bot, pero **salen por
+correo**, no por WhatsApp.
+
+La razón es de seguridad y está explicada en `docs/FASE-2-3-NO-SE-PIERDE.md`:
+la única puerta de salida a WhatsApp lleva tres candados —el filtro de salida,
+el freno de la CLABE ajena y la lista blanca de su teléfono— y abrir una
+segunda sin ellos sería un hueco.
+
+> **No es una pregunta para el dueño, es un pendiente para la rama del bot:**
+> que `api/whatsapp.mjs` llame a `_solicitud.paraWhatsApp()` y mande los dos
+> mensajes. La ficha ya sale hecha.
+>
+> **Y ojo:** hoy `DUENO_WHATSAPP` está vacía a propósito en producción, así
+> que aunque se hiciera, el ticket tampoco saldría todavía.
 
 ---
 
