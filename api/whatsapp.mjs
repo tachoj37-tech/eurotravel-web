@@ -36,6 +36,9 @@ import tarifa from './_tarifa.js';
 import logica from './_webhook-logica.js';
 import aprendidos from './_precios-aprendidos.js';
 import agente from './_agente.js';
+/* La puerta al CRM. Apagada mientras no haya KOMMO_SUBDOMINIO ni
+   KOMMO_TOKEN, así que importarla no cambia nada hasta que las haya. */
+import kommo from './_kommo.js';
 import origenes from './_origenes.js';
 import destinos from './_destinos.js';
 import seguimiento from './_seguimiento.js';
@@ -4666,6 +4669,133 @@ async function atiendeSeguimiento(a, b, esWeb) {
 }
 let ultimaPurga = '';
 
+/* ============================================================
+   KOMMO EN DOS TIEMPOS (12-sep-2026)
+   ============================================================
+   Kommo exige un `200` en DOS SEGUNDOS:
+
+     «To acknowledge that the webhook has been received, you need to
+      respond within 2 seconds with an HTTP status code 200.»
+     — developers.kommo.com
+
+   La IA tarda más que eso. Y el bot, hoy, hace todo el trabajo ANTES de
+   contestar —`await atiendeElAviso(...)`— porque a Meta le da igual
+   esperar. A Kommo no.
+
+   Así que el camino se parte en dos invocaciones:
+
+     1 · `/api/whatsapp/kommo`          la que Kommo llama.
+         Guarda el aviso, dispara la segunda y contesta 200. Nada de IA,
+         nada de red lenta: solo lo que cabe en dos segundos.
+
+     2 · `/api/whatsapp/kommo-trabajo`  la que hace el trabajo.
+         Es una invocación NUEVA, con su tiempo completo, y contesta
+         cuando termina. Nadie la está esperando.
+
+   ------------------------------------------------------------
+   POR QUÉ ASÍ Y NO CON `waitUntil`
+   ------------------------------------------------------------
+   `waitUntil` (de `@vercel/functions`) sería la primera dependencia del
+   proyecto —hoy tiene cero, a propósito— y su propia documentación dice
+   que es *best-effort*: sin reintentos, sin durabilidad, y muere con la
+   invocación. Para métricas está bien; para la respuesta a un cliente
+   que está esperando, no: si Vercel corta, el cliente se queda sin
+   contestación y nadie se entera.
+
+   Con dos invocaciones, la segunda es un request como cualquier otro:
+   Vercel no la mata a media faena porque está dentro de su propio ciclo.
+
+   ------------------------------------------------------------
+   EL DISPARO NO SE ESPERA, PERO SÍ SE DEJA SALIR
+   ------------------------------------------------------------
+   Si la primera contestara sin más, podría morir antes de que el aviso
+   llegue a la segunda. Y si esperara la respuesta completa, tardaría lo
+   mismo que el trabajo — que es lo que se quería evitar.
+
+   El punto medio: se espera con un tope corto y se deja caer el aborto.
+   En cuanto la segunda RECIBIÓ el aviso, su invocación ya es suya y
+   sigue aunque la primera cuelgue.
+
+   ------------------------------------------------------------
+   Y LA SEGUNDA PUERTA VA CON LLAVE
+   ------------------------------------------------------------
+   Es una URL que hace trabajo: si fuera pública, cualquiera podría
+   disparar llamadas a la IA a costa del dueño. Lleva el mismo secreto
+   del tramo de la URL, comparado en tiempo constante.
+   ============================================================ */
+const ESPERA_DEL_DISPARO_MS = 700;
+
+function secretoInterno() {
+  return String(process.env.WHATSAPP_RUTA_SECRETA || '').trim();
+}
+
+async function atiendeKommo(a, b, esWeb) {
+  /* Sin Kommo configurado, esta puerta no existe: 404 como cualquier
+     dirección que no lleva a ningún lado. */
+  if (!kommo.hayKommo()) {
+    if (!esWeb) { b.status(404).send(NO_HAY); return; }
+    return new Response(NO_HAY, { status: 404, headers: TIPO_TEXTO });
+  }
+
+  let crudo = '';
+  try {
+    crudo = esWeb ? await a.text() : await crudoDeNode(a);
+  } catch (e) {
+    console.error('[kommo] no se pudo leer el aviso: ' + e.message);
+  }
+
+  /* El disparo. No se espera la respuesta —el trabajo puede tardar un
+     minuto— pero sí se le da un momento para que salga. El aborto es lo
+     esperado, no un error. */
+  const destino = String(process.env.SITIO_URL || '').replace(/\/+$/, '') +
+    '/api/whatsapp/kommo-trabajo';
+  if (process.env.SITIO_URL) {
+    try {
+      await fetch(destino, {
+        method: 'POST',
+        signal: AbortSignal.timeout(ESPERA_DEL_DISPARO_MS),
+        headers: { 'Content-Type': 'application/json', 'x-interno': secretoInterno() },
+        body: crudo || '{}'
+      });
+    } catch (e) {
+      /* `TimeoutError` es el camino normal: la segunda ya recibió el
+         aviso y sigue trabajando por su cuenta. Cualquier otro error sí
+         se apunta, porque significa que el trabajo no arrancó. */
+      if (!e || e.name !== 'TimeoutError') {
+        console.error('[kommo] el aviso no llegó a la segunda puerta: ' + (e && e.message));
+      }
+    }
+  } else {
+    console.error('[kommo] falta SITIO_URL: no hay a dónde mandar el trabajo');
+  }
+
+  /* Y el 200, dentro de los dos segundos. */
+  if (!esWeb) { b.status(200).json({ ok: true }); return; }
+  return new Response(JSON.stringify({ ok: true }), { status: 200, headers: TIPO_JSON });
+}
+
+async function atiendeKommoTrabajo(a, b, esWeb) {
+  const dado = esWeb ? a.headers.get('x-interno') : (a.headers && a.headers['x-interno']);
+  if (!webhook.rutaSecretaValida(String(dado || ''), secretoInterno())) {
+    if (!esWeb) { b.status(404).send(NO_HAY); return; }
+    return new Response(NO_HAY, { status: 404, headers: TIPO_TEXTO });
+  }
+
+  let crudo = '';
+  try {
+    crudo = esWeb ? await a.text() : await crudoDeNode(a);
+  } catch (e) { crudo = ''; }
+
+  /* Aquí es donde va a vivir la conversación cuando haya cuenta: leer el
+     aviso de Kommo, pasarlo por el mismo motor que WhatsApp, y contestar
+     por su API. Hoy solo deja constancia — el bot sigue en Dualhook y
+     esta puerta no recibe nada real todavía. */
+  console.log('[kommo-trabajo] aviso recibido · ' + String(crudo || '').length + ' bytes');
+
+  if (!esWeb) { b.status(200).json({ ok: true }); return; }
+  return new Response(JSON.stringify({ ok: true }), { status: 200, headers: TIPO_JSON });
+}
+
 async function atiende(a) {
   const b = arguments[1];
   const esWeb = a && typeof a.arrayBuffer === 'function' &&
@@ -4675,6 +4805,9 @@ async function atiende(a) {
   /* La puerta del cron va ANTES del tramo secreto: «seguimiento» no es
      un tramo, es un nombre fijo, y su llave es otra (CRON_SECRET). */
   if (llave === 'seguimiento') return atiendeSeguimiento(a, b, esWeb);
+  /* Las dos mitades de Kommo. Ver la nota larga en `atiendeKommo`. */
+  if (llave === 'kommo') return atiendeKommo(a, b, esWeb);
+  if (llave === 'kommo-trabajo') return atiendeKommoTrabajo(a, b, esWeb);
   if (!webhook.rutaSecretaValida(llave, process.env.WHATSAPP_RUTA_SECRETA)) {
     if (!esWeb) { b.status(404).send(NO_HAY); return; }
     return new Response(NO_HAY, { status: 404, headers: TIPO_TEXTO });

@@ -6,6 +6,7 @@
       "destination": "/api/whatsapp?llave=:llave"
     }
   ],
+  "_nota": "Kommo entra por ese mismo rewrite con las llaves «kommo» y «kommo-trabajo»: no hace falta un archivo nuevo en api/, que seria la funcion 13 de 12 y rompe el despliegue entero.",
   "crons": [
     {
       "path": "/api/whatsapp/seguimiento",
