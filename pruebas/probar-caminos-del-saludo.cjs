@@ -64,9 +64,20 @@ titulo('el saludo ofrece por dónde empezar');
      Lo que se pide ahora es que la pregunta NOMBRE los dos caminos, para
      que quien lee el texto y quien solo mira los botones entiendan lo
      mismo. */
-  ok('la pregunta nombra los dos caminos',
-    /cotizar un viaje/i.test(r.texto) && /hablar con alguien/i.test(r.texto));
-  ok('  y ya no explica cómo usar los botones', !/dale a \*/i.test(r.texto));
+  /* Y CAMBIÓ OTRA VEZ EL MISMO DÍA. Esto exigía que la pregunta nombrara
+     los dos caminos —«¿qué necesitas: cotizar un viaje o hablar con
+     alguien?»— y el dueño lo recortó a «¿Qué necesitas?» a secas: los
+     botones ya lo dicen, y repetirlo es leerle en voz alta lo que tiene
+     enfrente.
+
+     Lo que se cuida ahora es lo que de verdad importa y no cambia con el
+     gusto: que PREGUNTE algo y que los botones estén. Los dos canales los
+     pintan —WhatsApp por su cuenta y la página con `pintaAtajos`—, así
+     que nadie se queda sin ver las opciones. */
+  ok('pregunta qué necesita', /qu[ée] necesitas/i.test(r.texto));
+  ok('  sin enumerar lo que ya dicen los botones',
+    !/cotizar un viaje/i.test(r.texto));
+  ok('  y sin explicar cómo usarlos', !/dale a \*/i.test(r.texto));
 
   /* La regla de forma del guion: nada de más de tres renglones. */
   const renglones = r.texto.split('\n').filter(function (l) { return l.trim(); });

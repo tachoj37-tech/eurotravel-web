@@ -5187,15 +5187,17 @@ function respuestaBase(mensaje, estado, hoy) {
            quitar: era explicarle al cliente cómo usar los botones, y un
            botón que necesita instrucciones está mal puesto.
 
-           Ahora la pregunta nombra los dos caminos y ya: los botones
-           dicen lo mismo, así que quien lee el texto y quien solo mira
-           los botones entienden igual.
+           Después estuvo un rato nombrando los dos caminos —«¿qué
+           necesitas: cotizar un viaje o hablar con alguien?»— y el dueño
+           lo recortó otra vez el mismo día: los botones ya dicen eso, y
+           repetirlo en el texto es leerle en voz alta lo que tiene
+           enfrente.
 
            Va en un solo renglón porque el saludo ya usa dos y el guion
            no manda mensajes de más de tres. Lo caza
            `probar-conversacion.cjs`.
            ------------------------------------------------------------ */
-        '\n\n¿Qué necesitas: cotizar un viaje o hablar con alguien?',
+        '\n\n¿Qué necesitas?',
       pasa: false,
       estado: { paso: 'destino' },
       /* ------------------------------------------------------------
