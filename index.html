@@ -2572,7 +2572,10 @@ window.IMGS = {
       <p>En EuroTravel nos encanta ayudarte a resolver tus traslados turísticos y empresariales. Ya sea que necesites cotizar un servicio, resolver dudas o agendar tu transporte, nuestro equipo está disponible para atenderte de forma rápida y personalizada.</p>
       <ul class="canales">
         <li><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><use href="#ei-tel"/></svg><a href="tel:+523324002285">33 2400 2285</a></li>
-        <li><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><use href="#ei-wasap"/></svg><a href="https://wa.me/523321832993">WhatsApp 33 2183 2993</a></li>
+        <!-- La dirección la pone el guion desde `config.js`, para que el
+             número viva en un solo lugar. Nace sin `href`: si el guion no
+             corriera, un enlace a ningún lado se ve peor que un texto. -->
+        <li><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><use href="#ei-wasap"/></svg><a data-wa>WhatsApp 33 2183 2993</a></li>
         <li><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><use href="#ei-sobre"/></svg><a href="mailto:ventas@eurotravel.com.mx">ventas@eurotravel.com.mx</a></li>
       </ul>
     </div>
@@ -3197,7 +3200,7 @@ window.IMGS = {
       <div class="contact-grid">
         <div class="cinfo">
           <a href="tel:+523324002285"><svg aria-hidden="true"><use href="#i-phone" /></svg><span><b>Teléfono</b><span class="v">33 2400 2285</span></span></a>
-          <a href="https://wa.me/523321832993" target="_blank" rel="noopener"><svg aria-hidden="true"><use href="#i-wa" /></svg><span><b>WhatsApp</b><span class="v">33 2183 2993</span></span></a>
+          <a data-wa target="_blank" rel="noopener"><svg aria-hidden="true"><use href="#i-wa" /></svg><span><b>WhatsApp</b><span class="v">33 2183 2993</span></span></a>
           <a href="mailto:ventas@eurotravel.com.mx"><svg aria-hidden="true"><use href="#i-mail" /></svg><span><b>Correo</b><span class="v">ventas@eurotravel.com.mx</span></span></a>
           <a href="https://maps.google.com/?q=Alba+1666,+Lomas+de+San+Pedrito,+Tlaquepaque,+Jalisco+45625" target="_blank" rel="noopener"><svg aria-hidden="true"><use href="#i-pin" /></svg><span><b>Oficina</b><span class="v">Alba 1666, Col. Lomas de San Pedrito<br />Tlaquepaque, Jalisco, C.P. 45625</span></span></a>
           <div class="ci"><svg aria-hidden="true"><use href="#i-clock" /></svg><span><b>Atención</b><span class="v">Lunes a sábado · Servicios operando 24/7</span></span></div>
@@ -5580,6 +5583,104 @@ window.IMGS = {
        no es un acuse.
        ============================================================ */
     /* ============================================================
+       LA LIGA DE WHATSAPP, ARMADA EN UN SOLO LUGAR
+       ------------------------------------------------------------
+       El número sale de `config.js` y de ningún otro lado: el día que
+       se mude a Kommo se cambia allá y toda la página lo sigue. Antes
+       estaba escrito a mano en ocho lugares —y en cuatro de ellos era
+       el número del TELÉFONO, no el del WhatsApp—.
+
+       `wa.me` abre la aplicación en el celular y WhatsApp Web en la
+       computadora. Quien no tenga WhatsApp instalado cae en la página
+       de WhatsApp, que le ofrece instalarlo: no se queda en un error,
+       pero tampoco nos escribe. Por eso el teléfono y el correo siguen
+       a la vista en el pie y en Contacto — el plan lo pedía revisar y
+       ésa es la respuesta.
+       ============================================================ */
+    function ligaWhatsApp(texto) {
+      var cfg = window.CONFIG || {};
+      var t = texto || cfg.WHATSAPP_TEXTO || '';
+      /* Se escapa siempre: un destino con `&` partiría la dirección en
+         dos y el mensaje le llegaría cortado al vendedor. */
+      return 'https://wa.me/' + cfg.WHATSAPP + (t ? '?text=' + encodeURIComponent(t) : '');
+    }
+
+    /* Los enlaces fijos —pie de página y Contacto— nacen sin dirección y
+       se llenan aquí, para que el número viva en un solo lugar. */
+    document.querySelectorAll('a[data-wa]').forEach(function (a) {
+      a.href = ligaWhatsApp();
+    });
+
+    /* ------------------------------------------------------------
+       EL FLOTANTE LLEVA EL VIAJE, CUANDO HAY VIAJE
+       ------------------------------------------------------------
+       «Y si viene desde el cotizador, el mensaje ya trae la ficha del
+       viaje», dice el plan. Quien ya escogió a dónde va y cuándo no
+       tiene por qué volver a teclearlo en WhatsApp.
+
+       Se recalcula al picarlo y no antes: el cliente puede cambiar el
+       destino cinco veces, y lo que cuenta es lo que tenía puesto en el
+       momento de escribirnos.
+       ------------------------------------------------------------ */
+    /* ------------------------------------------------------------
+       SE BUSCA AL USARLO, NO AL CARGAR
+       ------------------------------------------------------------
+       El botón flotante vive HASTA EL FINAL del archivo, mil líneas
+       después de este guion. Guardarlo en una variable aquí daba `null`,
+       y el `null.href` de abajo **tumbaba el resto del guion al
+       arrancar** — con él, la mitad de la página.
+
+       Lo cazó abrir la página, no las pruebas: un `byId` que devuelve
+       null se ve igual en el texto que uno que funciona.
+       ------------------------------------------------------------ */
+    function elFlotante() { return byId('wa-flotante'); }
+
+    /* ------------------------------------------------------------
+       SE LEE DE LA PANTALLA, NO DEL ESTADO DEL COTIZADOR
+       ------------------------------------------------------------
+       `VIAJE` solo recibe las fechas y la unidad cuando el cliente pica
+       «Cotizar»: si las escoge y se va derecho a WhatsApp sin cotizar
+       —que es lo más normal cuando ya sabe lo que quiere— el mensaje le
+       salía con la ruta y nada más.
+
+       Los campos de la pantalla sí las tienen desde que las escogió, y
+       son además lo que el cliente está viendo. Se manda eso.
+       ------------------------------------------------------------ */
+    function textoDelFlotante() {
+      if (!LOC.origen || !LOC.destino) return '';
+
+      var l = ['Hola, quiero cotizar un viaje.'];
+      l.push(LOC.origen.place[0] + ' → ' + LOC.destino.place[0]);
+
+      var salida = (byId('s-salida').value || '').trim();
+      if (salida) {
+        var regreso = (byId('s-regreso').value || '').trim();
+        l.push(fmtFechaHora(salida) +
+          (regreso ? ' → ' + fmtFechaHora(regreso) : ' · solo ida'));
+      }
+
+      var sel = byId('s-unidad');
+      if (sel.value) l.push(sel.options[sel.selectedIndex].textContent);
+
+      return l.join('\n');
+    }
+
+    function refrescaFlotante() {
+      var a = elFlotante();
+      if (a) a.href = ligaWhatsApp(textoDelFlotante());
+    }
+
+    /* El enganche espera a que el documento esté completo, que es cuando
+       el botón ya existe. Y se refresca al picarlo: el cliente puede
+       cambiar el destino cinco veces, y lo que cuenta es lo que tenía
+       puesto en el momento de escribirnos. */
+    document.addEventListener('DOMContentLoaded', function () {
+      refrescaFlotante();
+      var a = elFlotante();
+      if (a) a.addEventListener('click', refrescaFlotante);
+    });
+
+    /* ============================================================
        QUÉ ES UN TELÉFONO Y QUÉ ES UN CORREO
        ------------------------------------------------------------
        Una sola regla para las DOS pantallas que piden contacto: la caja
@@ -6522,7 +6623,10 @@ window.IMGS = {
       var texto = 'Solicitud de cotización — Eurotravel\n\n';
       filas.forEach(function (r) { texto += r[0] + ': ' + r[1] + '\n'; });
 
-      byId('send-wa').href = 'https://wa.me/523324002285?text=' + encodeURIComponent(texto);
+      /* Iba al número del TELÉFONO, no al del WhatsApp. Y es el botón del
+         resumen de la cotización: el cliente acaba de armar su viaje y
+         picaba para mandárnoslo a un número que no lo recibe. */
+      byId('send-wa').href = ligaWhatsApp(texto);
       byId('send-mail').href = 'mailto:ventas@eurotravel.com.mx?subject=' +
         encodeURIComponent('Cotización — ' + (VIAJE.origen ? VIAJE.origen.place[0] : '') + ' a ' + (VIAJE.destino ? VIAJE.destino.place[0] : '')) +
         '&body=' + encodeURIComponent(texto);
@@ -6739,12 +6843,28 @@ window.IMGS = {
 })();
 </script>
 <!-- /INICIO-NUEVO:GUION -->
-<!-- Antes se iba directo a wa.me. Ahora abre el chat de aquí mismo, que
-     contesta al instante y cotiza la Sprinter sin esperar a nadie. El
-     WhatsApp de verdad sigue a un clic: el bot lo ofrece en cuanto hace
-     falta una persona, y el pie de página lo tiene siempre. -->
-<button class="wa-fab" type="button" id="wa-abrir"
-   aria-label="Abrir el chat de Eurotravel" aria-expanded="false" aria-controls="wa-chat">
+<!-- ============================================================
+     EL BOTÓN FLOTANTE · VA A WHATSAPP (fase 4, 12-sep-2026)
+     ------------------------------------------------------------
+     Este botón ya había ido a `wa.me` y se había cambiado para que
+     abriera el chat de aquí mismo, «que contesta al instante y cotiza
+     la Sprinter sin esperar a nadie».
+
+     El dueño lo regresó a WhatsApp el 12-sep-2026: «va a abrir el
+     whatsapp que estamos trabajando con kommo, ve ajustando la ruta».
+     Y el argumento de entonces se había evaporado solo: con R46 la
+     página ya casi no cotiza, y con lo que viene no va a cotizar nada.
+
+     El número sale de `config.js`, no de aquí: el día de la mudanza a
+     Kommo se cambia allá y esto lo sigue.
+
+     OJO CON EL BOTÓN ESCONDIDO DE ABAJO. `bot-navegador.js` busca
+     `wa-abrir` al cargar y le pone su escucha SIN comprobar que exista:
+     quitarlo tumbaría el chat entero con un error. Se queda en el DOM,
+     escondido, hasta que la rama del bot decida qué hacer con el chat.
+     ============================================================ -->
+<a class="wa-fab" id="wa-flotante" target="_blank" rel="noopener"
+   aria-label="Escríbenos por WhatsApp">
   <span class="wa-fab-icono">
     <span class="wa-fab-onda" aria-hidden="true"></span>
     <svg width="22" height="22" viewBox="0 0 16 16" aria-hidden="true"><use href="#ei-wasap"/></svg>
@@ -6752,6 +6872,15 @@ window.IMGS = {
   <span class="wa-fab-texto">
     <b>Respuesta el mismo día</b>
     <b>Escríbenos ahora</b>
+  </span>
+</a>
+
+<!-- La puerta del chat, escondida. Ver la nota de arriba: no se borra
+     porque `bot-navegador.js` la busca y no comprueba si está. -->
+<button class="wa-fab" type="button" id="wa-abrir" hidden
+   aria-label="Abrir el chat de Eurotravel" aria-expanded="false" aria-controls="wa-chat">
+  <span class="wa-fab-icono">
+    <svg width="22" height="22" viewBox="0 0 16 16" aria-hidden="true"><use href="#ei-wasap"/></svg>
   </span>
 </button>
 

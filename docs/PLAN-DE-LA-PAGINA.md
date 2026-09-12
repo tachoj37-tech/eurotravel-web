@@ -203,7 +203,26 @@ mismos botones —incluido el de **mandar fotos de la unidad**.
 > sensato es que la página no sepa a dónde manda: que se lo pregunte a una
 > sola variable, la misma que use el bot.
 
-### Fase 4 · El botón de WhatsApp
+### Fase 4 · El botón de WhatsApp — **HECHA el 12-sep-2026**
+
+> El flotante abre WhatsApp con el mensaje ya escrito, y si el cliente ya
+> escogió viaje, el mensaje lleva su ruta, sus fechas y su unidad. Dictado del
+> dueño: «va a abrir el whatsapp que estamos trabajando con kommo, ve
+> ajustando la ruta».
+>
+> **Y salió un bug de dinero al empezarla.** Había OCHO `wa.me` en cuatro
+> archivos con **dos números distintos**, y cuatro de ellos mandaban al número
+> del TELÉFONO. Entre esos cuatro, el botón «Enviar por WhatsApp» del resumen
+> de la cotización — el momento de mayor intención de compra de la página.
+>
+> Ahora el número vive en **un solo lugar** (`config.js`, y `WHATSAPP_PUBLICO`
+> para el servidor): el día de la mudanza a Kommo es cambiar un renglón, no
+> acertarle a ocho. Lo vigila `pruebas/probar-whatsapp-de-la-pagina.cjs`.
+>
+> **Lo que dejó abierto:** el chat de la página se quedó sin botón visible.
+> Está anotado en `docs/PREGUNTAS-ABIERTAS.md` — le toca a la rama del bot.
+
+
 
 Flotante, en todas las vistas, con el texto ya escrito para que el cliente
 solo le dé enviar:

@@ -37,6 +37,35 @@ const RESEND = 'https://api.resend.com/emails';
    Está dicho en el diagnóstico y en el README. */
 const DE = process.env.RESEND_DE || 'Eurotravel <ventas@eurotravel.com.mx>';
 
+/* ------------------------------------------------------------
+   EL WHATSAPP AL QUE MANDA EL CORREO
+   ------------------------------------------------------------
+   Estaba escrito a mano, y además era el número del TELÉFONO y no el
+   del WhatsApp: quien abriera ese enlace desde el correo del contrato
+   le escribía a un número que no lo recibe.
+
+   Aquí no se puede leer `config.js` —eso es del navegador— así que
+   sale del entorno, con el mismo valor por omisión. El día que el
+   WhatsApp se mude a Kommo se cambia `WHATSAPP_PUBLICO` en Vercel y
+   `WHATSAPP` en `config.js`, y no queda ninguno escrito a mano.
+
+   NO ES UN SECRETO: va en el pie de la página. Vive en el entorno
+   por ser configurable, no por ser privado.
+   ------------------------------------------------------------ */
+const WHATSAPP_POR_OMISION = '523321832993';
+
+function whatsappPublico() {
+  const puesto = String(process.env.WHATSAPP_PUBLICO || '').replace(/\D/g, '');
+  return puesto || WHATSAPP_POR_OMISION;
+}
+
+/* «33 2183 2993» a partir del número con lada: es lo que se lee, no lo
+   que se marca, así que se arma del mismo dato y no se escribe aparte. */
+function whatsappLegible() {
+  const d = whatsappPublico().replace(/^52/, '');
+  return d.length === 10 ? d.slice(0, 2) + ' ' + d.slice(2, 6) + ' ' + d.slice(6) : d;
+}
+
 function clave() { return (process.env.RESEND_API_KEY || '').trim(); }
 function hayClave() { return clave().length > 0; }
 
@@ -233,7 +262,8 @@ function mensajeDeContrato(metadata, pdfBase64, liga) {
 
       '<p style="font-size:14px;margin:26px 0 0">Para abonar el resto o cambiar algo, ' +
         'contéstanos este correo o escríbenos por WhatsApp al ' +
-        '<a href="https://wa.me/523324002285" style="color:#db0d0d">33 2400 2285</a>.</p>' +
+        '<a href="https://wa.me/' + whatsappPublico() + '" style="color:#db0d0d">' +
+        whatsappLegible() + '</a>.</p>' +
 
       '<p style="font-size:12.5px;color:#6e6e6a;margin:28px 0 0;padding-top:16px;' +
         'border-top:1px solid #e6e6e3">Eurotravel · San Pedro Tlaquepaque, Jalisco<br>' +

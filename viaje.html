@@ -10,6 +10,9 @@
      así que el token de abajo NO sale de aquí. Está explicado en
      errores.js, que se escribió a mano justamente por esto. -->
 <script src="errores.js"></script>
+<!-- De aquí sale el WhatsApp al que manda esta pantalla. Es el mismo
+     archivo que carga la portada, para que el número viva en un lugar. -->
+<script src="config.js"></script>
 <!--
   ============================================================
   La pantalla propia de cada cliente.
@@ -119,7 +122,9 @@
 
   <footer>
     Eurotravel · San Pedro Tlaquepaque, Jalisco<br>
-    <a href="https://wa.me/523324002285">33 2400 2285</a>
+    <!-- La dirección la pone el guion desde `config.js`: el número del
+         WhatsApp vive en un solo lugar. Decía el del teléfono. -->
+    <a data-wa>33 2183 2993</a>
   </footer>
 </div>
 
@@ -129,6 +134,12 @@
 
   var pesos = new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 });
   var cuerpo = document.getElementById('cuerpo');
+
+  /* El WhatsApp del pie nace sin dirección y se llena aquí, desde
+     `config.js`, por lo mismo que en la portada: un solo lugar. */
+  document.querySelectorAll('a[data-wa]').forEach(function (a) {
+    a.href = 'https://wa.me/' + ((window.CONFIG || {}).WHATSAPP || '');
+  });
 
   function esc(t) {
     return String(t == null ? '' : t).replace(/[&<>"']/g, function (c) {
@@ -159,8 +170,13 @@
     if (!dentro) return '';
     return '<div class="tarjeta">' + (titulo ? '<h2>' + esc(titulo) + '</h2>' : '') + dentro + '</div>';
   }
+  /* El número sale de `config.js`, que esta pantalla carga arriba: vive en
+     un solo lugar y el día que se mude a Kommo se cambia allá. Aquí estaba
+     escrito a mano, y además era el del TELÉFONO, no el del WhatsApp. */
   function wa(texto) {
-    return 'https://wa.me/523324002285?text=' + encodeURIComponent(texto);
+    var cfg = window.CONFIG || {};
+    return 'https://wa.me/' + cfg.WHATSAPP +
+      (texto ? '?text=' + encodeURIComponent(texto) : '');
   }
 
   function pintaError(clase, titulo, texto) {

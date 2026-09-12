@@ -70,7 +70,24 @@ los de 49**: ésos van llenos.
 > **La pregunta:** ¿un grupo de 49 debe poder pedir el Century de 49, o
 > prefiere que también ahí quede un asiento de sobra? Es cambiar un número.
 
-## 4 · El acuse por WhatsApp lo tiene que mandar el bot (12-sep-2026)
+## 4 · El chat se quedó sin puerta, y su número sigue escrito a mano (12-sep-2026)
+
+Al regresar el botón flotante a WhatsApp —«va a abrir el whatsapp que estamos
+trabajando con kommo»— el **chat de la página se quedó sin botón visible**. Su
+código sigue entero y funcionando; lo que ya no tiene es por dónde abrirlo.
+
+No se borró nada, y el botón viejo se quedó escondido en el DOM a propósito:
+`bot-navegador.js` lo busca al cargar y **no comprueba que exista**, así que
+quitarlo tumbaría el chat con un error.
+
+> **Dos cosas le tocan a la rama del bot, no a ésta:**
+>
+> 1. Decidir qué pasa con el chat: se quita del todo, o se le da otra puerta.
+> 2. Que `bot-navegador.js` saque el número de `config.js` como todos los
+>    demás. Hoy lo tiene escrito a mano dos veces — con el número **bueno**,
+>    eso sí, y hay una prueba que se pone roja si alguna vez deja de serlo.
+
+## 5 · El acuse por WhatsApp lo tiene que mandar el bot (12-sep-2026)
 
 La fase 3 quedó a medias a propósito. Los dos mensajes están escritos y la
 ficha del vendedor se arma con el mismo ticket del bot, pero **salen por
