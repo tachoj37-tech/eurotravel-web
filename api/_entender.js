@@ -120,8 +120,26 @@ function catalogoParaLaIA() {
     const d = require('./_destinos.js');
     destinos = (d.DESTINOS || []).map(function (x) { return x.nombre; }).join(' · ');
   } catch (e) { /* idem */ }
+  /* ------------------------------------------------------------
+     LOS DOS i6 EXISTEN, Y NO ES UN ERROR DE DEDO
+     ------------------------------------------------------------
+     Corrida del 11-sep-2026: el modelo borró el «Irizar i6 51» de la
+     lista NUEVE veces de once. Lo lee al lado del «Irizar i6» de 47 y
+     lo toma por un duplicado mal escrito, así que lo «arregla»
+     quitándolo.
+
+     El guardia de `whatsapp.mjs` lo caza y manda la lista buena, o sea
+     que el cliente nunca vio una lista chueca. Pero vale más que el
+     modelo no se equivoque a estarlo corrigiendo: son dos camiones
+     distintos, y el que se caía es el que se acaba de dar de alta.
+     ------------------------------------------------------------ */
+  const ojoConLosRepetidos = unidades && /Irizar i6 51/.test(unidades)
+    ? '\nOJO: hay DOS Irizar i6 y los dos existen — uno de 47 pasajeros y otro de 51. ' +
+      'No es un error de dedo y no se juntan. Cuando enseñes la lista, van los dos.'
+    : '';
+
   return (unidades ? '\n\nUNIDADES QUE EXISTEN (nombre — capacidad — línea — equipamiento):\n' +
-    unidades : '') +
+    unidades + ojoConLosRepetidos : '') +
     (destinos ? '\n\nDESTINOS DE LISTA (para reconocerlos aunque vengan mal escritos):\n' +
     destinos : '');
 }

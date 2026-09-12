@@ -1282,10 +1282,32 @@ function fragmentosDeFecha(t) {
   const trozos = [];
   const mete = function (s) { if (s) trozos.push(s); };
 
-  /* «del 10 al 13» trae las DOS fechas de un golpe. Va primero
-     porque si no, el «10» se leería solo y el «13» se perdería. */
-  const rango = t.match(/\bdel?\s+(\d{1,2})\s+al\s+(\d{1,2})\b/);
-  if (rango) return { salida: 'el ' + rango[1], regreso: 'el ' + rango[2] };
+  /* ------------------------------------------------------------
+     «DEL 10 AL 13» TRAE LAS DOS FECHAS — Y SU MES
+     ------------------------------------------------------------
+     Va primero porque si no, el «10» se leería solo y el «13» se
+     perdería.
+
+     Y SE LLEVA EL MES, que es lo que faltaba. La expresión capturaba
+     nada más los dos días, así que «del 20 al 22 de diciembre»
+     devolvía «el 20» y «el 22» pelones y `fechaDe` los resolvía al 20
+     y 22 más cercanos desde hoy: **septiembre**. Tres meses de
+     diferencia en el primer mensaje, que es donde más veces llega esa
+     frase — «a vallarta del 20 al 22 de diciembre somos 45» es un
+     mensaje de lo más normal.
+
+     El mes puede venir en cualquiera de los dos extremos, o en los dos:
+     «del 20 de dic al 22», «del 20 al 22 de diciembre», «del 30 de
+     noviembre al 2 de diciembre». El que falte hereda del otro; si
+     vienen los dos, cada uno se queda con el suyo, que es lo que hace
+     falta para un viaje que cambia de mes (11-sep-2026).
+     ------------------------------------------------------------ */
+  const rango = t.match(/\bdel?\s+(\d{1,2})(\s+de\s+[a-zñ]{3,10})?\s+al\s+(\d{1,2})(\s+de\s+[a-zñ]{3,10})?\b/);
+  if (rango) {
+    const mesIda = rango[2] || rango[4] || '';
+    const mesVuelta = rango[4] || rango[2] || '';
+    return { salida: 'el ' + rango[1] + mesIda, regreso: 'el ' + rango[3] + mesVuelta };
+  }
 
   /* «el 12 de septiembre», «el 12» */
   const conEl = t.match(/\bel\s+(\d{1,2})(\s+de\s+[a-zñ]+)?\b/);
@@ -2697,13 +2719,34 @@ function pasoDeCotizacion(t, crudo, estado, hoy) {
     const diaSolo = /^\s*(?:el\s+)?(\d{1,2})\s*$/.exec(String(crudo || '').trim());
     const conElMes = (diaSolo && e.mesDicho) ? diaSolo[1] + ' de ' + e.mesDicho : crudo;
 
-    const f = fechaDe(conElMes, hoy);
+    let f = fechaDe(conElMes, hoy);
+    /* ------------------------------------------------------------
+       «DEL 20 AL 22 DE DICIEMBRE» TAMBIÉN ES UNA RESPUESTA
+       ------------------------------------------------------------
+       `fechaDe` lee UNA fecha, no un rango, así que contestar la
+       pregunta «¿qué día salen?» con las dos de un jalón caía en «esa
+       fecha no la entendí» — y `absorbeLoDemas` no ayuda porque a
+       propósito no toca fechas.
+
+       O sea que la forma más natural de contestar esa pregunta era la
+       que no se entendía. Se vio en la corrida del 11-sep-2026, en los
+       escenarios que corrieron sin IA: el bot repitió «¿qué día salen?»
+       cuatro veces seguidas con el cliente diciéndole las fechas.
+
+       `leeDeUnJalon` sí sabe leer el rango: se le pregunta a él.
+       ------------------------------------------------------------ */
+    let regresoDelRango = null;
+    if (!f) {
+      const dosFechas = leeDeUnJalon(crudo, hoy);
+      if (dosFechas.salida) { f = dosFechas.salida; regresoDelRango = dosFechas.regreso || null; }
+    }
     if (!f) {
       const acuse = absorbeLoDemas(e, crudo, hoy);
       if (acuse) return siguiente(e, acuse);
       return { texto: repregunta(e, 'salida'),
         pasa: false, estado: e, opciones: [], noEntendio: true };
     }
+    if (regresoDelRango && !e.regreso) e.regreso = regresoDelRango;
     e.salida = f;
     /* Si ya había regreso y quedó antes, se vuelve a preguntar. */
     if (e.regreso && e.regreso < f) e.regreso = null;

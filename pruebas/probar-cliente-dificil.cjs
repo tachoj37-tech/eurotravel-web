@@ -65,6 +65,45 @@ titulo('el mes y el día en dos mensajes (escenario bk)');
   ok('  y no inventa una fecha', !soloMes.estado.salida);
 }
 
+titulo('«del 20 al 22 de diciembre» — el rango se lleva su mes (escenario bj)');
+{
+  /* El peor de todos, porque llega en el PRIMER mensaje y es de las
+     formas más normales de escribirlo: «a vallarta del 20 al 22 de
+     diciembre somos 45».
+
+     La expresión que lee el rango capturaba nada más los dos días y
+     tiraba el mes, así que devolvía «el 20» y «el 22» pelones y se
+     resolvían a los más cercanos desde hoy: SEPTIEMBRE. Tres meses de
+     diferencia, sin que nada truene, en el mensaje con el que más gente
+     empieza.
+
+     Y de rebote, contestar «¿qué día salen?» con el rango caía en «esa
+     fecha no la entendí»: en la corrida del 11-sep-2026 el bot repitió
+     la misma pregunta cuatro veces con el cliente diciéndole las fechas. */
+  const lee = (t) => conv.leeDeUnJalon(t, HOY);
+
+  const a = lee('a vallarta del 20 al 22 de diciembre somos 45');
+  ok('el primer mensaje completo cae en diciembre', a.salida === '2026-12-20' && a.regreso === '2026-12-22');
+
+  const b = lee('del 20 de diciembre al 22');
+  ok('con el mes en el primer extremo también', b.salida === '2026-12-20' && b.regreso === '2026-12-22');
+
+  /* Un viaje que cambia de mes: cada extremo se queda con el suyo. */
+  const c = lee('del 30 de noviembre al 2 de diciembre');
+  ok('y un viaje que cruza de mes no se aplasta',
+    c.salida === '2026-11-30' && c.regreso === '2026-12-02');
+
+  /* Sin mes escrito se lee como siempre: el más cercano. */
+  const d = lee('del 20 al 22');
+  ok('sin mes, sigue siendo el más cercano', d.salida === '2026-09-20' && d.regreso === '2026-09-22');
+
+  /* Y contestando la pregunta del bot, que es el otro camino. */
+  const e = corre(['a vallarta somos 45', 'del 20 al 22 de diciembre']);
+  ok('contestar «¿qué día salen?» con el rango sí se entiende',
+    e.estado.salida === '2026-12-20' && e.estado.regreso === '2026-12-22');
+  ok('  y ya no vuelve a preguntar la fecha', !/qu[ée] d[ií]a salen/i.test(e.ultimo.texto));
+}
+
 titulo('una dirección no es una ciudad (escenario bh)');
 {
   /* «Nos recogen en hidalgo 45 a las 6 de la mañana» dejaba el viaje con
