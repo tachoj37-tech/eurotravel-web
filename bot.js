@@ -1061,6 +1061,20 @@ const COLAS_DE_TIEMPO = new RegExp(
   '(?:' + MESES_EN_LETRA + '|semana\\s+santa|navidad|a[nñ]o\\s+nuevo|' +
   'verano|invierno|vacaciones|el\\s+puente|puente|d[ií]a\\s+de\\s+muertos)\\b.*$', 'i');
 
+/* ------------------------------------------------------------
+   LO QUE SE DICE DEL VIAJE NO ES PARTE DEL NOMBRE DEL LUGAR
+   ------------------------------------------------------------
+   «...somos 45 salimos de gdl sin movimientos» guardaba el origen como
+   **«Gdl Sin Movimientos»**. Los buscadores de la frase toman hasta la
+   primera coma, y en un mensaje escrito de corrido no hay comas.
+
+   Ese texto viaja al ticket y al contrato, y el catálogo no lo
+   reconoce: el recargo de salida —que es lo que decide la ciudad—
+   sale mal. Cazado el 11-sep-2026 en la última vuelta.
+   ------------------------------------------------------------ */
+const COLAS_DE_VIAJE =
+  /\s+(?:sin|con|solo|s[oó]lo|nom[aá]s|nada\s+m[aá]s|no)\s+(?:nos\s+)?(?:movimiento|movimientos|parada|paradas|recorrido|recorridos|escala|escalas|traslado|traslados|ida|vuelta|movemos|salimos)\b.*$/i;
+
 function limpiaDestino(texto) {
   const original = String(texto || '').trim();
   let d = original;
@@ -1083,6 +1097,8 @@ function limpiaDestino(texto) {
   {
     const sinTiempo = d.replace(COLAS_DE_TIEMPO, '').replace(/[\s,;.]+$/, '').trim();
     if (sinTiempo.length >= 3) d = sinTiempo;
+    const sinViaje = d.replace(COLAS_DE_VIAJE, '').replace(/[\s,;.]+$/, '').trim();
+    if (sinViaje.length >= 3) d = sinViaje;
   }
   /* ------------------------------------------------------------
      LA MULETILLA DEL FINAL NO ES PARTE DEL NOMBRE
@@ -1178,6 +1194,20 @@ function esUnLugar(texto) {
    y el catálogo las reconoce—; lo que no vale es como origen. */
 function comoDestino(crudo) {
   if (!esUnLugar(crudo)) return null;
+  /* ------------------------------------------------------------
+     UN ASENTIMIENTO NO ES UN PUEBLO — 11-sep-2026
+     ------------------------------------------------------------
+     `NO_ES_CIUDAD` existía desde el 10-sep, cuando «si esta bien» se
+     guardó como ciudad de SALIDA y viajó tal cual a la solicitud del
+     vendedor y al contrato. Se tapó de ese lado y quedó abierto del
+     otro: «sale», contestando «¿a dónde van?», se guardaba como el
+     destino *Sale*, y de ahí sale el precio.
+
+     Va contra el texto crudo, antes de limpiarlo: `limpiaDestino`
+     recorta y pone mayúscula, y «Sale» ya no se parece a un
+     asentimiento cuando llega abajo.
+     ------------------------------------------------------------ */
+  if (NO_ES_CIUDAD.test(normaliza(crudo))) return null;
   const d = limpiaDestino(crudo);
   const n = normaliza(d);
   if (!n || n.length < 3) return null;
@@ -1799,7 +1829,7 @@ const NO_SABE_CUANTOS = /\b(no s[eé]|no sabemos|no tengo|todav[ií]a no|a[uú]n
 
 /* «No nos movemos allá», dicho al guion. Misma expresión que usa
    `whatsapp.mjs`, escrita aquí para que el motor la entienda sin IA. */
-const NO_SE_MUEVEN = /\b(solo|nomas|nada mas|unicamente|puro) (nos |que nos )?(lleven|llevan|llevar|traigan|traen|dejen|dejan)\b|\bllevar y traer\b|\bnos llevan y (nos )?traen\b|\bnos dejan y (nos )?recogen\b|\bno (nos vamos a|vamos a|nos) mover\b|\bsin recorridos\b|\bida y vuelta nada mas\b|\b(ir|solo ir|nomas ir|nada mas ir) y (venir|volver|regresar)\b/;
+const NO_SE_MUEVEN = /\b(solo|nomas|nada mas|unicamente|puro) (nos |que nos )?(lleven|llevan|llevar|traigan|traen|dejen|dejan)\b|\bllevar y traer\b|\bnos llevan y (nos )?traen\b|\bnos dejan y (nos )?recogen\b|\bno (nos vamos a|vamos a|nos) mover\b|\bsin (recorridos|movimientos|paradas|paseos|recorrido|movimiento)\b|\bida y vuelta nada mas\b|\b(ir|solo ir|nomas ir|nada mas ir) y (venir|volver|regresar)\b/;
 
 /* Lo que empieza con «de» y NO es un lugar: «de ida y vuelta», «de
    regreso», «de un día». Sin esto, «de ida y vuelta» se guardaba como
@@ -1885,6 +1915,11 @@ function leeDeUnJalon(crudo, hoy) {
     salida: salida,
     regreso: regreso,
     mesDicho: mesDicho,
+    /* «sin movimientos» en el primer mensaje se leía solo en el paso de
+       los recorridos y en el de escoger camión, así que quien lo decía
+       de entrada igual acababa contestando «¿cuántos días de paseo?»
+       — una pregunta que ya había respondido (11-sep-2026). */
+    sinMovimientos: NO_SE_MUEVEN.test(t),
     /* ------------------------------------------------------------
        SOLO IDA
 
@@ -2312,6 +2347,33 @@ function cabenEnLaUnidad(e, n) {
   return true;
 }
 
+/* ------------------------------------------------------------
+   UN GRUPO QUE YA NO CABE EN UNA SOLA UNIDAD — 11-sep-2026
+   ------------------------------------------------------------
+   `recomienda` ya avisaba esto desde hace tiempo —«para 200 personas se
+   ocupa más de una unidad»— pero solo en el paso donde se pregunta
+   cuántos son. Si el número se CORRIGE más adelante, no pasaba por ahí:
+
+     …escoge el i6S, contesta los movimientos, y entonces dice
+     «somos 55». La unidad se borraba —bien, no caben— y el viaje
+     seguía hasta el resumen SIN NINGUNA. El cliente confirmaba un
+     viaje que no decía en qué se va, y al vendedor le caía una
+     solicitud de 55 personas sin camión.
+
+   Son dos camiones, o sea el doble de precio. Callarlo es cotizarle mal
+   a alguien que todavía no sabe que su grupo no cabe.
+
+   No se duplica el texto de `recomienda`: aquí solo se deja el viaje
+   como ella lo deja —autobús, sin unidad escogida, porque son varias— y
+   se le dice al cliente en una línea.
+   ------------------------------------------------------------ */
+function noCabeEnUnaUnidad(n) {
+  const tope = UNIDADES.reduce(function (t, u) { return Math.max(t, Number(u.max) || 0); }, 0);
+  if (!(Number(n) > tope)) return null;
+  return 'Son *' + n + '* 👍 Para tantos se ocupa más de una unidad — la más ' +
+    'grande que tengo lleva ' + tope + '. Eso te lo arma un compañero.';
+}
+
 function absorbeLoDemas(e, crudo, hoy) {
   const l = leeDeUnJalon(crudo, hoy);
   let algo = false;
@@ -2371,6 +2433,17 @@ function absorbeLoDemas(e, crudo, hoy) {
        de elegir camión, y abajo de 7 puede ser Suburban. */
     const n = Number(l.gente);
     if (!e.unidad && n > Number(SUBURBAN.max) && n <= Number(SPRINTER.max)) e.unidad = 'sprinter';
+    /* Si ya no cabe en ninguna, el viaje queda como lo deja
+       `recomienda`: autobús, sin unidad escogida —porque son varias— y
+       con el aviso por delante. */
+    const aviso = noCabeEnUnaUnidad(n);
+    if (aviso) {
+      e.unidad = 'autobus';
+      delete e.unidadNombre; delete e.unidadId;
+      e.noCabeEnUna = true;
+      return aviso;
+    }
+    delete e.noCabeEnUna;
   }
   if (l.unidad && !e.unidad) { e.unidad = l.unidad; algo = true; }
   /* El NOMBRE de un camión también cuenta, lo diga donde lo diga: «el
@@ -2469,6 +2542,7 @@ function absorbeLoDemas(e, crudo, hoy) {
      `leeDeUnJalon` ya los sacaba de la frase y aquí se tiraban.
      ------------------------------------------------------------ */
   if (l.soloIda && !e.soloIda) { e.soloIda = true; algo = true; }
+  if (l.sinMovimientos && typeof e.recorridos !== 'number') { e.recorridos = 0; algo = true; }
   /* La ocasión se guarda, pero NO cuenta como haber entendido el
      mensaje. Es el único de estos datos que se saca de una palabra
      suelta dentro de cualquier frase: «cuando acabe la fiesta»,
@@ -4276,6 +4350,24 @@ function correccionDeFecha(mensaje, e, hoy) {
   }
 
   if (!QUIERE_CORREGIR.test(t)) return null;
+
+  /* ------------------------------------------------------------
+     LO DEMÁS DEL MENSAJE TAMBIÉN SE LEE — 11-sep-2026
+     ------------------------------------------------------------
+     Este bloque corre ANTES que los pasos, y devolvía en cuanto
+     encontraba una fecha o un mes: todo lo que viniera en el mismo
+     mensaje se perdía porque ya nadie lo miraba.
+
+     «oye mejor cambiemos todo, ahora es a mazatlán en enero para 20
+     personas» movía el mes y dejaba el viaje yendo a Vallarta con 40
+     personas. Y quien dice «cambiemos todo» está cambiando todo.
+
+     Es un defecto que metí yo esta misma tarde arreglando otra cosa, y
+     es el más caro de la vuelta: el cliente ve que pidió el cambio, el
+     bot le contesta que sí, y el viaje sale con los datos viejos.
+     ------------------------------------------------------------ */
+  const tambien = absorbeLoDemas(e, mensaje, hoy);
+
   const nueva = fechaConContexto(mensaje, e, hoy, 'el mes del viaje');
 
   /* «ya no, mejor en enero»: el mes cambia y el día todavía no se sabe.
@@ -4289,9 +4381,13 @@ function correccionDeFecha(mensaje, e, hoy) {
       e.mesDicho = mes[1];
       delete e.salida; delete e.regreso; delete e.fechaPorDecidir;
       e.paso = 'salida';
-      return { texto: 'Va, lo movemos a *' + mes[1] + '* 📅\n\n¿Qué día de ' +
-          mes[1] + ' salen?', pasa: false, estado: e, opciones: [] };
+      return { texto: (tambien ? tambien + '\n\n' : '') +
+          'Va, lo movemos a *' + mes[1] + '* 📅\n\n¿Qué día de ' + mes[1] + ' salen?',
+        pasa: false, estado: e, opciones: [] };
     }
+    /* Sin fecha ni mes, este bloque no tiene nada que hacer — pero lo
+       que `absorbeLoDemas` haya guardado ya quedó en `e`, y el paso que
+       sigue se encarga del resto del mensaje. */
     return null;
   }
   if (nueva === e.salida || nueva === e.regreso) return null;   // ya está así
@@ -4303,18 +4399,23 @@ function correccionDeFecha(mensaje, e, hoy) {
   if (!cual) {
     e.fechaPorDecidir = nueva;
     return {
-      texto: 'El *' + fechaEnPalabras(nueva) + '*, va — ¿esa es la de *salida* ' +
+      texto: (tambien ? tambien + '\n\n' : '') +
+        'El *' + fechaEnPalabras(nueva) + '*, va — ¿esa es la de *salida* ' +
         'o la de *regreso*? 🤔\n\nAhorita traigo salida el *' +
         fechaEnPalabras(e.salida) + '* y regreso el *' + fechaEnPalabras(e.regreso) + '*.',
       pasa: false, estado: e, opciones: ['Es la salida', 'Es el regreso']
     };
   }
-  return aplicaLaFecha(e, cual, nueva);
+  return aplicaLaFecha(e, cual, nueva, tambien);
 }
 
 /* Guarda la fecha corregida y devuelve al cliente a donde estaba, con
    la pregunta pendiente pegada — igual que el bloque de las fotos. */
-function aplicaLaFecha(e, cual, f) {
+/* `tambien` es el acuse de lo OTRO que traía el mismo mensaje —el
+   destino, cuántos son—: va delante, porque si el bot solo acusa la
+   fecha el cliente no sabe si lo demás se leyó. */
+function aplicaLaFecha(e, cual, f, tambien) {
+  const antepone = function (texto) { return (tambien ? tambien + '\n\n' : '') + texto; };
   /* ------------------------------------------------------------
      MOVER EL VIAJE NO ES DEJARLO SIN REGRESO
      ------------------------------------------------------------
@@ -4337,14 +4438,14 @@ function aplicaLaFecha(e, cual, f) {
       fechaEnPalabras(nuevoRegreso) + '* 📅\n\n(Te moví el regreso para que el ' +
       'viaje siga siendo de ' + dura + ' días — si no, dime qué día vuelven.)';
     return {
-      texto: p && p.texto ? acuse + '\n\n' + p.texto : acuse,
+      texto: antepone(p && p.texto ? acuse + '\n\n' + p.texto : acuse),
       opciones: (p && p.opciones) || [], pasa: false, estado: e
     };
   }
   if (cual === 'regreso' && e.salida && f < e.salida) {
     return {
-      texto: 'Ese regreso queda *antes* de la salida (el ' +
-        fechaEnPalabras(e.salida) + ') 🤔\n\n¿Qué día vuelven?',
+      texto: antepone('Ese regreso queda *antes* de la salida (el ' +
+        fechaEnPalabras(e.salida) + ') 🤔\n\n¿Qué día vuelven?'),
       pasa: false, estado: e, opciones: []
     };
   }
@@ -5345,6 +5446,7 @@ function aplicaEntendido(datos, hoy) {
      diciembre para 40»— espera aquí al día que llegue después. Sin esto
      el «20» del mensaje siguiente caía en septiembre. */
   guardaElMes(e, datos);
+  if (datos.sinMovimientos && typeof e.recorridos !== 'number') e.recorridos = 0;
 
   /* Solo ida: se cotiza como salir y volver el mismo día, que es lo que
      el motor sabe cobrar. Y así R22 le quita los movimientos solo.
