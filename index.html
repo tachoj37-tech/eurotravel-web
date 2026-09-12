@@ -2880,6 +2880,10 @@ window.IMGS = {
             <div class="field">
               <label for="f-mail">Correo electrónico</label>
               <input id="f-mail" type="email" placeholder="tucorreo@ejemplo.com" autocomplete="email" />
+              <!-- El correo no es obligatorio, pero si lo escriben tiene que
+                   servir, y necesita dónde decirlo. Nace escondido: `.msg`
+                   solo se ve cuando el campo lleva `.err`. -->
+              <span class="msg">Ese correo no se entiende.</span>
             </div>
             <div class="field">
               <label for="f-empresa">Empresa o grupo (opcional)</label>
@@ -5575,6 +5579,46 @@ window.IMGS = {
        El acuse sale en ESTA pantalla. Un mensaje que quizá no llega
        no es un acuse.
        ============================================================ */
+    /* ============================================================
+       QUÉ ES UN TELÉFONO Y QUÉ ES UN CORREO
+       ------------------------------------------------------------
+       Una sola regla para las DOS pantallas que piden contacto: la caja
+       del viaje sin precio y el formulario de «Tus datos» que lleva a
+       apartar. Antes cada una tenía la suya —y la de «Tus datos» era
+       simplemente «que no esté vacío», así que **«12» pasaba por
+       teléfono y «no-es-correo» por correo**, hasta el resumen—.
+
+       Dos reglas separadas se separan más: un teléfono que pasa en una
+       pantalla y se rechaza en la otra es peor que las dos mal.
+
+       Y no es un detalle de forma. El teléfono es por donde le escribe
+       el vendedor: mal escrito, es un cliente perdido con el viaje ya
+       armado. Lo encontró la fase 0 y se cerró a medias; esto lo cierra.
+
+       El navegador no es la defensa —`api/_solicitud.js` lo revisa otra
+       vez del lado del servidor, con las mismas reglas—. Esto le ahorra
+       el viaje de ida y vuelta a quien se equivocó de tecla.
+       ============================================================ */
+
+    /* Diez dígitos, como es un teléfono en México. Se aceptan los adornos
+       con los que la gente los escribe —espacios, guiones, paréntesis, el
+       +52 de adelante, y el viejo +52 1 de WhatsApp— porque escribirlo
+       así no es un error de nadie. */
+    function telefonoBueno(v) {
+      var d = String(v == null ? '' : v).replace(/\D/g, '');
+      if (d.length === 13 && d.slice(0, 3) === '521') d = d.slice(3);
+      if (d.length === 12 && d.slice(0, 2) === '52') d = d.slice(2);
+      if (d.length === 11 && d.charAt(0) === '1') d = d.slice(1);
+      return d.length === 10;
+    }
+
+    /* No se intenta validar de más —las reglas de verdad de una dirección
+       son un pantano— pero sí lo suficiente para no mandarle un correo a
+       «no-es-correo». La misma expresión que usa el servidor. */
+    function correoBueno(v) {
+      return /^[^\s@]+@[^\s@.]+(\.[^\s@.]+)+$/.test(String(v == null ? '' : v).trim());
+    }
+
     var CAPTURA_POR = 'whatsapp';        // o 'correo'
 
     function capturaTextos() {
@@ -5676,13 +5720,13 @@ window.IMGS = {
         campo.focus();
         return;
       }
-      if (CAPTURA_POR === 'whatsapp' && dato.replace(/\D/g, '').replace(/^521?/, '').length !== 10) {
+      if (CAPTURA_POR === 'whatsapp' && !telefonoBueno(dato)) {
         caja.classList.add('mal');
         error.textContent = 'Un WhatsApp de México son diez dígitos. Revísalo, por favor.';
         campo.focus();
         return;
       }
-      if (CAPTURA_POR === 'correo' && !/^[^\s@]+@[^\s@.]+(\.[^\s@.]+)+$/.test(dato)) {
+      if (CAPTURA_POR === 'correo' && !correoBueno(dato)) {
         caja.classList.add('mal');
         error.textContent = 'Ese correo no se entiende. Revisa que lleve arroba y punto.';
         campo.focus();
@@ -6044,14 +6088,63 @@ window.IMGS = {
       byId(puntoAMarcar === 'origen' ? 'btn-origen' : 'btn-destino').click();
     });
 
+    /* ------------------------------------------------------------
+       «TUS DATOS», EL FORMULARIO QUE LLEVA A APARTAR
+       ------------------------------------------------------------
+       Miraba solo que los obligatorios no estuvieran vacíos, así que
+       «12» pasaba por teléfono y llegaba tal cual al resumen, al mensaje
+       de WhatsApp y a la ficha del vendedor. La fase 0 lo encontró y se
+       arregló nada más en la caja de captura; éste —el que trae pago— se
+       quedó igual. Aquí se cierra.
+
+       Cada campo dice lo SUYO: no es lo mismo «te falta el teléfono» que
+       «ese teléfono no se entiende», y el cliente que se equivocó de
+       tecla necesita saber cuál de las dos le pasó.
+       ------------------------------------------------------------ */
     function validaDatos() {
       var ok = true;
+
+      /* `texto` vacío significa «el mensaje que ya traía escrito el HTML».
+         Y ése hay que GUARDARLO la primera vez: sin esto, quien escribía
+         un teléfono mal y luego lo borraba se quedaba leyendo «ese
+         teléfono no se entiende» sobre un campo vacío, que no es lo que
+         le pasa. Cazado probándolo en la pantalla. */
+      function falla(campo, texto) {
+        var f = campo.closest('.field');
+        f.classList.add('err');
+        var msg = f.querySelector('.msg');
+        if (msg) {
+          if (msg.dataset.original === undefined) msg.dataset.original = msg.textContent;
+          msg.textContent = texto || msg.dataset.original;
+        }
+        if (ok) { campo.focus(); ok = false; }
+      }
+
       document.querySelectorAll('#paso-datos .field[data-req]').forEach(function (f) {
         var input = f.querySelector('input, select');
-        var mal = !input.value.trim();
-        f.classList.toggle('err', mal);
-        if (mal && ok) { input.focus(); ok = false; }
+        f.classList.remove('err');
+        if (!input.value.trim()) {
+          /* Vacío: se deja el mensaje que ya trae escrito el HTML, que es
+             el que le corresponde a ese campo. */
+          falla(input, '');
+          return;
+        }
+        /* Y con algo escrito, que ese algo sirva. */
+        if (input.id === 'f-tel' && !telefonoBueno(input.value)) {
+          falla(input, 'Ese teléfono no se entiende. Son diez dígitos.');
+        }
       });
+
+      /* El correo NO es obligatorio —el dueño pidió un solo dato de
+         contacto— pero si lo escriben tiene que servir: un correo con
+         dedazo es peor que ninguno, porque el vendedor cree que tiene por
+         dónde escribir y nadie se entera de que no llegó. */
+      var mail = byId('f-mail');
+      mail.closest('.field').classList.remove('err');
+      if (mail.value.trim() && !correoBueno(mail.value)) {
+        falla(mail, 'Ese correo no se entiende. Revisa que lleve arroba y punto.');
+      }
+
       return ok;
     }
 

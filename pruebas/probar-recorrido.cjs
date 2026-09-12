@@ -42,6 +42,7 @@ function igual(nombre, dio, esperado) {
   if (a === b) { buenas++; console.log('ok   ' + nombre); }
   else { malas++; console.log('MAL  ' + nombre + '\n     dio      ' + a + '\n     esperaba ' + b); }
 }
+function cierto(nombre, v) { igual(nombre, !!v, true); }
 
 const html = fs.readFileSync(path.join(RAIZ, 'index.html'), 'utf8');
 
@@ -324,6 +325,93 @@ igual('cada ruta de window.IMGS existe en la carpeta',
     igual(par[0] + ': no manda el código incompleto',
       /length\s*!==?\s*6|length\s*<\s*6/.test(bloque || ''), true);
   });
+}
+
+/* ------------------------------------------------------------
+   8 · UN TELÉFONO QUE NO ES UN TELÉFONO NO PASA
+   ------------------------------------------------------------
+   La fase 0 lo encontró y lo dejó anotado: en el paso de «Tus datos» se
+   podía escribir **12** como teléfono y **no-es-correo** como correo, y el
+   formulario pasaba al resumen tan contento. `validaDatos()` solo miraba
+   que el campo no estuviera vacío.
+
+   Se dijo entonces que se arreglaba en la fase 2, y se arregló A MEDIAS:
+   la caja de captura nueva —la del viaje sin precio— sí valida, pero este
+   formulario, que es el que lleva a APARTAR CON DINERO, se quedó igual.
+   Ése es el camino que trae pago, así que es el que menos podía quedarse.
+
+   Y no es un detalle de forma: el teléfono es por donde le escribe el
+   vendedor. Mal escrito, es un cliente perdido con el viaje ya armado.
+
+   LAS DOS REGLAS SON UNA SOLA, a propósito: `telefonoBueno` y
+   `correoBueno` los usan los DOS formularios. Dos reglas separadas se
+   separan más, y entonces un teléfono que pasa en una pantalla se rechaza
+   en la otra.
+   ------------------------------------------------------------ */
+{
+  /* Los ayudantes existen y son de verdad compartidos. */
+  igual('hay una sola regla para el teléfono',
+    (html.match(/function telefonoBueno\(/g) || []).length, 1);
+  igual('y una sola para el correo',
+    (html.match(/function correoBueno\(/g) || []).length, 1);
+
+  /* Cortar entre dos marcas que quizá no existen devuelve basura o revienta,
+     y entonces el rojo no se puede leer entero — que es justo para lo que
+     sirve un rojo. Si falta cualquiera de las dos, se devuelve vacío y cada
+     aserción falla por su cuenta, diciendo lo suyo. */
+  function entre(desde, hasta) {
+    const a = html.indexOf(desde);
+    if (a < 0) return '';
+    const b = html.indexOf(hasta, a);
+    return b > a ? html.slice(a, b) : '';
+  }
+
+  /* El de diez dígitos, que es lo que es un teléfono en México. */
+  const tel = entre('function telefonoBueno(', 'function correoBueno(');
+  cierto('el teléfono se cuenta a diez dígitos', /length === 10/.test(tel));
+  /* Y se aceptan los adornos con los que la gente los escribe. */
+  cierto('  quitando lo que no es dígito', /replace\(\/\\D\/g/.test(tel));
+
+  /* El formulario que lleva al pago los usa. */
+  const valida = entre('function validaDatos()', '#paso-datos .field[data-req] input');
+  cierto('el manejador de «Tus datos» se encuentra', !!valida);
+  cierto('«Tus datos» revisa el teléfono, no solo que esté lleno',
+    /telefonoBueno\(/.test(valida));
+  cierto('  y el correo cuando lo escribieron', /correoBueno\(/.test(valida));
+
+  /* El correo NO es obligatorio —el dueño pide un solo dato— pero si lo
+     escriben tiene que servir: un correo con dedazo es peor que ninguno,
+     porque el vendedor cree que tiene por dónde escribir. */
+  cierto('  y el correo sigue sin ser obligatorio',
+    /f-mail/.test(valida) && !/data-req[^]*f-mail/.test(html.slice(
+      html.indexOf('id="f-mail"') - 200, html.indexOf('id="f-mail"'))));
+
+  /* Y la caja de captura de la fase 2 usa los MISMOS, no una copia. */
+  const captura = entre('function mandaSolicitud()', "byId('captura-ir').addEventListener");
+  cierto('la caja de captura usa la misma regla del teléfono',
+    /telefonoBueno\(/.test(captura));
+  cierto('  y la misma del correo', /correoBueno\(/.test(captura));
+
+  /* Que no queden reglas sueltas: la cuenta de diez dígitos y la forma del
+     correo se escriben UNA vez cada una, dentro de su ayudante. */
+  igual('la cuenta de diez dígitos no está repetida por ahí',
+    (html.match(/length === 10|length !== 10/g) || []).length, 1);
+
+  /* ------------------------------------------------------------
+     Y EL MENSAJE DE «ESTÁ VACÍO» NO SE PIERDE
+     ------------------------------------------------------------
+     Cazado probando la pantalla, y lo había metido este mismo cambio:
+     al escribir un teléfono mal y luego BORRARLO, el renglón se quedaba
+     diciendo «ese teléfono no se entiende» sobre un campo vacío — que no
+     es lo que le pasa a esa persona—. El mensaje del HTML se pisaba y ya
+     no volvía.
+
+     Se guarda el original la primera vez que se toca.
+     ------------------------------------------------------------ */
+  cierto('el mensaje original del campo se guarda antes de pisarlo',
+    /dataset\.original/.test(valida));
+  cierto('  y se usa cuando el campo está vacío',
+    /texto \|\| msg\.dataset\.original/.test(valida));
 }
 
 console.log('\n' + buenas + ' buenas, ' + malas + ' malas');

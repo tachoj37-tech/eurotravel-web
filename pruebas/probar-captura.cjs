@@ -183,8 +183,26 @@ titulo('la pantalla revisa antes de mandar, y el servidor otra vez');
      ida y vuelta a quien se equivocó de tecla. La defensa está en el
      servidor, y `probar-solicitud.cjs` la cuida. */
   cierto('avisa del campo vacío', /Escribe tu WhatsApp/.test(manda));
-  cierto('cuenta los diez dígitos', /length !== 10/.test(manda));
-  cierto('y revisa la forma del correo', /\$\{?\^?\[\^\\s@\]|\[\^\\s@\]\+@/.test(manda));
+
+  /* ------------------------------------------------------------
+     CAMBIÓ DE LADO EL 12-sep-2026, Y PARA BIEN
+
+     Aquí se miraba la regla ESCRITA DENTRO de `mandaSolicitud()`: la
+     cuenta de diez dígitos y la expresión del correo, con todo y sus
+     caracteres. Ya no están ahí, y es el arreglo lo que las movió.
+
+     El formulario de «Tus datos» —el que lleva a apartar— seguía dejando
+     pasar «12» por teléfono, y al cerrarlo las dos pantallas quedaron con
+     UNA sola regla: `telefonoBueno` y `correoBueno`. Dos reglas separadas
+     se separan más, y entonces un teléfono que pasa en una pantalla se
+     rechaza en la otra.
+
+     Así que lo que se cuida aquí ya no es que la regla esté escrita, sino
+     que esta pantalla USE la compartida. Que exista una sola y que los dos
+     formularios la usen lo cuida `probar-recorrido.cjs`.
+     ------------------------------------------------------------ */
+  cierto('usa la regla compartida del teléfono', /telefonoBueno\(/.test(manda));
+  cierto('y la compartida del correo', /correoBueno\(/.test(manda));
 
   /* Y ninguna de esas revisiones manda la petición. */
   const antesDeFetch = manda.slice(0, manda.indexOf('fetch('));
