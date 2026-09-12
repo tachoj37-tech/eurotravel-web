@@ -2933,9 +2933,38 @@ function siguiente(e, acuse) {
   };
 }
 
+/* ------------------------------------------------------------
+   LOS BOTONES DEL SALUDO NO SON RESPUESTAS AL PASO — 12-sep-2026
+   ------------------------------------------------------------
+   El saludo ofrece «Cotizar un viaje» y «Hablar con alguien», y deja la
+   conversación en el paso del destino. Ese paso se traga cualquier texto
+   como si fuera un lugar, así que el cliente apretaba el botón y el bot
+   le contestaba:
+
+       «*Hablar Con Alguien*, va 📍»
+
+   ...y guardaba eso como el destino del viaje. El botón que se ofrece y
+   no se entiende, que es justo lo que la batería de los caminos decía
+   vigilar — pero la probaba con la conversación VACÍA, y el saludo nunca
+   la deja vacía. El defecto entró por ahí.
+
+   Estas frases devuelven el mensaje al flujo general, donde ya viven las
+   reglas de «pide una persona» y «quiere su cotización anterior».
+
+   POR QUÉ EL PATRÓN ES TAN ESTRECHO: la regla general busca la palabra
+   «persona» suelta, y por eso vive DESPUÉS del paso — si corriera antes,
+   «somos 5 personas» en el paso de cuántos son se leería como que pide
+   un vendedor. Aquí se piden las frases completas, que nadie escribe
+   por accidente al contestar otra cosa.
+   ------------------------------------------------------------ */
+const NO_ES_RESPUESTA_DEL_PASO =
+  /\bhablar con (alguien|una persona|un asesor|alguno|un agente)\b|\bcon un (asesor|agente|ejecutivo)\b|\bme atienda (alguien|una persona)\b|\b(mi|la) cotizaci[oó]n\b|\bya me cotizaron\b|\bcotizaciones? (previa|previas|anterior|anteriores)\b|\bconsultar cotiza|^\s*(?:quiero\s+)?cotizar\s+(?:un|mi)\s+viaje\s*[.!]*\s*$/;
+
 function pasoDeCotizacion(t, crudo, estado, hoy) {
   const e = Object.assign({}, estado);
   const dicho = String(crudo).trim();
+
+  if (NO_ES_RESPUESTA_DEL_PASO.test(t)) return null;
 
   /* ------------------------------------------------------------
      CANCELAR ES EL MENSAJE ENTERO, NO UNA PALABRA ADENTRO
@@ -3728,7 +3757,12 @@ function pasoDeCotizacion(t, crudo, estado, hoy) {
           escogido = ops[i];
         }
       }
-      if (!escogido) return siguiente(e);
+      if (!escogido) {
+        /* Mismo arreglo que los otros dos pasos del final: lo que no sea
+           un paseo de la lista se guarda antes de repreguntar. */
+        const acuse = absorbeLoDemas(e, crudo, hoy);
+        return siguiente(e, acuse || undefined);
+      }
       e.paseo = escogido;
     }
     e.paso = 'lejos';
@@ -3739,7 +3773,14 @@ function pasoDeCotizacion(t, crudo, estado, hoy) {
   if (e.paso === 'lejos') {
     if (/lejos|otra ciudad|fuera|si\b/.test(t)) e.lejos = true;
     else if (/zona|cerca|aqui|no\b/.test(t)) e.lejos = false;
-    else return siguiente(e);
+    else {
+      /* Los tres últimos pasos —éste, las horas y el paseo— se quedaron
+         fuera de la matriz de la fase 3 y tiraban lo que no entendían.
+         «Es para una boda», dicho aquí, se perdía: y la ocasión es con lo
+         que se compara el precio al final (12-sep-2026). */
+      const acuse = absorbeLoDemas(e, crudo, hoy);
+      return siguiente(e, acuse || undefined);
+    }
     e.paso = 'horas';
     return siguiente(e, e.lejos ? 'Recorridos largos, anotado.' : 'Por la zona, va.');
   }
@@ -3750,11 +3791,14 @@ function pasoDeCotizacion(t, crudo, estado, hoy) {
     else if (/10|diez/.test(t)) b = 1;
     else if (/8|ocho/.test(t)) b = 0;
     if (b === null) {
+      /* Lo que no sean horas, se guarda antes de repreguntar (fase 3,
+         completada el 12-sep-2026). */
+      const acuse = absorbeLoDemas(e, crudo, hoy);
       return {
         /* Se le vuelve a preguntar con las mismas palabras que la
            primera vez —pidiendo consejo, no dato— para que no suene a
            que el formulario se enojó. */
-        texto: '¿Tú qué dices, cuántas horas al día les alcanza?',
+        texto: (acuse ? acuse + '\n\n' : '') + '¿Tú qué dices, cuántas horas al día les alcanza?',
         pasa: false, estado: e, opciones: pregunta(e).opciones
       };
     }

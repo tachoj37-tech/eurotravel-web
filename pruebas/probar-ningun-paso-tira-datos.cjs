@@ -132,6 +132,35 @@ titulo('lo que salió de la corrida con el modelo real (11-sep-2026)');
   ok('  y no se guarda también como origen', !d.origen);
 }
 
+titulo('los tres pasos del final, que se habían quedado fuera');
+{
+  /* 12-sep-2026: la tabla de arriba cubría ocho pasos y el guion tiene
+     once. Los tres del final —«¿por la zona o lejos?», «¿cuántas horas?»
+     y el paseo con nombre— tiraban lo que no entendían.
+
+     «Es para una boda», dicho ahí, se perdía. Y la ocasión es con lo que
+     se compara el precio al final, así que no es un adorno. */
+  function hasta(msgs) {
+    let e = null;
+    for (const m of msgs) { e = (conv.respuestaA(m, e, HOY).estado) || {}; }
+    return e;
+  }
+  const CAMINO = ['hola', 'a vallarta', 'somos 40', 'de gdl', '20 de diciembre',
+    'el 23', 'el i6s', '2 movimientos'];
+
+  const a = hasta(CAMINO.concat(['es para una boda']));
+  ok('en «¿por la zona o lejos?» se guarda la ocasión', !!a.ocasion);
+
+  const b = hasta(CAMINO.concat(['por la zona', 'es para una boda']));
+  ok('en «¿cuántas horas?» también', !!b.ocasion);
+
+  /* Y lo que esos pasos SÍ deben leer sigue leyéndose. */
+  const c = hasta(CAMINO.concat(['nos vamos lejos']));
+  ok('  y «nos vamos lejos» sigue siendo la respuesta del paso', c.lejos === true);
+  const d = hasta(CAMINO.concat(['por la zona']));
+  ok('  y «por la zona» también', d.lejos === false);
+}
+
 titulo('lo que NO debe absorberse');
 {
   /* El «sí» de la confirmación es una respuesta, no un dato suelto: si

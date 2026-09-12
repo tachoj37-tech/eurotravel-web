@@ -84,15 +84,40 @@ titulo('el saludo ofrece por dónde empezar');
   ok('  sin pasarse de tres renglones', renglones.length <= 3);
 }
 
-titulo('el bot entiende sus propios botones');
+titulo('el bot entiende sus propios botones · CON la conversación ya empezada');
 {
-  /* Un botón que se ofrece y no se entiende es peor que no ponerlo: el
-     cliente le pica y no pasa nada. */
+  /* ------------------------------------------------------------
+     EL DEFECTO QUE ESTA BATERÍA DEJÓ PASAR — 12-sep-2026
+     ------------------------------------------------------------
+     Esto probaba cada botón con la conversación VACÍA (`null`), y el
+     saludo nunca la deja vacía: la deja en el paso del destino. Ese paso
+     se traga cualquier texto como si fuera un lugar, así que apretar
+     «Hablar con alguien» contestaba:
+
+         «*Hablar Con Alguien*, va 📍»
+
+     ...y lo guardaba como el destino del viaje. El botón que se ofrece y
+     no se entiende — justo lo que esta batería decía vigilar, y no vio
+     porque probaba el caso que no ocurre nunca.
+
+     Ahora se prueban los dos: con la conversación vacía Y con el estado
+     que el saludo deja de verdad.
+     ------------------------------------------------------------ */
   const saludo = conv.respuestaA('hola', null, HOY);
   for (const boton of (saludo.opciones || [])) {
     const r = conv.respuestaA(boton, null, HOY);
-    ok('«' + boton + '» lleva a algún lado',
-      !!(r && r.texto) && !r.noEntendio);
+    ok('«' + boton + '» lleva a algún lado', !!(r && r.texto) && !r.noEntendio);
+
+    const conSaludo = conv.respuestaA(boton, saludo.estado, HOY);
+    const dest = conSaludo.estado && conSaludo.estado.destino;
+    ok('  y tras el saludo NO se guarda como destino',
+      !dest || !new RegExp(boton.slice(0, 12), 'i').test(String(dest)));
+  }
+
+  /* Y las frases de cotización previa, en el mismo estado real. */
+  for (const f of ['ya me cotizaron', 'mi cotización', 'consultar cotizaciones previas']) {
+    const r = conv.respuestaA(f, saludo.estado, HOY);
+    ok('«' + f + '» va a una persona aunque haya conversación', r.pasa === true);
   }
 
   const cotiza = conv.respuestaA('Cotizar un viaje', null, HOY);
