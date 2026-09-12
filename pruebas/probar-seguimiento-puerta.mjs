@@ -37,6 +37,18 @@ process.env.ALMACEN_CLAVE = 'sb_secret_de_mentiras';
 delete process.env.WHATSAPP_PLANTILLA_TOQUE1;
 delete process.env.WHATSAPP_PLANTILLA_TOQUE2;
 delete process.env.WHATSAPP_PLANTILLA_TOQUE3;
+/* ------------------------------------------------------------
+   12-sep-2026 · LAS PLANTILLAS SE PAGAN Y AHORA HAY QUE PEDIRLAS
+   ------------------------------------------------------------
+   Dictado del dueño: «solo úsalas si puedes usarlas sin Meta, Meta
+   cobra carísimo». Ya no basta con que la plantilla esté configurada:
+   hace falta encender `PLANTILLAS_DE_PAGO=1` a propósito.
+
+   Esta batería prueba el MECANISMO de las plantillas —que sigue vivo y
+   listo para el día que él decida usarlo—, así que lo enciende aquí.
+   El candado se comprueba aparte, en `probar-plantillas-apagadas.cjs`.
+   ------------------------------------------------------------ */
+process.env.PLANTILLAS_DE_PAGO = '1';
 
 const H = 60 * 60 * 1000;
 const D = 24 * H;

@@ -4546,7 +4546,30 @@ function envioDelToque(f, d) {
     });
     return texto ? Object.assign(base, { texto: texto }) : null;
   }
-  const nombre = process.env['WHATSAPP_PLANTILLA_TOQUE' + d.toque];
+  /* ------------------------------------------------------------
+     LAS PLANTILLAS DE META SE PAGAN, Y AQUÍ ESTÁN APAGADAS
+     ------------------------------------------------------------
+     Dictado del dueño el 12-sep-2026: «solo úsalas si puedes usarlas
+     sin Meta, Meta cobra carísimo».
+
+     Hasta hoy el único freno era que la variable del nombre no
+     estuviera puesta. Eso no es un freno: es un descuido que funciona.
+     Basta que alguien configure `WHATSAPP_PLANTILLA_TOQUE1` —o que
+     siga puesta de las pruebas de septiembre— para que se empiece a
+     pagar por cada seguimiento, sin que nadie lo decida y sin que
+     aparezca en ningún lado hasta que llegue la factura.
+
+     Ahora hacen falta DOS cosas: la plantilla y encender
+     `PLANTILLAS_DE_PAGO=1` a propósito. Apagado —que es lo de hoy— el
+     toque fuera de la ventana de 24 h se le avisa al dueño y él
+     escribe desde su teléfono, que no paga ventana.
+
+     El camino de la plantilla NO se borra: sigue probado y listo para
+     el día que él decida que le conviene. Lo que cambia es que ese día
+     tiene que decirlo.
+     ------------------------------------------------------------ */
+  const dePago = String(process.env.PLANTILLAS_DE_PAGO || '').trim() === '1';
+  const nombre = dePago ? process.env['WHATSAPP_PLANTILLA_TOQUE' + d.toque] : null;
   if (!nombre) {
     /* Sin plantilla (lo normal desde el 8-sep-2026: «quitamos lo de Meta»):
        el toque no se le manda al cliente; se le avisa al dueño para que le
