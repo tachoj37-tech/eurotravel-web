@@ -2353,9 +2353,15 @@ function absorbeLoDemas(e, crudo, hoy) {
   /* El NOMBRE de un camión también cuenta, lo diga donde lo diga: «el
      i6s» contestando «¿qué día regresan?» se tiraba, y el cliente tenía
      que repetirlo en el paso de escoger (11-sep-2026). */
-  if (!e.unidadNombre) {
+  {
     const suya = unidadPorNombre(crudo);
-    if (suya && suya.cat === 'autobus') {
+    /* Y se CAMBIA, no solo se llena: esto decía `if (!e.unidadNombre)`,
+       así que quien ya había escogido un camión y a media conversación
+       decía «mejor el neobus» se quedaba con el primero — y ése es el
+       que llega al ticket y el que se aparta. Solo se cambia por una
+       que de verdad le quepa al grupo (11-sep-2026). */
+    if (suya && suya.cat === 'autobus' && suya.name !== e.unidadNombre &&
+        Number(e.gente || 0) <= Number(suya.max)) {
       e.unidad = 'autobus'; e.unidadNombre = suya.name; e.unidadId = suya.id; algo = true;
     }
   }
@@ -2363,14 +2369,61 @@ function absorbeLoDemas(e, crudo, hoy) {
      respuesta por sí solo, así que no cuenta como `algo` ni se acusa.
      Pero se guarda: el día llega en el mensaje siguiente. */
   guardaElMes(e, l);
-  if (l.destino && !e.destino) { const d = comoDestino(l.destino); if (d) { e.destino = d; algo = true; } }
+  /* ------------------------------------------------------------
+     EL DESTINO Y EL ORIGEN TAMBIÉN SE CORRIGEN
+     ------------------------------------------------------------
+     Esto decía `&& !e.destino`: el lugar solo entraba si el hueco
+     estaba vacío, igual que pasaba con cuántos son antes de ayer. Así
+     que a media conversación «mejor vamos a tequila» se tiraba y el
+     viaje seguía yendo a Chapala — con el precio de Chapala.
+
+     Se pisa, pero se ACUSA: el destino y el origen mueven el precio, y
+     un dato de precio que cambia calladito es el peor de todos. Si se
+     entendió mal, el cliente lo ve en el acuse y lo corrige.
+     ------------------------------------------------------------ */
+  let cambioLugar = null;
+  if (l.destino) {
+    const suDestino = comoDestino(l.destino);
+    if (suDestino && suDestino !== e.destino) {
+      e.destino = suDestino; algo = true; cambioLugar = 'destino';
+    }
+  }
   /* Como ciudad, no como lo tecleó: «de gdl» quedaba en «gdl» y así
      viajaba al ticket y al contrato. */
-  if (l.origen && !e.origen) { const o = comoOrigen(l.origen); if (o) { e.origen = o; algo = true; } }
+  if (l.origen) {
+    const suyo = comoOrigen(l.origen);
+    if (suyo && suyo !== e.origen) {
+      e.origen = suyo; algo = true; if (!cambioLugar) cambioLugar = 'origen';
+    }
+  }
+
+  /* ------------------------------------------------------------
+     LO QUE NO SE PREGUNTA EN NINGÚN PASO
+     ------------------------------------------------------------
+     El sencillo y la ocasión no tienen paso propio: el cliente los dice
+     cuando se le ocurre o no se saben nunca. Y los dos importan:
+
+     · El sencillo tiene que llegar al CONTRATO, que dice SENCILLO o
+       REDONDO (dictado del dueño, 9-sep-2026).
+     · La ocasión es con lo que se compara el precio al final.
+
+     `leeDeUnJalon` ya los sacaba de la frase y aquí se tiraban.
+     ------------------------------------------------------------ */
+  if (l.soloIda && !e.soloIda) { e.soloIda = true; algo = true; }
+  /* La ocasión se guarda, pero NO cuenta como haber entendido el
+     mensaje. Es el único de estos datos que se saca de una palabra
+     suelta dentro de cualquier frase: «cuando acabe la fiesta»,
+     contestando «¿qué día regresan?», trae la palabra fiesta y no es el
+     cliente diciendo la ocasión — es una fecha vaga que el guion no
+     sabe leer y que le toca a la IA. Si contara, el paso daría la
+     vuelta por buena y la IA no entraría nunca. */
+  if (l.ocasion && !e.ocasion) e.ocasion = l.ocasion;
+
   if (!algo) return null;
   return l.gente ? 'Son *' + l.gente + '*, anotado 👍'
-    : l.destino ? '*' + e.destino + '*, va 📍'
-      : 'Anotado 👍';
+    : cambioLugar === 'destino' ? '*' + e.destino + '*, va 📍'
+      : cambioLugar === 'origen' ? 'Salen de *' + e.origen + '* 👍'
+        : 'Anotado 👍';
 }
 
 function repregunta(e, paso) {
@@ -2793,6 +2846,12 @@ function pasoDeCotizacion(t, crudo, estado, hoy) {
       return siguiente(e);
     }
     if (!n) {
+      /* Si no dijo cuántos son pero sí dijo OTRA cosa —el destino, de
+         dónde salen, qué camión quieren—, eso se guarda antes de volver
+         a preguntar. Sin esto el paso se lo tragaba entero y el cliente
+         tenía que repetirlo más adelante (11-sep-2026). */
+      const acuse = absorbeLoDemas(e, crudo, hoy);
+      if (acuse) return siguiente(e, acuse);
       /* Sin «perdón, no me quedó claro»: eso es confesarle al cliente que
          del otro lado hay un robot (dictado del dueño). Se vuelve a
          preguntar distinto y se marca `noEntendio` para que la IA lea el
@@ -2913,16 +2972,19 @@ function pasoDeCotizacion(t, crudo, estado, hoy) {
          20 pasa por este paso, así que le toca a la mitad de las
          conversaciones de autobús.
          ------------------------------------------------------------ */
+      /* Esto era una copia a mano de `absorbeLoDemas`, con sus propios
+         `!e.destino` y `!e.origen`, así que aquí NO se podía corregir
+         un destino ya puesto aunque en los otros pasos sí. Dos copias
+         de la misma regla siempre acaban diciendo cosas distintas: se
+         llama a la buena (11-sep-2026, fase 3). */
       const noSeMueve = NO_SE_MUEVEN.test(t);
-      if (otro.destino || otro.salida || otro.gente || otro.origen || noSeMueve) {
-        if (otro.destino && !e.destino) { const d = comoDestino(otro.destino); if (d) e.destino = d; }
-        if (otro.salida && !e.salida) e.salida = otro.salida;
-        if (otro.regreso && !e.regreso) e.regreso = otro.regreso;
-        if (otro.gente) e.gente = otro.gente;
-        if (otro.origen && !e.origen) { const o = comoOrigen(otro.origen); if (o) e.origen = o; }
-        if (noSeMueve && e.recorridos === undefined) e.recorridos = 0;
+      const acuse = absorbeLoDemas(e, crudo, hoy);
+      if (otro.salida && !e.salida) e.salida = otro.salida;
+      if (otro.regreso && !e.regreso) e.regreso = otro.regreso;
+      if (noSeMueve && e.recorridos === undefined) e.recorridos = 0;
+      if (acuse || otro.salida || noSeMueve) {
         alSiguienteHueco(e);
-        return siguiente(e, 'Anotado 👍');
+        return siguiente(e, acuse || 'Anotado 👍');
       }
 
       /* Ahora sí: no se entendió cuál. NO se escoge por él — un autobús
@@ -2936,6 +2998,10 @@ function pasoDeCotizacion(t, crudo, estado, hoy) {
 
     e.unidad = 'autobus';
     e.unidadNombre = elegido.name;
+    /* El id también: hoy el ticket lo saca del nombre, pero los otros
+       dos sitios que escogen camión sí lo guardan, y una de las tres
+       copias sin él es la que se rompe cuando alguien confíe en el id. */
+    e.unidadId = elegido.id;
     alSiguienteHueco(e);
     const p = siguiente(e);
     return {
@@ -3022,6 +3088,18 @@ function pasoDeCotizacion(t, crudo, estado, hoy) {
     if (leido.regreso) e.regreso = leido.regreso;
     /* El origen no se pisa: si ya venía de antes, ése es el bueno. */
     if (leido.origen && !e.origen) { const o = comoOrigen(leido.origen); if (o) e.origen = o; }
+    /* Y los dos datos que este bloque no miraba. El nombre del camión
+       importa porque decide la columna del Excel, y el sencillo porque
+       llega al contrato; los dos se decían aquí y se perdían
+       (11-sep-2026, fase 3). */
+    if (leido.soloIda) e.soloIda = true;
+    {
+      const suya = unidadPorNombre(crudo);
+      if (suya && suya.cat === 'autobus' && suya.name !== e.unidadNombre &&
+          Number(e.gente || 0) <= Number(suya.max)) {
+        e.unidad = 'autobus'; e.unidadNombre = suya.name; e.unidadId = suya.id;
+      }
+    }
 
     if (!leido.destino && (leido.gente || leido.salida || leido.unidad)) {
       if (leido.gente) e.gente = leido.gente;
@@ -3136,6 +3214,28 @@ function pasoDeCotizacion(t, crudo, estado, hoy) {
 
   /* ---- de dónde ---- */
   if (e.paso === 'origen' || e.paso === 'origenLibre') {
+    /* ------------------------------------------------------------
+       SI DIJO OTRA COSA, ESO SE GUARDA — 11-sep-2026
+       ------------------------------------------------------------
+       Este paso trataba TODO el mensaje como si fuera una ciudad de
+       salida. «somos 33», «vamos a tequila», «quiero el neobus» y «es
+       para una boda» se perdían enteros: el cliente los tenía que
+       repetir más adelante, o no los repetía y el viaje se cotizaba con
+       el dato viejo.
+
+       Solo entra cuando la frase NO trae un origen: «de guadalajara»
+       sigue siendo lo que este paso pregunta y se lee como siempre.
+       ------------------------------------------------------------ */
+    if (!origenDeLaFrase(dicho)) {
+      const antes = { g: e.gente, d: e.destino, u: e.unidadNombre, o: e.ocasion, s: e.soloIda };
+      const acuse = absorbeLoDemas(e, crudo, hoy);
+      const cambio = acuse && (e.gente !== antes.g || e.destino !== antes.d ||
+        e.unidadNombre !== antes.u || e.ocasion !== antes.o || e.soloIda !== antes.s);
+      if (cambio) {
+        const p = pregunta(e);
+        return { texto: acuse + '\n\n' + p.texto, pasa: false, estado: e, opciones: p.opciones };
+      }
+    }
     if (e.paso === 'origen' && /otro/.test(t)) {
       e.paso = 'origenLibre';
       return siguiente(e);
@@ -3180,7 +3280,20 @@ function pasoDeCotizacion(t, crudo, estado, hoy) {
        quita la preposición: «de guadalajara» se guardaba con el «de»
        pegado y así salía impreso —«Salen de *de guadalajara*»— y así
        llegaba al vendedor. */
-    e.origen = comoOrigen(dicho);
+    /* La puerta puede decir que no —«vamos a tequila» no es una ciudad
+       de salida—. Antes se guardaba el null igual y el bot contestaba
+       «Salen de *null* 👍». Ahora lo que traiga se absorbe y se vuelve
+       a preguntar (11-sep-2026). */
+    const suyo = comoOrigen(dicho);
+    if (!suyo) {
+      const acuse = absorbeLoDemas(e, crudo, hoy);
+      const p = pregunta(e);
+      return {
+        texto: (acuse ? acuse + '\n\n' : '') + p.texto,
+        pasa: false, estado: e, opciones: p.opciones, noEntendio: !acuse
+      };
+    }
+    e.origen = suyo;
     /* Antes decía `e.salida ? 'confirmar' : 'salida'` y se saltaba el
        regreso. Ver la nota de `alSiguienteHueco`. */
     alSiguienteHueco(e);
@@ -3419,13 +3532,36 @@ function pasoDeCotizacion(t, crudo, estado, hoy) {
        entra en un bucle. Sale de la auditoría del 10-sep-2026, la misma
        que encontró lo de «todavía no sé cuántos vamos».
        ------------------------------------------------------------ */
+    /* ------------------------------------------------------------
+       UN NÚMERO CON PALABRA DE GENTE NO SON MOVIMIENTOS
+       ------------------------------------------------------------
+       Este paso agarraba CUALQUIER número del mensaje, así que «somos
+       33» se leía como 33 recorridos y el bot contestaba «el viaje dura
+       4 días, no pueden ser más recorridos que eso» — a alguien que
+       estaba corrigiendo cuántos son. El dato se perdía y encima el
+       cliente recibía un regaño por algo que no dijo (11-sep-2026).
+
+       `cuantaGente` ya distingue las dos cosas: pide una señal de que
+       se habla de personas. Si dispara, esto no es un número de
+       movimientos.
+       ------------------------------------------------------------ */
+    if (cuantaGente(t)) {
+      const acuse = absorbeLoDemas(e, crudo, hoy);
+      if (acuse) return siguiente(e, acuse);
+    }
+
     if (NO_SE_MUEVEN.test(t)) n = 0;
     else if (/ningun|no\b|nada|solo ida|ninguna/.test(t)) n = 0;
     else {
       const m = t.match(/(\d{1,2})/);
       if (m) n = Number(m[1]);
     }
-    if (n === null || n < 0) return siguiente(e);
+    if (n === null || n < 0) {
+      /* Y si no dijo movimientos pero sí otra cosa, se guarda antes de
+         repreguntar, en vez de tirarla. */
+      const acuse = absorbeLoDemas(e, crudo, hoy);
+      return siguiente(e, acuse || undefined);
+    }
     const tope = diasEntre(e.salida, e.regreso);
     if (n > tope) {
       return {
@@ -3500,6 +3636,27 @@ function pasoDeCotizacion(t, crudo, estado, hoy) {
       e.paso = 'cambiar';
       return siguiente(e);
     }
+    /* ------------------------------------------------------------
+       UNA CORRECCIÓN NO ES UN «SÍ»
+       ------------------------------------------------------------
+       Aquí decía que cualquier cosa que no fuera «cambiar» se tomaba
+       como que sí. Así que «somos 33», dicho frente al resumen, cerraba
+       la solicitud **con 40 pasajeros** y se la mandaba al vendedor.
+       El cliente había corregido y vio que le dijeron que sí.
+
+       Es el paso más caro para perder un dato: de aquí sale el número
+       que el vendedor cotiza y el camión que se aparta. Se absorbe lo
+       que traiga y se vuelve a enseñar el resumen — corregido — para
+       que confirme sobre lo bueno (11-sep-2026).
+       ------------------------------------------------------------ */
+    {
+      const acuse = absorbeLoDemas(e, crudo, hoy);
+      if (acuse) {
+        alSiguienteHueco(e);
+        return siguiente(e, acuse);
+      }
+    }
+
     /* Cualquier otra cosa se toma como que sí: es lo que quiso decir
        quien contesta «va», «sale», «dale» o «ok». */
     const movimientos = [];
