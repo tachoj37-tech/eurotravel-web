@@ -309,6 +309,26 @@ function fechaDe(texto, hoy) {
   if (/^\s*(?:el\s+)?pasado\s*$/.test(t)) return masDias(base, 2);
   if (/\bmanana\b/.test(t)) return masDias(base, 1);
 
+  /* ------------------------------------------------------------
+     UN RANGO TRAE DOS FECHAS, Y AQUÍ SE LEE UNA
+     ------------------------------------------------------------
+     Quien sabe leer «del 20 al 23» es `fragmentosDeFecha`, que los
+     separa y manda cada extremo aquí por su cuenta. Si esta función
+     muerde el rango entero devuelve media respuesta, y la mitad que se
+     queda fuera es el REGRESO.
+
+     Eso se cobró el viaje más caro que se vende: «del 20 de diciembre
+     al 3 de enero» guardaba la salida y tiraba el regreso, y el bot
+     preguntaba «¿y qué día regresan?» a quien acababa de decirlo
+     (11-sep-2026).
+
+     Va hasta arriba a propósito. Abajo, en el orden viejo, la primera
+     expresión ya se había quedado con «20 de diciembre» y el freno
+     nunca llegaba a correr.
+     ------------------------------------------------------------ */
+  const UN_EXTREMO = '(?:\\d{1,2}|lunes|martes|miercoles|jueves|viernes|sabado|domingo)';
+  if (new RegExp('\\bdel?\\s+' + UN_EXTREMO + '\\b[\\s\\S]*\\bal\\s+' + UN_EXTREMO + '\\b').test(t)) return null;
+
   const anioHoy = Number(base.slice(0, 4));
 
   /* «10 de septiembre», «10 septiembre», «10 de sep del 2027», y
@@ -358,7 +378,10 @@ function fechaDe(texto, hoy) {
      ------------------------------------------------------------ */
   const DIAS_SEMANA = 'lunes|martes|miercoles|jueves|viernes|sabado|domingo';
   m = t.match(/^(?:el\s*)?(\d{1,2})$/) ||
-    t.match(new RegExp('\\b(?:el|dia)\\s+(?:' + DIAS_SEMANA + ')?\\s*(\\d{1,2})\\b')) ||
+    /* «al 22» señala igual que «el 22» y es como se pide un cambio:
+       «cambia la salida al 22». Sin esto, esa frase no traía fecha y el
+       cambio se perdía entero (11-sep-2026). */
+    t.match(new RegExp('\\b(?:el|al|dia)\\s+(?:' + DIAS_SEMANA + ')?\\s*(\\d{1,2})\\b')) ||
     /* ------------------------------------------------------------
        Y EL DÍA DE LA SEMANA HACE DE CANDADO IGUAL QUE EL «EL»
        ------------------------------------------------------------
@@ -381,7 +404,111 @@ function fechaDe(texto, hoy) {
     return armaFecha(anio, mes, dia, base);
   }
 
+  /* ------------------------------------------------------------
+     «EL SÁBADO», SIN NÚMERO
+     ------------------------------------------------------------
+     Es como contesta media la gente a «¿qué día salen?», y el bot no lo
+     entendía: repreguntaba con el mismo ejemplo una y otra vez.
+
+     Peor todavía: son sus PROPIOS BOTONES. Cuando un autobús cae en
+     domingo, el bot ofrece «Nos vamos el sábado» y «Regresamos el
+     lunes» — y no entendía ninguno de los dos si el cliente los
+     apretaba fuera de ese momento (11-sep-2026).
+
+     Se resuelve al día que viene, nunca hoy: quien dice «el sábado» un
+     sábado se refiere al siguiente. Y la base manda, así que de regreso
+     —donde la base es la salida— «el martes» cae después del viaje y no
+     en la semana de hoy.
+
+     Sin número no hay nada que confundir con un conteo de personas, así
+     que no hace falta el candado del «el»; pero sí se pide que el día
+     vaya solo o con una palabra de tiempo, para que «salimos el sábado
+     de la otra semana» no compita con una fecha escrita.
+     ------------------------------------------------------------ */
+  const DIAS = ['domingo', 'lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado'];
+  const porNombre = t.match(new RegExp(
+    '\\b(?:el|este|esta|proximo|proxima|entrante|que entra)?\\s*(' + DIAS_SEMANA + ')\\b'));
+  if (porNombre && !/\d/.test(t)) {
+    const quiere = DIAS.indexOf(porNombre[1]);
+    const hoyDia = new Date(Number(base.slice(0, 4)), Number(base.slice(5, 7)) - 1,
+      Number(base.slice(8, 10))).getDay();
+    let faltan = quiere - hoyDia;
+    if (faltan <= 0) faltan += 7;
+    /* «el próximo sábado» dicho en martes es el de esta semana para unos
+       y el de la otra para otros. Se toma el más cercano —el que no ha
+       pasado— porque prometer una fecha más lejos de la que el cliente
+       tenía en la cabeza le arruina el viaje; al revés, se nota al
+       confirmar, que es la línea que sigue. */
+    return masDias(base, faltan);
+  }
+
   return null;
+}
+
+/* ------------------------------------------------------------
+   LA ÚNICA PUERTA: UN DÍA SUELTO SE LEE CON LO QUE YA SE SABE
+   ------------------------------------------------------------
+   `fechaDe` resuelve «el 20» contra su base, y la base correcta no es
+   siempre hoy. Es, en este orden:
+
+     1. El VIAJE que ya tiene fecha. Con salida el 30 de diciembre,
+        «el 3» es el 3 de enero, no el 3 del mes que entra.
+     2. El MES que el cliente ya nombró. Dijo «diciembre» hace dos
+        mensajes: «20» es el 20 de diciembre.
+     3. Hoy, que es lo único que queda cuando no se sabe nada más.
+
+   Ese orden vivía escrito a mano en dos pasos del guion y en ningún
+   otro lado, así que el resto de los caminos resolvía todo contra hoy
+   y mandaba el camión hasta tres meses antes. Ahora se decide aquí, y
+   los pasos preguntan en vez de volver a decidir.
+
+   Una fecha COMPLETA —«5 de enero», «5/1»— no se ancla a nada: se lee
+   tal cual desde hoy. Anclarla a la salida la brincaba un año adelante
+   y la aceptaba en silencio; lo cazó la prueba «no deja regresar antes
+   de salir».
+
+   Y el ancla se pide, no se adivina, porque hay dos y son distintas:
+
+     · `'tras la salida'` —lo de siempre— resuelve al siguiente día N
+       DESPUÉS de la salida. Es lo que necesita un regreso: con salida
+       el 30 de diciembre, «el 3» es el 3 de enero.
+     · `'el mes del viaje'` resuelve al día N DEL MISMO MES del viaje,
+       aunque quede antes de la salida. Es lo que necesita una
+       corrección: con salida el 30 de diciembre, «mejor salimos el 28»
+       es el 28 de diciembre — el cliente está adelantando el viaje, no
+       mandándolo a enero.
+
+   Con una sola de las dos, la corrección caía en el 28 de ENERO y el
+   bot contestaba que la salida queda después del regreso.
+   ------------------------------------------------------------ */
+const TRAE_MES_O_ES_COMPLETA =
+  /\b\d{1,2}\s*(?:de\s*)?(?:ene|feb|mar|abr|may|jun|jul|ago|sep|set|oct|nov|dic)[a-z]*\b|\b\d{1,2}[\/\-.]\d{1,2}\b/;
+function fechaConContexto(crudo, e, hoy, ancla) {
+  const texto = String(crudo || '').trim();
+  const base = hoy || hoyISO();
+  if (TRAE_MES_O_ES_COMPLETA.test(normaliza(texto))) return fechaDe(texto, base);
+
+  const est = e || {};
+  const diaSolo = /^\s*(?:el|al)?\s*(\d{1,2})\s*$/.exec(texto) ||
+    (ancla === 'el mes del viaje' ? /\b(?:el|al|dia)\s+(\d{1,2})\b/.exec(normaliza(texto)) : null);
+
+  if (diaSolo && est.salida && ancla === 'el mes del viaje') {
+    const f = armaFecha(null, Number(est.salida.slice(5, 7)), Number(diaSolo[1]), base);
+    if (f) return f;
+  }
+  if (diaSolo && !est.salida && est.mesDicho) {
+    const f = fechaDe(diaSolo[1] + ' de ' + est.mesDicho, base);
+    if (f) return f;
+  }
+  return fechaDe(texto, est.salida || base);
+}
+
+/* Un mes sin día no es una fecha todavía, pero es la mitad de una: se
+   guarda para cuando llegue el día. Se pisa a propósito —el último mes
+   que dijo es el que vale— y deja de contar en cuanto hay salida, que
+   a partir de ahí es el ancla mejor. */
+function guardaElMes(e, leido) {
+  if (e && leido && leido.mesDicho && !e.salida) e.mesDicho = leido.mesDicho;
 }
 
 function armaFecha(anio, mes, dia, base) {
@@ -912,6 +1039,28 @@ const COLAS_DE_RELLENO = /\s+(entonces|pues|porfa|porfis|por\s+favor|plis|please
 
 const COLAS_DE_OCASION =/\s+(?:de|por|para)\s+(?:despedida|boda|bodas|xv|quince|quincea[nñ]era|graduaci[oó]n|generaci[oó]n|peregrinaci[oó]n|romer[ií]a|cumplea[nñ]os|convivencia|paseo|excursi[oó]n|viaje|placer|trabajo|negocios)\b.*$/i;
 
+/* ------------------------------------------------------------
+   EL CUÁNDO NO ES PARTE DEL NOMBRE DEL LUGAR
+   ------------------------------------------------------------
+   «quiero un camión a vallarta en diciembre para 40» dejaba el destino
+   en **«Vallarta En Diciembre»**, y así viajaba al resumen, al ticket y
+   al contrato. Cazado hablándole al bot el 11-sep-2026.
+
+   Y no era solo feo: el buscador del catálogo no encontraba ese nombre,
+   así que el viaje salía sin precio de lista y sin zona.
+
+   Va aparte de `COLAS_DE_RELLENO` porque esta cola SÍ dice algo —el mes
+   del viaje— y hay que recortarla del destino pero leerla como fecha.
+   De eso se encarga `leeDeUnJalon`, que la busca en la frase entera.
+   ------------------------------------------------------------ */
+const MESES_EN_LETRA = 'enero|febrero|marzo|abril|mayo|junio|julio|agosto|' +
+  'septiembre|setiembre|octubre|noviembre|diciembre';
+const COLAS_DE_TIEMPO = new RegExp(
+  '\\s+(?:en|para|el|la|los|las|a)\\s+' +
+  '(?:(?:principios|mediados|fines|finales)\\s+de\\s+)?' +
+  '(?:' + MESES_EN_LETRA + '|semana\\s+santa|navidad|a[nñ]o\\s+nuevo|' +
+  'verano|invierno|vacaciones|el\\s+puente|puente|d[ií]a\\s+de\\s+muertos)\\b.*$', 'i');
+
 function limpiaDestino(texto) {
   const original = String(texto || '').trim();
   let d = original;
@@ -927,6 +1076,14 @@ function limpiaDestino(texto) {
   }
 
   d = d.replace(COLAS_DE_OCASION, '').replace(/[\s,;.]+$/, '').trim();
+  /* El cuándo se recorta ANTES que las muletillas: «a vallarta en
+     diciembre porfa» trae las dos pegadas. Y con el mismo cuidado que
+     el resto: si el recorte deja menos de tres letras no se recorta,
+     porque hay lugares que empiezan con esas palabras. */
+  {
+    const sinTiempo = d.replace(COLAS_DE_TIEMPO, '').replace(/[\s,;.]+$/, '').trim();
+    if (sinTiempo.length >= 3) d = sinTiempo;
+  }
   /* ------------------------------------------------------------
      LA MULETILLA DEL FINAL NO ES PARTE DEL NOMBRE
      ------------------------------------------------------------
@@ -1429,6 +1586,25 @@ function fragmentosDeFecha(t) {
   }
 
   /* ------------------------------------------------------------
+     «DEL VIERNES AL DOMINGO» ES EL MISMO RANGO, SIN NÚMEROS
+     ------------------------------------------------------------
+     Es como se pide un fin de semana, que es el viaje más común que
+     hay. Se quedaba con el viernes y tiraba el domingo, y enseguida
+     preguntaba «¿y qué día regresan?» a quien acababa de decirlo
+     (11-sep-2026).
+
+     El regreso se manda SIN resolver: quien lo resuelve es el paso del
+     regreso, y su base es la salida — así «del domingo al martes» cae
+     en la misma semana y no en la de hoy.
+     ------------------------------------------------------------ */
+  const DIAS_R = 'lunes|martes|miercoles|jueves|viernes|sabado|domingo';
+  const rangoDeDias = t.match(new RegExp(
+    '\\bdel?\\s+(' + DIAS_R + ')\\s+al\\s+(' + DIAS_R + ')\\b'));
+  if (rangoDeDias) {
+    return { salida: 'el ' + rangoDeDias[1], regreso: 'el ' + rangoDeDias[2] };
+  }
+
+  /* ------------------------------------------------------------
      «SÁBADO 19» — EL FORMATO QUE EL PROPIO BOT PIDE
      ------------------------------------------------------------
      Cazado hablándole al bot el 11-sep-2026. Al repreguntar la fecha
@@ -1662,7 +1838,36 @@ function leeDeUnJalon(crudo, hoy) {
 
   const trozos = fragmentosDeFecha(sinGente);
   const salida = trozos.salida ? fechaDe(trozos.salida, hoy) : null;
-  const regreso = trozos.regreso ? fechaDe(trozos.regreso, hoy) : null;
+  /* El regreso se ancla a la SALIDA que acaba de leerse, no a hoy: en
+     «del viernes al domingo» el domingo es el de ese fin de semana, y
+     resolviéndolo desde hoy caía ANTES de la salida y se tiraba entero.
+     Es la misma puerta que usan los pasos del guion. */
+  const regreso = trozos.regreso
+    ? fechaConContexto(trozos.regreso, { salida: salida }, hoy) : null;
+
+  /* ------------------------------------------------------------
+     UN MES SIN DÍA SE GUARDA, NO SE TIRA
+     ------------------------------------------------------------
+     El paso de la fecha ya sabía hacer esto —«diciembre» y luego «20»
+     son una sola fecha— pero solo si el mes llegaba solo, en su propio
+     mensaje, y justo en ese paso. Fuera de ahí se perdía:
+
+       «quiero un camión a vallarta en diciembre para 40»  …  «20»
+       «vamos en diciembre, somos 40»                      …  «20»
+
+     Las dos terminaban en **20 de septiembre**: el 20 más cercano a
+     hoy. Tres meses antes, sin que nada truene, y de ahí salen el
+     precio, el calendario y el contrato. Cazadas hablándole al bot el
+     11-sep-2026.
+
+     Solo cuenta si NO se pudo armar una fecha completa: donde hay día
+     y mes, el mes ya viaja dentro de la fecha.
+     ------------------------------------------------------------ */
+  let mesDicho = null;
+  if (!salida) {
+    const m = new RegExp('\\b(' + MESES_EN_LETRA + ')\\b').exec(sinGente);
+    if (m) mesDicho = m[1];
+  }
 
   const destino = destinoDeLaFrase(original);
 
@@ -1679,6 +1884,7 @@ function leeDeUnJalon(crudo, hoy) {
     origen: origenDeLaFrase(original),
     salida: salida,
     regreso: regreso,
+    mesDicho: mesDicho,
     /* ------------------------------------------------------------
        SOLO IDA
 
@@ -2153,6 +2359,10 @@ function absorbeLoDemas(e, crudo, hoy) {
       e.unidad = 'autobus'; e.unidadNombre = suya.name; e.unidadId = suya.id; algo = true;
     }
   }
+  /* El mes dicho de pasada —«vamos en diciembre, somos 40»— no es una
+     respuesta por sí solo, así que no cuenta como `algo` ni se acusa.
+     Pero se guarda: el día llega en el mensaje siguiente. */
+  guardaElMes(e, l);
   if (l.destino && !e.destino) { const d = comoDestino(l.destino); if (d) { e.destino = d; algo = true; } }
   /* Como ciudad, no como lo tecleó: «de gdl» quedaba en «gdl» y así
      viajaba al ticket y al contrato. */
@@ -2541,7 +2751,20 @@ function pasoDeCotizacion(t, crudo, estado, hoy) {
   const e = Object.assign({}, estado);
   const dicho = String(crudo).trim();
 
-  if (tiene(t, ['cancelar', 'olvidalo', 'ya no', 'mejor no'])) {
+  /* ------------------------------------------------------------
+     CANCELAR ES EL MENSAJE ENTERO, NO UNA PALABRA ADENTRO
+     ------------------------------------------------------------
+     «ya no» estaba en esta lista y `tiene` la busca EN CUALQUIER PARTE
+     del mensaje. Así que «ya no, mejor en enero» —un cliente moviendo
+     su viaje— borraba la conversación completa: destino, gente, origen
+     y las dos fechas. Se quedaba sin nada y empezando de cero
+     (cazado hablándole al bot el 11-sep-2026).
+
+     Quien cancela lo dice y ya. El que sigue escribiendo después de
+     «ya no» está corrigiendo, no despidiéndose — y esa es justo la
+     frase con la que la gente corrige.
+     ------------------------------------------------------------ */
+  if (/^\s*(?:ya\s+)?(?:no,?\s+)?(?:cancelar|cancelalo|cancelame|olvidalo|olvidate|ya no|mejor no|dejalo|dejemoslo)\s*[.!]*\s*$/.test(t)) {
     return { texto: 'Listo, lo dejamos ahí 👍\n\n¿Te ayudo con algo más?',
       pasa: false, estado: null, opciones: [] };
   }
@@ -2987,10 +3210,9 @@ function pasoDeCotizacion(t, crudo, estado, hoy) {
       return { texto: '¿Qué día de ' + mesSolo[1] + '? 📅',
         pasa: false, estado: e, opciones: [] };
     }
-    const diaSolo = /^\s*(?:el\s+)?(\d{1,2})\s*$/.exec(String(crudo || '').trim());
-    const conElMes = (diaSolo && e.mesDicho) ? diaSolo[1] + ' de ' + e.mesDicho : crudo;
-
-    let f = fechaDe(conElMes, hoy);
+    /* El día suelto y el mes ya dicho los junta `fechaConContexto`, que
+       es donde vive ese orden para todo el bot. */
+    let f = fechaConContexto(crudo, e, hoy);
     /* ------------------------------------------------------------
        «DEL 20 AL 22 DE DICIEMBRE» TAMBIÉN ES UNA RESPUESTA
        ------------------------------------------------------------
@@ -3124,14 +3346,10 @@ function pasoDeCotizacion(t, crudo, estado, hoy) {
        ya resuelve «el N» al N más cercano desde su base: la base
        correcta para un regreso es la salida. Lo cazó la prueba del
        calendario de noviembre. */
-    /* SOLO el día suelto se ancla a la salida. Una fecha completa —«5 de
-       septiembre», «5/9»— se lee tal cual desde hoy, y si queda antes de
-       la salida se rechaza abajo, como siempre. Anclarla también a la
-       salida la brincaba un año adelante y la aceptaba en silencio: lo
-       cazó la prueba «no deja regresar antes de salir». */
-    const trajoMesOCompleta = /\b\d{1,2}\s*(?:de\s*)?(?:ene|feb|mar|abr|may|jun|jul|ago|sep|set|oct|nov|dic)[a-z]*\b|\b\d{1,2}[\/-]\d{1,2}\b/.test(t);
-    const base = trajoMesOCompleta ? hoy : (e.salida || hoy);
-    const f = esElMismoDia && e.salida ? e.salida : fechaDe(crudo, base);
+    /* SOLO el día suelto se ancla a la salida; una fecha completa se lee
+       desde hoy. Esa regla ya no vive aquí: es `fechaConContexto`, la
+       misma puerta que usa el paso de la salida. */
+    const f = esElMismoDia && e.salida ? e.salida : fechaConContexto(crudo, e, hoy);
     if (!f) {
       const acuse = absorbeLoDemas(e, crudo, hoy);
       if (acuse) return siguiente(e, acuse);
@@ -3765,8 +3983,152 @@ function saludo(vendedor, mensaje) {
   ][n];
 }
 
+/* ------------------------------------------------------------
+   UNA FECHA PUESTA SE CORRIGE — 11-sep-2026
+   ------------------------------------------------------------
+   El número de personas se corrige desde hace días —«se clava con el
+   número de personas» fue de lo primero que reportó el dueño— y la
+   fecha no. Cazado hablándole al bot:
+
+     · salida el 20 de diciembre … «mejor salimos el 22»
+       → «Anotado 👍», y el viaje seguía saliendo el 20.
+     · ya en el paso de escoger camión … «cambia la salida al 22 porfa»
+       → ni eso: contestaba «¿cuál de esos te late?».
+
+   Es peor que no entender: el cliente VE que pidió el cambio, el bot le
+   dice que sí, y el camión sale el día viejo. Y no hay forma de
+   corregirlo salvo empezar la conversación de cero.
+
+   Por qué hace falta la palabra de cambio («mejor», «cambia», «perdón»)
+   y no basta con que se lea una fecha: porque este bloque corre en
+   CUALQUIER paso, y sin ella un «2» contestando los movimientos, o un
+   «el 28» contestando otra cosa, movería el viaje de día cada vez que
+   el cliente teclea un número. La palabra de cambio es el candado, y
+   es la misma idea que el «el» que le pide `fechaDe` a un día suelto.
+
+   Y si no dice CUÁL de las dos fechas, se pregunta. Adivinar aquí es
+   apostar a que el camión salga el día bueno; preguntar cuesta un
+   mensaje.
+   ------------------------------------------------------------ */
+const QUIERE_CORREGIR = /\b(mejor|cambia|cambiame|cambiale|cambiar|cambiamos|corrige|corrigeme|perdon|equivoque|equivocamos|equivoco|en realidad|mas bien|ya no)\b|^\s*no,/;
+const ES_LA_SALIDA = /\b(salida|salimos|salgamos|salen|salir|nos vamos|partimos|de ida|la ida)\b/;
+const ES_EL_REGRESO = /\b(regreso|regresamos|regresan|regresar|volvemos|vuelven|volver|de vuelta|la vuelta)\b/;
+
+function correccionDeFecha(mensaje, e, hoy) {
+  const t = normaliza(mensaje);
+
+  /* La respuesta a «¿esa es la salida o el regreso?». Va primero porque
+     «es la salida» no trae palabra de cambio ni fecha: la fecha quedó
+     guardada de la vuelta anterior. */
+  if (e.fechaPorDecidir) {
+    const cual = ES_LA_SALIDA.test(t) ? 'salida' : ES_EL_REGRESO.test(t) ? 'regreso' : null;
+    if (cual) {
+      const f = e.fechaPorDecidir;
+      delete e.fechaPorDecidir;
+      return aplicaLaFecha(e, cual, f);
+    }
+    /* Si contestó otra cosa, la propuesta se cae: no se queda esperando
+       para aplicarse tres mensajes después, cuando ya nadie se acuerda. */
+    delete e.fechaPorDecidir;
+  }
+
+  if (!QUIERE_CORREGIR.test(t)) return null;
+  const nueva = fechaConContexto(mensaje, e, hoy, 'el mes del viaje');
+
+  /* «ya no, mejor en enero»: el mes cambia y el día todavía no se sabe.
+     Las fechas viejas se van —el viaje ya no es en diciembre— pero el
+     resto de la conversación se queda: destino, gente y origen siguen
+     siendo los mismos, y volver a preguntarlos es la fricción que hace
+     que el cliente deje de contestar. */
+  if (!nueva) {
+    const mes = new RegExp('\\b(' + MESES_EN_LETRA + ')\\b').exec(t);
+    if (mes && Number(e.salida.slice(5, 7)) !== MESES[mes[1]]) {
+      e.mesDicho = mes[1];
+      delete e.salida; delete e.regreso; delete e.fechaPorDecidir;
+      e.paso = 'salida';
+      return { texto: 'Va, lo movemos a *' + mes[1] + '* 📅\n\n¿Qué día de ' +
+          mes[1] + ' salen?', pasa: false, estado: e, opciones: [] };
+    }
+    return null;
+  }
+  if (nueva === e.salida || nueva === e.regreso) return null;   // ya está así
+
+  const cual = ES_LA_SALIDA.test(t) ? 'salida'
+    : ES_EL_REGRESO.test(t) ? 'regreso'
+      : (e.regreso ? null : 'salida');
+
+  if (!cual) {
+    e.fechaPorDecidir = nueva;
+    return {
+      texto: 'El *' + fechaEnPalabras(nueva) + '*, va — ¿esa es la de *salida* ' +
+        'o la de *regreso*? 🤔\n\nAhorita traigo salida el *' +
+        fechaEnPalabras(e.salida) + '* y regreso el *' + fechaEnPalabras(e.regreso) + '*.',
+      pasa: false, estado: e, opciones: ['Es la salida', 'Es el regreso']
+    };
+  }
+  return aplicaLaFecha(e, cual, nueva);
+}
+
+/* Guarda la fecha corregida y devuelve al cliente a donde estaba, con
+   la pregunta pendiente pegada — igual que el bloque de las fotos. */
+function aplicaLaFecha(e, cual, f) {
+  /* ------------------------------------------------------------
+     MOVER EL VIAJE NO ES DEJARLO SIN REGRESO
+     ------------------------------------------------------------
+     Un viaje de 4 días que se mueve a enero sigue siendo de 4 días. El
+     bot contestaba «esa salida queda después del regreso» y volvía a
+     contestar lo mismo cada vez, porque el cliente no tenía forma de
+     arreglarlo: cualquier fecha nueva de salida caía otra vez después
+     del regreso viejo. Callejón sin salida más que empezar de cero
+     (11-sep-2026).
+
+     Se conserva la DURACIÓN, que es el dato que el cliente ya dio, y se
+     dice completo para que si no era eso lo corrija de una.
+     ------------------------------------------------------------ */
+  if (cual === 'salida' && e.regreso && f > e.regreso) {
+    const dura = diasEntre(e.salida, e.regreso);
+    const nuevoRegreso = masDias(f, dura - 1);
+    e.salida = f; e.regreso = nuevoRegreso;
+    const p = pregunta(e);
+    const acuse = 'Listo: del *' + fechaEnPalabras(f) + '* al *' +
+      fechaEnPalabras(nuevoRegreso) + '* 📅\n\n(Te moví el regreso para que el ' +
+      'viaje siga siendo de ' + dura + ' días — si no, dime qué día vuelven.)';
+    return {
+      texto: p && p.texto ? acuse + '\n\n' + p.texto : acuse,
+      opciones: (p && p.opciones) || [], pasa: false, estado: e
+    };
+  }
+  if (cual === 'regreso' && e.salida && f < e.salida) {
+    return {
+      texto: 'Ese regreso queda *antes* de la salida (el ' +
+        fechaEnPalabras(e.salida) + ') 🤔\n\n¿Qué día vuelven?',
+      pasa: false, estado: e, opciones: []
+    };
+  }
+  e[cual] = f;
+  /* Si movió la salida y con eso el viaje se vuelve de un día, los
+     movimientos dejan de cobrarse — la misma regla R22 del paso. */
+  if (e.salida && e.regreso && diasEntre(e.salida, e.regreso) === 1) e.recorridos = 0;
+  const p = pregunta(e);
+  const acuse = cual === 'salida'
+    ? 'Listo: salen el *' + fechaEnPalabras(f) + '* 📅'
+    : 'Listo: regresan el *' + fechaEnPalabras(f) + '* 📅';
+  return {
+    texto: p && p.texto ? acuse + '\n\n' + p.texto : acuse,
+    opciones: (p && p.opciones) || [],
+    pasa: false, estado: e
+  };
+}
+
 function respuestaBase(mensaje, estado, hoy) {
   const t = normaliza(mensaje);
+
+  /* Va ANTES del paso, por lo mismo que las fotos: si fuera después, el
+     paso en curso ya se habría comido el texto. */
+  if (estado && estado.paso && estado.salida) {
+    const c = correccionDeFecha(mensaje, estado, hoy);
+    if (c) return c;
+  }
 
   /* ------------------------------------------------------------
      FOTOS A MEDIA COTIZACIÓN — 5-sep-2026
@@ -4736,6 +5098,10 @@ function aplicaEntendido(datos, hoy) {
   { const o = datos.origen ? comoOrigen(datos.origen) : null; if (o) e.origen = o; }
   if (datos.salida) e.salida = datos.salida;
   if (datos.regreso) e.regreso = datos.regreso;
+  /* El mes que traía el primer mensaje sin día —«un camión a vallarta en
+     diciembre para 40»— espera aquí al día que llegue después. Sin esto
+     el «20» del mensaje siguiente caía en septiembre. */
+  guardaElMes(e, datos);
 
   /* Solo ida: se cotiza como salir y volver el mismo día, que es lo que
      el motor sabe cobrar. Y así R22 le quita los movimientos solo.

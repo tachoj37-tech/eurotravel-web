@@ -218,7 +218,14 @@ console.log('\n== LAS FECHAS, COMO LAS ESCRIBE LA GENTE ==');
     ['1 de enero', '2027-01-01'],
     /* 2026 no es bisiesto, asi que esa fecha no existe. */
     ['29 de febrero', null],
-    ['32/13', null], ['el jueves ese', null], ['', null]
+    /* CAMBIÓ DE LADO EL 11-sep-2026: aquí estaba «el jueves ese» como
+       ejemplo de texto que NO trae fecha, y sí la trae — trae un día de
+       la semana. Desde hoy el bot lee «el sábado», «este domingo» y «el
+       próximo viernes», que es como contesta media la gente y como el
+       propio bot ofrece sus botones cuando un autobús cae en domingo.
+       Lo que la prueba quiere vigilar sigue vigilado con un texto que
+       de verdad no trae ninguna fecha. */
+    ['32/13', null], ['cuando se pueda', null], ['', null]
   ];
   const mal = casos.filter(function (c) { return conv.fechaDe(c[0], HOY) !== c[1]; })
     .map(function (c) { return c[0] + ' -> ' + conv.fechaDe(c[0], HOY) + ' (esperaba ' + c[1] + ')'; });
@@ -311,7 +318,11 @@ console.log('\n== NO SE DEJA LLEVAR A UN IMPOSIBLE ==');
   okQue('no deja regresar antes de salir', !r.cotiza && /antes de la salida/.test(r.texto));
 }
 {
-  const r = conv.respuestaA('el jueves ese', { paso: 'salida' }, HOY);
+  /* El texto cambió el 11-sep-2026 por lo mismo que arriba: «el jueves
+     ese» ya es una fecha legible. Lo que esta prueba cuida —que no se
+     invente una fecha de la nada— se cuida igual con un texto que de
+     verdad no la trae. */
+  const r = conv.respuestaA('cuando se pueda', { paso: 'salida' }, HOY);
   /* CAMBIÓ EL 5-SEP-2026: ya no se busca «no la entendí» —el bot dejó
      de confesar—. Lo que se vigila es lo mismo de siempre: que NO
      invente la fecha (sin `cotiza`, sin `salida`), que vuelva a pedirla,
