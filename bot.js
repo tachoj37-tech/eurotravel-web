@@ -5159,7 +5159,28 @@ function respuestaBase(mensaje, estado, hoy) {
         '\n\n¿A dónde van? Con eso te saco el precio.',
       pasa: false,
       estado: { paso: 'destino' },
-      opciones: []
+      /* ------------------------------------------------------------
+         LOS CAMINOS DEL QUE LLEGA — 12-sep-2026
+         ------------------------------------------------------------
+         El saludo no ofrecía NINGÚN botón: la única salida era ponerse
+         a escribir. Dictado del dueño: que pueda escoger.
+
+           1 · empezar un viaje nuevo
+           2 · su cotización anterior — la pone el webhook, y SOLO si de
+               verdad hay una (ver abajo)
+           3 · hablar con una persona
+
+         El texto está recortado porque WhatsApp NO ENSEÑA botones de
+         más de 20 caracteres: «Hablar con una persona» son 22 y se
+         quedaría cortado o no saldría. Hay una prueba que vigila ese
+         tope para todas las opciones del bot.
+
+         Y los tres los entiende el guion cuando el cliente los aprieta
+         —hay una batería que le da de comer al bot cada botón que
+         ofrece—, porque un botón que no se entiende es peor que no
+         ponerlo: el cliente lo aprieta y no pasa nada.
+         ------------------------------------------------------------ */
+      opciones: ['Cotizar un viaje', 'Hablar con alguien']
     };
   }
 
