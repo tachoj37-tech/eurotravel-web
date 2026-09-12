@@ -105,6 +105,37 @@ const HORA = 3600000;
   igual('y se acusa que se agotaron', cerrado.agotado, true);
 })();
 
+/* ============ 4b. EL CONTADOR NO SE PUEDE PONER EN NEGATIVO ============
+   Encontrado atacando el módulo el 12-sep-2026.
+
+   El contador vive en la metadata del cliente de Stripe, se guarda como
+   texto y se lee con `Number()`. Con un `-999` ahí dentro, `van >= INTENTOS`
+   es falso mil veces seguidas: cinco intentos se vuelven mil cuatro.
+
+   Quien escribe esa metadata es nuestro propio servidor, así que esto no es
+   un hueco que alguien pueda abrir desde fuera hoy — es defensa en
+   profundidad. Pero el contador de intentos es lo ÚNICO que separa un código
+   de seis dígitos de un ataque por fuerza bruta, y un candado que depende de
+   que nadie escriba mal un campo no es un candado.
+
+   Cuesta un `Math.max(0, …)`. */
+(function () {
+  const codigo = '777888';
+  const m = acceso.paraGuardar(codigo, AHORA);
+
+  m[acceso.CAMPO_INTENTOS] = '-999';
+  const r = acceso.revisaCodigo(m, '000000', AHORA);
+  igual('con el contador en -999, un fallo cuenta desde cero', r.van, 1);
+
+  /* Y con basura tampoco se regalan intentos. */
+  m[acceso.CAMPO_INTENTOS] = 'muchos';
+  igual('con el contador ilegible, también', acceso.revisaCodigo(m, '000000', AHORA).van, 1);
+
+  /* El camino de siempre no cambia. */
+  m[acceso.CAMPO_INTENTOS] = '3';
+  igual('y con tres, el siguiente es el cuatro', acceso.revisaCodigo(m, '000000', AHORA).van, 4);
+})();
+
 /* ============ 5. UN SOLO USO ============
    `paraBorrar` es lo que se escribe al acertar. Si eso no vaciara los tres
    campos, un codigo que se quedo en el historial del correo seguiria

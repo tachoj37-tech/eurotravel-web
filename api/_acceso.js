@@ -171,7 +171,14 @@ function revisaCodigo(metadataDelCliente, codigo, ahoraMs, uso) {
   const ahora = typeof ahoraMs === 'number' ? ahoraMs : Date.now();
   if (!isFinite(vence) || ahora > vence) return { ok: false, motivo: 'código vencido' };
 
-  const van = Number(m[CAMPO_INTENTOS]) || 0;
+  /* `Math.max(0, …)` y no `Number(…) || 0`: el contador vive en la metadata
+     de Stripe como texto, y un `-999` ahí dentro convertiría cinco intentos
+     en mil cuatro —`van >= INTENTOS` sería falso mil veces—. Hoy solo lo
+     escribe nuestro servidor, así que es defensa en profundidad; pero este
+     contador es lo ÚNICO que separa un código de seis dígitos de la fuerza
+     bruta, y un candado que depende de que nadie escriba mal un campo no es
+     un candado. Encontrado atacando el módulo el 12-sep-2026. */
+  const van = Math.max(0, Number(m[CAMPO_INTENTOS]) || 0);
   if (van >= INTENTOS) return { ok: false, motivo: 'demasiados intentos', agotado: true };
 
   /* Se acepta lo que la gente pega de verdad: «Tu código: 12 34 56». */

@@ -397,9 +397,37 @@
     }
 
     document.getElementById('entrar').addEventListener('click', manda);
-    document.getElementById('otro').addEventListener('click', function () {
-      err.textContent = 'Te mandamos otro código.';
-      pideCodigo(true);
+
+    /* ------------------------------------------------------------
+       «NO ME LLEGÓ — MÁNDAME OTRO»
+       ------------------------------------------------------------
+       Decía «Te mandamos otro código» ANTES de mandarlo, y pedía el código
+       en modo callado: si el servidor contestaba 429 —el freno son seis por
+       minuto— o 503, el texto se quedaba puesto igual. El cliente se quedaba
+       esperando un correo que nunca salió, y sin nada que le dijera que
+       volviera a intentar.
+
+       Es el mismo defecto que tenía «Entrar» en la portada: contestar algo
+       que no se sabe. Encontrado auditando las ligas el 12-sep-2026.
+
+       Y el botón se frena mientras va: cada clic es un correo que cuesta
+       dinero y un renglón del freno del servidor.
+       ------------------------------------------------------------ */
+    var otro = document.getElementById('otro');
+    otro.addEventListener('click', function () {
+      if (otro.disabled) return;
+      otro.disabled = true;
+      err.textContent = 'Mandando…';
+
+      pideCodigo(true).then(function (d) {
+        otro.disabled = false;
+        err.textContent = d
+          ? 'Listo, va otro código a ' + (d.correo || 'tu correo') + '.'
+          : 'No pudimos mandarlo ahora mismo. Inténtalo en un momento.';
+      }).catch(function () {
+        otro.disabled = false;
+        err.textContent = 'No hubo conexión. Vuelve a intentar.';
+      });
     });
   }
 
