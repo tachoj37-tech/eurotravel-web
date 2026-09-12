@@ -68,6 +68,31 @@ con calma, y después se llama a esa dirección para seguir la conversación.
 > arquitectura, no de conexión. Es la diferencia entre una tarde y varios
 > días, y más vale saberlo antes de prometer una fecha.
 
+### Cómo se va a partir, cuando toque (investigado el 11-sep-2026)
+
+Hay dos maneras en Vercel, y la primera no sirve aquí:
+
+**`waitUntil` — descartada.** Viene de `@vercel/functions`, o sea **la
+primera dependencia del proyecto** (hoy tiene cero, a propósito). Y su
+propia documentación dice que es *best-effort*: sin reintentos, sin
+durabilidad, y muere con la invocación. Para métricas o un log va bien;
+para **la respuesta a un cliente que está esperando**, no: si Vercel corta,
+el cliente se queda sin contestación y nadie se entera.
+
+**Auto-invocación — la buena.** Se contesta el `200` de inmediato y, antes
+de responder, se dispara un `fetch` a nuestra propia puerta con una marca.
+Ese segundo aviso es una invocación nueva, con su propio tiempo completo, y
+es la que piensa la respuesta y la manda por la API de Kommo. Sin
+dependencias, sin best-effort, y sin gastar una de las 12 funciones: entra
+por el mismo `whatsapp.mjs` con un rewrite, igual que ya se hizo con
+Dualhook.
+
+**No se toca hasta que Kommo esté confirmado.** Hoy el bot atiende clientes
+de verdad por Dualhook y Meta aguanta de sobra el tiempo actual; cambiar la
+forma de contestar ahora es puro riesgo sin ninguna ganancia. Cuando el plan
+Advanced esté y la cuenta responda, se hace — con su propia batería de
+pruebas, porque es el camino por donde pasa todo.
+
 ---
 
 ## La buena noticia: hoy no hay mudanza
@@ -355,6 +380,50 @@ Cuando las pruebas estén y quieras pasar el número real:
 5. **Solo cuando los dos sentidos funcionen**, cancela Dualhook. Ni un
    minuto antes: mientras siga contratado, la vuelta atrás son cinco
    minutos.
+
+### CANCELAR EL WEBHOOK: el orden importa más que la prisa
+
+Esto es lo que hay que tener clarísimo, porque el instinto lleva a hacerlo
+al revés y el error no avisa.
+
+**Cancelar el webhook deja al bot mudo en el momento.** No se degrada, no
+contesta a medias, no manda un aviso: los clientes escriben y **no contesta
+nadie**. Ni el bot, ni un mensaje de «ahorita te atiendo». Y como el
+vendedor tampoco ve nada nuevo en su pantalla, puede pasar un día entero
+sin que se note — perdiendo cada cliente que escribió ese día.
+
+El webhook es la única puerta por donde entran los mensajes. Sin ella, el
+bot no está apagado: está sordo.
+
+**El orden seguro, y no hay otro:**
+
+```
+1. Kommo probado con el número NUEVO          ← ya funciona
+2. Mueves el número bueno a Kommo
+3. Compruebas los DOS sentidos:
+      · te llega un mensaje de prueba (se ve en los Logs de Vercel)
+      · el bot contesta y al cliente le llega
+4. Dejas pasar un día con los dos webhooks vivos
+5. HASTA ENTONCES cancelas el viejo
+```
+
+El paso 4 no es exceso de cuidado: es el único momento en que puedes ver si
+algo falla con clientes reales **teniendo la vuelta atrás a cinco minutos**.
+Cancelado el viejo, la vuelta atrás deja de existir.
+
+**Dos webhooks a la vez no se estorban.** Meta manda el aviso a donde
+apunte el override; el otro simplemente deja de recibir. No hay mensajes
+duplicados ni cobro doble por tenerlos montados.
+
+**Y no confundas las dos cosas que se pueden cancelar:**
+
+| Qué cancelas | Qué pasa |
+|---|---|
+| El **webhook** en Meta (cambiar la URL) | El bot deja de recibir **al instante**. Se deshace en 1 minuto. |
+| La **suscripción a Dualhook** (dejar de pagar) | Se pierde el número como está montado hoy. **No se deshace solo.** |
+
+Cancela primero el webhook —que es reversible— y deja la suscripción para
+cuando lleves días tranquilos.
 
 ### Cómo volver atrás, mientras Dualhook siga vivo
 
