@@ -695,8 +695,107 @@ async function conversa(mensaje, opciones) {
   }
 }
 
+/* ------------------------------------------------------------
+   EL SEGUIMIENTO, ESCRITO PARA ESE VIAJE — 12-sep-2026
+   ------------------------------------------------------------
+   Dictado del dueño: «que la IA redacte los mensajes de cada 22 horas,
+   cada 3 días y cada 7».
+
+   Hasta hoy son diez frases fijas por toque que se turnan. Están bien
+   escritas, pero son genéricas: «¿te llegó bien la cotización?». La IA
+   puede nombrar SU viaje —«¿cómo ves lo de Vallarta del 20?»— y eso es
+   la diferencia entre un mensaje de plantilla y uno que suena a que
+   alguien se acuerda de ti.
+
+   TRES CANDADOS, porque esto sale SOLO, sin que nadie lo lea antes:
+
+     1 · Pasa por `sanea`, el mismo de la conversación. Tira cualquier
+         texto con DINERO —la IA no puede inventar ni repetir precios—,
+         lo que suene a instrucciones internas, las palabras prohibidas
+         por el dueño y lo que se pase de largo.
+     2 · Si la IA no contesta, tarda, o dice algo que no pasa el filtro,
+         se manda la frase fija de siempre. Nunca se queda sin mandar
+         nada por culpa de la IA — que es la regla de toda la casa.
+     3 · El prompt prohíbe lo que un vendedor no haría por escrito sin
+         permiso: prometer que hay disponibilidad, ofrecer descuentos, o
+         repetir el precio.
+
+   Lo que SÍ se le da: el viaje, cuántos días lleva sin contestar y qué
+   toque es. Sin historial de la conversación: esto no es una plática, es
+   un recordatorio, y mandarle el chat entero costaría más y tentaría al
+   modelo a retomar hilos viejos.
+   ------------------------------------------------------------ */
+const TOQUE_MAX_TOKENS = 150;
+
+function loQueTocaDecir(toque) {
+  if (toque === 1) return 'Van ~22 horas desde que le pasaste el precio y no ha contestado. ' +
+    'Pregúntale si le llegó bien y si tiene alguna duda.';
+  if (toque === 2) return 'Van ~3 días sin respuesta. Recuérdale algo útil del servicio ' +
+    '—que el precio ya lleva operador, combustible y casetas, sin cobros después— y deja la puerta abierta.';
+  return 'Van ~7 días sin respuesta. Es el último mensaje: pregúntale sin presionar si le seguimos ' +
+    'o lo dejamos para después.';
+}
+
+async function redactaSeguimiento(opciones) {
+  const o = opciones || {};
+  const clave = o.clave || process.env.ANTHROPIC_API_KEY;
+  const pide = o.pide || (typeof fetch === 'function' ? fetch : null);
+  if (!clave || !pide) return null;
+  if (!(o.toque >= 1 && o.toque <= 3)) return null;
+
+  const v = o.viaje || {};
+  const elViaje = [
+    v.destino ? 'Van a ' + v.destino : null,
+    v.salida ? 'salen el ' + v.salida : null,
+    v.gente ? 'son ' + v.gente : null,
+    v.unidad ? 'en ' + v.unidad : null
+  ].filter(Boolean).join(', ');
+
+  const instruccion =
+    'Eres el vendedor de Eurotravel escribiendo por WhatsApp a un cliente al que YA le pasaste ' +
+    'su cotización.\n\n' +
+    (elViaje ? 'Su viaje: ' + elViaje + '.\n' : '') +
+    loQueTocaDecir(o.toque) + '\n\n' +
+    'Escribe UN mensaje corto, de dos renglones cuando mucho, en español de Guadalajara, ' +
+    'cálido y sin formalismos. Una sola pregunta.\n' +
+    'PROHIBIDO: repetir o mencionar cualquier cantidad de dinero, ofrecer descuentos, ' +
+    'prometer que la fecha está disponible, disculparte por insistir más de una vez, ' +
+    'usar «estimado cliente» o sonar a robot.\n' +
+    'Contesta SOLO con el mensaje, sin comillas y sin explicar nada.';
+
+  try {
+    const r = await pide('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      signal: AbortSignal.timeout(ESPERA_IA_MS),
+      headers: { 'content-type': 'application/json', 'x-api-key': clave, 'anthropic-version': '2023-06-01' },
+      body: JSON.stringify({
+        model: MODELO, max_tokens: TOQUE_MAX_TOKENS, temperature: 0.7,
+        messages: [{ role: 'user', content: instruccion }]
+      })
+    });
+    if (!r || !r.ok) {
+      console.error('[seguimiento-ia] la IA contestó ' + (r && r.status) + ': va el texto de siempre');
+      return null;
+    }
+    const cuerpo = await r.json();
+    entendedor.apuntaElCosto(cuerpo && cuerpo.usage, o.cliente);
+    const dijo = (cuerpo && Array.isArray(cuerpo.content) ? cuerpo.content : [])
+      .filter(function (b) { return b && (b.type === 'text' || b.type === undefined) && typeof b.text === 'string'; })
+      .map(function (b) { return b.text; }).join('\n');
+    /* El mismo candado que la conversación. Si no pasa, `null` y arriba
+       se manda la frase fija: nunca un silencio. */
+    const limpio = sanea(String(dijo || '').replace(/^["'«»\s]+|["'«»\s]+$/g, ''));
+    if (!limpio) console.log('[seguimiento-ia] lo que escribió no pasó el candado: va el texto de siempre');
+    return limpio;
+  } catch (e) {
+    console.error('[seguimiento-ia] no se pudo: ' + (e && e.message) + ': va el texto de siempre');
+    return null;
+  }
+}
+
 module.exports = {
   conversa, sanea, limpiaDatos, instruccionesDelAgente, textoDelContexto,
+  redactaSeguimiento,
   recuerda, historialDe, siembraHistorial, olvidaTodo, PALABRAS_PROHIBIDAS,
   unidadPorTexto, unidadesEnTexto, fichaDeUnidades,
   /* El candado, para que `manda` frene lo mismo que `sanea`. */
