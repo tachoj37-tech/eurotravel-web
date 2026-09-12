@@ -8,6 +8,54 @@ Reescrito el 11-sep-2026, cuando el dueño dijo dos cosas que cambian todo:
 
 ---
 
+## ANTES DE NADA: el plan tiene que ser Advanced
+
+Verificado en la documentación de Kommo el 11-sep-2026, y es lo primero
+que hay que mirar porque **si el plan es Base, nada de este documento
+funciona**:
+
+| Lo que el bot necesita | Desde qué plan |
+|---|---|
+| **Salesbot** (el que contesta) | Advanced |
+| **Widget propio** (por donde el bot habla con nuestro servidor) | Advanced |
+| **Webhooks** (avisos de Kommo hacia nosotros) | Advanced, Pro, Enterprise |
+| API v4 y exportar a CSV | todos |
+
+> «You need at least **Advanced** plan to use WebSDK and upload custom
+> widgets to your Kommo account»
+> — developers.kommo.com/docs/private-chatbot-integration
+
+Precios de septiembre de 2026: Base $25, Advanced $35, Pro $45 por
+usuario al mes. Subieron el 1-sep-2026 (antes eran $15 y $25).
+
+**Paso cero: entra a tu cuenta y mira qué plan tienes.** Si es Base, la
+decisión —subir a Advanced o no— es de negocio, no técnica, y hay que
+tomarla antes de seguir.
+
+---
+
+## Dos cosas más que salieron de leer la documentación
+
+**1 · El bot necesita un WIDGET, no sólo un paso de «petición HTTP».**
+
+El Salesbot no trae un paso genérico para llamar a un servidor. Lo que hay
+es `widget_request`, y sólo funciona desde un **widget propio** subido a la
+cuenta. O sea que la integración privada del paso 1 no es opcional: es la
+pieza por donde el bot habla.
+
+**2 · Hay dos segundos para contestar, y sí alcanzan.**
+
+Kommo exige un `200` en **2 segundos**. La IA tarda más que eso, así que a
+primera vista parecía un problema serio. No lo es: el webhook trae un
+`return_url`. Se contesta el `200` de inmediato, se piensa la respuesta con
+calma, y después se llama al `return_url` para seguir la conversación.
+
+Es exactamente lo que el bot ya hace hoy con WhatsApp —contestarle rápido a
+Meta y mandar el mensaje aparte—, así que el código para esto ya existe y
+está probado.
+
+---
+
 ## La buena noticia: hoy no hay mudanza
 
 El número que ya está en Kommo es **nuevo**, así que se convierte en el
@@ -139,6 +187,78 @@ Lo que tiene que pasar, en orden:
 - En Kommo te queda el lead en la etapa `con_precio`, esperando precio.
 
 Si algo de eso no pasa, mándame la captura de la conversación.
+
+---
+
+## Los precios: de Kommo al cerebro
+
+Esto es lo que faltaba en toda la cadena, y Kommo lo resuelve mejor que
+cualquier otra cosa que se haya considerado.
+
+### El problema, dicho claro
+
+Hoy los precios que el dueño confirma **no se guardan en ningún lado**:
+
+- La tabla `precios` de Supabase **no existe** (comprobado el 11-sep-2026:
+  el único proyecto de la cuenta es el de EuroSystem, y no tiene ninguna
+  de las siete tablas del bot).
+- `guardaPrecio` termina en `.catch()` y quien lo llama pone otro, así que
+  un fallo no lo ve nadie.
+- Y aunque se guardaran, **no había puente** entre lo guardado y
+  `api/_destinos.js`, que es de donde el cotizador saca los precios.
+
+### Por qué Kommo es el mejor lugar
+
+Porque el precio ya va a vivir ahí sin que nadie haga nada extra. Kommo es
+un CRM: cada lead conserva su chat, sus notas y sus campos. Cuando el
+vendedor escribe el precio, **Kommo ya lo guardó**.
+
+Y leerlo después es más seguro que escucharlo en vivo: si un vendedor
+contesta a mano sin pasar por el bot, el bot no se entera —pero Kommo sí lo
+tiene. Leyendo la cuenta no se pierde ninguno.
+
+### Cómo queda la cadena
+
+```
+  el vendedor pone el precio en Kommo
+        ↓  (ya quedó guardado: no hay que hacer nada)
+  npm run precios:cerebro      ← leyendo Kommo, no Supabase
+        ↓
+  cerebro/precios-que-he-dado.md      el resumen
+  docs/PRECIOS-QUE-HE-DADO.md         el histórico
+  precios-aprendidos.json             el que puede leer el cotizador
+        ↓
+  el dueño revisa el diff y lo sube
+        ↓
+  el cotizador ya tiene ese precio
+```
+
+El script ya existe (`scripts/precios-al-cerebro.mjs`); lo único que cambia
+es de dónde lee.
+
+### La red de seguridad, que no cuesta nada
+
+Kommo **exporta a CSV o Excel con todos los campos personalizados**, y
+admite filtros. Así que si el script falla, si se cae la API o si un mes se
+olvida correrlo, los precios **no se pierden**: se bajan en un archivo y se
+vuelcan igual.
+
+Ésa es la ventaja grande frente a montar una base propia: el respaldo ya
+viene incluido y lo puede sacar el dueño solo, sin programar.
+
+### Por qué NO se hace automático (todavía)
+
+Se podría: con un webhook de «cambió la etapa del lead» pegándole a Vercel,
+y Vercel escribiendo en el repositorio por la API de GitHub. Funcionaría.
+
+Pero eso significa darle a un servidor permiso de escritura sobre el
+repositorio, y que un precio entre al catálogo sin que nadie lo vea. Para
+dinero, la regla de la casa es al revés: **se revisa antes de cobrarse.**
+Correr un comando cada quincena y mirar el diff cuesta dos minutos y evita
+que un precio mal capturado se cobre solo.
+
+Si con el tiempo correr el comando estorba, se automatiza — pero se empieza
+por lo revisable.
 
 ---
 
