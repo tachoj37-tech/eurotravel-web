@@ -45,14 +45,28 @@ pieza por donde el bot habla.
 
 **2 · Hay dos segundos para contestar, y sí alcanzan.**
 
-Kommo exige un `200` en **2 segundos**. La IA tarda más que eso, así que a
-primera vista parecía un problema serio. No lo es: el webhook trae un
-`return_url`. Se contesta el `200` de inmediato, se piensa la respuesta con
-calma, y después se llama al `return_url` para seguir la conversación.
+Kommo exige un `200` en **2 segundos**:
 
-Es exactamente lo que el bot ya hace hoy con WhatsApp —contestarle rápido a
-Meta y mandar el mensaje aparte—, así que el código para esto ya existe y
-está probado.
+> «To acknowledge that the webhook has been received, you need to respond
+> within 2 seconds with an HTTP status code 200.»
+
+La IA tarda más que eso. La salida existe y es el `return_url` que viene en
+el propio webhook: se contesta el `200` de inmediato, se piensa la respuesta
+con calma, y después se llama a esa dirección para seguir la conversación.
+
+**Pero ese código HAY QUE ESCRIBIRLO — hoy no existe.**
+
+> **CORREGIDO EL 11-sep-2026.** Aquí decía que el bot «ya hace exactamente
+> esto con Meta, así que el código existe y está probado». Es falso, y lo
+> comprobé leyendo el handler: `api/whatsapp.mjs` hace
+> `await atiendeElAviso(...)` —que procesa el aviso ENTERO, incluida la
+> llamada a la IA y los envíos— y contesta el `200` **al final**. Meta lo
+> tolera porque su plazo es mucho más largo; Kommo no.
+>
+> O sea que meter el bot a Kommo no es reusar lo que hay: es partir el
+> camino en dos —contestar primero, trabajar después— y eso es trabajo de
+> arquitectura, no de conexión. Es la diferencia entre una tarde y varios
+> días, y más vale saberlo antes de prometer una fecha.
 
 ---
 
@@ -130,7 +144,9 @@ KOMMO_TOKEN        el del paso 1
 ### 3 · Arma el embudo con estos nombres exactos
 
 ```
-nuevo
+escribio
+cotizando
+pidio_precio
 con_precio
 va_a_apartar
 mando_comprobante
@@ -138,9 +154,19 @@ datos_del_contrato
 contrato_listo
 ```
 
-Tal cual, con guion bajo y sin acentos. Son los que el bot ya usa por
-dentro desde hace semanas. Si les cambias el nombre hay que cambiarlo
-también en el código, y es de las cosas que se olvidan.
+Tal cual, con guion bajo y sin acentos, y **en ese orden**: el bot las
+compara por número para saber si una conversación avanzó o se regresó
+(`api/_etapas.js`). Si les cambias el nombre hay que cambiarlo también en
+el código.
+
+> **CORREGIDO EL 11-sep-2026.** Antes aquí decía una lista de SEIS que
+> empezaba con `nuevo`. Estaba mal de dos maneras: `nuevo` no existe en el
+> código —me la inventé— y faltaban las tres primeras de verdad
+> (`escribio`, `cotizando`, `pidio_precio`). Armar el embudo con esa lista
+> habría dejado al bot intentando mover leads a etapas inexistentes en las
+> tres cuartas partes de la conversación, que es justo el tramo donde se
+> arma el viaje. Salió de contar los usos de cada nombre en el código: los
+> otros cinco aparecen entre 15 y 17 veces, `nuevo` cero.
 
 ### 4 · Dime que ya
 
@@ -233,8 +259,21 @@ tiene. Leyendo la cuenta no se pierde ninguno.
   el cotizador ya tiene ese precio
 ```
 
-El script ya existe (`scripts/precios-al-cerebro.mjs`); lo único que cambia
-es de dónde lee.
+El script ya existe (`scripts/precios-al-cerebro.mjs`, 255 líneas), y la
+parte que agrupa, ordena y escribe los `.md` se aprovecha entera. Lo que hay
+que hacer, medido el 11-sep-2026:
+
+| | |
+|---|---|
+| Cambiar de dónde lee | ~10 líneas (hoy pega contra `/rest/v1/precios`) |
+| **Traducir la forma de los datos** | de los campos de Kommo a `{clave, total, anticipo, pasajeros, salida, fijado, cuando}` |
+| **Escribir `precios-aprendidos.json`** | hoy NO lo hace: sólo escribe los dos `.md` |
+| **Que `_destinos.js` lea ese JSON** | no existe ese puente |
+
+> **PRECISIÓN DEL 11-sep-2026.** Aquí decía «lo único que cambia es de dónde
+> lee». Es la mitad: cambiar la fuente son diez líneas, pero los otros tres
+> renglones de la tabla son código nuevo. Ninguno es difícil; lo que no vale
+> es venderlo como un ajuste de una línea.
 
 ### La red de seguridad, que no cuesta nada
 
