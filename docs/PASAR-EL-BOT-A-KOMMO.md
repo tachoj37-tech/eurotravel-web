@@ -1,175 +1,219 @@
-# Pasar el bot a Kommo
+# Meter el bot a Kommo
 
-Escrito el 10-sep-2026, a petición del dueño: «me entregues los pasos para
-subirlo a Kommo».
+Reescrito el 11-sep-2026, cuando el dueño dijo dos cosas que cambian todo:
 
-Esto es la **guía de la mudanza**, no el manual de Kommo. Lo que trae de más
-—y lo que no vas a encontrar en la documentación de ellos— son las tres cosas
-de *este* montaje que pueden tumbar el bot si se hacen en mal orden.
-
----
-
-## Antes de nada: las tres trampas
-
-### 1 · Vercel publica DOCE funciones y ya hay doce
-
-El plan Hobby tiene ese tope, y hoy está justo en el límite:
-
-```
-cerrar-sesion · confirmar · cotizar · cuenta · entender · pagar
-pedir-codigo · places · verificar-codigo · viaje · webhook-stripe · whatsapp
-```
-
-Crear `api/kommo.js` sería la trece y **el despliegue entero deja de subir** —
-no es que falle la función nueva, es que Vercel rechaza el proyecto completo.
-Hay una prueba que lo caza antes de subir (`pruebas/probar-despliegue.cjs`).
-
-Esto ya se resolvió una vez, con Dualhook: la puerta secreta no es una función
-aparte, es un *rewrite* en `vercel.json` hacia la que ya existe. Lo mismo se
-hará con Kommo. **No crees un archivo nuevo en `api/`.**
-
-### 2 · Mover el número a Kommo apaga Dualhook
-
-Dualhook (12 €/mes) es la puerta por la que el bot vive hoy: Meta le manda los
-avisos directo al servidor y el bot contesta por `api.dualhook.com`. Kommo
-quiere ser esa misma puerta.
-
-**No pueden ser las dos al mismo tiempo.** El día del cambio, el bot deja de
-recibir por un lado y empieza por el otro, y entre uno y otro hay un hueco. Si
-ese hueco cae en martes a mediodía, son clientes escribiendo a nadie.
-
-Por eso el paso 6 de abajo va en domingo temprano y con el número personal a la
-mano.
-
-### 3 · La ventana de 24 horas sigue existiendo
-
-Kommo no la quita: es de Meta. Todo lo que ya sabes se mantiene — texto libre
-solo dentro de las 24 h del último mensaje del cliente, y lo mismo para los
-avisos que te llegan a ti.
+> «Ya hay un número registrado en Kommo» — y es **otro**, no el del bot.
+> «Que empiece desde que lo vamos probando. Lo vamos a probar hoy un rato
+> y ya después lo subimos.»
 
 ---
 
-## Lo que hace falta de tu lado
+## La buena noticia: hoy no hay mudanza
 
-Dos datos, y sin ellos no se puede escribir ni una línea de código:
+El número que ya está en Kommo es **nuevo**, así que se convierte en el
+número de pruebas. Eso quiere decir:
 
-| Qué | Dónde sale |
-|---|---|
-| **Subdominio** | El `loquesea` de `loquesea.kommo.com`, el que ves en la barra |
-| **Token de integración privada** | Kommo → Ajustes → Integraciones → crear una privada |
+- **Dualhook no se toca.** El bot sigue atendiendo clientes de verdad en el
+  número de siempre, sin enterarse de nada.
+- **Nadie de verdad ve las pruebas.** Si el bot contesta una tontería en
+  Kommo, se la contesta a ti.
+- **No hay vuelta atrás que planear**, porque no se rompe nada.
 
-Cuando los tengas, van a `.env.local` (que no sube al repositorio) y a Vercel:
-
-```
-KOMMO_SUBDOMINIO=loquesea
-KOMMO_TOKEN=...
-```
-
-> **El token no se pega en el chat.** Igual que la llave de Anthropic: se
-> escribe directo en `.env.local` y en Vercel, y de ahí nadie lo saca.
+El día del cambio de verdad —mover el número bueno— viene después, y va
+al final de este documento.
 
 ---
 
-## Los pasos, en orden
-
-### Paso 1 · Dar de alta la cuenta
-
-Kommo, plan que incluya el canal de WhatsApp. Crea los usuarios de los
-vendedores desde el principio: cada uno con el suyo, no uno compartido — el
-embudo pierde todo el sentido si no se sabe quién movió qué.
-
-### Paso 2 · Armar el embudo
-
-Las etapas que el bot ya maneja, para que Kommo y el bot hablen de lo mismo.
-Están en `api/_etapas.js`:
+## Cómo va a funcionar
 
 ```
-nuevo → con_precio → va_a_apartar → mando_comprobante
-      → datos_del_contrato → contrato_listo
+  Cliente por WhatsApp
+          │
+          ▼
+      K O M M O          ← el número vive aquí, y aquí ves la conversación
+          │
+          │  Salesbot: «llegó un mensaje» → pregunta a nuestro servidor
+          ▼
+   /api/whatsapp/<ruta secreta>      ← el bot de siempre, en Vercel
+          │
+          │  contesta el texto
+          ▼
+      K O M M O          ← Kommo se lo manda al cliente y queda en el chat
 ```
 
-Ponlas con esos nombres. Si les cambias el nombre en Kommo, hay que cambiarlo
+Lo importante de este dibujo: **Kommo manda y recibe los mensajes**, y
+nuestro servidor solo piensa. Por eso no hace falta pelearse con la API de
+chats de Kommo, que firma cada petición — el Salesbot hace ese trabajo.
+
+Y de regalo, resuelve lo que no se podía en WhatsApp: como todos los
+mensajes pasan por Kommo, **el precio que escribe el vendedor en la
+conversación también se puede leer y aprender**. Eso era imposible con
+Dualhook.
+
+---
+
+## Lo que haces tú
+
+### 1 · Saca el token
+
+**Ajustes → Integraciones → Crear integración → privada.**
+
+Marca los permisos de **leads, contactos y chats**.
+
+⚠️ El token **se enseña una sola vez**. Cópialo en ese momento.
+
+> Si los nombres de los menús no coinciden con esto, mándame una captura y
+> te digo dónde. Kommo cambia la interfaz seguido y prefiero que me la
+> enseñes a que andes adivinando.
+
+### 2 · Guárdalo donde va
+
+En Vercel, proyecto `eurotravel-web` → Settings → Environment Variables:
+
+```
+KOMMO_SUBDOMINIO   el "loquesea" de loquesea.kommo.com
+KOMMO_TOKEN        el del paso 1
+```
+
+**Y dale Redeploy.** Una variable nueva no se aplica sola.
+
+**El token no me lo pegues en el chat.** Escríbelo directo en Vercel.
+
+### 3 · Arma el embudo con estos nombres exactos
+
+```
+nuevo
+con_precio
+va_a_apartar
+mando_comprobante
+datos_del_contrato
+contrato_listo
+```
+
+Tal cual, con guion bajo y sin acentos. Son los que el bot ya usa por
+dentro desde hace semanas. Si les cambias el nombre hay que cambiarlo
 también en el código, y es de las cosas que se olvidan.
 
-### Paso 3 · Sacar el token
+### 4 · Dime que ya
 
-Ajustes → Integraciones → Crear integración privada. Marca los permisos de
-leads, contactos y chats. Guarda el token: **se enseña una sola vez**, igual
-que la llave de Dualhook.
+Con el subdominio y el token puestos, yo escribo la parte del servidor:
+la puerta que entiende lo que manda Kommo y le contesta lo que el bot
+diga. Te aviso cuando esté arriba.
 
-### Paso 4 · Meter las variables en Vercel
+### 5 · Crea el Salesbot
 
-`KOMMO_SUBDOMINIO` y `KOMMO_TOKEN`, en el proyecto `eurotravel-web`.
+Éste es el que conecta las dos cosas, y lo armamos juntos porque necesito
+ver qué pasos te ofrece tu cuenta.
 
-**Y acuérdate del Redeploy.** Cambiar una variable en Vercel no la aplica sola;
-ya se te olvidó varias veces con las de WhatsApp.
+La forma que va a tener:
 
-### Paso 5 · Conectar el código (esto lo hago yo)
+1. **Arranque:** cuando llega un mensaje nuevo al chat.
+2. **Paso de petición HTTP:** a la dirección que yo te dé, mandando el
+   texto del cliente y su número.
+3. **Paso de mensaje:** contesta con lo que el servidor devolvió.
 
-Con las variables puestas:
+Cuando llegues aquí, **mándame una captura de la lista de pasos** que te
+ofrece el Salesbot. Con eso te digo exactamente cuáles poner y en qué
+orden — las opciones cambian según el plan.
 
-- `api/_kommo.js` — el cliente, apagado si faltan las variables, igual que
-  `_almacen.js`. Si Kommo se cae, el bot sigue contestando.
-- El *rewrite* en `vercel.json` para la entrada de Kommo, sin función nueva.
-- Los botones del vendedor: cuenta, contrato, recibido y las fotos de la
-  unidad, con su copy-paste.
-- `pruebas/probar-kommo.mjs`, con una puerta de mentiras — como se prueban
-  Meta y EuroSystem hoy.
+### 6 · Pruébalo
 
-### Paso 6 · El cambio de número — el día delicado
+Escríbele al número de Kommo desde tu celular, como si fueras un cliente:
 
-**En domingo temprano**, con el celular a la mano:
+```
+hola, quiero cotizar un viaje a vallarta
+somos 45
+20 de noviembre
+22 de noviembre
+el marcopolo
+guadalajara
+solo nos llevan y traen
+sí
+```
 
-1. Avisa a los vendedores que durante una hora contesten desde el WhatsApp
-   Business del teléfono.
-2. En Kommo, conecta el número. Kommo pide el Webhook Override en Meta, que es
-   exactamente lo que hoy apunta a Dualhook.
-3. Manda un mensaje de prueba desde tu número personal y comprueba que llega
-   al servidor: en Vercel → Logs tiene que aparecer la línea del webhook.
-4. Contesta desde el bot y comprueba que le llega al cliente.
-5. **Solo cuando los dos sentidos funcionen**, cancela Dualhook. Ni un minuto
-   antes: mientras no lo canceles, la vuelta atrás es de dos clics.
+Lo que tiene que pasar, en orden:
 
-### Paso 7 · La primera semana
+- El bot te va preguntando lo que falta, una cosa a la vez.
+- Al final te deja el resumen del viaje completo en un solo mensaje.
+- **Y ahí se calla.** El bot llega hasta la cotización y no más.
+- En Kommo te queda el lead en la etapa `con_precio`, esperando precio.
 
-Deja `DUENO_WHATSAPP` puesta. Los cinco avisos te siguen llegando a tu número
-personal aunque el bot ya viva en Kommo, y ésa es tu red mientras compruebas
-que el embudo se mueve solo.
-
-Cuando lleves una semana viendo todo en Kommo, se apagan.
+Si algo de eso no pasa, mándame la captura de la conversación.
 
 ---
 
-## Cómo volver atrás
+## Los atajos, una vez que esté
 
-Mientras Dualhook siga contratado:
+Los mismos que ya funcionan por WhatsApp. Escribe **`atajos`** y el bot te
+enseña la lista completa:
+
+| Escribes | Hace |
+|---|---|
+| `cuenta` | le manda la ficha, la CLABE y el número |
+| `contrato` | le pide sus datos para el contrato |
+| `recibido` | le confirma que su pago entró |
+| `fotos` | le manda fotos de su unidad |
+| `fotos i6s` | o de la que le digas |
+| un número | ése es el precio, y se lo manda cotizado |
+| `total 52,000` | corrige el total sin volver a cotizar |
+| `yo` / `bot` | tomas el chat, o se lo regresas |
+| `pendientes` | en qué va cada cliente |
+| `atajos` | la lista |
+
+En Kommo estos pueden dejar de ser palabras tecleadas y volverse **botones
+de verdad**. Eso se hace después de que lo básico funcione: primero que
+conteste, luego que se vea bonito.
+
+---
+
+## Lo que Kommo arregla solo
+
+Dos cosas que hoy no tienen dónde vivir:
+
+- **El renglón del Excel** (`💵 Del Excel: $13,000, columna «NEOBUS/i6
+  50/51 PAX»`) y **el aviso de recargo** (`⚠️ Ese calculado NO trae el
+  recargo de Ocotlán`). Hoy van en un mensaje aparte a tu número personal,
+  porque en WhatsApp no existen las notas privadas dentro de un chat. En
+  Kommo se vuelven **notas internas del lead**: las ves al abrir la
+  conversación y el cliente nunca las ve.
+
+- **Capturar el precio que escribe el vendedor.** Con Dualhook el bot no
+  puede ver lo que tú tecleas desde el teléfono. En Kommo sí, y de ahí se
+  aprende solo.
+
+---
+
+## El día de mover el número bueno
+
+Cuando las pruebas estén y quieras pasar el número real:
+
+1. **En domingo temprano**, y avisa a los vendedores que esa hora
+   contesten desde el teléfono.
+2. Conecta el número bueno en Kommo.
+3. Manda un mensaje de prueba desde tu número personal. Tiene que llegarte
+   al servidor: en Vercel → Logs aparece la línea del webhook.
+4. Contesta desde el bot y comprueba que le llega al cliente.
+5. **Solo cuando los dos sentidos funcionen**, cancela Dualhook. Ni un
+   minuto antes: mientras siga contratado, la vuelta atrás son cinco
+   minutos.
+
+### Cómo volver atrás, mientras Dualhook siga vivo
 
 1. En Meta, regresa el Webhook Override a la URL de Dualhook.
-2. En Vercel, `WHATSAPP_API_BASE=https://api.dualhook.com/v25.0` y el token
-   `dh_live_…` de vuelta.
+2. En Vercel, `WHATSAPP_API_BASE=https://api.dualhook.com/v25.0` y el
+   token `dh_live_…` de vuelta.
 3. Redeploy.
 
-Son cinco minutos. Por eso Dualhook no se cancela el mismo día.
-
 ---
 
-## Lo que NO cambia
+## Un detalle técnico, para que no te agarre de sorpresa
 
-- **El bot sigue llegando solo hasta la cotización.** Kommo no lo hace hablar
-  de más; el precio lo sigues poniendo tú.
-- **El criterio de precios.** Vive en `docs/CRITERIO-DE-PRECIOS.md` y en
-  `cerebro/`, y no sabe nada de CRMs.
-- **Los contratos** siguen yendo a EuroSystem por `POST /api/contratos/externo`.
-- **Los precios aprendidos** siguen guardándose en Supabase y volcándose al
-  cerebro con `npm run precios:cerebro`.
+El plan Hobby de Vercel publica **doce funciones** y hoy hay doce exactas.
+Crear un archivo nuevo en `api/` sería la trece y **el despliegue entero
+dejaría de subir** — no falla la función nueva, Vercel rechaza el proyecto
+completo. Hay una prueba que lo caza antes (`pruebas/probar-despliegue.cjs`).
 
----
-
-## Lo que hay que comprobar contra Kommo antes de escribir el código
-
-Escrito aquí para no olvidarlo, y porque **no está verificado**: la parte de
-mandar mensajes desde el bot pasa por la API de chats de Kommo
-(`amojo.kommo.com`), que pide una identidad de bot aparte y firma cada
-petición. Es la pieza que no se puede escribir a ciegas.
-
-Los pasos 1 a 4 no dependen de eso: se pueden hacer hoy.
+Así que la puerta de Kommo va a colgar de la función que ya existe, con un
+rewrite en `vercel.json`. Es el mismo truco con el que se resolvió Dualhook.
+No es algo que tengas que hacer tú; va aquí para que si un día ves un
+despliegue rechazado, sepas por dónde empezar a buscar.
