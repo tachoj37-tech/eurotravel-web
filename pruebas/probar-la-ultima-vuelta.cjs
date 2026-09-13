@@ -162,5 +162,37 @@ titulo('el flujo del dueño, de punta a punta (13-sep-2026)');
   ok('«sí, todo bien» cierra y pasa al vendedor', s.pasa === true);
 }
 
+titulo('los días de movimiento, sin inventarlos (escenario n, 13-sep-2026)');
+{
+  /* Con el modelo real, a «¿se van a mover allá?» el ticket salió con un
+     día de movimiento que nadie dijo y con el viaje recortado de 4 días a
+     2. Aquí se cuida la parte del guion; el candado sobre lo que devuelve
+     la IA se comprueba abajo, leyendo el código. */
+  const HASTA = ['hola', 'Cotizar un viaje', 'a la ciudad de mexico', 'somos 40', 'de gdl',
+    '5 de diciembre', 'el 8', 'el neobus'];
+  const base = corrido(HASTA);
+  function dice(frase) { return conv.respuestaA(frase, JSON.parse(JSON.stringify(base.estado)), HOY); }
+
+  const a = dice('sí, allá nos vamos a mover');
+  ok('«sí, nos vamos a mover» no inventa cuántos días', !a.estado || a.estado.recorridos === undefined);
+  ok('  y pregunta cuántos, no lo mismo otra vez', /cu[aá]ntos d[ií]as/i.test(a.texto));
+
+  const b = dice('dos días');
+  igual('«dos días», con letra, son 2 días de movimiento', b.estado && b.estado.recorridos, 2);
+  igual('  y NO cambian el regreso', b.estado && b.estado.regreso, '2026-12-08');
+
+  const c = dice('hasta 10 horas');
+  ok('«hasta 10 horas» no son 10 días', !c.estado || c.estado.recorridos !== 10);
+
+  const d = dice('es para una boda');
+  ok('«es para UNA boda» no es un día de movimiento', !d.estado || d.estado.recorridos !== 1);
+
+  /* El candado sobre la IA vive en whatsapp.mjs. Se comprueba que siga ahí. */
+  const fs = require('fs');
+  const wa = fs.readFileSync(path.join(RAIZ, 'api/whatsapp.mjs'), 'utf8');
+  ok('los recorridos de la IA pasan por el candado', /recorridos de la IA descartados/.test(wa));
+  ok('  y las fechas de la IA también', /de la IA descartada: /.test(wa));
+}
+
 console.log('\n' + buenas + ' buenas, ' + malas + ' malas');
 process.exit(malas ? 1 : 0);

@@ -2712,6 +2712,56 @@ async function loQueDiceElAgente(envio) {
     const base = viajeBaseDeLaFicha(tickets.fichaDe(cliente));
     if (base && base.nombre) antes = Object.assign({}, antes, { nombre: base.nombre });
   }
+  /* ------------------------------------------------------------
+     LO QUE LA IA LEE, SOLO SI EL CLIENTE LO DIJO — 13-sep-2026
+     ------------------------------------------------------------
+     Corrida con el modelo real, escenario n. El bot preguntó «¿se van a
+     mover allá?» y el modelo leyó mal las tres respuestas seguidas:
+
+       «sí, allá nos vamos a mover»  →  recorridos: 1       (nadie dijo 1)
+       «dos días»                     →  regreso: 6 de dic   (eran 2 días de
+                                                              movimientos; el
+                                                              viaje era al 8)
+       «hasta 10 horas»               →  recorridos: 10      (horas, no días)
+
+     El ticket salió con un viaje de 2 días en lugar de 4, y así lo habría
+     cotizado el vendedor. La IA es buena para platicar y mala para esto:
+     confunde duración, días de movimiento y horas.
+
+     Así que dos datos que mueven el precio pasan un candado: solo entran
+     si el MENSAJE DEL CLIENTE los respalda.
+
+       · Días de movimiento: tiene que haber un número (o un número dicho
+         con letra) que NO hable de horas, y no puede pasar de los días del
+         viaje. «Sí, nos vamos a mover» sin número no inventa uno: se
+         pregunta cuántos.
+       · Fechas: el propio guion tiene que poder leer una fecha en el
+         mensaje. «Dos días» no es una fecha, así que no mueve el regreso.
+     ------------------------------------------------------------ */
+  if (dicho.datos && typeof dicho.datos === 'object') {
+    const t = conversacion.normaliza(String(texto || ''));
+    const datosIA = Object.assign({}, dicho.datos);
+    if (datosIA.recorridos !== undefined && datosIA.recorridos !== null && Number(datosIA.recorridos) > 0) {
+      const hablaDeHoras = /\bhoras?\b|\bhrs?\b/.test(t);
+      const traeNumero = /\b\d{1,2}\b|\b(un|uno|una|dos|tres|cuatro|cinco|seis|siete|ocho|nueve|diez)\b/.test(t);
+      const tope = (antes.salida && antes.regreso) ? conversacion.diasEntre(antes.salida, antes.regreso) : 30;
+      if (hablaDeHoras || !traeNumero || Number(datosIA.recorridos) > tope) {
+        console.log('[agente] recorridos de la IA descartados («' + String(texto).slice(0, 40) + '» → ' + datosIA.recorridos + ')');
+        delete datosIA.recorridos;
+      }
+    }
+    for (const campo of ['salida', 'regreso']) {
+      if (!datosIA[campo]) continue;
+      let hayFecha = false;
+      try { hayFecha = !!conversacion.fechaDe(texto, hoy) || !!(conversacion.leeDeUnJalon(texto, hoy) || {})[campo]; }
+      catch (e) { hayFecha = false; }
+      if (!hayFecha && !/\bmismo dia\b|\bese dia\b/.test(t)) {
+        console.log('[agente] ' + campo + ' de la IA descartada: «' + String(texto).slice(0, 40) + '» no trae fecha');
+        delete datosIA[campo];
+      }
+    }
+    dicho.datos = datosIA;
+  }
   const nuevo = conversacion.pegaDatos(antes, dicho.datos);
   /* «Solo de ida» dicho a la IA. El agente no extrae ese dato —no está en
      su esquema— así que lo lee el código, igual que el guion. Va aquí

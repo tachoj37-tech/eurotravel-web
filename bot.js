@@ -3796,11 +3796,43 @@ function pasoDeCotizacion(t, crudo, estado, hoy) {
       if (acuse) return siguiente(e, acuse);
     }
 
+    /* ------------------------------------------------------------
+       LOS TRES TROPIEZOS DE ESTE PASO — 13-sep-2026
+       ------------------------------------------------------------
+       Corrida con el modelo real, escenario n:
+         · «sí, allá nos vamos a mover» → el bot volvía a hacer LA MISMA
+           pregunta. El cliente ya contestó que sí; lo que falta es
+           cuántos días, y eso es lo que se pregunta.
+         · «dos días», con letra, no se leía: solo se buscaban dígitos.
+         · «hasta 10 horas» se leía como DIEZ días de movimiento. Las horas
+           son otra pregunta, la de después.
+       ------------------------------------------------------------ */
+    const CON_LETRA = { un: 1, uno: 1, una: 1, dos: 2, tres: 3, cuatro: 4, cinco: 5,
+      seis: 6, siete: 7, ocho: 8, nueve: 9, diez: 10 };
+    const hablaDeHoras = /\bhoras?\b|\bhrs?\b/.test(t);
     if (NO_SE_MUEVEN.test(t)) n = 0;
     else if (/ningun|no\b|nada|solo ida|ninguna/.test(t)) n = 0;
-    else {
+    else if (!hablaDeHoras) {
       const m = t.match(/(\d{1,2})/);
       if (m) n = Number(m[1]);
+      else {
+        /* Con letra, SOLO pegado a «día(s)» o como el mensaje entero:
+           «es para UNA boda» se leía como un día de movimiento al primer
+           intento de este arreglo. */
+        const w = t.match(/\b(un|uno|una|dos|tres|cuatro|cinco|seis|siete|ocho|nueve|diez)\s+d[ií]as?\b/) ||
+          t.match(/^\s*(uno|una|dos|tres|cuatro|cinco|seis|siete|ocho|nueve|diez)\s*$/);
+        if (w) n = CON_LETRA[w[1]];
+      }
+    }
+    if (n === null && !hablaDeHoras &&
+        /\b(si|sip|claro|mover|movemos|moviendo|recorr\w*|pasear|paseo|nos vamos a mover)\b/.test(t)) {
+      const dias = diasEntre(e.salida, e.regreso);
+      return {
+        texto: '¿Cuántos días se van a mover allá?',
+        pasa: false, estado: e,
+        opciones: [1, 2, 3].filter(function (d) { return d <= dias; })
+          .map(function (d) { return d === 1 ? '1 día' : d + ' días'; })
+      };
     }
     if (n === null || n < 0) {
       /* Y si no dijo movimientos pero sí otra cosa, se guarda antes de
