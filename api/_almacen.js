@@ -591,12 +591,28 @@ async function leeTicket(id) {
    ------------------------------------------------------------ */
 async function guardaPrecio(renglon) {
   if (!renglon || !renglon.clave || !(renglon.total > 0)) return false;
-  const r = await pide('precios', {
+  /* ------------------------------------------------------------
+     SI LA BASE NO TIENE UNA COLUMNA NUEVA, SE GUARDA SIN ELLA
+     ------------------------------------------------------------
+     13-sep-2026, y casi se pierde en producción. El renglón ganó la
+     columna `calculado` y el almacén real todavía no la tenía:
+     PostgREST contesta 400 y rechaza EL RENGLÓN ENTERO. Antes esto
+     mandaba el renglón tal cual, así que el primer precio que el
+     dueño confirmara después del despliegue no se habría guardado —
+     lo contrario de para qué era la columna. No se perdió ninguno:
+     no hubo tickets en ese rato.
+
+     Fichas y tickets ya usaban esta salida desde el 7-sep; al precio
+     le faltaba. Se copia el renglón para no quitarle campos a quien
+     llamó. */
+  const fila = Object.assign({}, renglon);
+  if (faltaLaColumna('precios', 'calculado')) delete fila.calculado;
+  const r = await guardaSinColumnasQueFalten('precios', {
     metodo: 'POST',
     cabeceras: { 'Prefer': 'return=minimal' },
-    cuerpo: renglon,
+    cuerpo: fila,
     sinRespuesta: true
-  });
+  }, fila, 'precios');
   if (r) return true;
   /* El renglón entero: si la base no lo guardó, esto es lo único que
      queda de ese precio. */

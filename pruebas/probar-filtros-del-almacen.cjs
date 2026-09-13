@@ -151,6 +151,60 @@ const RAROS = ['a&b=c', 'a,b', '100%', "o'brien", 'con espacio', 'salto\nlinea',
   cierto('  filtrando por ese conteo exacto',
     new URL(ultima()).searchParams.get('toques') === 'eq.2');
 
+  console.log('\n--- un precio NO se pierde si la base no tiene la columna nueva ---');
+
+  /* ------------------------------------------------------------
+     13-sep-2026. Esto casi se pierde en producción, y fue mío.
+
+     El renglón del precio aprendido ganó la columna `calculado`. El
+     almacén real —en la organización EuroBot— no la tiene todavía, y
+     `guardaPrecio` mandaba el renglón tal cual: PostgREST contesta 400
+     «no existe la columna» y rechaza EL RENGLÓN ENTERO. O sea que el
+     primer precio que el dueño confirmara después del despliegue NO SE
+     GUARDABA — justo lo contrario de para qué era la columna.
+
+     No se perdió ninguno: entre el despliegue y el arreglo solo corrió
+     el recordatorio automático, ningún ticket. Pero el siguiente sí.
+
+     Este mismo archivo ya tenía la salida para eso —fichas y tickets
+     la usan desde el 7-sep—: si falta una columna, se guarda sin ella y
+     se grita en el registro. Aquí se exige que el precio la use.
+     ------------------------------------------------------------ */
+  {
+    const guardado = global.fetch;
+    let intentos = 0, cuerpoFinal = null;
+    global.fetch = function (url, opc) {
+      intentos++;
+      const cuerpo = opc && opc.body ? JSON.parse(opc.body) : {};
+      if ('calculado' in cuerpo) {
+        /* Lo que contesta PostgREST de verdad cuando no existe la columna. */
+        return Promise.resolve({ ok: false, status: 400,
+          text: function () { return Promise.resolve(
+            '{"code":"PGRST204","message":"Could not find the \'calculado\' column of \'precios\' in the schema cache"}'); } });
+      }
+      cuerpoFinal = cuerpo;
+      return Promise.resolve({ ok: true, status: 201, json: function () { return Promise.resolve(null); },
+        text: function () { return Promise.resolve(''); } });
+    };
+    const errores = [];
+    const errorDeAntes = console.error;
+    console.error = function (m) { errores.push(String(m)); };
+
+    const r = await almacen.guardaPrecio({ clave: 'zmg|puerto vallarta|sprinter|4', total: 24000,
+      anticipo: 5000, fijado: true, calculado: 22000, destino: 'Puerto Vallarta' });
+
+    console.error = errorDeAntes;
+    global.fetch = guardado;
+
+    igual('sin la columna, el precio SÍ se guarda', r, true);
+    cierto('  reintentando sin ese campo', intentos === 2 && cuerpoFinal && !('calculado' in cuerpoFinal));
+    igual('  y con su total intacto', cuerpoFinal && cuerpoFinal.total, 24000);
+    cierto('  y lo grita en el registro, para que alguien corra el SQL',
+      errores.some(function (e) { return /no tiene la columna «calculado»/.test(e); }));
+    cierto('  y NO lo da por perdido',
+      !errores.some(function (e) { return /precio-perdido/.test(e); }));
+  }
+
   console.log('\n--- los valores de texto libre ---');
 
   /* La clave de un precio lleva el DESTINO, que lo escribe el cliente
