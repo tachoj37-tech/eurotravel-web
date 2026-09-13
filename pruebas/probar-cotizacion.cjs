@@ -74,7 +74,27 @@ const AUTOBUS = { id: 'irizar-i6s', name: 'Irizar i6S', cotizadorAutomatico: fal
     (await m1.cotiza()).tipo, 'manual');
   cierto('cotizaEnAutomatico dice que no', !m1.cotizaEnAutomatico());
 
-  /* ---------------- el camino feliz, con lista blanca ---------------- */
+  /* ---------------- el camino feliz, con lista blanca ----------------
+     R47 · SE ENCIENDE EL COTIZADOR A PROPÓSITO (12-sep-2026)
+     ------------------------------------------------------------
+     Desde el 12-sep-2026 la página no cotiza —«ningún precio para
+     nadie»— y con el interruptor apagado esta sección entera no se
+     puede correr: la máquina contesta «manual» antes de pedir nada,
+     así que no hay respuesta del servidor que filtrar.
+
+     Pero LA REGLA QUE SE PRUEBA AQUÍ SIGUE VIVA, y es de las que no
+     conviene dejar sin quien las mire: es la lista blanca que le
+     quita los kilómetros y la tarifa a lo que manda el servidor. El
+     día que él encienda el cotizador, esa lista tiene que seguir
+     funcionando — y si nadie la probó en el intervalo, nadie sabe.
+
+     Así que se enciende aquí y se vuelve a apagar al salir de la
+     sección. Lo que NO se toca es el candado de verdad: éste es el
+     del navegador. El del servidor —`tarifa.PAGINA_DA_PRECIOS`— es
+     el que defiende el dinero, y lo cuida `probar-sin-precio.cjs`. */
+  const APAGADO = COTIZACION.PAGINA_DA_PRECIOS;
+  COTIZACION.PAGINA_DA_PRECIOS = true;
+
   /* El servidor de mentiras contesta el precio Y de más: mete kilómetros y
      tarifa como si un despiste del futuro los filtrara. La máquina los debe
      tirar ANTES de guardarlos: esa es la regla del kilómetro de este lado. */
@@ -180,6 +200,25 @@ const AUTOBUS = { id: 'irizar-i6s', name: 'Irizar i6S', cotizadorAutomatico: fal
   cierto('tras pon(), la cotización vieja no sobrevive',
     (m2.pon({ origen: LUGAR_GDL, destino: LUGAR_PVR, salida: '2026-10-01', regreso: '', unidad: SPRINTER }),
      m2.estadoVivo().cotizacion === null));
+
+  /* ---------------- R47 · y como está de verdad ----------------------
+     Se devuelve el interruptor a como vive en el archivo y se comprueba
+     lo que ve un cliente hoy: la Sprinter —la única que cotizaba— ya no
+     manda ni una petición. Sin esto, la sección de arriba se quedaría
+     encendida y la prueba diría que la página cotiza cuando no. */
+  COTIZACION.PAGINA_DA_PRECIOS = APAGADO;
+  igual('el interruptor vuelve a como está en el archivo', COTIZACION.PAGINA_DA_PRECIOS, false);
+
+  let pedidasApagado = 0;
+  const m6 = COTIZACION.crea({
+    pide: function () {
+      pedidasApagado++;
+      return Promise.resolve({ ok: true, json: function () { return Promise.resolve({ total: 1 }); } });
+    }
+  });
+  m6.pon({ origen: LUGAR_GDL, destino: LUGAR_PVR, salida: '2026-09-03', regreso: '2026-09-06', unidad: SPRINTER, redondo: true });
+  igual('apagado, la Sprinter contesta manual', (await m6.cotiza()).tipo, 'manual');
+  igual('y sin gastar una petición', pedidasApagado, 0);
 
   console.log('\n' + buenas + ' buenas, ' + malas + ' malas');
   process.exit(malas ? 1 : 0);

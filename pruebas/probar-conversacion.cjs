@@ -472,10 +472,27 @@ function cotiza(extra) {
      el bot no lo podía ofrecer. */
   const century = catalogo.filter(function (u) { return /Century/i.test(u.name); })[0];
   okQue('el Century está en el catálogo', !!century);
-  /* 7-sep-2026: el dueño lo puso como «47 a 49» y dictó que se ofrezca
-     hasta con 48 personas y con 49 ya no; por eso `max` es 48. */
-  ok('  se ofrece como «47 a 49 pasajeros»', century && century.cap, '47 a 49 pasajeros');
-  ok('  y su tope para ofrecerlo es 48', century && century.max, 48);
+  /* ------------------------------------------------------------
+     DEJARON DE SER UNO · 12-sep-2026
+
+     Decía «se ofrece como 47 a 49 pasajeros», con `max` 48: un solo
+     renglón para los dos Centurys y un asiento de margen.
+
+     El dueño lo partió: «irizar century 47 es uno, irizar century de 49 es
+     otro… son unidades con diferentes precios, no los pongas en una misma
+     unidad». Y el Excel le da la razón — Mazatlán son $38,000 en la
+     columna del de 47 y $40,000 en la del de 49.
+
+     Ahora son dos unidades, cada una con su capacidad de verdad y su
+     columna. El margen que daba el 48 sale solo: un grupo de 48 no cabe en
+     el de 47 y sí en el de 49.
+     ------------------------------------------------------------ */
+  ok('  el de 47 se ofrece como «47 pasajeros»', century && century.cap, '47 pasajeros');
+  ok('  y su tope es 47', century && century.max, 47);
+
+  const century49 = catalogo.filter(function (u) { return u.name === 'Irizar Century 49'; })[0];
+  okQue('  y existe el segundo Century, el de 49', !!century49);
+  ok('    con su tope en 49', century49 && century49.max, 49);
   /* Su forma de venderse es la regla más delicada del catálogo, y ya
      la cubre la prueba de arriba — pero se comprueba aquí también,
      nombrándola, porque es la unidad por la que se escribió. */
@@ -486,10 +503,13 @@ function cotiza(extra) {
   /* Las capacidades, confirmadas contra el sitio oficial el 4-sep-2026.
      Se cuidan porque un número de más son personas paradas el día del
      viaje — y ésa no se corrige después. */
-  /* El Century vale 48 y no 49: es «47 a 49» y el dueño dejó un lugar de
-     margen (7-sep-2026). */
-  const capacidades = { 'Irizar i6S': 51, 'Irizar i6': 47, 'Irizar PB': 47,
-    'Neobus': 50, 'Irizar Century': 48, 'Marcopolo Paradiso G8': 51 };
+  /* El Century se partió en dos el 12-sep-2026, a pedido del dueño: cada uno
+     con su capacidad real y su columna del Excel. Ver el comentario de
+     arriba. Los dos van en esta lista, que es la que cuida que un número de
+     más sean personas paradas el día del viaje. */
+  const capacidades = { 'Irizar i6S': 51, 'Irizar i6': 47, 'Irizar i6 51': 51,
+    'Irizar PB': 47, 'Neobus': 50,
+    'Irizar Century': 47, 'Irizar Century 49': 49, 'Marcopolo Paradiso G8': 51 };
   const malas = Object.keys(capacidades).filter(function (n) {
     const u = catalogo.filter(function (x) { return x.name === n; })[0];
     return !u || Number(u.max) !== capacidades[n];

@@ -197,5 +197,104 @@ const delatan = TODOS.filter(function (t) {
 ok('ninguno delata al bot', delatan, []);
 
 /* ============================================================ */
+titulo('los diez que afirman la fecha: por qué siguen aquí');
+
+/* ------------------------------------------------------------
+   13-sep-2026. Estaba anotado como pendiente que «los 40 textos ya
+   no se usan; dejarlos documentados o quitarlos». Al ir a quitarlos
+   resultó que LA NOTA ESTABA MAL:
+
+     · `A_LAS_HORAS` son [22, 72, 168] y los tres toques existen, así
+       que PRIMER_TOQUE, VEINTICUATRO_HORAS y
+       SETENTA_Y_DOS_SIN_CALENDARIO —treinta textos— se usan en CADA
+       recordatorio que sale.
+     · Los únicos sin alcanzar son los diez de
+       SETENTA_Y_DOS_CON_CALENDARIO: piden `fechaLibre: true` y los
+       dos sitios de `whatsapp.mjs` pasan `false`.
+
+   Y no es olvido: el propio código lo dice —«nadie comprobó el
+   calendario aquí»—. La regla 4 del módulo es que LA ESCASEZ TIENE
+   QUE SER CIERTA, y afirmar que una fecha está libre sin haberlo
+   visto es justo lo que no se vale.
+
+   POR ESO NO SE BORRAN: la consulta que falta YA EXISTE, en el mismo
+   archivo —`disponibilidadDe()` en `whatsapp.mjs`, que le pregunta a
+   EuroSystem y contesta `{ libres, total }`—. Están a una llamada de
+   servir, no muertos. Borrarlos sería tirar trabajo que ya tiene su
+   fuente de datos puesta.
+
+   Esta sección guarda el hallazgo por los dos lados: si alguien
+   engancha `fechaLibre`, comprueba que los diez funcionan; y si
+   alguien los borra creyéndolos muertos, se entera aquí.
+   ------------------------------------------------------------ */
+
+okQue('los diez con calendario siguen ahí', r.SETENTA_Y_DOS_CON_CALENDARIO.length === 10);
+
+/* Hoy: sin calendario comprobado, el tercer toque NO afirma nada. */
+const sinAfirmar = r.recordatorio(3, {
+  cliente: '3312223344', vuelta: 1, fecha: '20 de diciembre', fechaLibre: false });
+okQue('sin comprobar el calendario sale el juego que NO afirma',
+  r.SETENTA_Y_DOS_SIN_CALENDARIO.indexOf(sinAfirmar) >= 0);
+okQue('  y no se cuela ningún hueco de fecha sin llenar',
+  sinAfirmar.indexOf('[fecha]') === -1);
+
+/* Y con la fecha comprobada, los diez entran y llenan su hueco. */
+const afirmando = r.recordatorio(3, {
+  cliente: '3312223344', vuelta: 1, fecha: '20 de diciembre', fechaLibre: true });
+okQue('con el calendario comprobado sí entran los diez',
+  r.SETENTA_Y_DOS_CON_CALENDARIO.some(function (t) {
+    return t.replace(/\[fecha\]/g, '20 de diciembre') === afirmando;
+  }));
+okQue('  y el hueco [fecha] queda lleno', afirmando.indexOf('[fecha]') === -1);
+
+/* Solo SEIS de los diez traen el hueco `[fecha]`; los otros cuatro dicen
+   «tu fecha» sin nombrarla, y también valen. Así que no se puede exigir
+   que el texto escogido traiga la fecha — lo que sí se exige es que
+   NINGUNO deje el hueco a la vista, en las diez variantes. */
+{
+  const conHueco = r.SETENTA_Y_DOS_CON_CALENDARIO.filter(function (t) {
+    return t.indexOf('[fecha]') >= 0;
+  }).length;
+  okQue('seis de los diez nombran la fecha y cuatro no', conHueco === 6);
+
+  /* Se recorren las diez cambiando de cliente, para que salgan todas. */
+  const sobras = [];
+  for (let i = 0; i < 40; i++) {
+    const t = r.recordatorio(3, {
+      cliente: '33' + String(10000000 + i), vuelta: i,
+      fecha: '20 de diciembre', fechaLibre: true });
+    if (t.indexOf('[fecha]') >= 0) sobras.push(t);
+  }
+  ok('  y en ninguna de las diez se queda el hueco a la vista', sobras, []);
+}
+
+/* El candado que más importa de los tres: `fechaLibre: true` NO basta.
+   Sin fecha no hay nada que afirmar, y afirmar sin fecha es inventar —
+   que es el punto 1 de la cabecera de este archivo. */
+const libreSinFecha = r.recordatorio(3, {
+  cliente: '3312223344', vuelta: 1, fecha: null, fechaLibre: true });
+okQue('con fechaLibre pero SIN fecha, no se afirma nada',
+  r.SETENTA_Y_DOS_SIN_CALENDARIO.indexOf(libreSinFecha) >= 0);
+
+/* Y que hoy de verdad nadie los alcance. Si algún día se engancha, estas
+   cuentas cambian y hay que venir a leer esta sección antes de tocarlas. */
+{
+  const fs2 = require('fs');
+  const path2 = require('path');
+  const wa = fs2.readFileSync(path2.join(__dirname, '..', 'api', 'whatsapp.mjs'), 'utf8');
+  /* Se cuentan TODOS los `fechaLibre:` y aparte los que valen `false`.
+     La primera versión de esto usaba `fechaLibre:\s*(?!false)` y contaba
+     2 de 2: el `\s*` casa con cero espacios, así que el lookahead miraba
+     « false» —con espacio— y decía «no es false». Un lookahead después
+     de un cuantificador flexible casi nunca mira donde uno cree. */
+  const todos = (wa.match(/fechaLibre:/g) || []).length;
+  const enFalso = (wa.match(/fechaLibre:\s*false/g) || []).length;
+  ok('hoy los dos sitios fijan fechaLibre en false', enFalso, 2);
+  ok('  y no hay ningún otro que lo calcule', todos, enFalso);
+  okQue('pero la consulta que haría falta ya existe',
+    /async function disponibilidadDe\(/.test(wa));
+}
+
+/* ============================================================ */
 console.log('\n' + buenas + ' buenas, ' + malas + ' malas');
 process.exit(malas ? 1 : 0);

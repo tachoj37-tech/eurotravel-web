@@ -1562,8 +1562,28 @@ titulo('R50 · una segunda cotización no hereda los datos de la primera (10-sep
   okQue('  la plática nueva no hereda la gente', !ch.gente || ch.gente !== 40);
   okQue('  ni la unidad', !ch.unidadNombre || !/i6/i.test(ch.unidadNombre));
   okQue('  y sí trae el destino nuevo', /vallarta/i.test(ch.destino || ''));
-  /* Y una corrección del MISMO viaje sigue siendo un cambio, no otro viaje. */
+  /* Y una corrección del MISMO viaje sigue siendo un cambio, no otro viaje.
+
+     ------------------------------------------------------------
+     ESTE BLOQUE LLEVA SU PROPIO RELOJ (13-sep-2026)
+     ------------------------------------------------------------
+     Traía las fechas escritas a mano —salida el 11 de septiembre y
+     «el 12»— y el 13 de septiembre, al cruzar la medianoche, SE CAYÓ
+     SOLO: el viaje quedó en el pasado, el bot lo marcó vencido y dejó
+     de ser «el mismo viaje corregido».
+
+     Se perdió un rato averiguando si lo había roto un cambio del día.
+     No lo rompió nadie: caducó. Y se iba a volver a caer mañana, y
+     pasado.
+
+     Con `HOY_DE_PRUEBA` el bot cree que es el 10 de septiembre, así
+     que las fechas de abajo vuelven a estar por delante y se quedan
+     ahí para siempre. Se devuelve al salir, para no contagiar a los
+     bloques de después.
+     ------------------------------------------------------------ */
   limpia();
+  const relojDeAntes = process.env.HOY_DE_PRUEBA;
+  process.env.HOY_DE_PRUEBA = '2026-09-10';
   const D = '5213366670468';
   tk.anotaEtapa(D, 'con_precio', { total: 25000, anticipo: 5000,
     viajeDatos: { origen: 'Guadalajara', destino: 'Sayulita', salida: '2027-03-11', regreso: '2027-03-11',
@@ -1572,6 +1592,8 @@ titulo('R50 · una segunda cotización no hereda los datos de la primera (10-sep
   await dice('no, mejor a mazatlán el 12', D);
   okQue('«mejor a mazatlán» sigue siendo el mismo viaje corregido',
     (webhook.charlaDe(D) || {}).gente === 40);
+  if (relojDeAntes === undefined) delete process.env.HOY_DE_PRUEBA;
+  else process.env.HOY_DE_PRUEBA = relojDeAntes;
 }
 
 titulo('R51 · volver a una cotización anterior devuelve SU precio, y se puede apartar');

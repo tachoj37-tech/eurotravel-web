@@ -186,7 +186,32 @@ module.exports = async function handler(req, res) {
       redondo: redondo,
       /* R43 · Va aquí Y en `cotizar.js`. Si faltara en cualquiera de las
          dos, se enseñaría un precio y se cobraría otro. */
-      salida: cuerpo.salida
+      salida: cuerpo.salida,
+      /* ------------------------------------------------------------
+         R46 · AQUÍ TAMPOCO SE COBRA UN PRECIO DE FÓRMULA
+         ------------------------------------------------------------
+         Ésta es la otra puerta pública, y es la que compromete el
+         dinero. Sin esta línea, cerrar `/api/cotizar` no serviría de
+         nada: una petición armada a mano podía apartar un viaje al
+         precio de la fórmula —con folio, con contrato y con cobro—
+         aunque la pantalla nunca hubiera enseñado ese número.
+
+         No hace falta un freno nuevo: el precio viene con
+         `requiereAsesor` y el que ya está unas líneas abajo lo para.
+         ------------------------------------------------------------ */
+      soloDelCriterio: true,
+      /* ------------------------------------------------------------
+         R47 · Y HOY NO SE COBRA NINGUNO (12-sep-2026)
+         ------------------------------------------------------------
+         La misma lección de R46, subida un escalón. Con el cotizador
+         apagado la pantalla ya no llega hasta aquí, PERO la pantalla
+         no es la puerta: esta línea es la que impide que una petición
+         armada a mano aparte un viaje —con folio, contrato y cobro—
+         a un precio que el dueño hoy no quiere que se dé.
+
+         El freno que lo para es el mismo `requiereAsesor` de abajo.
+         ------------------------------------------------------------ */
+      sinPrecio: !tarifa.PAGINA_DA_PRECIOS
     });
 
     /* ------------------------------------------------------------

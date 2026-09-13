@@ -65,7 +65,12 @@ const EXCEL = {
    como él encuentra el renglón en su hoja. */
 const COLUMNAS = [
   { i: 0, columna: 'BUS N C 47 PAX',            unidad: 'irizar',     nota: 'Century de 47' },
-  { i: 1, columna: 'BUS 48/49 PAX',             unidad: 'irizar',     nota: 'Century de 49' },
+  /* CAMBIÓ DE UNIDAD EL 12-sep-2026: esta columna era del mismo `irizar`,
+     porque el catálogo tenía un solo Century para las dos del Excel. El
+     dueño lo partió en dos —«son unidades con diferentes precios, no los
+     pongas en una misma unidad»— y ahora la lee el de 49. La columna no
+     se movió; la unidad que la lee, sí. */
+  { i: 1, columna: 'BUS 48/49 PAX',             unidad: 'irizar-49',  nota: 'Century de 49 — unidad aparte' },
   { i: 2, columna: 'NEOBUS/i6 50/51 PAX',       unidad: 'neobus',     nota: 'Neobus, 50 pax' },
   { i: 3, columna: 'PB/i6 47 pax',              unidad: 'irizar-pb',  nota: 'Irizar PB, 47 pax' },
   { i: 3, columna: 'PB/i6 47 pax',              unidad: 'irizar-i6',  nota: 'Irizar i6, 47 pax — comparte renglón con el PB' },
@@ -91,14 +96,38 @@ titulo('cada número que se enseña es el de su Excel');
   }
 }
 
-titulo('el Century enseña sus DOS columnas, porque el Excel tiene dos');
+titulo('cada Century enseña SU columna, y solo la suya');
 {
-  /* El catálogo tiene UNA unidad («Irizar Century, 47 a 49 pasajeros») y el
-     Excel tiene dos columnas. No se escoge por el dueño. */
-  const dos = destinos.preciosDeListaDeUnidad('Puerto Vallarta, Jal.', 'irizar');
-  ok('salen las dos', dos.length === 2);
-  ok('  la de 47 en $32,000', dos[0] && dos[0].total === 32000 && dos[0].comoSeLlama === 'BUS N C 47 PAX');
-  ok('  la de 49 en $33,000', dos[1] && dos[1].total === 33000 && dos[1].comoSeLlama === 'BUS 48/49 PAX');
+  /* ------------------------------------------------------------
+     CAMBIÓ DE LADO EL 12-sep-2026, Y LO CAMBIÓ EL DUEÑO
+
+     Decía «el Century enseña sus DOS columnas»: el catálogo tenía UNA
+     unidad («Irizar Century, 47 a 49 pasajeros») para las DOS columnas del
+     Excel, y salían las dos para que nadie escogiera por él.
+
+     Él lo corrigió: «irizar century 47 es uno, irizar century de 49 es
+     otro… son unidades con diferentes precios, no los pongas en una misma
+     unidad». Y son mil pesos de diferencia en Vallarta, dos mil en
+     Mazatlán: con las dos colgando de una unidad, el precio que salía
+     dependía de cuál se leyera primero.
+
+     Ahora cada uno trae una sola, la suya. Que salga UNA y no dos es el
+     corazón de este cambio: si alguna vez vuelven a salir dos, el precio
+     del Century volvió a ser ambiguo.
+     ------------------------------------------------------------ */
+  const de47 = destinos.preciosDeListaDeUnidad('Puerto Vallarta, Jal.', 'irizar');
+  ok('el de 47 trae una sola columna', de47.length === 1);
+  ok('  y es la suya, en $32,000',
+    de47[0] && de47[0].total === 32000 && de47[0].comoSeLlama === 'BUS N C 47 PAX');
+
+  const de49 = destinos.preciosDeListaDeUnidad('Puerto Vallarta, Jal.', 'irizar-49');
+  ok('el de 49 trae una sola columna', de49.length === 1);
+  ok('  y es la suya, en $33,000',
+    de49[0] && de49[0].total === 33000 && de49[0].comoSeLlama === 'BUS 48/49 PAX');
+
+  /* Y no cuestan lo mismo: si algún día empataran, sería que los dos están
+     leyendo la misma columna otra vez. */
+  ok('y no cuestan lo mismo', de47[0].total !== de49[0].total);
 }
 
 titulo('los tres Irizar no se confunden entre ellos');

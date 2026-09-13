@@ -674,9 +674,19 @@ function precioDominical(destino, desdeOcotlan) {
    traducir nada. Si alguna correspondencia estuviera mal, se ve al
    primer viaje en vez de cobrarse en silencio durante meses.
 
-   El Century es el caso raro: el catálogo tiene UNA unidad («47 a 49
-   pasajeros») y el Excel tiene DOS columnas. No se escoge por él; se le
-   enseñan las dos al dueño y él decide, que es justo lo que pidió.
+   YA NO HAY CASO RARO — 12-sep-2026. Aquí decía que el Century era UNA
+   unidad («47 a 49 pasajeros») para DOS columnas del Excel, y que se le
+   enseñaban las dos al dueño para que escogiera. El dueño lo partió en
+   dos unidades —«son unidades con diferentes precios, no los pongas en
+   una misma unidad»— así que ahora cada una lee la suya y el ticket
+   enseña un solo número, el que le toca.
+
+   LO QUE NO CAMBIÓ, Y NO DEBE CAMBIAR: los rótulos de
+   `NOMBRE_DE_COLUMNA`. «BUS 48/49 PAX» sigue diciendo 48/49 aunque no
+   exista ningún autobús de 48, porque ese texto es el MAPA DEL DUEÑO a
+   su propia hoja: es como está escrito allá y es como él encuentra el
+   renglón. Lo que se corrigió es lo que ve el CLIENTE —«47 y 49», no
+   «47 a 49»—, no la trazabilidad del precio.
    ============================================================ */
 const COLUMNA_DE_UNIDAD = {
   'sprinter': ['sprinter'],
@@ -690,7 +700,20 @@ const COLUMNA_DE_UNIDAD = {
   'irizar-i6': ['pbI6'],
   /* «IRIZAR i6s 50/51 PAX 2023»: el i6S y nadie más. */
   'irizar-i6s': ['irizar'],
-  'irizar': ['busNC47', 'bus4849'],
+  /* ------------------------------------------------------------
+     LOS DOS CENTURYS, UNA COLUMNA CADA UNO — 12-sep-2026
+     ------------------------------------------------------------
+     `irizar` traía las DOS: `['busNC47', 'bus4849']`, porque el catálogo
+     tenía una sola unidad para las dos del Excel. El dueño lo corrigió —
+     «son unidades con diferentes precios, no los pongas en una misma
+     unidad»— y el Excel le da la razón: en Mazatlán son $38,000 contra
+     $40,000, en Vallarta $32,000 contra $33,000.
+
+     Con las dos colgando de una unidad, el precio que salía dependía de
+     cuál columna se leyera primero. Ahora cada Century lee la suya.
+     ------------------------------------------------------------ */
+  'irizar': ['busNC47'],
+  'irizar-49': ['bus4849'],
   'suburban': []
 };
 

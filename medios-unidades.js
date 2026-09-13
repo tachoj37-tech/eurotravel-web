@@ -56,6 +56,14 @@ window.MEDIOS_UNIDADES = {
      así que el bot no la podía ofrecer. Ya está dada de alta. */
   'irizar':       { fotos: 6,  video: '4bUMR2BYDog' },
 
+  /* EL CENTURY DE 49 · mismas fotos que el de 47, y se dice
+     ------------------------------------------------------------
+     Dado de alta el 12-sep-2026, cuando el dueño partió el Century en dos
+     unidades porque tienen precios distintos en el Excel. De éste no hay
+     fotos propias —es el mismo modelo—, así que presta las del de 47 y se
+     dice de quién son, igual que el i6 de 51. */
+  'irizar-49':    { fotos: 0, video: null, prestadas: 'irizar' },
+
   /* ------------------------------------------------------------
      EL G8 · fotos del dueño, no del sitio
      ------------------------------------------------------------

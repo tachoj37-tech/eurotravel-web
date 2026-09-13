@@ -115,6 +115,51 @@
     });
   }
 
+  /* ------------------------------------------------------------
+     R47 · EL COTIZADOR DE LA PÁGINA, APAGADO (12-sep-2026)
+     ------------------------------------------------------------
+     Dictado del dueño: «ningún precio para nadie… se le manda un
+     mensaje con el ticket… de momento no hay precio». El precio lo
+     pone un vendedor dentro de la conversación de WhatsApp.
+
+     ES UNA COPIA, Y SE SABE. El de verdad vive en `api/_tarifa.js`
+     —`PAGINA_DA_PRECIOS`— y es el que manda, porque es el que
+     defiende el dinero. Éste existe nada más para que la pantalla no
+     mande una petición cuya respuesta ya conoce: sin él, cada
+     búsqueda diría «Calculando kilómetros…» un segundo para acabar
+     enseñando la misma caja de captura.
+
+     `pruebas/probar-sin-precio.cjs` exige que los dos digan lo
+     mismo. El día que se enciendan, se encienden los dos.
+
+     No se lee de `config.js` a propósito: este archivo corre también
+     en Node, donde `window.CONFIG` no existe, y un interruptor que
+     depende del orden de las etiquetas <script> es un interruptor
+     que un día amanece apagado sin que nadie lo haya tocado.
+     ------------------------------------------------------------ */
+  var PAGINA_DA_PRECIOS = false;
+
+  /* ¿Esta unidad enseña precio en línea? Una sola regla para los tres
+     lugares que lo preguntan —las dos tarjetas de la pantalla y la
+     máquina—. Antes cada uno miraba `u.cotizadorAutomatico` por su
+     cuenta, y con el interruptor apagado una tarjeta habría dicho
+     «cotización en línea disponible» encima de la caja que pide el
+     teléfono. */
+  function cotizaEnLinea(unidad) {
+    /* Se lee del objeto exportado —y no de la variable de aquí arriba— para
+       que `probar-cotizacion.cjs` pueda encenderlo y seguir probando la
+       regla del kilómetro de este lado: la lista blanca que le quita los
+       kilómetros y la tarifa a la respuesta del servidor. Esa regla sigue
+       viva, solo que hoy no hay respuesta que filtrar, y una prueba que no
+       se puede correr es una regla que se pudre.
+
+       No abre ningún hueco: esto corre en el navegador, que es del cliente,
+       y encenderlo aquí no le saca un precio a nadie. El candado que
+       importa es el del servidor —`tarifa.PAGINA_DA_PRECIOS`—, y ése no se
+       toca desde fuera. */
+    return !!(COTIZACION.PAGINA_DA_PRECIOS && unidad && unidad.cotizadorAutomatico);
+  }
+
   /* ------------------------------ la máquina --------------------------- */
 
   /* opciones.pide: función tipo fetch. En el navegador se toma fetch; en las
@@ -149,9 +194,10 @@
 
       faltantes: faltantes,
 
-      /* ¿Esta unidad enseña precio en línea, o se cotiza a la medida? */
+      /* ¿Esta unidad enseña precio en línea, o se cotiza a la medida?
+         R47 · La regla es compartida: ver `cotizaEnLinea`. */
       cotizaEnAutomatico: function () {
-        return !!(estado.unidad && estado.unidad.cotizadorAutomatico);
+        return cotizaEnLinea(estado.unidad);
       },
 
       /* Compromete un viaje ya validado. Invalida cualquier cotización en
@@ -189,7 +235,7 @@
            { tipo: 'tarde' }                 — llegó después de otra búsqueda
          La pantalla decide qué pintar con cada uno; aquí no hay un solo id. */
       cotiza: function () {
-        if (!estado.unidad || !estado.unidad.cotizadorAutomatico) {
+        if (!cotizaEnLinea(estado.unidad)) {
           return Promise.resolve({ tipo: 'manual' });
         }
         if (!pide) { return Promise.resolve({ tipo: 'sinPrecio', aviso: '' }); }
@@ -235,6 +281,9 @@
     puntoExacto: puntoExacto,
     faltantes: faltantes,
     horasDe: horasDe,
+    /* R47 · El interruptor y la regla que sale de él. */
+    PAGINA_DA_PRECIOS: PAGINA_DA_PRECIOS,
+    cotizaEnLinea: cotizaEnLinea,
     CAMPOS_COTIZACION: CAMPOS_COTIZACION,
     CAMPOS_DESGLOSE: CAMPOS_DESGLOSE
   };

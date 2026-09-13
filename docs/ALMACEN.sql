@@ -247,3 +247,29 @@ alter table turnos enable row level security;
 -- repitan. Sin la columna, se guarda sin ella (se reintenta en 10 min).
 -- ------------------------------------------------------------
 alter table fichas add column if not exists fotos jsonb not null default '[]'::jsonb;
+
+-- ------------------------------------------------------------
+-- 13-SEP-2026 · LO QUE EL MOTOR HABÍA CALCULADO
+-- ------------------------------------------------------------
+-- Dictado del dueño: «el bot aprende, y cuando un vendedor ponga el
+-- precio de un Sprinter, el bot confirma o corrige el precio que ya
+-- tiene».
+--
+-- Eso no se podía: se guardaba SU total y la marca `fijado`, pero nunca
+-- el número del motor. Sin los dos no hay resta, y sin resta no hay
+-- manera de saber si el criterio va atinando ni cuándo puede soltarse.
+--
+-- NULO NO ES CERO, y ahí está todo el asunto. Cuando el motor no supo
+-- —destino fuera del criterio, unidad que no cotiza— hay que poder
+-- distinguirlo de un error: no se equivocó, NO SUPO. Por eso la columna
+-- admite nulos y un cero nunca se guarda.
+--
+--   calculado nulo     el motor no supo
+--   calculado número   el motor sí supo, y esto dijo
+--
+-- CORRER ESTO ANTES DE ENCENDER EL ALMACÉN. Los precios que se guarden
+-- sin la columna nacen sin el dato con el que se comparan, y eso no se
+-- reconstruye después: el número del motor solo existe en el instante
+-- en que el dueño contesta el ticket.
+-- ------------------------------------------------------------
+alter table precios add column if not exists calculado integer;

@@ -30,6 +30,7 @@ const ligas = require('./_ligas');
 const acceso = require('./_acceso');
 const stripe = require('./_stripe');
 const publico = require('./_publico');
+const saldos = require('./_saldo');       // la cuenta de los abonos
 
 /* Es una pantalla que el cliente recarga y comparte consigo mismo entre el
    teléfono y la computadora. Generoso, pero no infinito: cada visita cuesta
@@ -128,6 +129,182 @@ module.exports = defensas.aPruebaDeTronadas('viaje',
     return;
   }
 
+  /* ------------------------------------------------------------
+     4. EL SALDO, Y ABONAR
+     ------------------------------------------------------------
+     PASOS 2 Y 3 del spec de abonos en línea. Van DENTRO de esta puerta y
+     no en un `api/abonar.js` como decía el spec, y no es comodidad: el
+     plan Hobby de Vercel publica DOCE funciones y hay doce exactas. Un
+     archivo más tumba el despliegue entero —ya pasó el 26-ago-2026— y lo
+     caza `pruebas/probar-despliegue.cjs`. Es la misma salida que tomó la
+     solicitud dentro de `api/cotizar.js`.
+
+     Y es la puerta que le toca: aquí ya se comprobó la firma de la liga,
+     ya se preguntó a Stripe y ya se verificó que quien pide es el dueño
+     del viaje. Abonar necesita exactamente esas tres cosas.
+
+     TODO LO QUE SIGUE PASA DESPUÉS DE ESAS TRES COMPROBACIONES. Ése es el
+     motivo de que esté hasta abajo del archivo y no arriba.
+     ------------------------------------------------------------ */
+  const metadata = sesion.metadata || {};
+  const folio = String(metadata.folio || '').trim();
+
+  /* El saldo se cuenta desde Stripe cada vez: es la única verdad del
+     dinero y no se guarda copia (ver `_saldo.js`). */
+  async function cuentaElSaldo() {
+    const lista = await stripe.sesionesDelCliente(idCliente, 50);
+    if (lista.error) return { error: lista.error, reintentar: lista.reintentar };
+    return {
+      cuenta: saldos.calcula({
+        total: Number(metadata.total) || 0,
+        anticipo: Number(metadata.anticipo) || 0,
+        folio: folio,
+        sesiones: lista.sesiones || [],
+        estadoDe: stripe.estadoDePago
+      })
+    };
+  }
+
+  if (cuerpo.accion === 'abonar') {
+    if (!folio) {
+      res.status(409).json({ error: 'sin folio',
+        aviso: 'Este viaje todavía no tiene folio. Escríbenos por WhatsApp.' });
+      return;
+    }
+
+    const r = await cuentaElSaldo();
+    if (r.error) {
+      console.error('[viaje] no se pudo contar el saldo de ' + folio + ': ' + r.error);
+      res.status(r.reintentar ? 503 : 502).json({ error: r.error,
+        aviso: 'No pudimos consultar tu saldo ahora mismo. Inténtalo en un momento.' });
+      return;
+    }
+
+    /* EL MONTO SE REVISA CONTRA EL SALDO DE VERDAD, no contra lo que dijo
+       el navegador: quien puede escribir el monto puede escribir
+       cualquiera. Misma disciplina que `pagar.js`, que recalcula el
+       precio en vez de creerle a la pantalla. */
+    const revisado = saldos.revisaAbono(cuerpo.monto, r.cuenta.saldo);
+    if (!revisado.ok) {
+      res.status(422).json({ error: 'monto no válido', aviso: revisado.aviso });
+      return;
+    }
+
+    const sitio = defensas.sitioDe(req);
+    const creada = await stripe.creaSesionDeCobro({
+      mode: 'payment',
+      locale: 'es-419',
+      customer: idCliente,        // el MISMO cliente: su abono queda junto a su viaje
+      success_url: sitio + '/viaje.html?t=' + encodeURIComponent(cuerpo.t) +
+        '&abono={CHECKOUT_SESSION_ID}',
+      cancel_url: sitio + '/viaje.html?t=' + encodeURIComponent(cuerpo.t),
+      line_items: [{
+        quantity: 1,
+        price_data: {
+          currency: 'mxn',
+          unit_amount: revisado.monto * 100,      // Stripe cuenta en centavos
+          product_data: {
+            name: stripe.paraStripe('Abono · folio ' + folio),
+            description: stripe.paraStripe(String(metadata.ruta || 'Servicio de transporte') +
+              ' · Saldo antes de este abono $' + r.cuenta.saldo.toLocaleString('es-MX') + ' MXN')
+          }
+        }
+      }],
+      payment_method_types: revisado.monto <= 10000 ? ['card', 'oxxo'] : ['card'],
+      metadata: {
+        /* `tipo` y `folio` son lo que hace que `_saldo.js` lo encuentre y
+           que `_reversas.js` lo reconozca si algún día se revierte. Sin
+           ellos, el abono existe en Stripe y para nosotros no. */
+        tipo: saldos.TIPO_ABONO,
+        folio: folio,
+        monto: String(revisado.monto),
+        referenciaExterna: String(metadata.referenciaExterna || ''),
+        origen: 'WEB'
+      }
+    });
+
+    if (!creada.ok || !creada.datos || !creada.datos.url) {
+      console.error('[viaje] Stripe no abrió el cobro del abono de ' + folio + ': ' +
+        JSON.stringify((creada.datos && creada.datos.error) || {}).slice(0, 200));
+      res.status(502).json({ error: 'no se pudo abrir el cobro',
+        aviso: 'No pudimos abrir el pago ahora mismo. Inténtalo en un momento.' });
+      return;
+    }
+
+    res.status(200).json({ url: creada.datos.url, monto: revisado.monto });
+    return;
+  }
+
+  /* ------------------------------------------------------------
+     LA VUELTA DE STRIPE · «tu pago fue recibido con éxito»
+     ------------------------------------------------------------
+     NO SE LE CREE A LA DIRECCIÓN DE REGRESO. Trae el id de la sesión,
+     pero si le pagara al cliente escribirlo a mano, cualquiera pondría
+     un id y vería «recibido con éxito» sin haber pagado. Se le pregunta
+     a Stripe, igual que hace el webhook.
+
+     Y se comprueba que ese abono sea DE ESTE VIAJE y de ESTE cliente:
+     un id de sesión ajeno no puede contestar nada.
+     ------------------------------------------------------------ */
+  if (cuerpo.accion === 'abono') {
+    const id = String(cuerpo.abono || '');
+    if (!stripe.idDeSesionValido(id)) {
+      res.status(422).json({ error: 'id con mala forma' });
+      return;
+    }
+
+    const laDelAbono = await stripe.traeSesion(id);
+    if (laDelAbono.error) {
+      res.status(laDelAbono.reintentar ? 503 : 404).json({ error: laDelAbono.error,
+        aviso: 'No pudimos confirmar tu pago ahora mismo. Vuelve a abrir tu liga en un momento.' });
+      return;
+    }
+
+    const suya = laDelAbono.sesion || {};
+    const dueno = typeof suya.customer === 'string' ? suya.customer
+                : (suya.customer && suya.customer.id) || '';
+    if (dueno !== idCliente || !saldos.esAbonoDe(suya, folio)) {
+      console.error('[viaje] abono ajeno o de otro viaje: ' + id);
+      res.status(404).json({ error: 'no encontrado' });
+      return;
+    }
+
+    /* El saldo se vuelve a contar DESPUÉS del pago, para que el cliente
+       vea el de ahora y no el de antes de abonar. */
+    const r = await cuentaElSaldo();
+
+    res.status(200).json({
+      estado: laDelAbono.estado,                    // pagado · pendiente · sinPagar
+      monto: Number((suya.metadata || {}).monto) || 0,
+      folio: folio,
+      saldo: r.cuenta ? r.cuenta.saldo : null,
+      total: r.cuenta ? r.cuenta.total : null
+    });
+    return;
+  }
+
   /* ---- 3. LO QUE PUEDE VER, Y NADA MÁS ---- */
-  res.status(200).json(publico.viaje(sesion.metadata || {}, consulta.estado));
+  /* El saldo se cuenta desde Stripe y se le PASA a `_publico.js`, que
+     sigue siendo el único que decide qué sale. Pegarlo después sería
+     saltarse la lista, que es justamente lo que ese archivo existe para
+     impedir. Si Stripe no contesta, el viaje se enseña igual con el saldo
+     de la metadata: vale más un viaje con un saldo viejo que una pantalla
+     de error. */
+  const cuenta = await cuentaElSaldo();
+  if (cuenta.error) {
+    console.error('[viaje] sin saldo para ' + folio + ': ' + cuenta.error);
+  } else if (cuenta.cuenta.descuadre > 0) {
+    /* No se le enseña al cliente —no es asunto suyo y lo asustaría— pero
+       no puede pasar callado. */
+    console.error('[viaje] DESCUADRE de $' + cuenta.cuenta.descuadre +
+      ' en el folio ' + folio);
+  }
+
+  res.status(200).json(publico.viaje(metadata, consulta.estado,
+    cuenta.cuenta
+      ? Object.assign({}, cuenta.cuenta, {
+        abonoMinimo: saldos.MINIMO_ABONO,
+        sugerencias: saldos.sugerencias(cuenta.cuenta.saldo)
+      })
+      : null));
 });

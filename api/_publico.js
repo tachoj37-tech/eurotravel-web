@@ -97,7 +97,21 @@ const CAMPOS_VIAJE = [
   'total', 'anticipo', 'saldo',
   'origen', 'destino', 'ruta',
   'salida', 'regreso', 'dias', 'unidad', 'puntoSalida', 'paradas',
-  'diasMovimiento', 'movDetalle'
+  'diasMovimiento', 'movDetalle',
+  /* ------------------------------------------------------------
+     LOS TRES DE ABONAR · 12-sep-2026
+     ------------------------------------------------------------
+     Se agregaron a sabiendas, contestando la pregunta de arriba —«¿con
+     esto y el total en la mano, se puede deducir una tarifa?»— y la
+     respuesta es no: son cuánto lleva pagado de SU viaje, el mínimo que
+     se puede abonar (una regla nuestra, la misma para todos) y dos
+     cantidades sugeridas que salen del saldo que él ya ve.
+
+     Nada de esto sale de la metadata: el saldo se cuenta desde Stripe
+     cada vez (`_saldo.js`). El de la metadata es el de cuando se firmó
+     el contrato, y no sabe de los abonos que vinieron después.
+     ------------------------------------------------------------ */
+  'pagado', 'abonoMinimo', 'sugerencias'
 ];
 
 function porLista(objeto, lista) {
@@ -156,16 +170,24 @@ function confirmacion(m, estado) {
    archivo: lo que no está nombrado no sale, ni aunque mañana
    `pagar.js` le agregue algo nuevo a la metadata.
    ------------------------------------------------------------ */
-function viaje(m, estado) {
+/* `cuenta` es lo que devolvió `_saldo.calcula()`, y es OPCIONAL: quien no
+   la pase se queda con el saldo de la metadata, como antes. Va como
+   argumento y no pegado después, para que TODO lo que sale del viaje pase
+   por la lista de este archivo — que es la razón de que este archivo
+   exista. */
+function viaje(m, estado, cuenta) {
   const d = m || {};
+  const c = cuenta || null;
   const texto = function (v, largo) { return String(v == null ? '' : v).slice(0, largo); };
   return porLista({
     estado: estado,
     folio: texto(d.folio, 20),
     nombre: texto(d.nombre, 80),
-    total: Number(d.total) || 0,
+    total: c ? c.total : Number(d.total) || 0,
     anticipo: Number(d.anticipo) || 0,
-    saldo: Number(d.saldo) || 0,
+    /* El saldo CONTADO manda sobre el de la metadata: ése es el de cuando
+       se firmó el contrato y no sabe de los abonos que vinieron después. */
+    saldo: c ? c.saldo : Number(d.saldo) || 0,
     origen: texto(d.origen, 160),
     destino: texto(d.destino, 160),
     ruta: texto(d.ruta, 90),
@@ -176,7 +198,15 @@ function viaje(m, estado) {
     puntoSalida: texto(d.puntoSalida, 200),
     paradas: texto(d.paradas, 300),
     diasMovimiento: Number(d.movDias) || 0,
-    movDetalle: texto(d.movDetalle, 500)
+    movDetalle: texto(d.movDetalle, 500),
+    /* Los tres de abonar solo existen cuando hay cuenta: sin ella, la
+       pantalla no debe creer que puede abonar. Se agregan aquí y no
+       después de `porLista`, para que nada se salte la lista. */
+    ...(c ? {
+      pagado: c.pagado,
+      abonoMinimo: c.abonoMinimo,
+      sugerencias: c.sugerencias
+    } : {})
   }, CAMPOS_VIAJE);
 }
 

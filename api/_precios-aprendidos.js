@@ -45,9 +45,31 @@ function limpia(texto) {
     .trim();
 }
 
+/* ------------------------------------------------------------
+   LA HORA SE TIRA ANTES DE CONTAR · 12-sep-2026
+   ------------------------------------------------------------
+   Esto pegaba `'T12:00:00Z'` a lo que le dieran. Con una fecha pelada
+   —`2026-11-20`— sale bien; con una que traiga hora, queda
+   `2026-11-20T08:00T12:00:00Z`, que no es una fecha: `Date.parse` da NaN
+   y la cuenta devuelve **1 día, siempre**.
+
+   No se notaba porque el bot manda las fechas peladas. Pero la página las
+   manda CON HORA —el cliente escoge hora de salida y de regreso— y el día
+   que sus viajes entren al aprendizaje, el mismo viaje pedido por los dos
+   lados se guardaría con dos llaves distintas: `…|1` por la página y
+   `…|4` por WhatsApp. El precio puesto por un lado no se sugeriría por el
+   otro.
+
+   Es lo mismo que ya pasó con el origen —«el aprendizaje casi no
+   acumulaba»— y esa lección se paga una sola vez. Se corrige aquí, que es
+   donde se hace la cuenta, y no en cada quien que la llama.
+   ------------------------------------------------------------ */
+function soloElDia(v) { return String(v || '').slice(0, 10); }
+
 function diasEntre(a, b) {
-  const x = Date.parse(String(a || '') + 'T12:00:00Z');
-  const y = Date.parse(String(b || a || '') + 'T12:00:00Z');
+  const dia = soloElDia(a);
+  const x = Date.parse(dia + 'T12:00:00Z');
+  const y = Date.parse((soloElDia(b) || dia) + 'T12:00:00Z');
   if (!Number.isFinite(x) || !Number.isFinite(y)) return 1;
   return Math.max(1, Math.round((y - x) / 86400000) + 1);
 }
@@ -94,6 +116,29 @@ function renglonDe(resumen, unidad, precio, extra) {
     total: Math.round(Number(precio && precio.total) || 0),
     anticipo: Math.round(Number(precio && precio.anticipo) || 0),
     fijado: !!e.fijado,
+    /* ------------------------------------------------------------
+       LO QUE EL MOTOR HABÍA CALCULADO (13-sep-2026)
+       ------------------------------------------------------------
+       Dictado del dueño: «el bot aprende, y cuando un vendedor ponga
+       el precio de un Sprinter, el bot confirma o corrige el precio
+       que ya tiene».
+
+       Eso no se podía: se guardaba SU total y la marca `fijado`, pero
+       nunca el número del motor. Sin los dos no hay resta, y sin resta
+       no hay manera de saber si el criterio va atinando.
+
+       NULO Y CERO NO SON LO MISMO, y ahí está todo el asunto. Cuando
+       el motor no supo —destino fuera del criterio, unidad que no
+       cotiza— devuelve total 0. Guardarlo como cero haría que el
+       informe dijera que el sistema «calculó cero» y falló por el
+       precio entero. No falló: NO SUPO.
+
+         null    el motor no supo
+         número  el motor sí supo, y esto es lo que dijo
+
+       Por eso un 0 entra como nulo: un precio de cero no existe.
+       ------------------------------------------------------------ */
+    calculado: Math.round(Number(e.calculado) || 0) || null,
     cliente: e.cliente ? String(e.cliente).slice(-10) : null,
     salida: r.salida || null
   };

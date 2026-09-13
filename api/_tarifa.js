@@ -76,6 +76,29 @@
    La formula regalaria $48,000 en Cancun. Esos los cotiza una
    persona.
    ------------------------------------------------------------ */
+/* ------------------------------------------------------------
+   R47 · EL INTERRUPTOR DEL COTIZADOR PÚBLICO (12-sep-2026)
+   ------------------------------------------------------------
+   Apagado quiere decir: por `/api/cotizar` y `/api/pagar` no sale
+   NINGÚN número. Ni de fórmula —eso ya lo hacía R46— ni del Excel.
+
+   Dictado del dueño: «ningún precio para nadie». El precio lo pone
+   un vendedor dentro de la conversación de WhatsApp, y de ahí el
+   sistema lo aprende para el mes que entra.
+
+   ES UN SOLO RENGLÓN A PROPÓSITO, porque va a volver a encenderse:
+   él dijo «de momento no hay precio». El día que se encienda, hay
+   que encenderlo TAMBIÉN en `cotizacion.js` —la página tiene su
+   copia, porque corre en el navegador y no puede leer este
+   archivo—. `pruebas/probar-sin-precio.cjs` exige que los dos digan
+   lo mismo, justamente para que no se quede uno encendido.
+
+   NO SE APAGA EL CÁLCULO. Todo lo de abajo sigue vivo y probado: lo
+   necesitan el bot para estimar, la pantalla del dueño para revisar
+   de dónde sale un costo, y el aprendizaje de precios.
+   ------------------------------------------------------------ */
+const PAGINA_DA_PRECIOS = false;
+
 const BASE_TRASLADO = 6500;
 const POR_KM = 22;
 const TOPE_FORMULA_KM = 1400;
@@ -187,8 +210,33 @@ function seSabeCotizar(unidad) { return claveDeUnidad(unidad) !== null; }
    a la metadata del contrato y la oficina lo lee ahí. Se mide una
    vez, al comprometer el dinero, no en cada tecleo.
    ------------------------------------------------------------ */
-function necesitaMedirse(destino, unidad) {
-  return !destinos.precioDeLista(destino, claveDeUnidad(unidad) || 'sprinter');
+function necesitaMedirse(destino, unidad, opciones) {
+  if (destinos.precioDeLista(destino, claveDeUnidad(unidad) || 'sprinter')) return false;
+
+  /* ------------------------------------------------------------
+     CON `soloDelCriterio` NUNCA HACE FALTA MEDIR
+     ------------------------------------------------------------
+     Si el destino no está en la lista y quien pregunta es una puerta
+     pública, ya sabemos la respuesta: no hay precio que dar. Medir
+     serían dos llamadas de pago a Google para tirar el resultado.
+
+     El dominical tampoco necesita kilómetros —su renglón del Excel
+     es un precio completo—, así que no hay ningún caso que se pierda
+     por no medir.
+
+     Y hay un segundo efecto, que se ve al probarlo sin llave: antes,
+     un destino de fuera contestaba 503 «Cotizador en línea no
+     configurado» y el cliente veía un error donde debía ver «te
+     contacta un vendedor».
+     ------------------------------------------------------------ */
+  if (opciones && opciones.soloDelCriterio) return false;
+
+  /* R47 · Con `sinPrecio`, menos todavía: no se va a enseñar ningún
+     número, ni de lista ni de fórmula. Los de lista ya los cortó la
+     primera línea; ésta corta lo que quedaba. */
+  if (opciones && opciones.sinPrecio) return false;
+
+  return true;
 }
 
 /* ------------------------------------------------------------
@@ -258,7 +306,7 @@ function precioPorDuracion(enLista, dias) {
   return tabla[base] + (d - base) * extra;
 }
 
-function trasladoDe(kmTotal, destino, unidad, dias, dominical) {
+function trasladoDe(kmTotal, destino, unidad, dias, dominical, opciones) {
   const km = Math.max(0, Number(kmTotal) || 0);
 
   /* ------------------------------------------------------------
@@ -312,6 +360,37 @@ function trasladoDe(kmTotal, destino, unidad, dias, dominical) {
       movimientosIncluidos: enLista.movimientosIncluidos || 0,
       precioConMovimientos: enLista.conMovimientos || null
     };
+  }
+
+  /* ------------------------------------------------------------
+     R46 · LA PÁGINA NO DA UN PRECIO QUE NO SALIÓ DEL CRITERIO
+     ------------------------------------------------------------
+     Dictado del dueño, 11-sep-2026: «No me gustaría que el cotizador
+     pueda cotizar si el cotizador NO tiene el precio desde el
+     criterio de precios».
+
+     Aquí abajo empieza la fórmula por kilómetros. Es un número que
+     no salió del Excel de nadie, y es justo el que él no quiere que
+     vea un cliente. Con `soloDelCriterio` el camino se corta antes:
+     si el destino no tuvo renglón —ni de lista ni dominical, que se
+     resolvieron arriba—, no hay precio y pasa al vendedor.
+
+     ESTO NO BORRA LA FÓRMULA. Sigue viva para quien NO pide la
+     opción: el bot de WhatsApp, que la usa para estimar, y la
+     pantalla del dueño en `pendiente/prueba-cotizador-api.js`, donde
+     él revisa de dónde sale un costo. Lo que se apagó son las dos
+     puertas públicas —`/api/cotizar` y `/api/pagar`—, que la piden.
+
+     Y va como ARGUMENTO de quien llama, no como campo del cuerpo de
+     la petición: el cuerpo lo escribe el navegador, y el navegador es
+     del cliente. Si se leyera de ahí, bastaría mandar `false` para
+     volver a los precios de fórmula.
+
+     Lo cuida `probar-solo-del-criterio.cjs`, que además congela los
+     50 precios de la lista para que esto no mueva ninguno.
+     ------------------------------------------------------------ */
+  if (opciones && opciones.soloDelCriterio) {
+    return { requiereAsesor: true, porQue: 'fuera del criterio', km: km, total: 0, porKm: null };
   }
 
   /* ------------------------------------------------------------
@@ -984,6 +1063,40 @@ function recargoDeSalida(km, extras, dias) {
 function calcula(kmTotal, dias, extras) {
   extras = extras || {};
 
+  /* ------------------------------------------------------------
+     R47 · NINGÚN PRECIO PARA NADIE, POR LAS PUERTAS PÚBLICAS
+     ------------------------------------------------------------
+     Dictado del dueño, 12-sep-2026: «exacto, ningún precio para
+     nadie… se le manda un mensaje con el ticket… de momento no hay
+     precio». Y el porqué, que es de negocio y no de código: el
+     precio lo pone un vendedor dentro de la conversación de
+     WhatsApp, y de ahí se aprende.
+
+     R46 apagó la FÓRMULA. R47 apaga también los precios del Excel,
+     que eran los que sí se daban: la Sprinter cotizaba sola a 43
+     destinos y enseñaba «aparta con $4,000».
+
+     VA AQUÍ ARRIBA, ANTES DE `trasladoDe`, y ésa es toda la
+     diferencia con R46. R46 corta adentro de `trasladoDe`, después
+     de buscar en la lista, para que los de lista pasen. Éste corta
+     antes de buscar: no hay lista que valga.
+
+     NO BORRA NADA. Sin la opción, el cálculo entero sigue igual, y
+     hace falta que siga: el bot lo usa para estimar, la pantalla del
+     dueño para revisar de dónde sale un costo, y el aprendizaje de
+     precios para comparar lo que él cobró contra lo que el sistema
+     habría cobrado.
+
+     Y como R46, va en los EXTRAS y no en el cuerpo de la petición:
+     el cuerpo lo escribe el navegador, y el navegador es del
+     cliente. Quien la pone es la puerta. Ver `PAGINA_DA_PRECIOS`.
+     ------------------------------------------------------------ */
+  if (extras.sinPrecio) {
+    return sinPrecio(
+      { requiereAsesor: true, porQue: 'la página no da precios (R47)', km: kmTotal, total: 0, porKm: null },
+      dias, extras);
+  }
+
   /* R43 · El dominical necesita saber dos cosas que el resto del cálculo no
      mira: qué día de la semana sale, y si sale de la zona de Ocotlán —que
      tiene su propio renglón, la fila 27, no un recargo—. */
@@ -991,7 +1104,10 @@ function calcula(kmTotal, dias, extras) {
   const origenDominical = esDom
     ? { desdeOcotlan: (origenes.buscaOrigen(extras.origen) || {}).nombre === 'Ocotlán' }
     : null;
-  const km = trasladoDe(kmTotal, extras.destino, extras.unidad, dias, origenDominical);
+  /* R46 · `soloDelCriterio` viaja en los extras porque quien lo pone es la
+     puerta —`/api/cotizar` y `/api/pagar`—, no el cálculo. Ver `trasladoDe`. */
+  const km = trasladoDe(kmTotal, extras.destino, extras.unidad, dias, origenDominical,
+    { soloDelCriterio: !!extras.soloDelCriterio });
 
   /* ----------------------------------------------------------
      ARRIBA DEL TOPE NO HAY PRECIO — Y NO ES LO MISMO QUE UNO BAJO
@@ -1415,6 +1531,8 @@ function calcula(kmTotal, dias, extras) {
 }
 
 module.exports = {
+  /* R47 · Lo leen las dos puertas públicas. Ver el comentario largo arriba. */
+  PAGINA_DA_PRECIOS,
   BASE_TRASLADO, POR_KM, TOPE_FORMULA_KM, POR_KM_LARGO,
   MINIMO_POR_DIA, REDONDEO, TASA_IVA, ANTICIPO, ANTICIPO_MULTIPLO,
   /* Se exporta para que `probar-whatsapp.cjs` compare esta tabla contra el
