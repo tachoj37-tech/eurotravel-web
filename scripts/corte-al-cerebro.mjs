@@ -1,5 +1,5 @@
 /* ============================================================
-   EL CIERRE DEL MES (12-sep-2026)
+   EL CORTE, CADA QUINCE DÍAS (12-sep-2026)
    ============================================================
    Dictado del dueño:
 
@@ -10,9 +10,11 @@
       vendedores y clientes, que se vaya curtiendo y mejorando
       criterio.»
 
-   Esto lo junta todo de una corrida:
+   Y al enterarse de que el almacén purga a los 45 días, lo apretó:
+   **«entonces cada 15 días almacenamos todo»**. Por eso esto se
+   llama corte y no cierre del mes.
 
-     npm run mes
+     npm run corte
 
    ------------------------------------------------------------
    POR QUÉ HAY DOS SALIDAS, Y NO UNA
@@ -25,7 +27,7 @@
       contestar, qué destinos pidieron. **No lleva un solo dato de
       una persona**: son cuentas.
 
-        cerebro/el-mes.md        el resumen, dentro del criterio
+        cerebro/el-corte.md      el resumen, dentro del criterio
 
    2. LAS CONVERSACIONES ENTERAS, que NO van al repositorio. Es el
       material del que se aprende a vender, y trae lo que la gente
@@ -33,7 +35,7 @@
       de qué es la fiesta. Eso en un repositorio de Git se queda
       para siempre y lo ve todo el que lo clone.
 
-        conversaciones/AAAA-MM.md     fuera de Git (.gitignore)
+        conversaciones/AAAA-MM-DD.md   fuera de Git (.gitignore)
 
       De ahí se leen en una sesión, y lo que se aprenda se escribe
       en el criterio con sus propias palabras. **Lo que sube al
@@ -43,13 +45,22 @@
    es cambiar el .gitignore — pero que sea porque él lo decidió,
    no porque un script lo hizo sin preguntar.
 
+   EL NOMBRE LLEVA EL DÍA, Y NO SOLO EL MES. La primera versión de
+   esto guardaba `AAAA-MM.md`, porque el corte iba a ser mensual.
+   Con quince días, el segundo corte del mes le pasaba encima al
+   primero y se perdía la primera quincena entera — en silencio, y
+   justo del archivo que NO está en Git y por lo tanto no se puede
+   recuperar de ningún lado.
+
    ------------------------------------------------------------
    OJO CON LA FECHA: EL ALMACÉN TIRA LO VIEJO A LOS 45 DÍAS
    ------------------------------------------------------------
    `api/_almacen.js` purga `mensajes` y `charlas` a los
-   `VIDA_DIAS` = 45. O sea que **«cada mes» no es una costumbre
-   cómoda, es el mínimo**: si se salta un mes, ese mes de
-   conversaciones ya no existe en ningún lado.
+   `VIDA_DIAS` = 45. Con cortes de quince días sobra margen: se
+   pueden saltar DOS y todavía no se pierde nada.
+
+   Y por si acaso, el script mira cuándo fue el corte pasado y
+   avisa si ya pasó demasiado. Ver `avisaDelAtraso`.
 
    Los `precios` NO se purgan, así que ésos no se pierden.
 
@@ -84,8 +95,16 @@ const CLAVE = String(process.env.ALMACEN_CLAVE || '');
    aquí por copia y no por importación a propósito: importar el otro
    script correría su lectura del entorno dos veces. Si se agrega un
    número de prueba hay que tocarlo en los dos, y
-   `pruebas/probar-mes-al-cerebro.mjs` exige que digan lo mismo. */
+   `pruebas/probar-corte.mjs` exige que digan lo mismo. */
 const DE_PRUEBA = /^(52)?1?33(6667|1111)/;
+
+/* Lo que el almacén guarda antes de purgar. Es una COPIA de `VIDA_DIAS`
+   en `api/_almacen.js`, y no una importación, porque aquel es CommonJS y
+   éste corre como módulo: enredar los dos formatos por un número no
+   vale la pena. `pruebas/probar-corte.mjs` exige que digan lo mismo, que
+   es lo que importa — si allá se sube a 90 y aquí no, este script
+   seguiría pidiendo de menos y nadie se enteraría. */
+const VIDA_DIAS = 45;
 
 /* ------------------------------------------------------------
    TRAER DEL ALMACÉN
@@ -184,12 +203,12 @@ function cuentasDelMes(por, precios) {
 
 function laPaginaDelMes(c, periodo) {
   const l = [];
-  l.push('# El mes, en números');
+  l.push('# El corte, en números');
   l.push('');
   l.push('Lo que dejaron las conversaciones de **' + periodo + '**.');
   l.push('');
-  l.push('> Se llena sola con `npm run mes`. Si corrijo algo aquí a mano, la');
-  l.push('> siguiente corrida me lo pisa.');
+  l.push('> Se llena sola con `npm run corte`, cada quince días. Si corrijo');
+  l.push('> algo aquí a mano, la siguiente corrida me lo pisa.');
   l.push('');
   l.push('**Aquí no hay datos de nadie, a propósito: son cuentas.** Las');
   l.push('conversaciones enteras quedan fuera del repositorio, en la carpeta');
@@ -199,9 +218,9 @@ function laPaginaDelMes(c, periodo) {
   if (!c.conversaciones) {
     l.push('---');
     l.push('');
-    l.push('**Este mes no hubo ninguna conversación guardada.** Si el bot sí');
+    l.push('**En este corte no hubo ninguna conversación guardada.** Si el bot sí');
     l.push('estuvo contestando, lo que falta es el almacén: ver');
-    l.push('`docs/EL-CIERRE-DEL-MES.md`.');
+    l.push('`docs/EL-CORTE.md`.');
     l.push('');
     return l.join('\n') + '\n';
   }
@@ -279,7 +298,7 @@ function lasConversaciones(por, periodo) {
   l.push('criterio de venta, y lo que se aprenda se escribe en `cerebro/` con');
   l.push('palabras propias — la lección sube, la conversación no.');
   l.push('');
-  l.push('Generado con `npm run mes`.');
+  l.push('Generado con `npm run corte`.');
   l.push('');
 
   let n = 0;
@@ -317,7 +336,53 @@ function lasConversaciones(por, periodo) {
    en `precios-al-cerebro.mjs`. Y por eso el script solo corre cuando
    se le llama directo, no cuando se le importa.
    ------------------------------------------------------------ */
-export { porConversacion, cuentasDelMes, laPaginaDelMes, lasConversaciones, quienHablo, DE_PRUEBA };
+/* ------------------------------------------------------------
+   ¿CUÁNDO FUE EL CORTE PASADO, Y SE PERDIÓ ALGO?
+   ------------------------------------------------------------
+   Los archivos de `conversaciones/` se llaman por el día en que se
+   hizo el corte, así que la carpeta misma es la bitácora. Si entre
+   el último y hoy pasaron más días de los que el almacén guarda,
+   hubo conversaciones que se purgaron sin que nadie las leyera — y
+   eso no se puede deshacer, así que conviene decirlo fuerte.
+
+   `hoy` entra como parámetro para poder probarlo sin esperar
+   cuarenta y cinco días.
+   ------------------------------------------------------------ */
+function avisaDelAtraso(nombres, hoy, vidaDias) {
+  const dias = (nombres || [])
+    .map((n) => String(n).match(/^(\d{4}-\d{2}-\d{2})\.md$/))
+    .filter(Boolean)
+    .map((m) => m[1])
+    .sort();
+
+  if (!dias.length) return { primero: true, aviso: '' };
+
+  const ultimo = dias[dias.length - 1];
+  const pasaron = Math.round(
+    (Date.parse(hoy + 'T12:00:00Z') - Date.parse(ultimo + 'T12:00:00Z')) / 86400000);
+
+  if (pasaron > vidaDias) {
+    return {
+      primero: false, ultimo: ultimo, pasaron: pasaron, perdido: true,
+      aviso: 'El corte pasado fue el ' + ultimo + ', hace ' + pasaron + ' días, y el ' +
+        'almacén solo guarda ' + vidaDias + '.\nHubo conversaciones que se borraron sin ' +
+        'que nadie las leyera, y eso no se recupera.'
+    };
+  }
+  if (pasaron > 20) {
+    return {
+      primero: false, ultimo: ultimo, pasaron: pasaron, perdido: false,
+      aviso: 'El corte pasado fue el ' + ultimo + ', hace ' + pasaron + ' días. Todavía no ' +
+        'se pierde nada (el almacén guarda ' + vidaDias + '), pero el trato eran quince.'
+    };
+  }
+  return { primero: false, ultimo: ultimo, pasaron: pasaron, perdido: false, aviso: '' };
+}
+
+export {
+  porConversacion, cuentasDelMes, laPaginaDelMes, lasConversaciones, quienHablo,
+  avisaDelAtraso, DE_PRUEBA
+};
 
 const meLlamaronDirecto = process.argv[1] &&
   path.resolve(process.argv[1]) === path.resolve(fileURLToPath(import.meta.url));
@@ -333,14 +398,37 @@ if (meLlamaronDirecto) {
     process.exit(2);
   }
 
-  /* Cuántos días se juntan. Por omisión 31, y nunca más de 45, que es lo
-     que el almacén guarda antes de purgar (`_almacen.js`, VIDA_DIAS).
-     Pedir más daría un archivo con un hueco al principio y parecería que
-     ese mes hubo poco movimiento. */
-  const DIAS = Math.min(45, Math.max(1, Number(process.argv[2]) || 31));
+  const hoy = new Date().toISOString().slice(0, 10);
+  const carpeta = path.join(RAIZ, 'conversaciones');
+  fs.mkdirSync(carpeta, { recursive: true });
+
+  /* Antes de leer nada: ¿cuánto hace del corte pasado? */
+  const atraso = avisaDelAtraso(fs.readdirSync(carpeta), hoy, VIDA_DIAS);
+  if (atraso.aviso) {
+    console.log(atraso.perdido ? '⚠  SE PERDIÓ INFORMACIÓN' : '⚠  Vas tarde');
+    console.log('');
+    console.log('   ' + atraso.aviso.replace(/\n/g, '\n   '));
+    console.log('');
+  }
+
+  /* Cuántos días se juntan. Por omisión DIECISÉIS: el trato son cortes de
+     quince días —«entonces cada 15 días almacenamos todo»— y el día de
+     más es traslape a propósito. Un corte que se hace el día 16 en vez
+     del 15 no puede dejar un hueco de un día, y repetir unas cuantas
+     conversaciones en dos archivos no le hace daño a nadie.
+
+     Nunca más de 45, que es lo que el almacén guarda antes de purgar
+     (`_almacen.js`, VIDA_DIAS): pedir más daría un archivo con un hueco
+     al principio y parecería que hubo poco movimiento.
+
+     Y si se pasó un corte, se pide lo que de verdad falta: desde el
+     corte pasado hasta hoy, no los dieciséis de siempre. */
+  const porAtraso = atraso.primero ? 0 : atraso.pasaron + 1;
+  const DIAS = Math.min(VIDA_DIAS,
+    Math.max(1, Number(process.argv[2]) || Math.max(16, porAtraso)));
   const desde = new Date(Date.now() - DIAS * 24 * 3600 * 1000);
   const corte = desde.toISOString();
-  const periodo = corte.slice(0, 10) + ' a ' + new Date().toISOString().slice(0, 10);
+  const periodo = corte.slice(0, 10) + ' a ' + hoy;
 
   const mensajes = await trae('mensajes', '&cuando=gte.' + corte + '&order=cuando.asc');
   const precios = await trae('precios', '&cuando=gte.' + corte + '&order=cuando.desc');
@@ -348,12 +436,13 @@ if (meLlamaronDirecto) {
   const por = porConversacion(mensajes);
   const c = cuentasDelMes(por, precios);
 
-  const dondeCerebro = path.join(RAIZ, 'cerebro', 'el-mes.md');
+  const dondeCerebro = path.join(RAIZ, 'cerebro', 'el-corte.md');
   fs.writeFileSync(dondeCerebro, laPaginaDelMes(c, periodo), 'utf8');
 
-  const carpeta = path.join(RAIZ, 'conversaciones');
-  fs.mkdirSync(carpeta, { recursive: true });
-  const dondeCrudo = path.join(carpeta, new Date().toISOString().slice(0, 7) + '.md');
+  /* EL NOMBRE LLEVA EL DÍA. Con solo el mes, el segundo corte de la
+     quincena le pasaba encima al primero — y este archivo no está en
+     Git, así que no habría de dónde recuperarlo. */
+  const dondeCrudo = path.join(carpeta, hoy + '.md');
   fs.writeFileSync(dondeCrudo, lasConversaciones(por, periodo), 'utf8');
 
   console.log('Últimos ' + DIAS + ' días · ' + periodo);
@@ -366,6 +455,6 @@ if (meLlamaronDirecto) {
   console.log('  ' + path.relative(RAIZ, dondeCerebro) + '   ← sube a Git');
   console.log('  ' + path.relative(RAIZ, dondeCrudo) + '   ← NO sube (datos de clientes)');
   console.log('');
-  console.log('Falta el otro medio del cierre, que son los precios:');
+  console.log('Falta el otro medio del corte, que son los precios:');
   console.log('  npm run precios:cerebro');
 }

@@ -1,11 +1,11 @@
 /* ============================================================
-   El cierre del mes, probado sin tocar el almacén
+   El corte de quincena, probado sin tocar el almacén
    ------------------------------------------------------------
-       node pruebas/probar-mes-al-cerebro.mjs
+       node pruebas/probar-corte.mjs
 
-   `scripts/mes-al-cerebro.mjs` junta lo que dejó el mes. Aquí se le
-   dan renglones de mentiras y se comprueba lo que saca, igual que
-   `probar-precios-al-cerebro.mjs` hace con los precios.
+   `scripts/corte-al-cerebro.mjs` junta lo que dejó la quincena.
+   Aquí se le dan renglones de mentiras y se comprueba lo que saca,
+   igual que `probar-precios-al-cerebro.mjs` hace con los precios.
 
    QUÉ CUIDA, en orden de gravedad:
 
@@ -14,17 +14,19 @@
         un commit se queda en el historial para siempre.
      2. Que las cuentas cuadren —y sobre todo «sin contestar», que es
         la que le dice al dueño cuánta venta se está quedando parada—.
-     3. Que los números de prueba no ensucien el criterio.
-     4. Que el periodo que se pide nunca pase de lo que el almacén
-        guarda: pedir 90 días daría un archivo con un hueco y
-        parecería que ese mes hubo poco movimiento.
+     3. QUE DOS CORTES DE LA MISMA QUINCENA NO SE PISEN EL ARCHIVO.
+        Ése es el que NO está en Git: lo que se pierda ahí no se
+        recupera de ningún lado.
+     4. Que se avise cuando pasó tanto tiempo que el almacén ya purgó.
+     5. Que los números de prueba no ensucien el criterio.
    ============================================================ */
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import {
-  porConversacion, cuentasDelMes, laPaginaDelMes, lasConversaciones, quienHablo, DE_PRUEBA
-} from '../scripts/mes-al-cerebro.mjs';
+  porConversacion, cuentasDelMes, laPaginaDelMes, lasConversaciones, quienHablo,
+  avisaDelAtraso, DE_PRUEBA
+} from '../scripts/corte-al-cerebro.mjs';
 
 const AQUI = path.dirname(fileURLToPath(import.meta.url));
 const RAIZ = path.join(AQUI, '..');
@@ -156,17 +158,17 @@ igual('ni una sola frase de la conversación, de las ' + MENSAJES.length + ' del
 cierto('sí lleva las cuentas', pagina.indexOf('Conversaciones') !== -1);
 cierto('y la de los que se quedaron esperando', /\*\*1\*\*\s*conversaciones/.test(pagina));
 cierto('y los destinos más pedidos', pagina.indexOf('Puerto Vallarta') !== -1);
-cierto('dice de dónde sale y que se pisa sola', pagina.indexOf('npm run mes') !== -1);
+cierto('dice de dónde sale y que se pisa sola', pagina.indexOf('npm run corte') !== -1);
 cierto('y avisa que las conversaciones NO están aquí',
   pagina.indexOf('conversaciones/') !== -1);
 
-/* Un mes vacío no puede salir con una tabla de ceros que parezca un
+/* Un corte vacío no puede salir con una tabla de ceros que parezca un
    error: tiene que decir qué revisar. */
-const vacia = laPaginaDelMes(cuentasDelMes(new Map(), []), 'un mes sin nada');
-cierto('un mes vacío lo dice con todas sus letras',
+const vacia = laPaginaDelMes(cuentasDelMes(new Map(), []), 'un corte sin nada');
+cierto('un corte vacío lo dice con todas sus letras',
   vacia.indexOf('no hubo ninguna conversación') !== -1);
 cierto('y manda al almacén, que es lo que suele faltar',
-  vacia.indexOf('EL-CIERRE-DEL-MES') !== -1);
+  vacia.indexOf('EL-CORTE') !== -1);
 
 console.log('\n--- las conversaciones, que NO suben ---');
 
@@ -189,31 +191,82 @@ igual('quienHablo traduce los tres',
   ['cliente', 'bot', 'dueno', 'otra cosa'].map(quienHablo),
   ['CLIENTE', 'BOT', 'VENDEDOR', 'BOT']);
 
-console.log('\n--- los candados del script ---');
+console.log('\n--- dos cortes en la misma quincena ---');
 
-const FUENTE = fs.readFileSync(path.join(RAIZ, 'scripts', 'mes-al-cerebro.mjs'), 'utf8');
+/* ------------------------------------------------------------
+   EL DEFECTO QUE DESTAPÓ LA QUINCENA
+   ------------------------------------------------------------
+   La primera versión nombraba el archivo `AAAA-MM.md`, porque el
+   corte iba a ser mensual. Al pasar a quince días —«entonces cada 15
+   días almacenamos todo»— el segundo corte del mes le pasaba encima
+   al primero, y se perdía la primera quincena ENTERA.
+
+   Y en silencio, y del archivo que NO está en Git: no habría de dónde
+   recuperarlo. Por eso el nombre lleva el día.
+   ------------------------------------------------------------ */
+const FUENTE = fs.readFileSync(path.join(RAIZ, 'scripts', 'corte-al-cerebro.mjs'), 'utf8');
 const IGNORE = fs.readFileSync(path.join(RAIZ, '.gitignore'), 'utf8');
 const ALMACEN = fs.readFileSync(path.join(RAIZ, 'api', '_almacen.js'), 'utf8');
 
-/* Sin este renglón, el primer cierre del mes sube las conversaciones de
-   los clientes al repositorio, y de ahí ya no salen. */
+cierto('el archivo se nombra con el DÍA, no solo con el mes',
+  /carpeta,\s*hoy\s*\+\s*'\.md'/.test(FUENTE));
+cierto('y ya no se nombra por mes (slice(0, 7))',
+  FUENTE.indexOf("slice(0, 7)") === -1);
+
+console.log('\n--- el aviso de atraso ---');
+
+igual('sin cortes previos, es el primero',
+  avisaDelAtraso([], '2026-09-12', 45).primero, true);
+igual('y no regaña a nadie', avisaDelAtraso([], '2026-09-12', 45).aviso, '');
+
+igual('a los 15 días, todo en orden',
+  avisaDelAtraso(['2026-08-28.md'], '2026-09-12', 45).aviso, '');
+
+const tarde = avisaDelAtraso(['2026-08-20.md'], '2026-09-12', 45);
+igual('a los 23, avisa sin alarmar', [tarde.pasaron, tarde.perdido], [23, false]);
+cierto('y dice cuál fue el corte pasado', tarde.aviso.indexOf('2026-08-20') !== -1);
+
+/* LA QUE IMPORTA: pasado el tope del almacén, hubo conversaciones que
+   se borraron sin que nadie las leyera. Eso no se deshace. */
+const perdio = avisaDelAtraso(['2026-07-01.md'], '2026-09-12', 45);
+igual('pasados los 45, dice que SE PERDIÓ', perdio.perdido, true);
+cierto('y lo dice sin rodeos', /no se recupera/.test(perdio.aviso));
+
+igual('toma el corte MÁS RECIENTE, no el primero de la lista',
+  avisaDelAtraso(['2026-07-01.md', '2026-09-05.md', '2026-08-20.md'], '2026-09-12', 45).ultimo,
+  '2026-09-05');
+igual('y no se confunde con otros archivos de la carpeta',
+  avisaDelAtraso(['LEEME.md', 'notas.txt', '2026-09-05.md'], '2026-09-12', 45).ultimo,
+  '2026-09-05');
+
+console.log('\n--- los candados del script ---');
+
+/* Sin este renglón, el primer corte sube las conversaciones de los
+   clientes al repositorio, y de ahí ya no salen. */
 cierto('.gitignore aparta la carpeta de conversaciones',
   /^conversaciones\/$/m.test(IGNORE));
 
-/* El almacén purga a los 45 días. Si alguien pide 90, el archivo sale
-   con un hueco al principio y parece que ese mes hubo poco movimiento. */
+/* El almacén purga a los 45 días y el script trae su propia copia del
+   número. Si allá se sube a 90 y aquí no, este script seguiría pidiendo
+   de menos —y el aviso de atraso regañaría de más— sin que nadie lo
+   note. */
 const vida = (ALMACEN.match(/VIDA_DIAS\s*=\s*(\d+)/) || [])[1];
-igual('el almacén sigue guardando 45 días', vida, '45');
-cierto('y el script no pide más de lo que hay guardado',
-  FUENTE.indexOf('Math.min(45') !== -1);
+const vidaAqui = (FUENTE.match(/const VIDA_DIAS = (\d+);/) || [])[1];
+igual('el script y el almacén dicen los mismos días', vidaAqui, vida);
+cierto('y el script nunca pide más de lo que hay guardado',
+  FUENTE.indexOf('Math.min(VIDA_DIAS') !== -1);
 
-/* Los números de prueba están escritos en los dos scripts del cierre.
+/* El trato son quince días, con uno de traslape para que un corte hecho
+   tarde no deje hueco. */
+cierto('por omisión junta dieciséis días', /Math\.max\(16,/.test(FUENTE));
+
+/* Los números de prueba están escritos en los dos scripts del corte.
    Si se agrega uno y se olvida el otro, ese cliente de mentiras se
    cuela a la mitad del criterio. */
 const PRECIOS_SCRIPT = fs.readFileSync(path.join(RAIZ, 'scripts', 'precios-al-cerebro.mjs'), 'utf8');
 const aqui = (FUENTE.match(/const DE_PRUEBA = (\/.*\/);/) || [])[1];
 const alla = (PRECIOS_SCRIPT.match(/const DE_PRUEBA = (\/.*\/);/) || [])[1];
-igual('los dos scripts del cierre apartan los mismos números de prueba', aqui, alla);
+igual('los dos scripts del corte apartan los mismos números de prueba', aqui, alla);
 cierto('y son los que de verdad usa el código', String(DE_PRUEBA) === alla);
 
 console.log('\n' + buenas + ' buenas, ' + malas + ' malas');
