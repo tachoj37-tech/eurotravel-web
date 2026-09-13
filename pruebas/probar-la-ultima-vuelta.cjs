@@ -194,5 +194,29 @@ titulo('los días de movimiento, sin inventarlos (escenario n, 13-sep-2026)');
   ok('  y las fechas de la IA también', /de la IA descartada: /.test(wa));
 }
 
+titulo('la prueba del dueño desde su número (13-sep-2026)');
+{
+  /* Lo que escribió, tal cual. Con la IA el bot se quedó preguntando
+     cuántos son después de «sería una sprinter»; el guion, que es el
+     respaldo, guardaba «vamos pasado» y «regresamos» como la ciudad de
+     salida y «sería una sprinter» como el destino. */
+  const H = '2026-09-13';
+  let e = null, r = null;
+  const paso = {};
+  for (const m of ['Hola', 'Cotizar un viaje', 'vamos a vta', 'vamos pasado', '17', 'regresamos', 'sería una sprinter']) {
+    r = conv.respuestaA(m, e, H); e = r.estado || {}; paso[m] = JSON.parse(JSON.stringify(e));
+  }
+  igual('«vamos pasado» es pasado mañana', paso['vamos pasado'].salida, '2026-09-15');
+  ok('  y no es la ciudad de salida', !paso['vamos pasado'].origen);
+  ok('«regresamos» no es la ciudad de salida', !paso['regresamos'].origen);
+  igual('«sería una sprinter» no cambia el destino', e.destino, 'Puerto Vallarta');
+  igual('  y deja la Sprinter escogida', e.unidadNombre, 'Sprinter');
+  ok('  y ya no pregunta cuántos van', e.paso !== 'cuantos' && !/cu[aá]ntos van/i.test(r.texto));
+  ok('«una sprinter» no es un destino', conv.comoDestino('sería una sprinter') === null);
+  /* Lo que no se debe romper: ciudades de verdad y «el sábado pasado». */
+  ok('«la barca» sigue siendo ciudad', !!conv.comoOrigen('la barca'));
+  ok('«el mes pasado» no es pasado mañana', conv.fechaDe('el mes pasado', H) !== '2026-09-15');
+}
+
 console.log('\n' + buenas + ' buenas, ' + malas + ' malas');
 process.exit(malas ? 1 : 0);

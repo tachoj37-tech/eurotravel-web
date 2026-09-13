@@ -133,7 +133,14 @@ titulo('la plática de un cliente real, ahora con el agente');
     return null;
   };
   await dice('hola', C);
-  ok('«hola»: contesta la IA', textos(C).slice(-1)[0], '¡Qué tal! Soy Eurobot, de Eurotravel 🚐 ¿A dónde va el plan?');
+  /* Cambió de lado el 13-sep-2026. Esto exigía que el «hola» lo contestara
+     la IA; desde el 12-sep el dueño dictó el saludo con «¿Qué necesitas?» y
+     dos botones, y la IA no manda botones: en su prueba desde su número el
+     saludo nunca salió. El saludo es del guion; la IA sigue desde el
+     mensaje siguiente, y sabe qué se dijo (ver la línea del contexto). */
+  okQue('«hola»: contesta el saludo con «¿Qué necesitas?», no la IA', /¿Qué necesitas\?/.test(textos(C).slice(-1)[0] || ''));
+  const botones = (mandados.filter((m) => mismo(m.to, C)).slice(-1)[0] || {}).interactive;
+  okQue('  con sus dos botones', !!botones && JSON.stringify(botones).includes('Cotizar un viaje') && JSON.stringify(botones).includes('Hablar con alguien'));
   await dice('bien y tu?', C);
   ok('«bien y tú?» es plática, no destino', textos(C).slice(-1)[0], 'Muy bien, gracias. Cuéntame, ¿a dónde van?');
   okQue('  y el guion NO guardó «Bien y Tu?» como destino', !textos(C).join('\n').includes('Bien y Tu'));
@@ -170,7 +177,9 @@ titulo('la plática de un cliente real, ahora con el agente');
   okQue('  y al dueño le llega el ticket de precio', /Precio por confirmar/.test(alDueno));
   okQue('  con Puerto Vallarta, 12 pax y las fechas', /Vallarta/.test(alDueno) && /12 pax/.test(alDueno));
   okQue('  el cliente nunca vio un precio ni un «no entendí»', !/\$\s?\d|no entend|no me qued/i.test(textos(C).join('\n')));
-  ok('  una llamada a la IA por mensaje', llamadasALaIA, 8);
+  /* 8 mensajes, 7 llamadas: el «hola» lo contesta el guion desde el
+     13-sep-2026 (ver arriba). Una llamada por cada mensaje que sí es de la IA. */
+  ok('  una llamada a la IA por mensaje (menos el saludo)', llamadasALaIA, 7);
 }
 
 /* ============================================================ */

@@ -307,6 +307,12 @@ function fechaDe(texto, hoy) {
   /* «pasado» a secas, contestando «¿qué día salen?», es pasado mañana. Un
      cliente real lo escribió así (5-sep-2026) y el bot no lo leyó. */
   if (/^\s*(?:el\s+)?pasado\s*$/.test(t)) return masDias(base, 2);
+  /* Y con un verbo de viaje delante: «vamos pasado», «salimos pasado».
+     Prueba del dueño desde su número (13-sep-2026): «vamos pasado» no se
+     leía como fecha y el guion lo guardó como la ciudad de salida. «El
+     sábado pasado» o «el mes pasado» no entran: ahí «pasado» va detrás de
+     otra palabra, no de un verbo. */
+  if (/^\s*(?:nos\s+)?(?:vamos|salimos|nos vamos|seria|sería|es|queremos ir|queremos salir|salir|ir)\s+(?:para\s+)?pasado\s*$/.test(t)) return masDias(base, 2);
   if (/\bmanana\b/.test(t)) return masDias(base, 1);
 
   /* ------------------------------------------------------------
@@ -1208,6 +1214,10 @@ function comoDestino(crudo) {
      asentimiento cuando llega abajo.
      ------------------------------------------------------------ */
   if (NO_ES_CIUDAD.test(normaliza(crudo))) return null;
+  /* Una unidad no es un lugar: «sería una sprinter» contestando «¿como
+     cuántos van?» cambió el destino a *Una Sprinter* (prueba del dueño
+     desde su número, 13-sep-2026). */
+  if (/\b(sprinter|suburban|camion\w*|autobus\w*|camioneta)\b/.test(normaliza(crudo)) || unidadPorNombre(crudo)) return null;
   const d = limpiaDestino(crudo);
   const n = normaliza(d);
   if (!n || n.length < 3) return null;
@@ -2484,6 +2494,15 @@ function absorbeLoDemas(e, crudo, hoy) {
     delete e.noCabeEnUna;
   }
   if (l.unidad && !e.unidad) { e.unidad = l.unidad; algo = true; }
+  /* La Sprinter o la Suburban nombrada es una unidad ESCOGIDA, igual que un
+     camión: lleva su nombre, que es lo que exime de preguntar cuántos son
+     (`alSiguienteHueco`). Sin él, «sería una sprinter» contestando «¿como
+     cuántos van?» dejaba al bot preguntando lo mismo (prueba del dueño
+     desde su número, 13-sep-2026). Igual que `pegaDatos`. */
+  if (l.unidad && e.unidad === l.unidad && l.unidad !== 'autobus' && !e.unidadNombre) {
+    const chica = UNIDADES.find(function (x) { return x.cat === l.unidad; });
+    if (chica && !(e.gente && Number(e.gente) > Number(chica.max))) { e.unidadNombre = chica.name; algo = true; }
+  }
   /* El NOMBRE de un camión también cuenta, lo diga donde lo diga: «el
      i6s» contestando «¿qué día regresan?» se tiraba, y el cliente tenía
      que repetirlo en el paso de escoger (11-sep-2026). */
@@ -2559,8 +2578,14 @@ function absorbeLoDemas(e, crudo, hoy) {
      sigue diciendo con «de», que es como se dice, y ése lo lee
      `origenDeLaFrase` de siempre.
      ------------------------------------------------------------ */
+  /* Un cuarto candado, del 13-sep-2026 (prueba del dueño desde su número):
+     «regresamos» contestando «¿qué día regresan?» quedó como la ciudad de
+     salida *Regresamos*. Un verbo de viaje, una unidad o una fecha dicha
+     con palabras no es una ciudad. Los artículos no se vetan: La Barca y
+     Los Mochis sí son ciudades. */
+  const NO_ES_CIUDAD_PELADA = /\b(regres\w*|volv\w*|vamos|salimos|venimos|nos|seria|sera|somos|son|una?|sprinter|suburban|camion\w*|autobus\w*|van|unidad|pasado|manana|hoy|dias?|nada|pues|bueno|todavia|aun)\b/;
   if (!e.origen && e.destino && cambioLugar !== 'destino' &&
-      palabrasDe(normaliza(crudo)).length <= 2) {
+      palabrasDe(normaliza(crudo)).length <= 2 && !NO_ES_CIUDAD_PELADA.test(normaliza(crudo))) {
     const suyo = comoOrigen(crudo);
     if (suyo && suyo !== e.destino) {
       e.origen = suyo; algo = true; if (!cambioLugar) cambioLugar = 'origen';
@@ -3070,7 +3095,14 @@ function pasoDeCotizacion(t, crudo, estado, hoy) {
          a preguntar. Sin esto el paso se lo tragaba entero y el cliente
          tenía que repetirlo más adelante (11-sep-2026). */
       const acuse = absorbeLoDemas(e, crudo, hoy);
-      if (acuse) return siguiente(e, acuse);
+      /* Y se recalcula el paso: si lo que dijo fue la unidad («sería una
+         sprinter»), cuántos son ya no hace falta y no se vuelve a preguntar
+         (13-sep-2026). */
+      if (acuse) {
+        alSiguienteHueco(e);
+        return siguiente(e, e.unidadNombre && e.paso !== 'cuantos' && acuse === 'Anotado 👍'
+          ? 'Va, en *' + e.unidadNombre + '* 🚐' : acuse);
+      }
       /* Sin «perdón, no me quedó claro»: eso es confesarle al cliente que
          del otro lado hay un robot (dictado del dueño). Se vuelve a
          preguntar distinto y se marca `noEntendio` para que la IA lea el

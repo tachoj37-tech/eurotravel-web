@@ -2070,7 +2070,27 @@ function procesa(crudo, firma, entorno) {
                 const conAgente = agenteIA(env) && !!texto;
                 const respuesta = conversacion.respuestaA(texto, suEstado,
                   env.VERCEL_ENV === 'production' ? undefined : env.HOY_DE_PRUEBA);
-                if (conAgente && respuesta && typeof respuesta === 'object') {
+                /* ------------------------------------------------------------
+                   EL SALUDO Y SUS BOTONES LOS DICE EL GUION — 13-sep-2026
+                   ------------------------------------------------------------
+                   Prueba del dueño desde su número: a «Hola» contestó la IA
+                   («¡Qué tal! ¿A dónde va el plan?») y el saludo dictado —
+                   «¿Qué necesitas?» con «Cotizar un viaje» y «Hablar con
+                   alguien»— nunca salió, porque TODO texto pasaba al agente y
+                   el agente no manda botones. Lo mismo con el botón pulsado:
+                   «Hablar con alguien» no es algo que la IA tenga que platicar.
+                   El saludo y la respuesta a esos dos botones son del guion. */
+                const esElSaludo = !!(respuesta && Array.isArray(respuesta.opciones) &&
+                  respuesta.opciones.indexOf('Cotizar un viaje') >= 0);
+                const esBotonDelSaludo = /^(cotizar un viaje|hablar con alguien)$/.test(conversacion.normaliza(String(texto || '')).trim());
+                if (conAgente && (esElSaludo || esBotonDelSaludo) && respuesta && typeof respuesta === 'object') {
+                  console.log('[saludo] ' + (esElSaludo ? 'el saludo con sus botones' : 'botón «' + texto + '»') + ': contesta el guion, no la IA');
+                  /* Tampoco lo «rescata» la IA (`noEntendio`), y lo que se
+                     dijo entra a su memoria para el mensaje siguiente. */
+                  respuesta.sinIA = true;
+                  respuesta.guionALaMemoria = true;
+                }
+                if (conAgente && !esElSaludo && !esBotonDelSaludo && respuesta && typeof respuesta === 'object') {
                   respuesta.agente = true;
                   respuesta.estadoAntes = estadoAntes;
                 }
@@ -2309,6 +2329,7 @@ function procesa(crudo, firma, entorno) {
           estadoDelCliente: (r.noEntendio || siempreIA(env)) ? charlaDe(m.from) : null,
           /* El agente: la IA habla; el guion es respaldo. */
           agente: !!r.agente,
+          guionALaMemoria: !!r.guionALaMemoria,
           estadoAntes: r.estadoAntes || null,
           /* El texto ENTERO, no el recortado de `escribio`: la IA tiene
              que leer lo mismo que escribió el cliente. */

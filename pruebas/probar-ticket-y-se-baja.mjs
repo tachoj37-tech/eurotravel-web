@@ -223,6 +223,26 @@ titulo('pero una corrección del viaje sí la hace');
 }
 
 /* ============================================================ */
+titulo('con la unidad escogida, la IA no se queda en cuántos son');
+{
+  /* La respuesta que dio la IA en la prueba del dueño desde su número
+     (13-sep-2026): «sería una sprinter» → «Listo, Sprinter para ustedes.
+     ¿Cuántos son, más o menos?». El candado de «pregunta que sobra» solo
+     valía con autobús. */
+  limpia();
+  const C = '5213366670060';
+  for (const m of ['hola', 'Cotizar un viaje', 'a vallarta', '15 de noviembre', 'el 17']) await dice(m, C);
+  laIA = function () {
+    return { respuesta: 'Listo, Sprinter para ustedes. ¿Cuántos son, más o menos?', datos: { unidad: 'sprinter' }, accion: 'seguir' };
+  };
+  const antes = textos(C).length;
+  await dice('sería una sprinter', C);
+  const tras = textos(C).slice(antes).join('\n');
+  ok('no le vuelve a preguntar cuántos son (dijo: ' + JSON.stringify(tras.slice(0, 90)) + ')',
+    tras.length > 0 && !/cu[aá]ntos (son|van)/i.test(tras));
+}
+
+/* ============================================================ */
 titulo('y al dueño, nada');
 {
   ok('en toda la batería no le llegó nada a su número', textos(process.env.DUENO_WHATSAPP).length === 0);

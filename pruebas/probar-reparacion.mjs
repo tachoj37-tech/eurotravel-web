@@ -143,7 +143,11 @@ titulo('R1 · cuatro datos en cuatro turnos: cero preguntas repetidas');
     return { respuesta: 'Va.', datos: {}, accion: 'seguir' };
   };
   for (const t of ['hola', 'soy Mariana', 'a Vallarta', 'somos 18']) await dice(t, C);
-  const cuarto = payloads[3];
+  /* Desde el 13-sep-2026 el «hola» lo contesta el guion con su saludo y sus
+     botones (no llama a la IA), así que las llamadas se cuentan desde el
+     final: el turno de «somos 18» es la última, sea la 3ª o la 4ª. */
+  const base = payloads.length;
+  const cuarto = payloads[base - 1];
   okQue('el 4º turno lleva el bloque «LO QUE YA SÉ» PRIMERO', /^══ LO QUE YA SÉ/.test(cuarto.dinamico));
   okQue('  con el nombre dicho en el chat', /Nombre: Mariana/.test(cuarto.dinamico));
   okQue('  y el destino', /Destino: Puerto Vallarta/.test(cuarto.dinamico));
@@ -151,11 +155,11 @@ titulo('R1 · cuatro datos en cuatro turnos: cero preguntas repetidas');
   okQue('  el bloque cacheado sigue siendo uno y fijo', cuarto.cacheado === 1);
   const antes = textos(C).length;
   await dice('el 20 de octubre', C);
-  const quinto = payloads[4];
+  const quinto = payloads[base];
   okQue('el 5º turno ya sabe los 18 pasajeros', /Pasajeros: 18/.test(quinto.dinamico));
   const ultimo = textos(C).slice(antes).join('\n');
   okQue('la IA volvió a preguntar «¿a dónde van?» y NO le llegó al cliente', !/d[oó]nde van/i.test(ultimo));
-  okQue('  se regeneró UNA vez con el aviso «ese dato ya lo tienes»', payloads.length === 6 && /Ese dato ya lo tienes: destino/.test(payloads[5].dinamico));
+  okQue('  se regeneró UNA vez con el aviso «ese dato ya lo tienes»', payloads.length === base + 2 && /Ese dato ya lo tienes: destino/.test(payloads[base + 1].dinamico));
   okQue('  y el cliente recibió la pregunta que sí falta (el regreso)', /regres|mismo d[ií]a|vuelven/i.test(ultimo));
   okQue('  la plática guarda el nombre y no lo pisa el del perfil', (webhook.charlaDe(C) || {}).nombre === 'Mariana');
 }
@@ -373,9 +377,12 @@ titulo('R4 · el mismo webhook tres veces: una sola respuesta (Falla 2)');
 {
   limpia();
   const C = '5213366670404';
-  laIA = () => ({ respuesta: '¡Qué tal! ¿A dónde va el plan?', datos: {}, accion: 'seguir' });
+  laIA = () => ({ respuesta: 'Vallarta, va. ¿Qué día salen?', datos: { destino: 'Puerto Vallarta' }, accion: 'seguir' });
+  /* Con «a vallarta» y no con «hola»: desde el 13-sep-2026 el saludo lo
+     contesta el guion sin llamar a la IA, y lo que aquí se vigila es que la
+     IA no se llame tres veces por el mismo mensaje. */
   const cuerpo = JSON.stringify({ entry: [{ changes: [{ value: { metadata: { phone_number_id: '111' },
-    messages: [{ id: 'wamid.repetido-r4', from: C, type: 'text', text: { body: 'hola' } }] } }] }] });
+    messages: [{ id: 'wamid.repetido-r4', from: C, type: 'text', text: { body: 'a vallarta' } }] } }] }] });
   for (let i = 0; i < 3; i++) {
     await atiende(new Request('https://x/api/whatsapp', { method: 'POST', body: cuerpo, headers: { 'x-hub-signature-256': firma(cuerpo) } }));
   }

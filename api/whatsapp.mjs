@@ -2333,7 +2333,11 @@ function sinMuletillaRepetida(respuesta, ultimoTextoDelBot) {
    regenera una vez y, si insiste, contesta el guion con lo que falta. */
 function preguntaQueSobra(respuesta, estado, ficha) {
   const e = estado || {};
-  const busEscogido = e.unidad === 'autobus' && e.unidadNombre;
+  /* Cualquier unidad escogida, no solo autobús: es la misma regla que
+     `alSiguienteHueco` ya aplica desde el 10-sep. Prueba del dueño desde su
+     número (13-sep-2026): «sería una sprinter» → «Listo, Sprinter para
+     ustedes. ¿Cuántos son, más o menos?», y el bot se quedó en cuántos. */
+  const busEscogido = !!e.unidadNombre;
   if ((busEscogido || e.sinCuenta) && !e.gente && PREGUNTA_DE.gente.test(String(respuesta || ''))) return 'gente';
   /* Antes del depósito no se pregunta hora, dirección ni nombre: eso son
      datos del contrato y se piden con el comprobante en mano (dictado del
@@ -2578,6 +2582,19 @@ async function loQueDiceElAgente(envio) {
     if (!antes.gente && !antes.sinCuenta && diceQueNoSabeCuantos(texto)) {
       console.error('[agente] no sabe cuántos son: se deja de pedir');
       antes = Object.assign({}, antes, { sinCuenta: true }); cambio = true;
+    }
+    /* «Sería una sprinter» = la Sprinter escogida, lo apunte la IA o no.
+       Con el modelo real (13-sep-2026, la plática del dueño) unas veces la
+       ponía en datos y otras solo en el texto, y cuando no, el bot seguía
+       preguntando cuántos son. Lo lee el código. */
+    if (!antes.unidadNombre) {
+      const t = conversacion.normaliza(texto);
+      const chica = /\bsprinter\b/.test(t) ? 'sprinter' : (/\bsuburban\b/.test(t) ? 'suburban' : null);
+      const u = chica && (conversacion.UNIDADES || []).find(function (x) { return x.cat === chica; });
+      if (u && !/\bno\b/.test(t) && !(antes.gente && Number(antes.gente) > Number(u.max))) {
+        console.error('[agente] nombró la ' + u.name + ': queda escogida');
+        antes = Object.assign({}, antes, { unidad: chica, unidadNombre: u.name }); cambio = true;
+      }
     }
     /* «Ese» / «el G8» con quiero/precio/reservar = lo escogió. */
     if (!antes.unidadNombre) {
@@ -3894,6 +3911,12 @@ async function reparte(envio) {
   }
 
   await manda(envio);
+  /* El saludo y sus botones los contesta el guion (ver `_whatsapp-webhook`):
+     la IA no habló, pero tiene que saber qué se dijo. */
+  if (envio.guionALaMemoria && envio.para && envio.texto) {
+    if (envio.textoDelCliente) agente.recuerda(envio.para, 'cliente', envio.textoDelCliente);
+    agente.recuerda(envio.para, 'bot', envio.texto);
+  }
   if (envio.cotiza) for (const p of await precioDe(envio)) await manda(p);
 }
 

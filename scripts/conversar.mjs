@@ -664,6 +664,10 @@ const escenarios = {
   bl: ['hola, quiero cotizar a chapala el 25 de octubre, ida y vuelta el mismo día, somos 14, de guadalajara, solo nos llevan y traen',
     'ah no, perdón, somos 18', 'sí, así está bien', 'oye y cuánto tarda en llegar el precio?'],
 
+  /* bn · LA PRUEBA DEL DUEÑO DESDE SU NÚMERO (13-sep-2026), tal cual la
+     escribió. Se quedó en «¿cuántos son?» después de «sería una sprinter». */
+  bn: ['Hola', 'Cotizar un viaje', 'vamos a vta', 'vamos pasado', '17', 'regresamos', 'sería una sprinter', 'si', 'no nos movemos'],
+
   /* bm · CORRIGE LA FECHA Y LOS DÍAS DE MOVIMIENTO EN EL TICKET. */
   bm: ['a vallarta del 20 al 23 de noviembre, somos 40, de guadalajara, en el neobus, nos movemos un día allá',
     'mejor regresamos el 24 y nos movemos dos días', 'perfecto, todo bien']
