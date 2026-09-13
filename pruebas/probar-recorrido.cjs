@@ -433,8 +433,12 @@ igual('cada ruta de window.IMGS existe en la carpeta',
    ============================================================ */
 {
   const css = html.slice(html.indexOf('.cal-mes {'), html.indexOf('.cal-dia:not(.apagado):hover'));
-  const desde = html.lastIndexOf('@media (max-width: 680px)');
-  const enCelular = html.slice(desde, desde + 1600);
+
+  /* El bloque de celular que trae los TAMAÑOS. Se busca por su contenido y
+     no por «el último @media», porque ya son dos bloques de este corte.
+     Y sin pegar saltos de línea al patrón: este archivo va con CRLF. */
+  const iTam = (html.match(/@media \(max-width: 680px\)\s*\{\s*\.cal-mes \{ grid-template-columns/) || {}).index;
+  const enCelular = iTam === undefined ? '' : html.slice(iTam, iTam + 700);
 
   /* En computadora se queda como estaba. */
   cierto('en computadora el día sigue midiendo lo de siempre',
@@ -469,6 +473,47 @@ igual('cada ruta de window.IMGS existe en la carpeta',
   cierto('el flotante se esconde con el calendario abierto',
     /:has\(\.cal\.on\)[^{]*\{[^}]*display:\s*none/.test(html) ||
     /cal-abierto/.test(html));
+
+  /* ------------------------------------------------------------
+     Y LA BANDA DEL RANGO SIGUE CUADRANDO CON EL CÍRCULO
+     ------------------------------------------------------------
+     Esto lo METIÓ el cambio de tamaño y se vio midiendo un rango de
+     verdad en el teléfono: la banda rosa de los días intermedios se
+     dibuja con `::before` pegado a la celda —`top` y `bottom` de 1 px—
+     así que creció con la celda, a 42. El círculo del día se quedó en
+     38, y la banda sobresalía 4 px arriba y abajo.
+
+     Antes cuadraban exactos —celda 34, banda 32, círculo 32— y esa es
+     la invariante que hay que sostener: BANDA = CÍRCULO. Si no, el
+     rango se ve como una cinta mal recortada detrás de los días.
+     ------------------------------------------------------------ */
+  const circulo = Number((enCelular.match(/\.cal-dia span\s*\{[^}]*height:\s*(\d+)px/) || [])[1]);
+
+  /* El ajuste de la banda vive en SU PROPIO bloque de celular, y dónde está
+     importa: ver abajo. */
+  const mBanda = html.match(/@media \(max-width: 680px\)\s*\{\s*\.cal-dia\.dentro::before[\s\S]{0,200}?top:\s*(\d+)px/);
+  const iBanda = mBanda ? mBanda.index : -1;
+  const margen = mBanda ? Number(mBanda[1]) : NaN;
+
+  cierto('en celular el círculo del día crece con la celda', circulo >= 40);
+  cierto('  y la banda del rango mide lo mismo que el círculo',
+    Number.isFinite(margen) && (alto - margen * 2) === circulo);
+
+  /* ------------------------------------------------------------
+     Y EL AJUSTE DE LA BANDA VA DESPUÉS DE LA REGLA QUE CORRIGE
+     ------------------------------------------------------------
+     Esto no es manía de orden: la primera versión puso el ajuste dentro
+     del bloque de tamaños, ARRIBA de la regla base. Misma especificidad,
+     y las medias consultas NO suman especificidad — así que ganaba la de
+     abajo y la banda seguía saliéndose.
+
+     Y la prueba de texto pasaba igual, porque la declaración sí existía.
+     Lo cazó medirlo en el navegador. Por eso aquí se exige el orden: es
+     lo único que un archivo puede comprobar de esto.
+     ------------------------------------------------------------ */
+  const iBase = html.indexOf('/* la franja que une las dos fechas */');
+  cierto('  y el ajuste va DESPUÉS de la regla base, o no surte efecto',
+    iBase !== -1 && iBanda !== -1 && iBanda > iBase);
 }
 
 console.log('\n' + buenas + ' buenas, ' + malas + ' malas');

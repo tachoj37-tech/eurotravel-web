@@ -121,6 +121,36 @@ const RAROS = ['a&b=c', 'a,b', '100%', "o'brien", 'con espacio', 'salto\nlinea',
   igual('y por eso leer una ficha no se puede desviar',
     consulta().cuantosNumero, 1);
 
+  console.log('\n--- el candado del seguimiento no se ablanda ---');
+
+  /* ------------------------------------------------------------
+     `marcaToque` no es una consulta cualquiera: es el CANDADO que
+     impide que dos corridas del cron le manden el mismo recordatorio
+     al mismo cliente. Actualiza «donde numero=X **y toques=de**», así
+     que solo gana la corrida que vio el valor que leyó (B9/C13).
+
+     Al escapar los valores estuve a punto de ablandarlo: con `de`
+     ilegible, `Number(de) || 0` da CERO, y cero empareja con las
+     fichas que no han recibido ningún toque. Un candado que ante la
+     duda empareja no es un candado.
+
+     Hoy no es alcanzable —quien llama ya hace `Number(f.toques) || 0`—
+     pero la dirección importa: ante un valor que no es un conteo, esto
+     no consulta nada.
+     ------------------------------------------------------------ */
+  for (const malo of ['abc', '1&numero=eq.99', {}, [], NaN, -1, 1.5, null, undefined]) {
+    urls = [];
+    const r = await almacen.marcaToque('3312223344', malo, 1);
+    igual('con un conteo ilegible (' + JSON.stringify(malo === undefined ? 'undefined' : malo) +
+      ') no consulta nada', [urls.length, r], [0, false]);
+  }
+
+  urls = [];
+  await almacen.marcaToque('3312223344', 2, 3);
+  cierto('y con un conteo bueno sí consulta', urls.length === 1);
+  cierto('  filtrando por ese conteo exacto',
+    new URL(ultima()).searchParams.get('toques') === 'eq.2');
+
   console.log('\n--- los valores de texto libre ---');
 
   /* La clave de un precio lleva el DESTINO, que lo escribe el cliente

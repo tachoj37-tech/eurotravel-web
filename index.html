@@ -849,7 +849,7 @@
   @media (max-width: 680px) {
     .cal-mes { grid-template-columns: repeat(7, 44px); }
     .cal-dia { height: 44px; font-size: 15px; }
-    .cal-dia span { width: 38px; height: 38px; }
+    .cal-dia span { width: 40px; height: 40px; }
   }
   .cal-dia.vacio, .cal-dia.apagado { cursor: default; color: #c8c8c4; }
   .cal-dia.apagado span { text-decoration: line-through; }
@@ -862,6 +862,28 @@
   .cal-dia.ini::before { left: 50%; border-radius: 999px 0 0 999px; }
   .cal-dia.fin::before { right: 50%; border-radius: 0 999px 999px 0; }
   .cal-dia.ini.fin::before { display: none; }
+
+  /* ------------------------------------------------------------
+     LA BANDA DEL RANGO CUADRA CON EL CÍRCULO, TAMBIÉN EN CELULAR
+     ------------------------------------------------------------
+     La banda se dibuja pegada a la celda, así que al crecer la celda
+     a 44 quedó en 42 contra un círculo de 40 y sobresalía 2 px arriba
+     y abajo. Se vio midiendo un rango de verdad en el teléfono; en
+     computadora cuadraban exactos (34 → 32 y 32) y así debe quedar.
+
+     Y VA AQUÍ ABAJO A PROPÓSITO. La primera versión puso esto dentro
+     del bloque de celular de más arriba y NO SURTIÓ EFECTO: misma
+     especificidad que la regla base, y las medias consultas no suman
+     especificidad — ganaba la que estaba después. La prueba de texto
+     pasó igual, porque la declaración sí existía; lo cazó medirlo en
+     el navegador.
+     ------------------------------------------------------------ */
+  @media (max-width: 680px) {
+    .cal-dia.dentro::before, .cal-dia.ini::before, .cal-dia.fin::before {
+      top: 2px; bottom: 2px;
+    }
+  }
+
   .cal-dia.ini span, .cal-dia.fin span { background: var(--red); color: #fff; font-weight: 600; }
   .cal-dia.ini:hover span, .cal-dia.fin:hover span { background: var(--red); }
   .cal-dia.hoy:not(.ini):not(.fin) span { box-shadow: inset 0 0 0 1px var(--line); }

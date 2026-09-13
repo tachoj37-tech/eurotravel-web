@@ -332,7 +332,32 @@ async function fichasDeSeguimiento() {
 async function marcaToque(numero, de, a) {
   const k = llave(numero);
   if (!k) return false;
-  const filas = await pide('fichas?numero=eq.' + val(k) + '&toques=eq.' + val(Number(de) || 0), {
+  /* ------------------------------------------------------------
+     ANTE UN CONTEO ILEGIBLE, NO SE CONSULTA (13-sep-2026)
+     ------------------------------------------------------------
+     Esto no es una consulta cualquiera: es el CANDADO que impide que
+     dos corridas del cron le manden el mismo recordatorio al mismo
+     cliente. Solo gana la que vio `toques` en el valor que leyó.
+
+     Al escapar los valores (B15) estuvo a punto de ablandarse: con un
+     `de` ilegible, `Number(de) || 0` da CERO, y cero empareja con las
+     fichas que no han recibido ningún toque. Un candado que ante la
+     duda empareja no es un candado — y lo que está del otro lado es
+     escribirle dos veces a un cliente.
+
+     Quien llama ya hace `Number(f.toques) || 0`, así que hoy no es
+     alcanzable. La dirección sí importa.
+
+     SE EXIGE UN NÚMERO DE VERDAD, no algo que se convierta en uno.
+     `Number(null)` y `Number([])` dan CERO calladamente — eso es la
+     flojera de JavaScript, no la intención de quien llamó. Un candado
+     que acepta `null` como «cero toques» acaba mandando el primer
+     recordatorio a quien ya lo recibió.
+     ------------------------------------------------------------ */
+  if (typeof de !== 'number' || !Number.isInteger(de) || de < 0) return false;
+  const cuantosVan = de;
+
+  const filas = await pide('fichas?numero=eq.' + val(k) + '&toques=eq.' + val(cuantosVan), {
     metodo: 'PATCH',
     cabeceras: { 'Prefer': 'return=representation' },
     cuerpo: { toques: Number(a) }
