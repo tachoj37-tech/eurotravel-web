@@ -3,6 +3,12 @@
 Lo que falta, de quién depende, y cómo se sabe que quedó. Se actualiza
 cada vez que algo se cierra.
 
+> **13-sep-2026 · Lo de LA PÁGINA se separó.** Esta lista creció alrededor del
+> bot y ya cuesta encontrar en ella lo que toca a la página. Lo de la página
+> —R47, el corte de quincena, el dominio, el almacén— vive ahora en
+> **`docs/PENDIENTES-DE-LA-PAGINA.md`**, numerado para irlo resolviendo de uno
+> en uno. Lo de aquí abajo sigue siendo del bot y de su lanzamiento.
+
 ## Del dueño (nadie más puede hacerlo)
 
 | # | Qué | Cómo | Cómo se comprueba |
