@@ -606,6 +606,11 @@
   .caminos-caja .field { margin-bottom: 12px; }
   .caminos-nota { font-size: 13px; color: var(--muted); margin: 0 0 14px; line-height: 1.5; }
   .caminos-error { font-size: 13px; color: var(--red); margin: 12px 0 0; min-height: 1px; }
+  /* El MISMO renglón, cuando lo que trae es una buena noticia. «Listo, va
+     otro código en camino» en rojo se lee como un problema justo cuando
+     todo salió bien. Se pone y se quita según lo que conteste el
+     servidor; el renglón es uno solo para que no salten dos textos. */
+  .caminos-error.caminos-bien { color: #14682f; }
   .caminos-dentro {
     display: flex; align-items: center; gap: 9px; font-size: 14px;
     background: var(--soft); border-radius: var(--radius-sm); padding: 12px 14px; margin: 0;
@@ -4313,6 +4318,49 @@ window.IMGS = {
         });
       }
 
+      /* ============================================================
+         «NO ME LLEGÓ — MÁNDAME OTRO», LOS TRES IGUALES
+         ------------------------------------------------------------
+         Hay tres botones de reenviar en esta pantalla —el de pago, el
+         del modal de la barra y el de la contraseña nueva— y hacían
+         tres cosas distintas:
+
+           · el de la contraseña nueva decía «Listo, va otro código en
+             camino» SIN MIRAR SI SALIÓ. Con un 429 —el freno son cuatro
+             por minuto— el cliente se quedaba esperando un correo que
+             nunca se mandó.
+           · los tres pintaban la buena noticia en el renglón de errores,
+             que es rojo.
+           · ninguno frenaba el doble clic, y cada pica es un correo que
+             cuesta dinero.
+
+         El de `viaje.html` ya se había arreglado auditando las ligas;
+         esto trae a los tres de aquí a lo mismo, en una sola función
+         para que no se vuelvan a separar.
+         ============================================================ */
+      function reenvia(boton, renglon, pedir) {
+        if (boton.disabled) return;
+        boton.disabled = true;
+        renglon.classList.remove('caminos-bien');
+        renglon.textContent = 'Mandando…';
+
+        function di(texto, bien) {
+          boton.disabled = false;
+          renglon.classList.toggle('caminos-bien', !!bien);
+          renglon.textContent = texto;
+        }
+
+        pedir().then(function (r) {
+          if (r && r.status === 200) {
+            di('Listo, va otro código en camino.', true);
+            return;
+          }
+          di((r && r.datos && r.datos.aviso) || 'No se pudo mandar. Inténtalo en un momento.', false);
+        }).catch(function () {
+          di('No hubo conexión. Vuelve a intentar.', false);
+        });
+      }
+
       function verCaja(cual) {
         ['caja-alta', 'caja-entrar', 'caja-codigo'].forEach(function (id) {
           byId(id).style.display = (id === cual) ? '' : 'none';
@@ -4660,14 +4708,11 @@ window.IMGS = {
         });
 
         byId('cod-otro').addEventListener('click', function () {
-          var error = byId('cod-error');
-          var correo = (byId('f-mail').value || byId('ent-correo').value || '').trim();
-          error.textContent = 'Mandando…';
-          pideCuenta('codigo', { correo: correo }).then(function (r) {
-            error.textContent = r.status === 200
-              ? 'Listo, va otro código en camino.'
-              : (r.datos.aviso || 'No se pudo mandar.');
-          }).catch(function () { error.textContent = 'No hubo conexión.'; });
+          reenvia(byId('cod-otro'), byId('cod-error'), function () {
+            return pideCuenta('codigo', {
+              correo: (byId('f-mail').value || byId('ent-correo').value || '').trim()
+            });
+          });
         });
       })();
 
@@ -4923,6 +4968,14 @@ window.IMGS = {
           error.textContent = '';
           if (!nombre) { error.textContent = 'Escribe tu nombre.'; return; }
           if (!correo) { error.textContent = 'Escribe tu correo.'; return; }
+          /* Y que el correo sirva. El código de confirmación va a llegar
+             ahí: con un dedazo, la cuenta nace sin manera de abrirse y el
+             cliente no entiende por qué no le llega nada. La regla es la
+             misma que usan el cotizador y la caja de captura. */
+          if (!correoBueno(correo)) {
+            error.textContent = 'Ese correo no se entiende. Revisa que lleve arroba y punto.';
+            return;
+          }
 
           boton.disabled = true; boton.textContent = 'Creando…';
           pideCuenta('crear', {
@@ -4977,13 +5030,9 @@ window.IMGS = {
         });
 
         byId('cta-c-otro').addEventListener('click', function () {
-          var error = byId('cta-c-error');
-          error.textContent = 'Mandando…';
-          pideCuenta('codigo', { correo: correoEnCurso }).then(function (r) {
-            error.textContent = r.status === 200
-              ? 'Listo, va otro código en camino.'
-              : (r.datos.aviso || 'No se pudo mandar.');
-          }).catch(function () { error.textContent = 'No hubo conexión.'; });
+          reenvia(byId('cta-c-otro'), byId('cta-c-error'), function () {
+            return pideCuenta('codigo', { correo: correoEnCurso });
+          });
         });
 
         /* ============================================================
@@ -5036,12 +5085,15 @@ window.IMGS = {
           });
         });
 
+        /* Éste era el peor de los tres: prometía el correo SIN MIRAR la
+           respuesta del servidor —`then(function () {…})`, sin `r`— así
+           que un 429 del freno se leía como «listo». Y es la pantalla de
+           recuperar la contraseña, donde quedarse sin el correo significa
+           quedarse sin cuenta. */
         byId('cta-n-otro').addEventListener('click', function () {
-          var error = byId('cta-n-error');
-          error.textContent = 'Mandando…';
-          pideCuenta('olvide', { correo: correoAOlvidar }).then(function () {
-            error.textContent = 'Listo, va otro código en camino.';
-          }).catch(function () { error.textContent = 'No hubo conexión.'; });
+          reenvia(byId('cta-n-otro'), byId('cta-n-error'), function () {
+            return pideCuenta('olvide', { correo: correoAOlvidar });
+          });
         });
 
         byId('cta-n-guardar').addEventListener('click', function () {
