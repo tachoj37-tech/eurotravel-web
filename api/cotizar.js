@@ -88,6 +88,22 @@ module.exports = async function handler(req, res) {
       /* Para que la pantalla sepa si prometer el correo o no. Nada de esto
          es dinero ni delata una tarifa. */
       porCorreo: !!salio.alCliente,
+      /* ------------------------------------------------------------
+         R47 · Y SI EL VENDEDOR SE ENTERÓ O NO (12-sep-2026)
+         ------------------------------------------------------------
+         La pantalla decía «Ya quedó: tu solicitud está con un vendedor»
+         pasara lo que pasara, y ese aviso sale por correo: puede fallar.
+
+         Hasta ayer eso tocaba a los destinos que no cotizaban. Con la
+         página sin precios, por aquí pasan TODAS las cotizaciones — si
+         Resend está mal, se pierden todas, y cada cliente se va
+         convencido de que lo van a llamar.
+
+         Se manda el dato y la pantalla decide qué decir. No es un error
+         en su cara: sus datos sí se recibieron. Es no afirmar lo que no
+         pasó, y empujarlo al WhatsApp, que no depende del correo.
+         ------------------------------------------------------------ */
+      conVendedor: !!salio.alVendedor,
       contacto: revisada.solicitud.telefono ? 'whatsapp' : 'correo'
     });
     return;

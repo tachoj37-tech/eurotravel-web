@@ -215,5 +215,50 @@ titulo('la pantalla revisa antes de mandar, y el servidor otra vez');
   igual('y NO manda los días: los cuenta el servidor', /dias:/.test(manda), false);
 }
 
+/* ============================================================ */
+titulo('el acuse no promete un vendedor que no se enteró');
+{
+  /* ------------------------------------------------------------
+     12-sep-2026, y salió de R47.
+
+     El aviso al vendedor sale POR CORREO, y puede fallar: Resend
+     caído, la llave mal, `AVISOS_A` apuntando a nadie. Cuando falla,
+     `avisa()` lo grita en el registro y ya — y la pantalla decía
+     igual «Ya quedó: tu solicitud está con un vendedor».
+
+     Hasta ayer eso tocaba a los 36 destinos que no cotizaban. Con R47
+     la página no da NINGÚN precio, así que por ese correo pasan TODAS
+     las cotizaciones: mal configurado, se pierden todas — y cada
+     cliente se va convencido de que lo van a llamar.
+
+     Es el mismo defecto que esta página ya pagó dos veces: el «te
+     mandamos otro código» que se escribía antes de mandarlo, y los
+     dos «Entrar» que contestaban sin preguntar. La regla que salió de
+     aquéllos: NO SE PROMETE LO QUE TODAVÍA NO SE SABE.
+
+     El arreglo no es enseñarle un error al cliente —él no tiene la
+     culpa y sus datos sí se recibieron—: es que el acuse deje de
+     AFIRMAR lo que no pasó, y empuje el botón de WhatsApp, que no
+     depende de Resend y le llega al vendedor de inmediato.
+     ------------------------------------------------------------ */
+  const manda = html.slice(html.indexOf('function mandaSolicitud()'),
+    html.indexOf("byId('captura-ir').addEventListener"));
+
+  cierto('el servidor dice si el vendedor se enteró',
+    /conVendedor:\s*!!salio\.alVendedor/.test(puerta));
+  cierto('la pantalla lo lee', manda.indexOf('conVendedor') !== -1);
+
+  /* Lo que no puede pasar: escribir «ya quedó» sin mirar si quedó. */
+  const mira = manda.indexOf('conVendedor');
+  const quedo = manda.indexOf('Ya quedó');
+  cierto('y lo mira ANTES de escribir «ya quedó»',
+    mira !== -1 && quedo !== -1 && mira < quedo);
+
+  /* Y cuando no quedó, que haya salida: el botón de WhatsApp se
+     enciende igual, porque es el camino que no depende del correo. */
+  cierto('el botón de WhatsApp se enciende pase lo que pase',
+    /captura-whats/.test(manda));
+}
+
 console.log('\n' + buenas + ' buenas, ' + malas + ' malas');
 process.exit(malas ? 1 : 0);
