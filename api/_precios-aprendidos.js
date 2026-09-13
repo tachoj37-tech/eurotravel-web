@@ -45,9 +45,31 @@ function limpia(texto) {
     .trim();
 }
 
+/* ------------------------------------------------------------
+   LA HORA SE TIRA ANTES DE CONTAR · 12-sep-2026
+   ------------------------------------------------------------
+   Esto pegaba `'T12:00:00Z'` a lo que le dieran. Con una fecha pelada
+   —`2026-11-20`— sale bien; con una que traiga hora, queda
+   `2026-11-20T08:00T12:00:00Z`, que no es una fecha: `Date.parse` da NaN
+   y la cuenta devuelve **1 día, siempre**.
+
+   No se notaba porque el bot manda las fechas peladas. Pero la página las
+   manda CON HORA —el cliente escoge hora de salida y de regreso— y el día
+   que sus viajes entren al aprendizaje, el mismo viaje pedido por los dos
+   lados se guardaría con dos llaves distintas: `…|1` por la página y
+   `…|4` por WhatsApp. El precio puesto por un lado no se sugeriría por el
+   otro.
+
+   Es lo mismo que ya pasó con el origen —«el aprendizaje casi no
+   acumulaba»— y esa lección se paga una sola vez. Se corrige aquí, que es
+   donde se hace la cuenta, y no en cada quien que la llama.
+   ------------------------------------------------------------ */
+function soloElDia(v) { return String(v || '').slice(0, 10); }
+
 function diasEntre(a, b) {
-  const x = Date.parse(String(a || '') + 'T12:00:00Z');
-  const y = Date.parse(String(b || a || '') + 'T12:00:00Z');
+  const dia = soloElDia(a);
+  const x = Date.parse(dia + 'T12:00:00Z');
+  const y = Date.parse((soloElDia(b) || dia) + 'T12:00:00Z');
   if (!Number.isFinite(x) || !Number.isFinite(y)) return 1;
   return Math.max(1, Math.round((y - x) / 86400000) + 1);
 }

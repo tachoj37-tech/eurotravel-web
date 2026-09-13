@@ -34,6 +34,41 @@ igual('otros días son otro viaje', ap.claveDe(Object.assign({}, base, { regreso
 igual('ida y vuelta el mismo día es 1 día', ap.claveDe({ origen: 'gdl', destino: 'tequila', salida: '2026-10-01', regreso: '2026-10-01' }, 'Sprinter'), 'zmg|tequila|sprinter|1');
 igual('sin unidad no truena', ap.claveDe(base, ''), 'zmg|chapala|sin unidad|3');
 
+/* ------------------------------------------------------------
+   UNA FECHA CON HORA ES LA MISMA FECHA · 12-sep-2026
+   ------------------------------------------------------------
+   `diasEntre` arma la fecha pegándole `'T12:00:00Z'` a lo que le den. Con
+   `2026-11-20T08:00` eso queda `…T08:00T12:00:00Z`, que no es una fecha:
+   `Date.parse` da NaN y la cuenta devuelve **1 día, siempre**.
+
+   Hoy no se nota porque el bot manda las fechas peladas. Pero la página
+   las manda CON HORA —el cliente escoge hora de salida y de regreso— y el
+   día que sus viajes entren al aprendizaje, el mismo viaje pedido por la
+   página y por WhatsApp se guardaría con dos llaves distintas:
+
+       por la página  →  zmg|puerto vallarta|irizar i6s|1
+       por WhatsApp   →  zmg|puerto vallarta|irizar i6s|4
+
+   O sea: el precio que el dueño ponga por un lado no se le sugeriría por
+   el otro. Es exactamente lo que ya pasó con el origen —«el aprendizaje
+   casi no acumulaba»— y la lección se paga una sola vez.
+
+   Se corrige en `diasEntre`, que es quien hace la cuenta, y no en cada
+   quien que la llama.
+   ------------------------------------------------------------ */
+igual('la hora no cambia la cuenta de días',
+  ap.claveDe({ origen: 'Guadalajara', destino: 'Chapala',
+    salida: '2026-11-20T08:00', regreso: '2026-11-22T18:00' }, 'Sprinter'),
+  'zmg|chapala|sprinter|3');
+igual('  y da la MISMA llave que sin hora',
+  ap.claveDe({ origen: 'Guadalajara', destino: 'Chapala',
+    salida: '2026-11-20T08:00', regreso: '2026-11-22T18:00' }, 'Sprinter'),
+  ap.claveDe(base, 'Sprinter'));
+igual('con segundos y zona horaria también',
+  ap.claveDe({ origen: 'Guadalajara', destino: 'Chapala',
+    salida: '2026-11-20T08:00:00-06:00', regreso: '2026-11-22T18:00:00-06:00' }, 'Sprinter'),
+  'zmg|chapala|sprinter|3');
+
 /* Lo que la zona junta y lo que NO junta. Es la razón del cambio, así que
    va probado y no de palabra. */
 function conOrigen(o) { return ap.claveDe(Object.assign({}, base, { origen: o }), 'Sprinter'); }
