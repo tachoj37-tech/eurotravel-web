@@ -235,11 +235,42 @@ Y si viene desde el cotizador, el mensaje ya trae la ficha del viaje.
 en celular y WhatsApp Web en computadora. Hay que probarlo en los dos, y
 hay que probar qué pasa con quien no tiene WhatsApp instalado.
 
-### Fase 5 · El vendedor cierra
+### Fase 5 · El vendedor cierra — **ESPERA A LA RAMA DEL BOT**
 
 Ya existe casi todo: el vendedor contesta el precio y el bot se lo pasa al
 cliente, con los atajos de fotos, cuenta y contrato. Lo que falta es que un
 viaje **que entró por la página** llegue a ese mismo tablero.
+
+> **Y resultó ser lo mismo que faltaba en la fase 3**, lo cual es una buena
+> noticia: las dos se cierran con un solo cambio, y no es de este lado.
+>
+> La ficha de la página ya se arma con `_tickets.armaTicket` —el MISMO ticket
+> del bot— y `_solicitud.paraWhatsApp()` la entrega hecha. Lo que falta es
+> mandarla por WhatsApp, y esa puerta vive en `api/whatsapp.mjs` con sus tres
+> candados (ver la fase 3).
+>
+> **El día que se mande, se cierran tres cosas de un golpe:** el aviso al
+> vendedor (fase 3), el viaje en su tablero (fase 5) y el aprendizaje de
+> precios (`docs/EL-CIRCULO-DE-APRENDER-PRECIOS.md`) — porque el precio que
+> él conteste a ese ticket entra al almacén como cualquier otro.
+
+---
+
+## Después de las fases: los abonos
+
+**12-sep-2026.** Con las fases 0 a 4 cerradas se retomó el spec del
+25-ago —`docs/superpowers/specs/2026-08-25-abonos-en-linea-design.md`— y se
+hicieron sus **pasos 1 a 3**, que son los que no dependen de EuroSystem:
+
+| | |
+|---|---|
+| `api/_saldo.js` | el saldo contado desde Stripe, sin guardar copia |
+| la caja de abonar | en la pantalla del viaje, con el monto validado en el servidor |
+| «recibido con éxito» | preguntándole a Stripe, no a la dirección de regreso |
+
+**El cliente ya abona de verdad y su pantalla dice la verdad.** Lo que falta
+es el paso 4 —registrar el abono en EuroSystem— y necesita las dos puertas de
+allá, que no existen: `docs/QUE-FALTA-PARA-LOS-ABONOS.md`.
 
 ---
 
