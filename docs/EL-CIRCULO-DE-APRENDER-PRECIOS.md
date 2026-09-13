@@ -64,15 +64,12 @@ hace la cuenta y no en cada quien que la llama. Las dos llaves ya empatan.
 
 Con la llave arreglada, quedan **dos piezas**, y ninguna es de este lado:
 
-### 1 · El almacén, que todavía no existe en producción
+### ~~1 · El almacén, que todavía no existe en producción~~
 
-`_precios-aprendidos.js` decide **qué** se guarda y **cómo** se le enseña al
-dueño. Guardarlo y leerlo vive en `_almacen.js`, y el propio código lo dice:
-sin almacén encendido, `guardaPrecio` no se llama —`almacen.hayAlmacen()`— y
-el bot avisa en el ticket que *«este precio no se va a guardar»*.
-
-Mientras no exista, «ir aprendiendo» no acumula nada entre un viaje y el
-siguiente, venga de donde venga.
+> **Corregido el 13-sep-2026: SÍ existe.** Vive en la organización gratis
+> **EuroBot** de Supabase desde el 5-sep, con sus llaves en Vercel; el registro
+> de producción lo confirma. Esto se escribió sin mirar producción. Ver
+> `docs/ENCENDER-EL-ALMACEN.md`.
 
 ### 2 · El enganche: hoy la página no pasa por ahí
 

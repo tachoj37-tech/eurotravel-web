@@ -127,8 +127,12 @@ al cotizador»*. Chocan, y la manera de resolverlo cambia el diseño entero:
   del dueño— y él revisa una tanda al mes antes de que salga en público.
 
 Lo sensato es lo segundo, pero es su decisión y no se supone. Y de todos
-modos falta la pieza de abajo: **el almacén no existe en producción**
-(`docs/EL-CIRCULO-DE-APRENDER-PRECIOS.md`), así que hoy no se acumula nada.
+modos falta la pieza de abajo: ~~el almacén no existe en producción~~
+**(corregido el 13-sep: sí existe, en EuroBot)**. Lo que falta es el puente
+del almacén al cotizador, que no está escrito.
+
+> **Contestada el 13-sep-2026:** no sale solo. Se guarda y se aprende, y sale
+> hasta que el dueño lo autorice.
 
 ---
 

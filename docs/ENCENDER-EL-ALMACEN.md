@@ -1,131 +1,84 @@
-# Encender el almacén
+# El almacén: ya existía
 
-**13-sep-2026.** Pendiente #3 de `docs/PENDIENTES-DE-LA-PAGINA.md`. Mientras
-esto no exista, **no se guarda ni una conversación ni un precio**.
-
-Son tres partes. Tardan unos 15 minutos.
-
----
-
-## ⚠️ Antes de empezar: NO es el proyecto EJR
-
-En tu Supabase hay **un solo proyecto, EJR**. **Esa es la base en producción
-de EuroSystem**, con contratos reales (lo dice `EUROSYSTEM/CLAUDE.md`).
-
-**El SQL del almacén NO se corre ahí.** Tú lo pediste el 2-sep: *«me gustaría
-que esa base de datos sea independiente, no me gustaría que luego se esté
-mezclando información»*.
-
-Y no es solo orden: si las dos cosas vivieran en la misma base, compartirían
-la misma llave maestra. Una fuga de esa llave expondría **a la vez** los
-contratos y las conversaciones de los clientes.
-
-**Cuesta $10 USD al mes.** Es lo que Supabase cobra por un proyecto más en tu
-organización, y es el precio de que no se mezclen.
+**13-sep-2026.** Este documento decía cómo *crear* el almacén. **Estaba mal:
+el almacén ya existe y está conectado en producción.** Queda corregido, con lo
+que de verdad hay que hacer —que es una sola línea— y con el error escrito,
+para que no se repita.
 
 ---
 
-## Parte 1 · Crear el proyecto (5 min)
+## Lo que hay de verdad
 
-1. Entra a **supabase.com/dashboard**
-2. Organización **tachoj37-tech's Org** → botón **New project**
-3. Llénalo así:
+El **5-sep-2026** el dueño creó una organización **gratis y aparte** en
+Supabase, **«EuroBot»**, a propósito:
 
-   | Campo | Qué poner |
-   |---|---|
-   | Name | **`eurotravel-almacen`** — que se note que no es EJR |
-   | Database password | Genera una y **guárdala** en tu gestor de contraseñas. La página no la usa, pero sin ella no se recupera la base |
-   | Region | **East US (North Virginia)** |
+- un proyecto más en la organización de pago cuesta **$10 al mes**
+- y meterlo en **EJR** le daría al bot la llave maestra de EuroSystem
 
-   > Virginia y no Ohio (donde está EJR) porque ahí mismo corren las funciones
-   > de la página en Vercel. El bot le da **4 segundos** al almacén para
-   > contestar; entre más cerca, menos riesgo de que se le acabe el tiempo.
+Ahí corrió `docs/ALMACEN.sql` y puso `ALMACEN_URL` y `ALMACEN_CLAVE` en Vercel.
+El 8-sep ya estaba en uso: se cayó por una llave mal pegada y la repuso.
 
-4. Te va a enseñar el cargo de **$10 al mes** → **Create new project**
-5. Espera a que diga **Healthy** (uno o dos minutos)
+**Comprobado el 13-sep en los registros de Vercel:** a las 16:30 dice
+`[almacen] no se pudo: timeout`. Esa línea **solo sale si las llaves están
+puestas** —sin ellas, el código ni siquiera intenta llamar—. Y a las 16:45 y
+17:00 el recordatorio automático leyó el almacén sin error.
+
+La conexión de Supabase que uso **no ve la organización EuroBot**, solo la de
+pago. Por eso no aparecía.
 
 ---
 
-## Parte 2 · Crear las tablas (3 min)
+## Lo único que falta: una línea
 
-1. Menú de la izquierda → **SQL Editor** → **New query**
-2. Abre **`eurotravel-web/docs/ALMACEN.sql`**, copia **todo** —de la primera a
-   la última línea— y pégalo
-3. **Run**
-4. Tiene que decir **«Success. No rows returned»**
+La columna `calculado` —lo que el motor calculó, junto al precio del dueño—
+se agregó el 13-sep. **El almacén de EuroBot no la tiene.**
 
-**Cómo se comprueba:** menú **Table Editor**. Tienen que aparecer **siete
-tablas**:
+En **supabase.com/dashboard** → organización **EuroBot** → su proyecto →
+**SQL Editor** → **New query**, pega y corre:
 
-```
-charlas   fichas   mensajes   precios   tickets   turnos   vistos
+```sql
+alter table precios add column if not exists calculado integer;
 ```
 
-Y cada una con el candado de **RLS enabled**. Si una dice «RLS disabled», no
-sigas y avísame: sin ese candado, cualquiera con la llave pública podría leer
-las conversaciones.
+Tiene que decir **«Success. No rows returned»**. Si lo corres dos veces no
+pasa nada.
 
-> Si ya lo corriste y no estás seguro de si salió completo, **córrelo otra
-> vez**: todo el archivo usa `if not exists`, así que repetirlo no rompe nada.
-
----
-
-## Parte 3 · Darle las llaves a la página (5 min)
-
-### 3a · Copiar las dos cosas de Supabase
-
-En el proyecto **eurotravel-almacen** → **Project Settings** → **API**
-(en algunas versiones se llama **Data API** o **API Keys**):
-
-| Qué | Dónde está | Cómo se ve |
-|---|---|---|
-| **Project URL** | arriba | `https://xxxxxxxx.supabase.co` |
-| **service_role** | en «Project API keys», marcada como **secret** | un texto larguísimo que empieza con `eyJ` |
-
-> **Ojo, que ya pasó dos veces:** una vez se pegó una llave donde iba la
-> dirección, y otra la dirección con `/rest/v1` de más. La dirección va
-> **exacta**, solo `https://xxxxxxxx.supabase.co`.
->
-> Y es la **service_role**, no la **anon** ni la **publishable**. La anon no
-> puede escribir —las tablas nacen cerradas a propósito— y el bot fallaría en
-> silencio.
-
-**La service_role es la llave maestra de esa base.** No la pegues en el chat,
-ni en WhatsApp, ni en ningún archivo. Solo va en Vercel.
-
-### 3b · Ponerlas en Vercel
-
-1. **vercel.com** → equipo **EURO** → proyecto **eurotravel-web**
-2. **Settings** → **Environment Variables**
-3. Agrega dos, marcando **solo Production**:
-
-   | Key | Value |
-   |---|---|
-   | `ALMACEN_URL` | la Project URL |
-   | `ALMACEN_CLAVE` | la service_role |
-
-4. **Deployments** → el de arriba → menú **⋯** → **Redeploy**
-
-   > Sin redesplegar, la página no ve las variables nuevas.
+**Sin esa línea el bot sigue funcionando** —desde `5c8ad90`, si falta la
+columna guarda el precio sin ella y lo grita en el registro—, pero **esos
+precios nacen sin el número del motor**, y ese número no se reconstruye
+después.
 
 ---
 
-## Parte 4 · Avísame
+## ⚠️ Lo que NO se hace
 
-Con eso lo compruebo yo desde aquí:
-
-- que las siete tablas existan con su candado
-- que el despliegue nuevo esté **READY**
-- que el bot conteste sin errores al leer el almacén
-- y el primer renglón real: el primer ticket que contestes **después** de
-  esto tiene que quedar con **tu precio y el del motor, lado a lado**
+**No se corre nada en EJR.** Es la base en producción de EuroSystem, con
+contratos reales.
 
 ---
 
-## Si algo sale mal
+## El error, para que no se repita
 
-| Lo que ves | Qué es |
-|---|---|
-| El SQL da un error rojo | Mándame **el mensaje de error**, no la llave |
-| Faltan tablas | El pegado quedó incompleto: vuelve a copiar el archivo entero y corre otra vez |
-| Todo bien pero el bot no guarda | Casi siempre es la anon en vez de la service_role, o la dirección con algo de más |
+Durante el 12 y 13 de sep le dije varias veces al dueño que **«el almacén no
+existe»**. Lo deduje de dos indicios:
+
+1. las llaves no están en `.env.local` — pero ese archivo es de **esta
+   máquina**, no de Vercel
+2. el volcado de precios nunca se había generado — pero ese script **se corre
+   a mano**
+
+Ninguno de los dos lo prueba, y **mi propia memoria decía lo contrario**. El
+registro de Vercel lo desmintió en un minuto.
+
+Por creerlo pasaron tres cosas:
+
+- **Se creó un proyecto que sobra:** `eurotravel-almacen`
+  (`xivgvnaeigqmdocvqlvo`), en la organización de pago, **$10 al mes** — justo
+  lo que el dueño había evitado. Está vacío. **Hay que borrarlo**, desde el
+  dashboard: Project Settings → General → Delete project.
+- **Se subió una regresión:** el precio con la columna nueva se habría
+  rechazado entero. No se perdió ninguno y quedó arreglado en `5c8ad90`.
+- **Este documento dijo que había que crear lo que ya existía.**
+
+La lección: **antes de afirmar que algo no existe en producción, se mira
+producción.** Los registros de Vercel estaban a una consulta.

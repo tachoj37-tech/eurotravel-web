@@ -391,10 +391,12 @@ if (meLlamaronDirecto) {
   if (!URL_BASE || !CLAVE) {
     console.error('Faltan ALMACEN_URL y ALMACEN_CLAVE (en el entorno o en .env.local).');
     console.error('');
-    console.error('Si todavía no existe el almacén, ése es el primer paso y no');
-    console.error('es de código: crear el proyecto de Supabase y correr');
-    console.error('docs/ALMACEN.sql. Mientras no exista, NADA se está guardando');
-    console.error('—ni conversaciones ni precios— y este comando no tiene qué leer.');
+    /* Decía «si todavía no existe el almacén, créalo». Era falso: existe
+       desde el 5-sep en la organización EuroBot. Que falten aquí solo
+       quiere decir que esta máquina no las tiene. */
+    console.error('El almacén ya existe (organización EuroBot en Supabase) y');
+    console.error('sus llaves están en Vercel. Lo que falta es tenerlas AQUÍ:');
+    console.error('ponlas en .env.local —que no sube a Git— y vuelve a correr.');
     process.exit(2);
   }
 

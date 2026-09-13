@@ -111,9 +111,9 @@ Lo que falta para cerrar su círculo:
    — que es literalmente «el consumidor pueda funcionar sin necesidad de que
    haya este mensaje».
 
-> **Pero el almacén todavía no existe en producción.** Está la lógica y está el
-> volcado; lo que no hay es dónde guardar. Sin eso, «ir aprendiendo» no
-> acumula nada entre un viaje y el siguiente.
+> ~~Pero el almacén todavía no existe en producción.~~ **Corregido el
+> 13-sep-2026: sí existe**, en la organización EuroBot de Supabase desde el
+> 5-sep. Ver `docs/ENCENDER-EL-ALMACEN.md`.
 
 ## 5 · El portal de abonos por folio (NUEVO, 12-sep-2026)
 

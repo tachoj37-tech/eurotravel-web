@@ -21,24 +21,24 @@ sistema aprende un precio, **no sale solo a la página**. Entra a una tanda que
 
 ---
 
-## Lo primero, porque sin esto no hay nada que subir
+## El almacén ya está conectado
 
-**El almacén no existe todavía.** No hay proyecto de Supabase, así que hoy
-**no se está guardando ni una conversación ni un precio**. El bot contesta y
-lo dicho se pierde.
+> **Corregido el 13-sep-2026.** Aquí decía que el almacén no existía y que
+> había que crearlo. **Era falso**: vive en la organización gratis **EuroBot**
+> de Supabase desde el 5-sep, con sus llaves en Vercel. Lo comprobó el
+> registro de producción. El detalle —y el error— en
+> `docs/ENCENDER-EL-ALMACEN.md`.
 
-No es trabajo de código —ya está todo escrito— son tres pasos, una vez:
+Para correr el corte desde esta máquina hacen falta **las mismas dos llaves
+que ya están en Vercel**, puestas en `.env.local` (que no sube a Git):
 
-1. Crear un proyecto **nuevo** en Supabase, solo para esto. Aparte a
-   propósito: *«no me gustaría que luego se esté mezclando información que no
-   se debería estar mezclando»* (dictado del 2-sep-2026).
-2. Pegar **`docs/ALMACEN.sql`** completo en el editor SQL y correrlo.
-3. Copiar de *Settings → API* a las variables de Vercel:
-   - `Project URL` → **`ALMACEN_URL`**
-   - `service_role key` → **`ALMACEN_CLAVE`**
+```
+ALMACEN_URL=https://xxxxxxxx.supabase.co
+ALMACEN_CLAVE=la service_role del proyecto de EuroBot
+```
 
 La `service_role` se salta RLS a propósito: la usa el servidor, nunca el
-navegador. Por eso no va en ninguna variable que empiece con `NEXT_`.
+navegador. No se pega en el chat ni en ningún archivo que suba.
 
 ---
 
