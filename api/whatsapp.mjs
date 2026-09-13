@@ -670,6 +670,26 @@ async function precioDe(envio, opciones) {
       console.error('[whatsapp] cotizador tronado: ' + e.message);
     }
   }
+  /* ------------------------------------------------------------
+     LO QUE EL MOTOR CALCULÓ, APARTADO ANTES DE QUE SE PISE
+     ------------------------------------------------------------
+     13-sep-2026. Dictado del dueño: «el bot aprende, y cuando un
+     vendedor ponga el precio de un Sprinter, el bot confirma o
+     corrige el precio que ya tiene».
+
+     Hasta hoy no se podía: el renglón del precio aprendido guardaba
+     SU total y la marca `fijado`, pero nunca el número del motor —
+     que existe EN ESTE INSTANTE Y EN NINGÚN OTRO, porque el renglón
+     de abajo lo pisa con el suyo. Sin los dos números no hay resta,
+     y sin resta no hay manera de saber si el criterio va atinando.
+
+     Va nulo cuando el motor NO SUPO (fuera del criterio, unidad que
+     no cotiza: `requiereAsesor`, total 0). Nulo y cero no son lo
+     mismo — ver el comentario de `renglonDe`.
+     ------------------------------------------------------------ */
+  const calculadoPorElMotor =
+    (precio && !precio.requiereAsesor && precio.total > 0) ? precio.total : null;
+
   /* El dueño contestó con un número: ése es el precio, calcule lo que
      calcule el motor. Regla de la casa: los precios los pone él. */
   if (totalFijado !== null) precio = conTotalFijado(precio, totalFijado, res);
@@ -707,7 +727,10 @@ async function precioDe(envio, opciones) {
   const marcaQueYaTienePrecio = function () {
     if (confirmado && precio && precio.total > 0 && almacen.hayAlmacen()) {
       almacen.guardaPrecio(aprendidos.renglonDe(res, unidadDelViaje, precio,
-        { fijado: totalFijado !== null, cliente: envio.para })).catch(function () {});
+        { fijado: totalFijado !== null, cliente: envio.para,
+          /* Para poder comparar después lo que él cobró contra lo que el
+             sistema habría cobrado. Ver arriba: solo existe aquí. */
+          calculado: calculadoPorElMotor })).catch(function () {});
     }
     if (!(precio && typeof precio.total === 'number')) return;
     const r = envio.resumen || {};

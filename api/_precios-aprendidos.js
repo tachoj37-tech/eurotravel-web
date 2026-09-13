@@ -116,6 +116,29 @@ function renglonDe(resumen, unidad, precio, extra) {
     total: Math.round(Number(precio && precio.total) || 0),
     anticipo: Math.round(Number(precio && precio.anticipo) || 0),
     fijado: !!e.fijado,
+    /* ------------------------------------------------------------
+       LO QUE EL MOTOR HABÍA CALCULADO (13-sep-2026)
+       ------------------------------------------------------------
+       Dictado del dueño: «el bot aprende, y cuando un vendedor ponga
+       el precio de un Sprinter, el bot confirma o corrige el precio
+       que ya tiene».
+
+       Eso no se podía: se guardaba SU total y la marca `fijado`, pero
+       nunca el número del motor. Sin los dos no hay resta, y sin resta
+       no hay manera de saber si el criterio va atinando.
+
+       NULO Y CERO NO SON LO MISMO, y ahí está todo el asunto. Cuando
+       el motor no supo —destino fuera del criterio, unidad que no
+       cotiza— devuelve total 0. Guardarlo como cero haría que el
+       informe dijera que el sistema «calculó cero» y falló por el
+       precio entero. No falló: NO SUPO.
+
+         null    el motor no supo
+         número  el motor sí supo, y esto es lo que dijo
+
+       Por eso un 0 entra como nulo: un precio de cero no existe.
+       ------------------------------------------------------------ */
+    calculado: Math.round(Number(e.calculado) || 0) || null,
     cliente: e.cliente ? String(e.cliente).slice(-10) : null,
     salida: r.salida || null
   };

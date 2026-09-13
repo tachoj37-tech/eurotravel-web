@@ -110,5 +110,88 @@ igual('máximo tres en la línea',
   'Antes lo diste a: $1,000 · $2,000 · $3,000');
 igual('totales en cero se ignoran', ap.lineasDeHistorial([{ total: 0 }]), []);
 
+/* ============================================================
+   LO QUE EL MOTOR HABÍA CALCULADO, GUARDADO JUNTO AL SUYO
+   ------------------------------------------------------------
+   13-sep-2026. Dictado del dueño: «el bot aprende, y cuando un
+   vendedor ponga el precio de un Sprinter, el bot confirma o corrige
+   el precio que ya tiene».
+
+   Eso no se podía: se guardaba SU total y una marca de «lo escribió
+   él», pero nunca el número del motor. Sin los dos no hay resta, y
+   sin resta no hay manera de saber si el criterio va atinando.
+
+   Y el número estaba en la mano: en `whatsapp.mjs`, `precio` es lo
+   que calculó el motor hasta la línea que lo pisa con el suyo. Se
+   tiraba un renglón después.
+
+   ------------------------------------------------------------
+   NULO Y CERO NO SON LO MISMO, Y AHÍ ESTÁ TODO EL ASUNTO
+   ------------------------------------------------------------
+   Cuando el motor NO supo —destino fuera del criterio, unidad que no
+   cotiza— devuelve total 0 con `requiereAsesor`. Si eso se guardara
+   como un cero, el informe diría que el sistema «calculó cero» y por
+   lo tanto se equivocó por el precio completo.
+
+   No se equivocó: NO SUPO. Son cosas distintas, y si no se
+   distinguen, el primer informe va a decir que el criterio está
+   catastróficamente mal cuando lo que pasa es que no le preguntaron.
+
+     calculado = null    el motor no supo
+     calculado = número  el motor sí supo, y esto es lo que dijo
+   ============================================================ */
+{
+  const VIAJE = { origen: 'Guadalajara', destino: 'Puerto Vallarta',
+                  salida: '2026-12-20', regreso: '2026-12-23', gente: 14 };
+
+  /* Él escribió un número distinto del que calculó el motor. */
+  const corrigio = ap.renglonDe(VIAJE, 'Sprinter', { total: 24000, anticipo: 5000 },
+    { fijado: true, cliente: '3312223344', calculado: 22000 });
+  igual('se guarda lo que él puso', corrigio.total, 24000);
+  igual('y TAMBIÉN lo que el motor había calculado', corrigio.calculado, 22000);
+  igual('con la marca de que lo escribió él', corrigio.fijado, true);
+
+  /* Él dijo «va» al calculado: los dos números son el mismo. */
+  const confirmo = ap.renglonDe(VIAJE, 'Sprinter', { total: 22000, anticipo: 5000 },
+    { fijado: false, cliente: '3312223344', calculado: 22000 });
+  igual('cuando dice «va», los dos coinciden',
+    [confirmo.total, confirmo.calculado, confirmo.fijado], [22000, 22000, false]);
+
+  /* EL CASO QUE IMPORTA: el motor no supo. */
+  const noSupo = ap.renglonDe(VIAJE, 'Irizar i6S', { total: 38000, anticipo: 8000 },
+    { fijado: true, cliente: '3312223344', calculado: null });
+  igual('si el motor no supo, queda en NULO y no en cero', noSupo.calculado, null);
+  igual('  pero su precio sí se guarda', noSupo.total, 38000);
+
+  /* Y que un cero no se cuele como número: un motor que «calculó cero»
+     no existe — eso es no haber sabido. */
+  const cero = ap.renglonDe(VIAJE, 'Sprinter', { total: 30000 },
+    { fijado: true, calculado: 0 });
+  igual('un cero se guarda como NULO, porque cero no es un precio',
+    cero.calculado, null);
+
+  /* Sin el dato —renglones viejos, o quien llame sin pasarlo— tampoco
+     se inventa nada. */
+  const sinDato = ap.renglonDe(VIAJE, 'Sprinter', { total: 30000 }, { fijado: true });
+  igual('y si no se lo pasan, nulo', sinDato.calculado, null);
+
+  const fs = require('fs');
+  const path = require('path');
+
+  /* La columna tiene que existir en el esquema o el renglón ENTERO se
+     rechaza: se perdería el precio, no solo este campo. */
+  const sql = fs.readFileSync(path.join(__dirname, '..', 'docs', 'ALMACEN.sql'), 'utf8');
+  igual('la columna existe en ALMACEN.sql',
+    /alter table precios add column if not exists calculado/i.test(sql), true);
+
+  /* Y que el bot de verdad se lo pase: sin esto el campo existe y
+     siempre llega vacío. */
+  const wa = fs.readFileSync(path.join(__dirname, '..', 'api', 'whatsapp.mjs'), 'utf8');
+  igual('whatsapp.mjs aparta el calculado antes de pisarlo',
+    /calculadoPorElMotor/.test(wa), true);
+  igual('  y se lo pasa a renglonDe',
+    /calculado:\s*calculadoPorElMotor/.test(wa), true);
+}
+
 console.log('\n' + buenas + ' buenas, ' + malas + ' malas');
 process.exit(malas ? 1 : 0);
