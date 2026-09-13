@@ -18,6 +18,20 @@ node_modules
 .agents/
 .claude/
 
+# Las conversaciones enteras del cierre del mes (`npm run mes`)
+#
+# Traen lo que la gente escribio: nombres, domicilios, telefonos, y a
+# veces de que es la fiesta. En Git eso se queda PARA SIEMPRE —aunque
+# se borre despues sigue en el historial— y lo ve todo el que clone.
+#
+# Se leen para sacar criterio de venta, y lo que se aprende se escribe
+# en cerebro/ con palabras propias: la leccion sube, la conversacion no.
+# El resumen en numeros ese SI va al repositorio: cerebro/el-mes.md
+#
+# Si el dueño decide que tambien quiere versionarlas, se quita esta
+# linea — pero que sea decision suya, no de un script.
+conversaciones/
+
 # Obsidian
 # Su configuracion es de cada maquina —que notas quedaron abiertas, el
 # zoom del grafo, el tema— y no del proyecto. Las NOTAS si se versionan;
