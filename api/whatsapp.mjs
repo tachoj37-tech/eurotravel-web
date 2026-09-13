@@ -3523,9 +3523,36 @@ async function loQueDiceElAgente(envio) {
          `accion !== 'seguir'`); mandarlo otra vez lo duplicaba (corrida
          real del 8-sep, escenario c: «Eso lo ve el dueño…» dos veces). */
       if (!dicho.respuesta) {
-        const alCliente = esPersona
-          ? 'Va, en breve te contestan por aquí mismo 🙌'
-          : 'Va, en breve te paso ese dato 🙌';
+        /* ------------------------------------------------------------
+           NO LA MISMA FRASE DOS VECES SEGUIDAS — 13-sep-2026
+           ------------------------------------------------------------
+           Corrida con el modelo real: un cliente preguntó el RFC, el
+           permiso de la SCT, si podían llevar cerveza y si podían llevar
+           un perro guía, uno tras otro. Las cuatro son de las que el bot
+           no sabe y no inventa —bien— pero las cuatro recibieron
+           «Va, en breve te paso ese dato 🙌» idéntico. A la tercera ya
+           no parece que alguien las esté leyendo.
+
+           Ninguna variante promete ni confiesa nada: todas dicen lo
+           mismo —que la pregunta va a una persona— con otras palabras.
+           Se escoge la primera que NO sea lo último que dijo el bot,
+           así que es determinista y las pruebas no bailan.
+           ------------------------------------------------------------ */
+        const variantes = esPersona
+          ? ['Va, en breve te contestan por aquí mismo 🙌',
+             'Claro, ahorita te atienden por aquí 👍',
+             'Listo, ya le avisé a un compañero y te escribe por aquí.']
+          : ['Va, en breve te paso ese dato 🙌',
+             'Eso te lo confirmo en un momento 👍',
+             'Déjame checarlo y te digo por aquí mismo.',
+             'Anotado, ahorita te respondo eso 🙌'];
+        const previos = agente.historialDe(cliente)
+          .filter(function (t) { return t.de === 'bot'; })
+          .map(function (t) { return t.texto; });
+        const ultimo = previos[previos.length - 1];
+        const alCliente = variantes.find(function (v) {
+          return v !== ultimo && previos.slice(-3).indexOf(v) < 0;
+        }) || variantes.find(function (v) { return v !== ultimo; }) || variantes[0];
         await manda({ numeroDeOrigen: envio.numeroDeOrigen, para: cliente, texto: alCliente,
           pasaAPersona: false, escribio: '[agente · dato del dueño]' });
         agente.recuerda(cliente, 'bot', alCliente);

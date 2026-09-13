@@ -1517,13 +1517,19 @@ titulo('R50 · una segunda cotización no hereda los datos de la primera (10-sep
   limpia();
   const C = '5213366670467';
   /* Sayulita ya cotizado: Irizar i6 para 40. */
+  /* FECHAS EN 2027 A PROPÓSITO — 13-sep-2026. Estaban en 11, 12, 15 y 20
+     de septiembre de 2026, y esta prueba corre con el reloj de verdad. El
+     13 de septiembre las del 11 y el 12 ya habían pasado, `fechaValida`
+     las rechazó —con razón: nadie cotiza un viaje para atrás— y la prueba
+     se puso roja sola, sin que nadie tocara el código. Se movieron a
+     marzo de 2027 (ningún domingo, para no tropezar con R52). */
   tk.anotaEtapa(C, 'con_precio', { total: 25000, anticipo: 5000, cuentaMandadaEn: Date.now(),
-    viajeDatos: { origen: 'Guadalajara', destino: 'Sayulita', salida: '2026-09-11', regreso: '2026-09-11',
+    viajeDatos: { origen: 'Guadalajara', destino: 'Sayulita', salida: '2027-03-11', regreso: '2027-03-11',
       gente: 40, unidad: 'Irizar i6', recorridos: 0 } }, Date.now());
   /* El cliente pide otra, con destino y fechas nuevos, sin decir cuántos
      ni cuál unidad. La frase no trae «otra cotización». */
   laIA = () => ({ respuesta: 'Vallarta del 15 al 20, perfecto. ¿Cuántos van?',
-    datos: { destino: 'Puerto Vallarta', salida: '2026-09-15', regreso: '2026-09-20' }, accion: 'seguir' });
+    datos: { destino: 'Puerto Vallarta', salida: '2027-03-15', regreso: '2027-03-20' }, accion: 'seguir' });
   const antes = mandados.length;
   await dice('Buenas noches, quiero hacer una cotización a Vallarta del 15 de septiembre al 20', C);
   const alDueno = mandados.slice(antes).filter((m) => mismo(m.to, DUENO)).map((m) => (m.text && m.text.body) || (m.interactive && m.interactive.body && m.interactive.body.text) || '').join('\n');
@@ -1537,9 +1543,9 @@ titulo('R50 · una segunda cotización no hereda los datos de la primera (10-sep
   limpia();
   const D = '5213366670468';
   tk.anotaEtapa(D, 'con_precio', { total: 25000, anticipo: 5000,
-    viajeDatos: { origen: 'Guadalajara', destino: 'Sayulita', salida: '2026-09-11', regreso: '2026-09-11',
+    viajeDatos: { origen: 'Guadalajara', destino: 'Sayulita', salida: '2027-03-11', regreso: '2027-03-11',
       gente: 40, unidad: 'Irizar i6', recorridos: 0 } }, Date.now());
-  laIA = () => ({ respuesta: 'Va, Mazatlán entonces.', datos: { destino: 'Mazatlán', salida: '2026-09-12' }, accion: 'seguir' });
+  laIA = () => ({ respuesta: 'Va, Mazatlán entonces.', datos: { destino: 'Mazatlán', salida: '2027-03-12' }, accion: 'seguir' });
   await dice('no, mejor a mazatlán el 12', D);
   okQue('«mejor a mazatlán» sigue siendo el mismo viaje corregido',
     (webhook.charlaDe(D) || {}).gente === 40);
