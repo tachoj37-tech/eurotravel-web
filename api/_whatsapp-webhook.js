@@ -1044,6 +1044,31 @@ function procesa(crudo, firma, entorno) {
          sí mismo (auditoría general del 8-sep, hallazgo 15). */
       if (campo && campo !== 'messages') continue;
 
+      /* ------------------------------------------------------------
+         UN BOTÓN PULSADO ES LO QUE DICE EL BOTÓN — 13-sep-2026
+         ------------------------------------------------------------
+         Cuando el cliente pulsa «Cotizar un viaje», Meta no manda un
+         texto: manda `type: 'interactive'` con `button_reply.title` (o
+         `list_reply` en una lista, o `type: 'button'` en la respuesta
+         rápida de una plantilla). Aquí solo se leía `type: 'text'`, así
+         que el botón caía donde caen las fotos y las ubicaciones, y el
+         bot no seguía el camino que el cliente escogió. Las pruebas no lo
+         veían porque simulaban el botón escribiendo su texto.
+
+         Se vuelve texto una sola vez, aquí arriba, y todo lo de abajo lo
+         lee igual que si lo hubiera escrito.
+         ------------------------------------------------------------ */
+      for (const m of valor.messages) {
+        if (!m) continue;
+        const i = m.type === 'interactive' ? (m.interactive || {}) : null;
+        const elegido = i ? (i.button_reply || i.list_reply) : null;
+        const titulo = elegido ? elegido.title : (m.type === 'button' && m.button ? m.button.text : null);
+        if (titulo) {
+          m.type = 'text';
+          m.text = { body: String(titulo) };
+        }
+      }
+
       const deQuien = (valor.metadata && valor.metadata.phone_number_id) || '';
 
       /* ------------------------------------------------------------
@@ -1832,6 +1857,23 @@ function procesa(crudo, firma, entorno) {
           continue;
         }
 
+        /* Con el ticket mandado y esperando precio, una foto, un documento o
+           una ubicación ya no los contesta el bot («Ya lo vi 🙌 Déjame
+           revisarlo»): el chat pasa a la persona, que es quien los ve.
+           Dictado del dueño del 13-sep-2026: después del ticket, todo lo
+           que no sea corregir el viaje es de un humano. Los textos y las
+           notas de voz sí siguen, porque pueden traer una corrección. */
+        {
+          const f = tickets.fichaDe(m.from);
+          if (String(env.BOT_HASTA_COTIZACION || '1').trim() === '1' &&
+              f && f.porConfirmar && f.porConfirmar.resumen &&
+              m.type !== 'text' && m.type !== 'audio') {
+            tickets.anotaEtapa(m.from, f.etapa, { enManosDe: 'dueno', clienteEn: ahora }, ahora);
+            console.log('[relevo] ' + m.type + ' después del ticket: el chat pasa a una persona, el bot no contesta');
+            continue;
+          }
+        }
+
         let texto;
         let audioLargo = false;
         if (m.type === 'text') {
@@ -2159,7 +2201,18 @@ function procesa(crudo, firma, entorno) {
         if (r.pideDatosBancarios && !precioVigente) {
           console.error('[apartado] el precio de la ficha es de otro grupo: no se manda la cuenta');
         }
-        const pideDatosBancarios = !!r.pideDatosBancarios && precioVigente;
+        /* Y con el ticket mandado y esperando precio, la cuenta tampoco la
+           manda el bot: todavía no hay precio que depositar, y lo que siga
+           es de la persona (corrida con el modelo real del 13-sep-2026,
+           escenario aa: a «apártamelo» después del ticket el chat pasó a la
+           persona, pero la ficha bancaria y la CLABE ya habían salido). */
+        const fTicket = tickets.fichaDe(m.from);
+        const ticketEsperando = String(env.BOT_HASTA_COTIZACION || '1').trim() === '1' &&
+          !!(fTicket && fTicket.porConfirmar && fTicket.porConfirmar.resumen);
+        if (r.pideDatosBancarios && ticketEsperando) {
+          console.log('[apartado] el ticket espera precio: la cuenta la da la persona, no el bot');
+        }
+        const pideDatosBancarios = !!r.pideDatosBancarios && precioVigente && !ticketEsperando;
         const mandaFicha = !!(pideDatosBancarios && clabe);
         /* Queda anotado que la cuenta ya salió, para no repetirla sola
            (dictado del dueño, 9-sep-2026). Vive en la ficha porque la

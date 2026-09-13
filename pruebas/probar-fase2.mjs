@@ -165,7 +165,17 @@ titulo('solo el ticket del precio confirma precio');
     return iaDeVallarta(t);
   };
   await cotizaVallarta(C);
+  /* Desde el 13-sep-2026, con el bot hasta la cotización (lo normal), una
+     pregunta después del ticket ya no la contesta el bot ni le abre ticket
+     al dueño: el chat pasa a la persona (probar-ticket-y-se-baja.mjs).
+     Lo que aquí se vigila —que «15000» a un ticket que no es el del precio
+     no cotice— es del camino con el bot haciendo todo, así que esa
+     pregunta se hace con ese camino encendido. */
+  const hastaAntes = process.env.BOT_HASTA_COTIZACION;
+  process.env.BOT_HASTA_COTIZACION = '0';
   await dice('me pasas tu rfc?', C);
+  if (hastaAntes === undefined) delete process.env.BOT_HASTA_COTIZACION;
+  else process.env.BOT_HASTA_COTIZACION = hastaAntes;
   const ticketRfc = ultimoTicket(/Un cliente pregunta/);
   const antes = textos(C).length;
   await contesta(ticketRfc, '15000');

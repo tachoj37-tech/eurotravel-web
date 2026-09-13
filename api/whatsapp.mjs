@@ -243,7 +243,8 @@ function resumenAntesDelPrecio(res, nombreUnidad) {
   lineas.push('');
   lineas.push('En un momento te paso tu precio y la disponibilidad 🙌');
   lineas.push('');
-  lineas.push('Si algo de arriba está mal, dímelo y lo corrijo antes de cotizarte.');
+  /* «Le pregunta al cliente si todo bien» (dictado del dueño, 13-sep-2026). */
+  lineas.push('¿Todo bien? Si algo de arriba está mal, dímelo y lo corrijo antes de cotizarte.');
   return lineas.join('\n');
 }
 /* «sprinter» → «Sprinter»; un nombre de camión («Neobus», «Irizar i6S») se
@@ -1781,6 +1782,20 @@ function mismoViaje(a, b) {
   return true;
 }
 
+/* ¿El estado nuevo cambia algo de lo que dice el ticket? Más estricto que
+   `mismoViaje`: el ticket también enseña el origen, los días de movimiento
+   y la unidad escogida, y corregir cualquiera de ésos es una corrección. */
+function cambiaElTicket(nuevo, base) {
+  if (!mismoViaje(nuevo, base)) return true;
+  const n = function (x) { return conversacion.normaliza(String(x || '')); };
+  if (nuevo.origen && base.origen && n(nuevo.origen) !== n(base.origen)) return true;
+  if (typeof nuevo.recorridos === 'number' && typeof base.recorridos === 'number' &&
+      nuevo.recorridos !== base.recorridos) return true;
+  if (nuevo.unidadNombre && n(nuevo.unidadNombre) !== n(base.unidadNombre)) return true;
+  if (nuevo.gente && !base.gente) return true;
+  return false;
+}
+
 /* «Te paso el precio en un momento» con datos que faltan es un callejón:
    nadie pregunta lo que falta y el ticket nunca sale (corrida real del
    8-sep, escenario c: 30 a Mazatlán, tres veces «te paso el precio», cero
@@ -2612,6 +2627,17 @@ async function loQueDiceElAgente(envio) {
       webhook.guardaCharla(cliente, delGuion === undefined ? null : delGuion);
       return false;
     }
+    /* Con el ticket esperando precio, tampoco aquí contesta el bot: sin la
+       IA no se sabe si el mensaje corrige el viaje, y la persona lo lee
+       igual. Ver «CON EL TICKET MANDADO» más abajo. */
+    if (String(process.env.BOT_HASTA_COTIZACION || '1').trim() === '1' &&
+        viajeDeLaFicha && viajeDeLaFicha.estado === 'pedido') {
+      console.log('[relevo] la IA no contestó y el ticket ya salió: el chat pasa a una persona, el bot no contesta');
+      tickets.anotaEtapa(cliente, tickets.fichaDe(cliente).etapa, { enManosDe: 'dueno' });
+      agente.recuerda(cliente, 'cliente', texto);
+      webhook.guardaCharla(cliente, (envio.estadoAntes && typeof envio.estadoAntes === 'object') ? envio.estadoAntes : null);
+      return true;
+    }
     console.error('[agente] la IA no contestó y hay precio en la ficha: contesta neutro, no el guion');
     await manda({ numeroDeOrigen: envio.numeroDeOrigen, para: cliente, texto: neutra, pasaAPersona: false, escribio: '[agente · neutra con precio]' });
     agente.recuerda(cliente, 'cliente', texto);
@@ -2777,6 +2803,40 @@ async function loQueDiceElAgente(envio) {
   /* «Otro viaje» explícito queda marcado en la plática: los mensajes que
      sigan son de ese viaje nuevo, no basura que haya que reemplazar. */
   if (esOtroViaje && viajeDeLaFicha) nuevo.otroViaje = true;
+  /* ------------------------------------------------------------
+     CON EL TICKET MANDADO, EL BOT SOLO CORRIGE EL VIAJE — 13-sep-2026
+     ------------------------------------------------------------
+     Dictado del dueño: «el agente solo llega al ticket y listo… si el
+     cliente le dice que sí, ya no hay bot… todo lo demás ya es un humano».
+
+     El relevo a la persona solo se hacía cuando el BOT mandaba el precio
+     (`marcaQueYaTienePrecio`), y el bot ya no manda precio: lo manda el
+     vendedor. Así que el chat nunca pasaba a nadie y el bot seguía
+     platicando después del ticket. Corrida con el modelo real del
+     13-sep-2026: a «apártamelo» contestó «Ya está apartado desde hace
+     rato» — falso: nadie había apartado nada — y a «¿cómo sé que no me
+     van a estafar?» y «¿tienen oficina?» soltó dos veces el mismo párrafo.
+
+     Ahora, con el ticket esperando precio, el mensaje del cliente solo lo
+     contesta el bot si CAMBIA el viaje (otra fecha, otra gente, otro
+     destino, otra unidad, otros días de movimiento): ahí sale el ticket
+     corregido, como antes. Cualquier otra cosa —«sí, todo bien», una
+     pregunta, «apártamelo», el RFC— el chat pasa a la persona y el bot
+     no escribe nada. El ticket ya le dijo que en un momento le pasan su
+     precio. Un «otro viaje» explícito sí lo sigue cotizando el bot.
+     ------------------------------------------------------------ */
+  if (String(process.env.BOT_HASTA_COTIZACION || '1').trim() === '1' &&
+      viajeDeLaFicha && viajeDeLaFicha.estado === 'pedido' && !esOtroViaje) {
+    const fichaAhora = tickets.fichaDe(cliente);
+    const base = viajeBaseDeLaFicha(fichaAhora);
+    if (base && !cambiaElTicket(nuevo, base)) {
+      console.log('[relevo] ticket mandado y el mensaje no cambia el viaje: el chat pasa a una persona, el bot no contesta');
+      tickets.anotaEtapa(cliente, fichaAhora.etapa, { enManosDe: 'dueno' });
+      agente.recuerda(cliente, 'cliente', texto);
+      webhook.guardaCharla(cliente, null);
+      return true;
+    }
+  }
   webhook.guardaCharla(cliente, nuevo);
   agente.recuerda(cliente, 'cliente', texto);
   /* «Ya dijiste eso con esas palabras» (8-sep-2026, «que deje de sonar a
@@ -3533,7 +3593,17 @@ async function loQueDiceElAgente(envio) {
          el viaje («…de Guadalajara, ¿traen aire?»), la respuesta de la IA
          sale ANTES de la espera; antes se tiraba (auditoría 7-sep-2026,
          A12). Una respuesta que solo repite «te paso el precio» no. */
-      if (dicho.respuesta && !/precio|cotizaci/i.test(dicho.respuesta)) {
+      /* Pero no cuando el mensaje es una CORRECCIÓN del ticket que ya salió:
+         ahí el ticket corregido es la respuesta, y lo que la IA diga encima
+         sobra o miente. Corrida con el modelo real del 13-sep-2026
+         (escenario bl): a «ah no, perdón, somos 18» dijo «para ese número
+         la unidad es el autobús» —la Sprinter lleva 20— y justo abajo salió
+         el ticket con la Sprinter para 18. */
+      const corrigeElTicket = !!(viajeDeLaFicha && viajeDeLaFicha.estado === 'pedido' && !esOtroViaje);
+      if (corrigeElTicket && dicho.respuesta) {
+        console.log('[agente] corrección del ticket: sale solo el ticket corregido, sin el texto de la IA');
+      }
+      if (dicho.respuesta && !corrigeElTicket && !/precio|cotizaci/i.test(dicho.respuesta)) {
         await manda({ numeroDeOrigen: envio.numeroDeOrigen, para: cliente, texto: dicho.respuesta,
           pasaAPersona: false, escribio: '[agente · antes del precio]' });
         agente.recuerda(cliente, 'bot', dicho.respuesta);

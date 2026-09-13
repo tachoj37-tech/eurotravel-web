@@ -656,7 +656,17 @@ const escenarios = {
   /* bk · UNA SOLA PALABRA POR MENSAJE, como quien escribe desde el
      camión. Lo que se vigila: que no se pierda ni repita. */
   bk: ['hola', 'vallarta', '45', 'diciembre', '20', '22', 'guadalajara',
-    'no', 'sí']
+    'no', 'sí'],
+
+  /* bl · CORRIGE EL TICKET Y DESPUÉS DICE QUE SÍ (13-sep-2026). Lo que se
+     vigila: la corrección saca el ticket nuevo; el «sí» y lo que sigue ya
+     no los contesta el bot, porque el chat es de la persona. */
+  bl: ['hola, quiero cotizar a chapala el 25 de octubre, ida y vuelta el mismo día, somos 14, de guadalajara, solo nos llevan y traen',
+    'ah no, perdón, somos 18', 'sí, así está bien', 'oye y cuánto tarda en llegar el precio?'],
+
+  /* bm · CORRIGE LA FECHA Y LOS DÍAS DE MOVIMIENTO EN EL TICKET. */
+  bm: ['a vallarta del 20 al 23 de noviembre, somos 40, de guadalajara, en el neobus, nos movemos un día allá',
+    'mejor regresamos el 24 y nos movemos dos días', 'perfecto, todo bien']
 };
 const pedidos = process.argv.slice(2).filter((x) => escenarios[x]);
 for (const k of (pedidos.length ? pedidos : Object.keys(escenarios))) {
