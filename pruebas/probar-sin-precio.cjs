@@ -275,7 +275,17 @@ function precioDe(texto, dias, opciones) {
     'se suma a tu total',
     'Ya está sumado al total',
     'el precio todavía se puede mover',
-    'la tarifa queda firme'
+    'la tarifa queda firme',
+    /* Éstas salieron de caminar las cinco pestañas con la página abierta.
+       Las dos primeras son las que MÁS se ven y las que nadie mira al
+       cambiar código: la `meta description` es lo que sale en Google, y
+       `og:description` es lo que se previsualiza cuando alguien pega el
+       link en WhatsApp —que es como se comparte esta página—.
+
+       Prometer «cotiza en línea» ahí es traer gente a buscar un precio
+       que no va a encontrar, y perderla en la primera pantalla. */
+    'Cotiza en línea',
+    'Cotiza tu viaje en línea'
   ];
 
   /* SE MIRA SIN LOS COMENTARIOS, y no es un detalle: la primera versión
