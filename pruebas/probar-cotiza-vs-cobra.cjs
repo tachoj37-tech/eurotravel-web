@@ -10,6 +10,27 @@
    Es la prueba que mas vale de todas: si el cliente ve un precio
    en pantalla y en la pantalla de cobro le sale otro, da igual
    que las dos cuentas esten bien por separado.
+
+   ------------------------------------------------------------
+   R47 · POR QUE ESTA PRUEBA ENCIENDE EL INTERRUPTOR (12-sep-2026)
+   ------------------------------------------------------------
+   Desde el 12-sep-2026 las dos puertas no dan NINGUN precio:
+   `tarifa.PAGINA_DA_PRECIOS` esta apagado y todo sale en cero.
+
+   Con eso, esta prueba «pasaria» sola: cero es igual a cero, y
+   coincidirian aunque una de las dos cuentas estuviera rota. La
+   prueba que mas vale de todas se habria vuelto la que menos.
+
+   Asi que aqui se ENCIENDE a proposito, para que las dos puertas
+   vuelvan a hacer la cuenta completa y se pueda exigir que
+   coincidan al peso. Es lo unico que se toca: ni el cuerpo de las
+   peticiones ni los numeros esperados cambiaron.
+
+   Y al final, con el interruptor como esta en produccion, se
+   comprueba lo otro: que apagado NO sale numero por ninguna de las
+   dos. Las dos mitades hacen falta —una cuida la cuenta, la otra
+   cuida el candado— y ninguna sirve sin la otra.
+   ------------------------------------------------------------
    ============================================================ */
 'use strict';
 
@@ -25,6 +46,15 @@ process.env.STRIPE_SECRET_KEY = 'sk_test_de_mentiras';
 
 const cotizar = require('../api/cotizar.js');
 const pagar = require('../api/pagar.js');
+
+/* R47 · El interruptor, encendido para la cuenta. Ver la nota de arriba.
+   Las dos puertas lo leen de aqui EN CADA PETICION —`!tarifa.PAGINA_DA_PRECIOS`
+   dentro del manejador—, asi que se puede prender y apagar a media prueba;
+   si algun dia alguna se lo copiara a una constante suya al cargar el
+   modulo, la ultima seccion de este archivo se caeria y se sabria. */
+const tarifa = require('../api/_tarifa.js');
+const APAGADO_EN_PRODUCCION = tarifa.PAGINA_DA_PRECIOS;
+tarifa.PAGINA_DA_PRECIOS = true;
 
 /* Google y Stripe, fingidos. Google contesta los metros que se le pidan;
    Stripe contesta una sesion cualquiera con su URL. */
@@ -603,6 +633,39 @@ function dia(fecha, inicio, fin) {
     igual('y el de fuera contesta «te contactamos», no un 503',
       [sinClaveFormula.status, sinClaveFormula.json.requiereAsesor], [200, true]);
     process.env.GOOGLE_ROUTES_KEY = clave;
+  }
+
+  /* ============================================================
+     R47 · Y AHORA CON EL INTERRUPTOR COMO ESTA EN PRODUCCION
+     ------------------------------------------------------------
+     Todo lo de arriba corrio con `PAGINA_DA_PRECIOS` encendido, para
+     que hubiera cuentas que comparar. Aqui se devuelve a como esta de
+     verdad y se exige lo contrario: que por las DOS puertas no salga
+     numero.
+
+     Se prueba con el destino MAS facil de todos —Puerto Vallarta, que
+     esta en el Excel y que hasta ayer cotizaba solo a $19,000 con
+     boton de apartar—. Si el candado se cayera, es el primero que se
+     escaparia.
+
+     Y va con los dos endpoints por lo de siempre: cerrar `/api/cotizar`
+     sin cerrar `/api/pagar` no sirve de nada, porque una peticion
+     armada a mano apartaria el viaje con folio, contrato y cobro.
+     ============================================================ */
+  tarifa.PAGINA_DA_PRECIOS = APAGADO_EN_PRODUCCION;
+  igual('en produccion el interruptor esta apagado', tarifa.PAGINA_DA_PRECIOS, false);
+
+  {
+    METROS_IDA = 610000; METROS_VUELTA = 600000;
+    const apagado = await corre(610000, 600000, '2026-09-03T08:00', '2026-09-10T18:00',
+      [], { direccion: 'Puerto Vallarta, Jalisco, México' });
+
+    igual('apagado, Vallarta ya no da los $19,000 por /api/cotizar',
+      [apagado.cotiza.requiereAsesor, apagado.cotiza.total, apagado.cotiza.anticipo],
+      [true, 0, 0]);
+    igual('y /api/pagar lo rechaza en vez de cobrarlo',
+      [apagado.estados[1], apagado.cobra && apagado.cobra.error],
+      [422, 'requiere asesor']);
   }
 
   igual('sin fallas', fallas, []);

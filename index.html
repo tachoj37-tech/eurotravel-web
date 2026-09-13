@@ -129,6 +129,26 @@
   .captura-listo b { display: block; color: #14682f; }
   .captura-listo span { display: block; margin-top: 3px; color: var(--ink-2); font-size: 14px; }
 
+  /* R47 · El botón que abre la conversación. Verde de WhatsApp y no rojo de
+     la marca: aquí la promesa es «esto abre WhatsApp», y el color es la
+     mitad de esa promesa. Va ancho y con el texto grande porque es la única
+     cosa que queda por hacer en la pantalla. */
+  .captura-whats {
+    display: none; align-items: center; justify-content: center; gap: 9px;
+    margin-top: 14px; width: 100%; min-height: 52px; padding: 13px 18px;
+    border: 0; border-radius: var(--radius-sm); cursor: pointer;
+    background: #1fa855; color: #fff; font-size: 16px; font-weight: 600;
+    text-decoration: none; line-height: 1.25;
+  }
+  .captura-whats:hover { background: #178c46; }
+  .captura-whats:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+  .captura-whats svg { width: 21px; height: 21px; flex: 0 0 auto; }
+  .captura-whats.on { display: flex; }
+  .captura-whats-nota {
+    display: none; margin: 8px 0 0; color: var(--muted); font-size: 13.5px; line-height: 1.45;
+  }
+  .captura-whats-nota.on { display: block; }
+
   /* «También la hay de 51 pasajeros»: la otra capacidad de la misma unidad,
      dentro de su ficha. Se lee como un dato, no como una advertencia. */
   .unit-alterna {
@@ -2787,6 +2807,32 @@ window.IMGS = {
                 <span id="captura-listo-nota"></span>
               </div>
             </div>
+
+            <!-- R47 · LA FICHA POR WHATSAPP, Y POR QUÉ LA MANDA ÉL
+                 ------------------------------------------------------------
+                 El dueño lo pidió así: «se le manda un mensaje con el ticket
+                 para que el vendedor vaya a esa misma conversación y dé
+                 precio». Para que eso pase tiene que HABER conversación, y
+                 quien la puede abrir es el cliente: WhatsApp solo deja
+                 escribirle primero a alguien con una plantilla aprobada por
+                 Meta, y eso ya se descartó (docs/SEGUIMIENTO.md).
+
+                 Así que el mensaje viene escrito y él nada más le da enviar.
+                 Con eso: se abre la ventana de 24 horas, el bot arma el
+                 ticket, el vendedor contesta el precio AHÍ, y de ahí se
+                 aprende para el cotizador.
+
+                 Y no se pierde nada si no lo pica: la solicitud YA se mandó
+                 antes de llegar aquí. Esto es lo que la mejora, no lo que la
+                 sostiene. -->
+            <a class="captura-whats" id="captura-whats" target="_blank" rel="noopener">
+              <svg aria-hidden="true"><use href="#i-wa" /></svg>
+              <span>Mándanos tu viaje por WhatsApp</span>
+            </a>
+            <p class="captura-whats-nota" id="captura-whats-nota">
+              Se abre con tu viaje ya escrito: solo dale enviar y ahí mismo te
+              atiende un vendedor.
+            </p>
           </div>
         </div>
       </div>
@@ -4205,10 +4251,13 @@ window.IMGS = {
     unidadSel.insertBefore(new Option('Selecciona una unidad', ''), unidadSel.firstChild);
     unidadSel.value = '';
 
-    /* Sprinter cotiza en línea; el resto manda solicitud a la empresa. */
+    /* Quién cotiza en línea lo decide UNA regla, en la máquina (R47). Hoy
+       está apagada para todos, así que el botón dice «Solicitar cotización»
+       siempre — y eso es justo lo que tiene que decir: prometer «Cotizar» y
+       acabar pidiendo el teléfono es la manera más rápida de perder a alguien. */
     function pintaBotonBuscar() {
       var u = unidadPorId(tipoUnidad);
-      var auto = !!(u && u.cotizadorAutomatico);
+      var auto = COTIZACION.cotizaEnLinea(u);
       byId('s-go').innerHTML =
         '<svg aria-hidden="true"><use href="#' + (auto ? 'i-search' : 'i-mail') + '"/></svg> ' +
         (auto ? 'Cotizar' : 'Solicitar cotización');
@@ -5811,6 +5860,34 @@ window.IMGS = {
       return partes.join('  ·  ');
     }
 
+    /* ------------------------------------------------------------
+       LA MISMA FICHA, PERO PARA MANDARLA POR WHATSAPP (R47)
+       ------------------------------------------------------------
+       Es la de arriba con renglones en vez de puntos medios, y con una
+       primera línea que dice para qué es. Los renglones no son adorno:
+       así llega, y así la lee el vendedor en su teléfono. Un renglón
+       corrido de sesenta caracteres con puntos medios se lee mal.
+
+       Se arma de LA PANTALLA —`LOC` y `VIAJE`— y no del estado del
+       cotizador, por lo mismo que el botón flotante: quien escoge su
+       viaje y se va derecho a WhatsApp sin picar «Cotizar» tenía un
+       mensaje a medias.
+       ------------------------------------------------------------ */
+    function fichaParaWhatsApp() {
+      var partes = ['Hola, quiero cotizar este viaje:'];
+      if (LOC.origen && LOC.destino) {
+        partes.push(LOC.origen.place[0] + ' → ' + LOC.destino.place[0]);
+      }
+      if (VIAJE.salida) {
+        partes.push(fmtFechaHora(VIAJE.salida) +
+          (VIAJE.regreso ? ' → ' + fmtFechaHora(VIAJE.regreso) : ' · solo ida'));
+      }
+      if (VIAJE.unidad) partes.push(VIAJE.unidad.name);
+      /* Si no alcanzó a escoger nada, se manda el saludo de siempre y no
+         un «Hola, quiero cotizar este viaje:» con nada debajo. */
+      return partes.length > 1 ? partes.join('\n') : '';
+    }
+
     function abreCaptura() {
       var caja = byId('captura');
       caja.style.display = '';
@@ -5826,6 +5903,11 @@ window.IMGS = {
          Lo que NO se borra es lo que ya tecleó: cambiar de fecha no es
          motivo para hacerle escribir su número otra vez. */
       byId('captura-listo').style.display = 'none';
+      /* R47 · El botón de WhatsApp es parte del acuse, así que se guarda
+         con él. Si se quedara puesto, alguien que cambia la fecha vería
+         «mándanos tu viaje» con la ficha VIEJA todavía en el enlace. */
+      byId('captura-whats').classList.remove('on');
+      byId('captura-whats-nota').classList.remove('on');
       byId('captura-label').style.display = '';
       byId('captura-fila-caja').style.display = '';
       byId('captura-cambia').style.display = '';
@@ -5930,6 +6012,20 @@ window.IMGS = {
           ? 'Te escribimos por WhatsApp con tu precio, el mismo día hábil.'
           : 'Te mandamos tu precio por correo, el mismo día hábil.';
         byId('captura-listo').style.display = '';
+
+        /* ------------------------------------------------------------
+           R47 · Y EL ATAJO: QUE LA ABRA ÉL AHORITA
+           ------------------------------------------------------------
+           La solicitud ya salió —el vendedor la tiene—, así que esto no
+           es un segundo intento: es la diferencia entre que él espere y
+           que la conversación exista YA. Ver el comentario del HTML.
+
+           El enlace se arma al pintarlo y no al cargar la página: la
+           ficha depende de lo que acabó de escoger. */
+        var whats = byId('captura-whats');
+        whats.href = ligaWhatsApp(fichaParaWhatsApp());
+        whats.classList.add('on');
+        byId('captura-whats-nota').classList.add('on');
       }).catch(function () {
         boton.disabled = false;
         boton.textContent = 'Mándamelo';
@@ -6146,7 +6242,9 @@ window.IMGS = {
          DOM— y `probar-pantallas.cjs` lo caza: esa prueba nació justamente
          de un id repetido, porque `getElementById` devuelve el primero que
          encuentra y eso no truena, solo se equivoca en silencio. */
-      var auto = u.cotizadorAutomatico;
+      /* R47 · La misma regla compartida que el botón de buscar. Con el
+         cotizador apagado, esta nota dice siempre «se cotiza a la medida». */
+      var auto = COTIZACION.cotizaEnLinea(u);
       var nota = '<span class="fit' + (auto ? '' : ' no') + '" id="res-nota">' +
         '<svg aria-hidden="true"><use href="' + (auto ? '#i-check' : '#i-mail') + '"/></svg>' +
         (auto ? 'Cotización en línea disponible para esta unidad'
@@ -6227,10 +6325,26 @@ window.IMGS = {
         ? 'del origen y del destino'
         : (faltaOrigen ? 'del origen' : 'del destino');
 
+      /* R47 · CAMBIÓ EL PORQUÉ, NO LA PETICIÓN (12-sep-2026)
+         ------------------------------------------------------------
+         Decía «el precio todavía se puede mover… y la tarifa queda
+         firme». Con el cotizador apagado eso quedó mintiendo: no hay
+         precio que se mueva ni tarifa que quede firme.
+
+         Y no se cazó con una prueba: se cazó abriendo la página y
+         caminando el cotizador completo. El texto vive dentro de una
+         plantilla armada a pedazos, así que ninguna prueba de texto
+         lo iba a ver.
+
+         La petición SIGUE VALIENDO, por dos razones que no dependen
+         del cotizador: el vendedor necesita el punto para poner el
+         precio —«del centro de la ciudad» y «del hotel» no cuestan lo
+         mismo— y el día del viaje el operador necesita una dirección,
+         no una ciudad. Lo que se cambia es lo que se le promete. */
       byId('pide-exacto-texto').innerHTML =
         '<b>Nos falta la dirección exacta ' + cual + '.</b> Por ahora tomamos el centro de ' +
-        'la ciudad, así que el precio todavía se puede mover. Marca el hotel, el salón o el ' +
-        'domicilio y la tarifa queda firme.';
+        'la ciudad. Marca el hotel, el salón o el domicilio: con el punto exacto te pasamos ' +
+        'el precio más ajustado, y el día del viaje el operador sabe dónde llegar.';
       caja.style.display = '';
     }
 
@@ -6354,7 +6468,11 @@ window.IMGS = {
         'La unidad permanecerá ' + dias + (dias === 1 ? ' noche' : ' noches') +
         ' en destino, del ' + fechaLegible(soloFecha(VIAJE.salida)) +
         ' al ' + fechaLegible(soloFecha(VIAJE.regreso)) + '. ' +
-        'Cada día con movimientos se cobra aparte y se suma a tu total.';
+        /* R47 · Decía «se cobra aparte y se suma a tu total». Ya no hay
+           total al que sumarle; lo que sigue siendo verdad es que el día
+           con movimientos cuesta aparte, y que por eso se pregunta. */
+        'Cada día con movimientos cuesta aparte, así que dinos cuáles ' +
+        'llevan recorrido y el vendedor te los incluye en el precio.';
       pintaInterruptor();
     }
 
@@ -6370,11 +6488,20 @@ window.IMGS = {
          destino, para que la pantalla y el cobro no puedan discrepar—. */
       var reg = VIAJE.cotizacion && VIAJE.cotizacion.desglose &&
                 VIAJE.cotizacion.desglose.reglaDestino;
+      /* R47 · Los dos decían «Ya está sumado al total de arriba», y arriba
+         ya no hay total. Lo demás —qué cubre un día con movimientos— es
+         de la operación y no del precio, así que se queda: es lo que le
+         evita al cliente pedir doce horas creyendo que van incluidas.
+
+         Con el cotizador apagado `reglaDestino` viene siempre en null y
+         hoy solo se ve la segunda rama. La primera se deja puesta a
+         propósito: el día que él vuelva a encender el cotizador tiene que
+         seguir ahí, y borrarla sería trabajo que habría que rehacer. */
       byId('aviso-mov-texto').textContent = reg
         ? 'En ' + reg + ' el día con movimientos es tarifa fija: cueste 4 horas o 12, ' +
-          'se cobra igual. Ya está sumado al total de arriba.'
+          'se cobra igual.'
         : 'Cada día con movimientos cubre 8 horas dentro de la zona metropolitana del ' +
-          'destino, o 40 km a la redonda del centro. Ya está sumado al total de arriba.';
+          'destino, o 40 km a la redonda del centro.';
     }
 
     byId('mov-si').addEventListener('click', function () {

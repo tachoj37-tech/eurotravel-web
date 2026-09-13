@@ -22,6 +22,7 @@
    ============================================================ */
 
 const nucleo = require('./_cotiza-nucleo'); // el calculo, compartido con el bot
+const tarifa = require('./_tarifa');        // R47: de aqui sale el interruptor
 const defensas = require('./_defensas');    // origen, freno e IP, en un lugar
 const solicitud = require('./_solicitud');  // fases 2 y 3: el que no lleva precio
 
@@ -124,8 +125,18 @@ module.exports = async function handler(req, res) {
      ------------------------------------------------------------ */
   let r;
   try {
+    /* ------------------------------------------------------------
+       R47 · Y HOY NO DA NINGUNO, NI DEL CRITERIO (12-sep-2026)
+       ------------------------------------------------------------
+       Dictado del dueño: «ningún precio para nadie». El interruptor
+       vive en `_tarifa.js` con su porqué; aquí solo se le pregunta.
+
+       Se pregunta y no se escribe `true` a mano para que el día que
+       él lo encienda se encienda de un solo renglón, y no haya que
+       acordarse de esta línea y de la gemela en `pagar.js`.
+       ------------------------------------------------------------ */
     r = await nucleo.cotiza(cuerpo, process.env.GOOGLE_ROUTES_KEY,
-      { soloDelCriterio: true });
+      { soloDelCriterio: true, sinPrecio: !tarifa.PAGINA_DA_PRECIOS });
   } catch (e) {
     res.status(502).json({ error: 'No se pudo calcular la distancia' });
     return;

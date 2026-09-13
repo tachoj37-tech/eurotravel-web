@@ -256,6 +256,33 @@ viaje **que entró por la página** llegue a ese mismo tablero.
 
 ---
 
+## Y encima de todo: R47, ningún precio para nadie
+
+**12-sep-2026.** El dueño cortó por lo sano y dejó corta la fase 1: no es que
+la página no dé un precio que no salió del criterio, es que **no da ninguno**.
+Ni del criterio.
+
+> «Exacto, ningún precio para nadie… cuando se usa el cotizador de la página y
+> el cliente selecciona confirmar, se le manda un mensaje con el ticket… de
+> momento no hay precio.»
+
+De las once unidades solo cotizaba una —la Sprinter—, así que el cambio cabe
+en un interruptor: `PAGINA_DA_PRECIOS`, en `api/_tarifa.js` y su copia en
+`cotizacion.js`. El cálculo entero sigue vivo y probado, porque lo necesitan
+el bot, la pantalla del dueño y el aprendizaje de precios.
+
+**Y esto adelanta las fases 3 y 5 sin tocar el bot.** El acuse ahora le abre
+WhatsApp al cliente con su viaje ya escrito. Cuando él le da enviar, la
+conversación existe —que es lo único que Meta no deja abrir desde este lado— y
+de ahí en adelante ocurre solo lo que faltaba: el ticket, el vendedor
+contestando en esa misma conversación, el recordatorio de 22 horas y el precio
+aprendido.
+
+Lo que queda abierto —el bot, que todavía cotiza la Sprinter, y qué pasa
+cuando un precio se aprende— está en **`docs/SIN-PRECIOS.md`**.
+
+---
+
 ## Después de las fases: los abonos
 
 **12-sep-2026.** Con las fases 0 a 4 cerradas se retomó el spec del

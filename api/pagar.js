@@ -199,7 +199,19 @@ module.exports = async function handler(req, res) {
          No hace falta un freno nuevo: el precio viene con
          `requiereAsesor` y el que ya está unas líneas abajo lo para.
          ------------------------------------------------------------ */
-      soloDelCriterio: true
+      soloDelCriterio: true,
+      /* ------------------------------------------------------------
+         R47 · Y HOY NO SE COBRA NINGUNO (12-sep-2026)
+         ------------------------------------------------------------
+         La misma lección de R46, subida un escalón. Con el cotizador
+         apagado la pantalla ya no llega hasta aquí, PERO la pantalla
+         no es la puerta: esta línea es la que impide que una petición
+         armada a mano aparte un viaje —con folio, contrato y cobro—
+         a un precio que el dueño hoy no quiere que se dé.
+
+         El freno que lo para es el mismo `requiereAsesor` de abajo.
+         ------------------------------------------------------------ */
+      sinPrecio: !tarifa.PAGINA_DA_PRECIOS
     });
 
     /* ------------------------------------------------------------

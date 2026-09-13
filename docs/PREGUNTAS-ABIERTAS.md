@@ -105,6 +105,44 @@ segunda sin ellos sería un hueco.
 > **Y ojo:** hoy `DUENO_WHATSAPP` está vacía a propósito en producción, así
 > que aunque se hiciera, el ticket tampoco saldría todavía.
 
+> **Se destrabó por otro lado el 12-sep-2026 (R47).** No hacía falta que el
+> bot escribiera primero —Meta no lo deja sin plantillas—: ahora el acuse de
+> la página le abre WhatsApp al cliente con su viaje ya escrito, y cuando él
+> le da enviar la conversación existe. De ahí el ticket sale solo, por el
+> camino de siempre. Ver `docs/SIN-PRECIOS.md`.
+
+---
+
+## 6 · Cuando la IA aprende un precio, ¿sale solo al cotizador? (12-sep-2026)
+
+**Es para el dueño, y hay que preguntárselo antes de escribir nada.**
+
+Él pidió las dos cosas en el mismo mensaje: *«ningún precio para nadie»* y
+*«ahí es donde la IA aprende de precios para que cada mes añada nuevos precios
+al cotizador»*. Chocan, y la manera de resolverlo cambia el diseño entero:
+
+- **Si sale solo:** ese destino deja de ser «ningún precio» en cuanto se
+  aprende, y el cotizador se va soltando mes con mes sin que nadie lo apruebe.
+- **Si necesita su «va»:** es como funciona hoy todo lo demás —la compuerta
+  del dueño— y él revisa una tanda al mes antes de que salga en público.
+
+Lo sensato es lo segundo, pero es su decisión y no se supone. Y de todos
+modos falta la pieza de abajo: **el almacén no existe en producción**
+(`docs/EL-CIRCULO-DE-APRENDER-PRECIOS.md`), así que hoy no se acumula nada.
+
+---
+
+## 7 · El bot todavía cotiza la Sprinter (12-sep-2026)
+
+**No es una pregunta, es un pendiente para la rama del bot.** El dueño dijo
+«ningún precio para nadie» incluyendo el bot. La página ya no cotiza; el bot
+sí, porque comparten el catálogo.
+
+Es un renglón —`cotizadorAutomatico: false` en la Sprinter, `unidades.js`— y
+el bot ya tiene hecho el camino para cuando pase. No se tocó desde el worktree
+de la página porque mueve más de cien aserciones de las pruebas del bot. El
+detalle, en `docs/SIN-PRECIOS.md`.
+
 ---
 
 # Lo que se cerró el 1-sep-2026

@@ -63,6 +63,12 @@ async function cotiza(cuerpo, claveGoogle, opciones) {
      ------------------------------------------------------------ */
   const soloDelCriterio = !!(opciones && opciones.soloDelCriterio);
 
+  /* R47 · Y lo mismo, un escalón más arriba: con esto NO sale ningún
+     número, ni siquiera los del Excel. Lo piden las mismas dos puertas
+     públicas, leyendo `tarifa.PAGINA_DA_PRECIOS`. El bot no lo pide.
+     También va en `opciones` y no en `c`, por la misma razón de arriba. */
+  const sinPrecio = !!(opciones && opciones.sinPrecio);
+
   const origen = rutas.formasDe(c.origen);
   const destino = rutas.formasDe(c.destino);
   if (!origen.length || !destino.length) {
@@ -100,7 +106,7 @@ async function cotiza(cuerpo, claveGoogle, opciones) {
      un peso, así que se pagaban dos llamadas por una respuesta que se
      tiraba. Quién sabe si hacen falta es `_tarifa`, no este archivo. */
   const hayQueMedir = tarifa.necesitaMedirse(c.destino, c.unidad,
-    { soloDelCriterio: soloDelCriterio });
+    { soloDelCriterio: soloDelCriterio, sinPrecio: sinPrecio });
 
   if (hayQueMedir && !claveGoogle) {
     return { ok: false, status: 503, error: 'Cotizador en línea no configurado' };
@@ -147,7 +153,10 @@ async function cotiza(cuerpo, claveGoogle, opciones) {
     /* R46 · Y esto también va TAMBIÉN en `pagar.js`: si faltara en
        cualquiera de las dos, se enseñaría «te contactamos» y se cobraría
        un precio de fórmula, o al revés. */
-    soloDelCriterio: soloDelCriterio
+    soloDelCriterio: soloDelCriterio,
+    /* R47 · Y ésta TAMBIÉN va en las dos. Si faltara aquí, la página
+       enseñaría «te contactamos» y `/api/pagar` cobraría $19,000. */
+    sinPrecio: sinPrecio
   });
 
   /* Qué del precio puede salir lo decide `_publico.js`, el único dueño
