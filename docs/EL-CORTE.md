@@ -21,20 +21,18 @@ sistema aprende un precio, **no sale solo a la página**. Entra a una tanda que
 
 ---
 
-## El almacén ya está conectado
+## El almacén
 
-> **Corregido el 13-sep-2026.** Aquí decía que el almacén no existía y que
-> había que crearlo. **Era falso**: vive en la organización gratis **EuroBot**
-> de Supabase desde el 5-sep, con sus llaves en Vercel. Lo comprobó el
-> registro de producción. El detalle —y el error— en
+> **Corregido el 13-sep-2026.** El almacén es el proyecto **eurotravel-almacen**
+> de Supabase, ya con sus tablas. Falta conectarlo en Vercel: ver
 > `docs/ENCENDER-EL-ALMACEN.md`.
 
 Para correr el corte desde esta máquina hacen falta **las mismas dos llaves
-que ya están en Vercel**, puestas en `.env.local` (que no sube a Git):
+que van en Vercel**, puestas en `.env.local` (que no sube a Git):
 
 ```
 ALMACEN_URL=https://xxxxxxxx.supabase.co
-ALMACEN_CLAVE=la service_role del proyecto de EuroBot
+ALMACEN_CLAVE=la llave secreta de eurotravel-almacen
 ```
 
 La `service_role` se salta RLS a propósito: la usa el servidor, nunca el

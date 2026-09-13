@@ -157,7 +157,7 @@ const RAROS = ['a&b=c', 'a,b', '100%', "o'brien", 'con espacio', 'salto\nlinea',
      13-sep-2026. Esto casi se pierde en producción, y fue mío.
 
      El renglón del precio aprendido ganó la columna `calculado`. El
-     almacén real —en la organización EuroBot— no la tiene todavía, y
+     almacén de producción no la tenía, y
      `guardaPrecio` mandaba el renglón tal cual: PostgREST contesta 400
      «no existe la columna» y rechaza EL RENGLÓN ENTERO. O sea que el
      primer precio que el dueño confirmara después del despliegue NO SE

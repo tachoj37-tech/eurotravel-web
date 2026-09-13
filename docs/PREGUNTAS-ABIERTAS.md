@@ -128,7 +128,7 @@ al cotizador»*. Chocan, y la manera de resolverlo cambia el diseño entero:
 
 Lo sensato es lo segundo, pero es su decisión y no se supone. Y de todos
 modos falta la pieza de abajo: ~~el almacén no existe en producción~~
-**(corregido el 13-sep: sí existe, en EuroBot)**. Lo que falta es el puente
+**(13-sep: el almacén es eurotravel-almacen, falta conectarlo)**. Lo que falta es el puente
 del almacén al cotizador, que no está escrito.
 
 > **Contestada el 13-sep-2026:** no sale solo. Se guarda y se aprende, y sale

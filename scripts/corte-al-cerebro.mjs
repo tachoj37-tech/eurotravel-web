@@ -391,10 +391,9 @@ if (meLlamaronDirecto) {
   if (!URL_BASE || !CLAVE) {
     console.error('Faltan ALMACEN_URL y ALMACEN_CLAVE (en el entorno o en .env.local).');
     console.error('');
-    /* Decía «si todavía no existe el almacén, créalo». Era falso: existe
-       desde el 5-sep en la organización EuroBot. Que falten aquí solo
-       quiere decir que esta máquina no las tiene. */
-    console.error('El almacén ya existe (organización EuroBot en Supabase) y');
+    /* El almacén es el proyecto eurotravel-almacen (13-sep-2026). Que falten
+       aquí solo quiere decir que esta máquina no tiene las llaves. */
+    console.error('El almacén es el proyecto eurotravel-almacen de Supabase y');
     console.error('sus llaves están en Vercel. Lo que falta es tenerlas AQUÍ:');
     console.error('ponlas en .env.local —que no sube a Git— y vuelve a correr.');
     process.exit(2);

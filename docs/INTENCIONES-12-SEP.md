@@ -112,8 +112,7 @@ Lo que falta para cerrar su círculo:
    haya este mensaje».
 
 > ~~Pero el almacén todavía no existe en producción.~~ **Corregido el
-> 13-sep-2026: sí existe**, en la organización EuroBot de Supabase desde el
-> 5-sep. Ver `docs/ENCENDER-EL-ALMACEN.md`.
+> 13-sep-2026:** el almacén es el proyecto eurotravel-almacen, creado ese día. Ver `docs/ENCENDER-EL-ALMACEN.md`.
 
 ## 5 · El portal de abonos por folio (NUEVO, 12-sep-2026)
 

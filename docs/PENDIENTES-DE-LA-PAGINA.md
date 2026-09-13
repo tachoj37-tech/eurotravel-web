@@ -45,8 +45,7 @@ el mensaje exacto al WhatsApp **no al teléfono**.
 |---|---|---|---|
 | ~~**1**~~ | ~~Decir si subo los commits~~ | **HECHO el 13-sep.** Ver arriba | ✅ |
 | **2** | **Confirmar que te LLEGÓ el correo de prueba** | Ver la nota de abajo: el servidor dice que salió, pero eso no es que haya llegado | Buscar en tu correo «PRUEBA DEL SISTEMA» |
-| **3** | **Correr UNA línea en el almacén de EuroBot:** `alter table precios add column if not exists calculado integer;` — el almacén **ya existe** desde el 5-sep; aquí decía que había que crearlo y era falso (ver `docs/ENCENDER-EL-ALMACEN.md`) | Sin ella el bot sigue guardando precios, pero **sin el número del motor**, que no se reconstruye después | «Success. No rows returned» |
-| **3b** | **Borrar el proyecto `eurotravel-almacen`** de la organización de pago | Lo creé yo el 13-sep creyendo que el almacén no existía. Está vacío y **cuesta $10 al mes** | Dashboard → Project Settings → General → Delete project |
+| **3** | **Conectar el almacén:** poner la dirección y la llave secreta de **eurotravel-almacen** en Vercel y redesplegar. El proyecto ya existe con sus tablas y su candado probado | Hoy las llaves de Vercel apuntan a algo que no contesta | El recordatorio automático lee el almacén sin tiempo agotado |
 | **4** | **`eurotravel.com.mx`: ¿se muda o no?** | Comprobado el 13-sep: ese dominio sirve un **WordPress**, no esta página. Y en Vercel el proyecto solo tiene los tres dominios `.vercel.app` | El dominio aparece en la lista del proyecto y abre esta página |
 | **5** | **Que el bot deje de cotizar la Sprinter** | Dijiste «ningún precio para nadie» incluyendo el bot. Es un renglón en `unidades.js`, pero mueve 100+ aserciones de las pruebas del bot: le toca a su rama | El bot contesta con ficha armada en vez de precio |
 | **6** | **Cambio de fecha: ¿hay política?** | Hoy el bot te pasa al cliente sin explicar nada | Si dictas una, se escribe en el criterio |

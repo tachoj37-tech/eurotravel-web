@@ -66,9 +66,8 @@ Con la llave arreglada, quedan **dos piezas**, y ninguna es de este lado:
 
 ### ~~1 · El almacén, que todavía no existe en producción~~
 
-> **Corregido el 13-sep-2026: SÍ existe.** Vive en la organización gratis
-> **EuroBot** de Supabase desde el 5-sep, con sus llaves en Vercel; el registro
-> de producción lo confirma. Esto se escribió sin mirar producción. Ver
+> **Corregido el 13-sep-2026.** El almacén es el proyecto **eurotravel-almacen**
+> (creado ese día, ya con sus tablas). Falta conectarlo en Vercel: ver
 > `docs/ENCENDER-EL-ALMACEN.md`.
 
 ### 2 · El enganche: hoy la página no pasa por ahí
