@@ -71,5 +71,23 @@ publicas.forEach(function (f) {
   cierto(f + ' tiene extensión que Vercel entiende', /\.(js|mjs|cjs|ts)$/.test(f));
 });
 
+/* ------------------------------------------------------------
+   VERCEL.JSON SOLO CON LLAVES QUE VERCEL CONOCE — 13-sep-2026
+   ------------------------------------------------------------
+   Le puse una nota de texto («_nota») explicando el rewrite de Kommo.
+   Vercel valida el archivo contra su esquema y rechaza cualquier llave que
+   no conozca: el despliegue murió antes de construir, con 5318 pruebas en
+   verde, y producción se quedó en la versión anterior. Las notas van en
+   el código o en docs/, nunca aquí. */
+{
+  const conocidas = ['$schema', 'buildCommand', 'cleanUrls', 'crons', 'devCommand', 'framework',
+    'functions', 'git', 'github', 'headers', 'ignoreCommand', 'images', 'installCommand',
+    'outputDirectory', 'public', 'redirects', 'regions', 'functionFailoverRegions', 'rewrites',
+    'trailingSlash', 'bunVersion', 'fluid'];
+  const config = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'vercel.json'), 'utf8'));
+  const raras = Object.keys(config).filter(function (k) { return conocidas.indexOf(k) < 0; });
+  igual('vercel.json no trae llaves que Vercel rechace', raras, []);
+}
+
 console.log('\n' + buenas + ' buenas, ' + malas + ' malas');
 process.exit(malas ? 1 : 0);
