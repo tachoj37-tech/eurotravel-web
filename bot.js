@@ -1211,6 +1211,16 @@ function comoDestino(crudo) {
   const d = limpiaDestino(crudo);
   const n = normaliza(d);
   if (!n || n.length < 3) return null;
+  /* ------------------------------------------------------------
+     UNA OCASIÓN NO ES UN LUGAR — 13-sep-2026
+     ------------------------------------------------------------
+     «es para una boda», dicho sobre el ticket ya armado, cambiaba el
+     destino del viaje a *Una Boda*. Entró con la fase 3, cuando el destino
+     pasó a poder CORREGIRSE y no solo llenarse: antes el hueco ya estaba
+     lleno y la frase no pisaba nada. Nadie probó que una ocasión no se
+     leyera como lugar.
+     ------------------------------------------------------------ */
+  if (/^(?:un|una|la|el|mi|su|nuestra|nuestro)?\s*(?:boda|bodas|xv|xv anos|quince|quinceanera|fiesta|despedida|graduacion|cumpleanos|convivencia|peregrinacion|romeria|excursion|paseo|posada|retiro|evento|reunion)s?$/.test(n)) return null;
   if (SOLO_ES_FECHA.test(n) || NO_ES_UN_LUGAR.test(n)) return null;
   if (/^d[oó]nde\b/.test(n)) return null;
   return d.slice(0, 120);
@@ -2742,10 +2752,29 @@ function pregunta(estado) {
         texto: '¿Tú qué dices, cuántas horas al día les alcanza?',
         opciones: HORAS_MOV.map(function (h) { return h.etiqueta; })
       };
+    /* ------------------------------------------------------------
+       EL TICKET QUE SE QUEDA EN EL CHAT — 13-sep-2026
+       ------------------------------------------------------------
+       Dictado del dueño: el bot llega hasta aquí y ya. Este mensaje ES el
+       ticket: el vendedor entra al chat, lo lee y pone el precio.
+
+       SIN BOTONES, a propósito. No espera nada: el cliente puede decir
+       «todo bien», pedir un cambio, o no decir nada — y en los tres casos
+       el vendedor sigue desde aquí. Dos botones pedían una respuesta que
+       el flujo ya no necesita.
+
+       Y dice que el precio viene en camino, porque puede que el cliente no
+       conteste nunca: si el aviso esperara a su «sí», quien no escribe se
+       quedaba sin saber que alguien le va a responder.
+
+       Cambiar algo sigue funcionando escrito —«mejor el 22», «somos 45»—:
+       lo leen `correccionDeFecha` y `absorbeLoDemas`, no un botón.
+       ------------------------------------------------------------ */
     case 'confirmar':
       return {
-        texto: 'Déjame confirmar 👇\n\n' + resumenDe(e) + '\n\n¿Todo bien?',
-        opciones: ['Sí, cotizar', 'Cambiar algo']
+        texto: 'Déjame confirmar 👇\n\n' + resumenDe(e) +
+          '\n\n¿Todo bien? En un momento te paso tu precio 🙌',
+        opciones: []
       };
     case 'cambiar':
       return {
@@ -3367,6 +3396,12 @@ function pasoDeCotizacion(t, crudo, estado, hoy) {
       ? comoDestino(leido.destino)
       : (palabras > 5 ? null : comoDestino(dicho));
     if (!suDestino) {
+      /* «Es para una boda» no trae lugar, pero sí la ocasión: se guarda
+         antes de volver a preguntar. Desde que `comoDestino` rechaza las
+         ocasiones (13-sep-2026) la frase ya no se colaba como destino
+         *Una Boda* — y con ella se iba la ocasión, que es con lo que se
+         compara el precio al final. */
+      if (!e.ocasion) e.ocasion = ocasionDe(crudo);
       return {
         texto: '¿A qué ciudad o pueblo van? 📍 Con el nombre del lugar me arranco.',
         pasa: false, estado: e, opciones: [], noEntendio: true
@@ -3917,6 +3952,10 @@ function pasoDeCotizacion(t, crudo, estado, hoy) {
         opciones: ['Enviar por WhatsApp', 'Cotizar otro'],
         solicitud: {
           unidad: e.unidad, gente: e.gente || null,
+          /* La ocasión viaja con la solicitud: «es para una boda», dicho
+             sobre el ticket, se guardaba en el estado y se perdía al
+             cerrar, porque la solicitud no la llevaba (13-sep-2026). */
+          ocasion: e.ocasion || null,
           /* CUÁL camión escogió, no solo que es un camión. El ticket del
              dueño decía «🚐 Autobús · 45 pasajeros» y con eso él no sabía
              si armar el i6S de 51 o el Century de 47 — y sin saber la
@@ -4478,9 +4517,19 @@ function correccionDeFecha(mensaje, e, hoy) {
           'Va, lo movemos a *' + mes[1] + '* 📅\n\n¿Qué día de ' + mes[1] + ' salen?',
         pasa: false, estado: e, opciones: [] };
     }
-    /* Sin fecha ni mes, este bloque no tiene nada que hacer — pero lo
-       que `absorbeLoDemas` haya guardado ya quedó en `e`, y el paso que
-       sigue se encarga del resto del mensaje. */
+    /* Sin fecha ni mes. Si el mismo mensaje SÍ cambió otra cosa —«mejor
+       somos 45»— se acusa aquí y se vuelve a enseñar lo que toca.
+
+       Antes esto devolvía null y le dejaba el mensaje al paso. Pero el
+       cambio ya estaba guardado, así que el paso de confirmar no veía
+       nada nuevo, tomaba el mensaje como un «sí» y CERRABA el ticket: el
+       cliente pedía un cambio y nunca veía su viaje corregido
+       (13-sep-2026). */
+    if (tambien) {
+      alSiguienteHueco(e);
+      const p = pregunta(e);
+      return { texto: tambien + '\n\n' + p.texto, opciones: p.opciones || [], pasa: false, estado: e };
+    }
     return null;
   }
   if (nueva === e.salida || nueva === e.regreso) return null;   // ya está así

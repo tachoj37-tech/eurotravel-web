@@ -78,7 +78,10 @@ titulo('la tabla: cada paso contra cada dato');
       let quedo = false;
       try {
         const r = conv.respuestaA(dice, Object.assign({}, antes), HOY);
-        quedo = comprueba(r.estado || {});
+        /* Si el mensaje cierra el ticket —en «confirmar», lo que no es un
+           cambio se toma como que sí— el estado ya no existe y los datos
+           viajan en la solicitud que recibe el vendedor. Ahí se buscan. */
+        quedo = comprueba(r.estado || r.solicitud || {});
       } catch (e) { quedo = false; }
       ok('en «' + paso + '» se guarda ' + nombre + ' («' + dice + '»)', quedo);
     }

@@ -297,7 +297,13 @@ console.log('\n== COTIZAR LA SPRINTER, PASO A PASO ==');
   okQue('confirma antes de cotizar', /confirmar/i.test(t));
   okQue('  repitiendo el destino', /Chapala/.test(t));
   okQue('  y las fechas', /septiembre/.test(t));
-  ok('  con boton de si y de cambiar', c.ultimo.opciones, ['Sí, cotizar', 'Cambiar algo']);
+  /* CAMBIÓ DE LADO EL 13-sep-2026. Pedía los botones «Sí, cotizar» y
+     «Cambiar algo». El dueño dictó que este mensaje es el TICKET que se
+     queda en el chat: no espera respuesta —el cliente puede decir que sí,
+     pedir un cambio o no decir nada, y el vendedor sigue desde ahí— así
+     que va sin botones y avisando que el precio viene en camino. */
+  ok('  sin botones: es el ticket, no una pregunta', c.ultimo.opciones, []);
+  okQue('  y avisa que el precio viene en camino', /en un momento te paso tu precio/i.test(t));
 }
 
 console.log('\n== R22: EL VIAJE DE UN DIA NO PAGA MOVIMIENTOS ==');

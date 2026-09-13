@@ -38,7 +38,7 @@ function titulo(t) { console.log('\n== ' + t.toUpperCase() + ' =='); }
 function corrido(msgs) {
   let e = null, ultimo = null;
   for (const m of msgs) { ultimo = conv.respuestaA(m, e, HOY); e = ultimo.estado || {}; }
-  return { estado: e, texto: (ultimo && ultimo.texto) || '' };
+  return { estado: e, texto: (ultimo && ultimo.texto) || '', r: ultimo || {} };
 }
 
 const ARMADO = ['hola', 'a vallarta', 'somos 40', 'de gdl', '20 de diciembre', 'el 23'];
@@ -140,6 +140,26 @@ titulo('el flujo del dueño, de punta a punta (13-sep-2026)');
   ok('  y el resumen lo dice', /Irizar i6S/.test(b.texto));
   ok('  sin dar precio', !/\$\s?\d/.test(b.texto));
   ok('  y pregunta si todo bien', /todo bien/i.test(b.texto));
+  ok('  sin botones: es el ticket', (b.r.opciones || []).length === 0);
+  ok('  avisando que el precio viene', /en un momento te paso tu precio/i.test(b.texto));
+
+  /* Lo que el cliente puede decirle al ticket, y qué tiene que pasar. */
+  function sobreElTicket(frase) {
+    return conv.respuestaA(frase, JSON.parse(JSON.stringify(b.estado)), HOY);
+  }
+  const c = sobreElTicket('mejor somos 45');
+  ok('«mejor somos 45» corrige y NO cierra', !!c.estado && Number(c.estado.gente) === 45);
+  ok('  y le vuelve a enseñar el ticket', /confirmar/i.test(c.texto));
+
+  const d = sobreElTicket('es para una boda');
+  ok('«es para una boda» NO cambia el destino',
+    !d.estado || d.estado.destino === 'Puerto Vallarta');
+  ok('  y la ocasión llega al vendedor',
+    !!((d.estado && d.estado.ocasion) || (d.solicitud && d.solicitud.ocasion)));
+  ok('«una boda» no es un destino', conv.comoDestino('una boda') === null);
+
+  const s = sobreElTicket('si todo bien');
+  ok('«sí, todo bien» cierra y pasa al vendedor', s.pasa === true);
 }
 
 console.log('\n' + buenas + ' buenas, ' + malas + ' malas');
