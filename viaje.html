@@ -84,6 +84,28 @@
   .aviso { border-radius: 12px; padding: 16px 18px; font-size: 14.5px; }
   .aviso.malo { background: #fdeaea; color: #8a0a0a; }
   .aviso.ojo { background: #fff8e6; color: #7a5200; }
+  /* «Tu pago fue recibido con éxito». Es la única buena noticia de esta
+     pantalla y tiene que verse como tal. */
+  .aviso.bien { background: #eef8f0; color: #14682f; }
+
+  /* ============================================================
+     LA CAJA DE ABONAR
+     ============================================================ */
+  .abono-caja .atajos { display: flex; gap: 8px; flex-wrap: wrap; margin: 14px 0 0; }
+  .abono-caja .atajo {
+    background: var(--soft); border: 1px solid var(--line); border-radius: 999px;
+    padding: 7px 14px; font: inherit; font-size: 13.5px; cursor: pointer;
+  }
+  .abono-caja .atajo:hover { border-color: var(--red); color: var(--red); }
+  .abono-fila { display: flex; align-items: center; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+  .abono-fila .signo { font-size: 19px; color: var(--muted); }
+  .abono-fila input {
+    flex: 1 1 120px; min-width: 0; padding: 13px 12px;
+    font: inherit; font-size: 16px;      /* 16px o el teléfono hace zoom al enfocar */
+    border: 1px solid var(--line); border-radius: 10px; background: #fff;
+  }
+  .abono-fila input:focus { outline: 2px solid var(--red); outline-offset: 1px; }
+  .abono-fila .btn { width: auto; flex: 0 0 auto; margin-top: 0; padding: 14px 18px; }
   .cargando { text-align: center; color: var(--muted); padding: 50px 0; }
 
   /* ---- el paso del código ---- */
@@ -186,6 +208,110 @@
       '">Escríbenos por WhatsApp</a>';
   }
 
+  /* ============================================================
+     ABONAR DESDE SU PROPIA PANTALLA
+     ------------------------------------------------------------
+     Paso 2 del spec de abonos en línea. El monto se teclea libre, con
+     el saldo y la mitad como atajos.
+
+     LO QUE SE TECLEA AQUÍ NO DECIDE NADA. El servidor lo revisa contra
+     el saldo de verdad antes de abrir el cobro (`api/_saldo.js`); esto
+     es una cortesía para no hacer ir y volver a quien se equivocó de
+     tecla, no una defensa.
+     ============================================================ */
+  function cajaDeAbono(d) {
+    var atajos = (d.sugerencias || []).map(function (m) {
+      return '<button type="button" class="atajo" data-monto="' + m + '">' +
+        pesos.format(m) + '</button>';
+    }).join('');
+
+    return '<div class="tarjeta abono-caja">' +
+      '<h2>¿Quieres abonar?</h2>' +
+      '<p class="nota">Abona lo que quieras, las veces que quieras, hasta el día ' +
+        'de la salida. Con tarjeta o en el OXXO.</p>' +
+      (atajos ? '<div class="atajos">' + atajos + '</div>' : '') +
+      '<div class="abono-fila">' +
+        '<span class="signo">$</span>' +
+        '<input id="abono-monto" type="text" inputmode="numeric" ' +
+          'placeholder="' + pesos.format(d.saldo).replace('$', '').trim() + '" ' +
+          'aria-label="Cuánto quieres abonar" />' +
+        '<button class="btn" id="abono-ir">Continuar al pago</button>' +
+      '</div>' +
+      '<p class="error-codigo" id="abono-error" role="alert"></p>' +
+    '</div>';
+  }
+
+  /* Lo que se teclea puede venir como «5,000» o «5 000». Se queda el
+     número; lo demás lo revisa el servidor. */
+  function soloNumero(v) {
+    return Math.round(Number(String(v || '').replace(/[^\d.]/g, '')) || 0);
+  }
+
+  function enganchaAbono(d) {
+    var campo = document.getElementById('abono-monto');
+    var boton = document.getElementById('abono-ir');
+    var error = document.getElementById('abono-error');
+    if (!campo || !boton) return;
+
+    Array.prototype.forEach.call(document.querySelectorAll('.abono-caja .atajo'),
+      function (a) {
+        a.addEventListener('click', function () {
+          campo.value = a.getAttribute('data-monto');
+          error.textContent = '';
+          campo.focus();
+        });
+      });
+
+    function manda() {
+      if (boton.disabled) return;
+      var monto = soloNumero(campo.value);
+
+      if (!monto) { error.textContent = '¿Cuánto quieres abonar?'; campo.focus(); return; }
+      if (monto < d.abonoMinimo) {
+        error.textContent = 'El abono más chico es de ' + pesos.format(d.abonoMinimo) + '.';
+        campo.focus(); return;
+      }
+      if (monto > d.saldo) {
+        error.textContent = 'Tu saldo es de ' + pesos.format(d.saldo) + '.';
+        campo.focus(); return;
+      }
+
+      boton.disabled = true;
+      error.textContent = 'Abriendo el pago…';
+
+      fetch('/api/viaje', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ t: t, accion: 'abonar', monto: monto })
+      }).then(leeJSON).then(function (res) {
+        boton.disabled = false;
+        if (res.ok && res.d && res.d.url) {
+          /* A Stripe. La dirección la da NUESTRO servidor, pero se
+             comprueba antes de seguirla: es un dato que llega de la red y
+             termina en `location`. Misma disciplina que «Mis viajes». */
+          var destino;
+          try { destino = new URL(res.d.url); } catch (e) { destino = null; }
+          if (destino && /^https:$/.test(destino.protocol) &&
+              /(^|\.)stripe\.com$/.test(destino.hostname)) {
+            window.location.href = destino.href;
+            return;
+          }
+          error.textContent = 'No pudimos abrir el pago. Escríbenos por WhatsApp.';
+          return;
+        }
+        error.textContent = (res.d && res.d.aviso) ||
+          'No pudimos abrir el pago ahora mismo. Inténtalo en un momento.';
+      }).catch(function () {
+        boton.disabled = false;
+        error.textContent = 'No hubo conexión. Vuelve a intentar.';
+      });
+    }
+
+    boton.addEventListener('click', manda);
+    campo.addEventListener('keydown', function (e) { if (e.key === 'Enter') manda(); });
+    campo.addEventListener('input', function () { error.textContent = ''; });
+  }
+
   function pinta(d) {
     var pagado = d.estado === 'pagado';
     var partes = [];
@@ -215,11 +341,24 @@
           (pagado ? 'Tu viaje está apartado' : 'Estamos confirmando tu pago') + '</div>' +
       '</div>');
 
-    /* --- el dinero --- */
+    /* --- el dinero ---
+       «Ya pagaste» usa `d.pagado` cuando viene: es el anticipo MÁS los
+       abonos, contado desde Stripe. `d.anticipo` solo es el primer pago, y
+       enseñar ése a quien ya abonó tres veces le diría que debe más de lo
+       que debe. */
+    var yaPago = typeof d.pagado === 'number' ? d.pagado : d.anticipo;
     partes.push(tarjeta('Tu pago',
       r('Total del viaje', pesos.format(d.total) + ' · IVA incluido') +
-      r('Ya pagaste', pesos.format(d.anticipo)) +
+      r('Ya pagaste', pesos.format(yaPago)) +
       r('Queda por abonar', pesos.format(d.saldo), 'suma saldo')));
+
+    /* --- abonar ---
+       Solo si queda saldo y el servidor dijo que se puede: `abonoMinimo`
+       viene con la cuenta, y sin cuenta esta pantalla no debe creer que
+       puede cobrar. */
+    if (d.saldo > 0 && typeof d.abonoMinimo === 'number') {
+      partes.push(cajaDeAbono(d));
+    }
 
     /* --- el viaje --- */
     partes.push(tarjeta('Tu viaje',
@@ -264,6 +403,9 @@
         '<button class="enlace" id="salir">Cerrar sesión en este dispositivo</button></p>');
 
     cuerpo.innerHTML = partes.join('');
+
+    /* La caja de abonar, si se pintó. */
+    enganchaAbono(d);
 
     document.getElementById('salir').addEventListener('click', function () {
       fetch('/api/cerrar-sesion', { method: 'POST' }).then(function () {
@@ -478,6 +620,38 @@
     return;
   }
 
+  /* ============================================================
+     LA VUELTA DE STRIPE · «tu pago fue recibido con éxito»
+     ------------------------------------------------------------
+     Paso 3 del spec. Stripe regresa al cliente con el id del abono en la
+     dirección, y de ahí NO se concluye nada: se le pregunta al servidor,
+     que a su vez le pregunta a Stripe. Quien escriba a mano
+     `?abono=cs_loquesea` no ve «recibido con éxito».
+
+     Y un voucher de OXXO generado y no pagado NO dice que se recibió.
+     Decírselo sería mentirle a alguien que todavía no ha pagado — y que
+     además va a llegar creyendo que ya.
+     ============================================================ */
+  var abonoQueVuelve = new URLSearchParams(location.search).get('abono') || '';
+
+  function avisoDelAbono(d) {
+    if (d.estado === 'pagado') {
+      return ['bien', 'Tu pago fue recibido con éxito',
+        (d.monto ? pesos.format(d.monto) + ' abonados. ' : '') +
+        (typeof d.saldo === 'number'
+          ? (d.saldo > 0 ? 'Te quedan ' + pesos.format(d.saldo) + ' por abonar.'
+                         : '¡Tu viaje queda pagado completo!')
+          : '')];
+    }
+    if (d.estado === 'pendiente') {
+      return ['ojo', 'Tu ficha está lista',
+        'Pá­gala en el OXXO y en cuanto entre el dinero se descuenta de tu saldo. ' +
+        'Aquí lo vas a ver actualizado.'];
+    }
+    return ['malo', 'No se completó el pago',
+      'No se cobró nada. Puedes intentarlo otra vez desde aquí mismo.'];
+  }
+
   fetch('/api/viaje', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -506,6 +680,28 @@
         d.aviso || 'Si ya pagaste tu ficha en la tienda, puede tardar unas horas en reflejarse.');
       return;
     }
+
+    /* Si viene de pagar un abono, se le pregunta al servidor cómo salió y
+       el aviso va ARRIBA de su viaje — que ya está pintado con el saldo
+       nuevo, porque el servidor lo recontó. */
+    if (abonoQueVuelve) {
+      fetch('/api/viaje', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ t: t, accion: 'abono', abono: abonoQueVuelve })
+      }).then(leeJSON).then(function (r2) {
+        pinta(d);
+        if (!r2.ok) return;        // no se pudo confirmar: se ve su viaje y ya
+        var a = avisoDelAbono(r2.d || {});
+        var caja = document.createElement('div');
+        caja.className = 'aviso ' + a[0];
+        caja.innerHTML = '<b>' + esc(a[1]) + '</b><br>' + esc(a[2]);
+        cuerpo.insertBefore(caja, cuerpo.firstChild);
+        window.scrollTo(0, 0);
+      }).catch(function () { pinta(d); });
+      return;
+    }
+
     pinta(d);
   }).catch(function () {
     pintaError('malo', 'No hubo conexión',
