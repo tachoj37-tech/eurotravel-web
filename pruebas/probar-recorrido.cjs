@@ -414,5 +414,62 @@ igual('cada ruta de window.IMGS existe en la carpeta',
     /texto \|\| msg\.dataset\.original/.test(valida));
 }
 
+/* ============================================================
+   EL DÍA DEL CALENDARIO, EN CELULAR, SE PUEDE TOCAR
+   ------------------------------------------------------------
+   13-sep-2026. Salió de recorrer la página en celular de verdad:
+   el calendario abre bien y cabe —345 px de 375— pero cada día
+   medía **36 × 34 px**. La guía de Apple y la de Google coinciden
+   en **44 × 44** para algo que se toca con el dedo.
+
+   No rompía nada, y por eso ninguna prueba lo veía. Pero la fecha
+   es paso obligado del cotizador y es **el dato que más cuesta
+   corregir después**: un dedazo elige el día de junto, el cliente
+   no lo nota, y el viaje se arma con la fecha equivocada.
+
+   Con un ratón 36 px sobran, así que el tamaño grande va SOLO en
+   el corte de celular —donde además ya se esconde el segundo mes
+   y sobra ancho: 7 × 44 = 308 px dentro de los 345 del globo—.
+   ============================================================ */
+{
+  const css = html.slice(html.indexOf('.cal-mes {'), html.indexOf('.cal-dia:not(.apagado):hover'));
+  const desde = html.lastIndexOf('@media (max-width: 680px)');
+  const enCelular = html.slice(desde, desde + 1600);
+
+  /* En computadora se queda como estaba. */
+  cierto('en computadora el día sigue midiendo lo de siempre',
+    /grid-template-columns: repeat\(7, 36px\)/.test(css));
+
+  const columnas = Number((enCelular.match(/\.cal-mes\s*\{[^}]*repeat\(7,\s*(\d+)px\)/) || [])[1]);
+  const alto = Number((enCelular.match(/\.cal-dia\s*\{[^}]*height:\s*(\d+)px/) || [])[1]);
+
+  cierto('en celular la columna llega a los 44 px del dedo', columnas >= 44);
+  cierto('  y el alto también', alto >= 44);
+
+  /* Y que no se pase: siete columnas tienen que seguir cabiendo en el
+     globo, que en un teléfono de 375 mide 345. */
+  cierto('  sin que las siete dejen de caber', columnas * 7 <= 345);
+
+  /* ------------------------------------------------------------
+     Y EL BOTÓN FLOTANTE NO SE COME UN DÍA
+     ------------------------------------------------------------
+     Salió de medirlo con el calendario abierto en el teléfono: el
+     flotante de WhatsApp es `fixed` abajo a la derecha, el
+     calendario scrollea por debajo, y en cierta posición quedaban
+     encima. Se comprobó con `elementFromPoint` sobre el centro del
+     día 6: quien recibía el toque era `SPAN.wa-fab-icono`.
+
+     O sea que el cliente tocaba un domingo y le abría WhatsApp —y
+     los domingos son justo los viajes de fin de semana—. No es del
+     tamaño del día: con 36 px pasaba igual, solo que más abajo.
+
+     Un botón flotante no compite con un diálogo abierto. Mientras
+     el calendario esté abierto, el flotante se quita.
+     ------------------------------------------------------------ */
+  cierto('el flotante se esconde con el calendario abierto',
+    /:has\(\.cal\.on\)[^{]*\{[^}]*display:\s*none/.test(html) ||
+    /cal-abierto/.test(html));
+}
+
 console.log('\n' + buenas + ' buenas, ' + malas + ' malas');
 process.exit(malas ? 1 : 0);

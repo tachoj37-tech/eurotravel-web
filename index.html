@@ -828,6 +828,29 @@
     width: 32px; height: 32px; margin: 0 auto; border-radius: 50%;
   }
   .cal-dia:not(.apagado):hover span { background: var(--soft); }
+
+  /* ------------------------------------------------------------
+     EN CELULAR EL DÍA CRECE A LO QUE ALCANZA UN DEDO (13-sep-2026)
+     ------------------------------------------------------------
+     Salió de recorrer la página en un teléfono de verdad: el
+     calendario abría bien y cabía —345 px de 375— pero cada día
+     medía 36 × 34. La guía de Apple y la de Google coinciden en
+     44 × 44 para algo que se toca con el dedo.
+
+     No rompía nada, y por eso ninguna prueba lo veía. Pero la
+     fecha es paso obligado del cotizador y es el dato que más
+     cuesta corregir después: un dedazo elige el día de junto, el
+     cliente no lo nota, y el viaje se arma con la fecha mala.
+
+     Va SOLO aquí: con un ratón, 36 px sobran. Y cabe porque en
+     este corte ya se esconde el segundo mes — 7 × 44 = 308 px
+     dentro de los 345 del globo.
+     ------------------------------------------------------------ */
+  @media (max-width: 680px) {
+    .cal-mes { grid-template-columns: repeat(7, 44px); }
+    .cal-dia { height: 44px; font-size: 15px; }
+    .cal-dia span { width: 38px; height: 38px; }
+  }
   .cal-dia.vacio, .cal-dia.apagado { cursor: default; color: #c8c8c4; }
   .cal-dia.apagado span { text-decoration: line-through; }
 
@@ -2145,6 +2168,27 @@
 @media (prefers-reduced-motion: reduce) {
   .wa-fab, .wa-fab-icono svg, .wa-fab-onda, #v-inicio .cartel-desliza i { animation: none !important; }
 }
+
+/* ------------------------------------------------------------
+   CON EL CALENDARIO ABIERTO, EL FLOTANTE SE QUITA (13-sep-2026)
+   ------------------------------------------------------------
+   Medido en el teléfono con el calendario abierto: el flotante es
+   `fixed` abajo a la derecha, el calendario scrollea por debajo, y
+   quedaban encima. Con `elementFromPoint` sobre el centro del día
+   6, quien recibía el toque era `SPAN.wa-fab-icono`.
+
+   O sea que el cliente tocaba un domingo y le abría WhatsApp. Y los
+   domingos son justo los viajes de fin de semana.
+
+   No es del tamaño del día: con 36 px pasaba igual, nada más que
+   más abajo. Es que un botón flotante no compite con un diálogo
+   abierto.
+
+   La clase la pone y la quita `abre()`/`cierra()` del calendario, y
+   no un `:has()`, para que no dependa de qué navegador trae el
+   cliente. Ver `probar-recorrido.cjs`.
+   ------------------------------------------------------------ */
+body.cal-abierto .wa-fab { display: none; }
 
 </style>
 <!-- /INICIO-NUEVO:CSS -->
@@ -5623,6 +5667,11 @@ window.IMGS = {
         panel.classList.add('on');
         btn.classList.add('abierto');
         btn.setAttribute('aria-expanded', 'true');
+        /* El flotante de WhatsApp tapaba un día —medido: el toque en el
+           centro del 6 lo recibía el botón verde— y abrir WhatsApp en vez
+           de elegir la fecha es perder al cliente en el paso obligado del
+           cotizador. Ver el comentario del CSS. */
+        document.body.classList.add('cal-abierto');
         if (ini) mesIzq = new Date(ini.getFullYear(), ini.getMonth(), 1);
         pinta();
       }
@@ -5630,6 +5679,7 @@ window.IMGS = {
         panel.classList.remove('on');
         btn.classList.remove('abierto');
         btn.setAttribute('aria-expanded', 'false');
+        document.body.classList.remove('cal-abierto');
       }
 
       btn.addEventListener('click', function (e) {
