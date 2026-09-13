@@ -39,6 +39,16 @@ process.env.AGENTE_IA = '1';
    ------------------------------------------------------------ */
 process.env.BOT_HASTA_COTIZACION = '0';
 
+/* EL DÍA DE ESTA SUITE ES EL 8-SEP-2026, NO EL DEL RELOJ — 13-sep-2026.
+   Las fechas de los viajes están escritas a mano (septiembre a diciembre
+   de 2026) y pasan por `fechaValida`, que tira las que ya pasaron. Con el
+   reloj de verdad la suite se ponía roja sola conforme avanzaba el
+   calendario: el 13-sep cayeron el 11 y el 12 (d404245), y adelantando el
+   reloj al 31-dic caían 29 aserciones más. Con el día fijo, las fechas
+   dicen lo mismo hoy que en un año. Es el mismo mecanismo que ya usan
+   probar-agente, probar-fase1…4 y probar-relevo. */
+process.env.HOY_DE_PRUEBA = '2026-09-08';
+
 process.env.SITIO_URL = 'https://eurotravel-web.vercel.app';
 delete process.env.ALMACEN_URL; delete process.env.ALMACEN_CLAVE;
 
