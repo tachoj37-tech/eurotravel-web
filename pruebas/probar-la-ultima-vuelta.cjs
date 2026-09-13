@@ -118,5 +118,29 @@ titulo('un asentimiento no es un pueblo');
   }
 }
 
+titulo('el flujo del dueño, de punta a punta (13-sep-2026)');
+{
+  /* Dictado: «le pone a quiero cotizar, el bot hace su cotización, no da
+     precio, guía al cliente a generar el ticket con la confirmación de su
+     viaje —gdl a vallarta i6s 51 pasajeros— y le pregunta si todo bien».
+
+     Probándolo así salieron dos defectos de dinero en el camino más
+     normal que hay: «somos 51» escogía el «Irizar i6 51» sin preguntar (el
+     51 del nombre), y «el i6s» en el paso de recorridos se leía como SEIS
+     días de recorrido. El resumen salía con un camión que el cliente
+     nunca pidió. */
+  const a = corrido(['hola', 'Cotizar un viaje', 'a vallarta', 'somos 51', 'de gdl',
+    '20 de diciembre', 'el 23']);
+  ok('«somos 51» no escoge camión por el cliente', !a.estado.unidadNombre);
+  ok('  y le pregunta cuál', a.estado.paso === 'elegirBus');
+
+  const b = corrido(['hola', 'Cotizar un viaje', 'a vallarta', 'somos 51', 'de gdl',
+    '20 de diciembre', 'el 23', 'el i6s', '0']);
+  igual('«el i6s» es el i6S, no el i6 51', b.estado.unidadNombre, 'Irizar i6S');
+  ok('  y el resumen lo dice', /Irizar i6S/.test(b.texto));
+  ok('  sin dar precio', !/\$\s?\d/.test(b.texto));
+  ok('  y pregunta si todo bien', /todo bien/i.test(b.texto));
+}
+
 console.log('\n' + buenas + ' buenas, ' + malas + ' malas');
 process.exit(malas ? 1 : 0);

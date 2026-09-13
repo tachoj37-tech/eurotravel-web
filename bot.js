@@ -1342,12 +1342,40 @@ function busesQueNombra(texto, todos) {
     return contenidos.filter(function (b) { return b.name.length === masLargo; });
   }
 
+  /* ------------------------------------------------------------
+     UN NÚMERO SOLO NO ES EL NOMBRE DE UN CAMIÓN — 13-sep-2026
+     ------------------------------------------------------------
+     «Irizar i6 51» lleva el 51 en el nombre, y ese «51» era la única
+     palabra que no compartía con nadie. Así que CUALQUIER mensaje con un
+     51 lo nombraba: «somos 51» escogía ese camión sin preguntar, y el
+     viaje llegaba al ticket con una unidad que el cliente nunca pidió —
+     y con la columna del Excel de esa unidad. Cazado probando el flujo
+     de punta a punta: el cliente dijo «el i6s» y el resumen decía
+     «Irizar i6 51».
+
+     Los números hablan de capacidad, y la capacidad ya se lee aparte
+     —`porAsientos` en el paso de escoger, con su propio candado de
+     empate—. Aquí solo cuentan las palabras que son palabras.
+     ------------------------------------------------------------ */
+  const esNumero = function (p) { return /^\d+$/.test(p); };
+
+  /* Pero el nombre SIN la marca, dicho completo, sí vale aunque traiga el
+     número: «el i6 51» es ese camión y ningún otro. Sin esta pasada, quitar
+     los números de las señas dejaba empatados al i6 y al i6 51, y el
+     cliente que escribió el nombre exacto recibía la pregunta de cuál. Una
+     frase de dos palabras seguidas no aparece por accidente en «somos 51». */
+  const porFrase = buses.filter(function (b) {
+    const sinMarca = normaliza(b.name).replace(/^irizar\s*/, '');
+    return /\s/.test(sinMarca) && comoPalabra(sinMarca, t);
+  });
+  if (porFrase.length) return porFrase;
+
   /* Cuántos camiones usan cada palabra. */
   const cuantos = {};
   buses.forEach(function (u) {
     const vistas = {};
     normaliza(u.name).split(/\s+/).forEach(function (p) {
-      if (!p || vistas[p]) return;
+      if (!p || esNumero(p) || vistas[p]) return;
       vistas[p] = true;
       cuantos[p] = (cuantos[p] || 0) + 1;
     });
@@ -1355,7 +1383,7 @@ function busesQueNombra(texto, todos) {
 
   const porPalabraSuya = buses.filter(function (b) {
     return normaliza(b.name).split(/\s+/)
-      .filter(function (p) { return p && cuantos[p] === 1; })
+      .filter(function (p) { return p && !esNumero(p) && cuantos[p] === 1; })
       .some(function (p) { return comoPalabra(p, t); });
   });
   if (porPalabraSuya.length) return porPalabraSuya;
@@ -1363,7 +1391,7 @@ function busesQueNombra(texto, todos) {
   return buses.filter(function (b) {
     const suyo = normaliza(b.name);
     const sinMarca = suyo.replace(/^irizar\s*/, '');
-    const señas = suyo.split(/\s+/).filter(Boolean);
+    const señas = suyo.split(/\s+/).filter(function (p) { return p && !esNumero(p); });
     if (sinMarca && sinMarca !== suyo) señas.push(sinMarca);
     return señas.some(function (p) { return comoPalabra(p, t); });
   });
@@ -3113,6 +3141,19 @@ function pasoDeCotizacion(t, crudo, estado, hoy) {
     if (!elegido) {
       const porAsientos = buses.filter(function (b) { return comoPalabra(b.max, t); });
       if (porAsientos.length === 1) elegido = porAsientos[0];
+      /* «El de 51» le queda a TRES camiones (G8, i6S e i6 51). Antes lo
+         resolvía el «51» del nombre del i6 51 —el mismo defecto que hacía
+         que «somos 51» escogiera ese camión sin preguntar—. Ahora no se
+         adivina, pero tampoco se le vuelve a enseñar la lista entera: se
+         pregunta solo entre los que dijo (13-sep-2026). */
+      else if (porAsientos.length > 1 && porAsientos.length <= 3) {
+        return {
+          texto: 'De ' + porAsientos[0].max + ' tengo ' + porAsientos.length + ' 🤔 ¿Cuál te late?\n\n' +
+            porAsientos.map(function (b) { return '*' + b.name + '*'; }).join('\n'),
+          pasa: false, estado: e,
+          opciones: porAsientos.map(function (b) { return b.name; })
+        };
+      }
     }
 
     if (!elegido) {
@@ -3708,6 +3749,14 @@ function pasoDeCotizacion(t, crudo, estado, hoy) {
        movimientos.
        ------------------------------------------------------------ */
     if (cuantaGente(t)) {
+      const acuse = absorbeLoDemas(e, crudo, hoy);
+      if (acuse) return siguiente(e, acuse);
+    }
+    /* El nombre de un camión trae dígitos —«i6s», «G8»— y este paso
+       agarraba el primero que viera: «el i6s» se leía como SEIS días de
+       recorrido y el bot le contestaba «el viaje dura 4 días, no pueden
+       ser más». Al cliente que estaba escogiendo camión (13-sep-2026). */
+    if (unidadPorNombre(crudo)) {
       const acuse = absorbeLoDemas(e, crudo, hoy);
       if (acuse) return siguiente(e, acuse);
     }

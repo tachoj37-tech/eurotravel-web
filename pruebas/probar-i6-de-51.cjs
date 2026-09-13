@@ -126,7 +126,17 @@ titulo('«el i6» ya no dice cuál: se pregunta, no se adivina');
 
   /* Y si dice la capacidad, ahí sí se resuelve solo. */
   ok('«el i6 de 51» escoge el de 51', escoge('el i6 de 51', 45).estado.unidadNombre === 'Irizar i6 51');
-  ok('«el de 51» también', escoge('el de 51', 45).estado.unidadNombre === 'Irizar i6 51');
+  /* CAMBIÓ DE LADO EL 13-sep-2026. Esto pedía que «el de 51» escogiera
+     el i6 51, y lo lograba por el «51» de su NOMBRE — el mismo defecto que
+     hacía que «somos 51» escogiera ese camión sin preguntar y el ticket
+     saliera con una unidad que nadie pidió. Pero de 51 asientos hay TRES:
+     G8, i6S e i6 51. «El de 51» no dice cuál; adivinar es cotizar otra
+     columna del Excel. Se pregunta, y solo entre esos tres. */
+  const de51 = escoge('el de 51', 45);
+  ok('«el de 51» no escoge por él: hay tres de 51', !de51.estado.unidadNombre);
+  ok('  y pregunta solo entre los de 51',
+    /De 51 tengo 3/.test(de51.texto) && (de51.opciones || []).length === 3);
+  ok('«somos 51» no escoge ningún camión', !bot.unidadPorNombre('somos 51'));
   ok('«el i6 de 47» escoge el de 47', escoge('el i6 de 47', 45).estado.unidadNombre === 'Irizar i6');
 
   /* Con 50 personas el de 47 ni aparece, así que «el i6» no es ambiguo. */
