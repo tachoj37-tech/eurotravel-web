@@ -243,6 +243,24 @@ titulo('con la unidad escogida, la IA no se queda en cuántos son');
 }
 
 /* ============================================================ */
+titulo('un día suelto es ese día, lo anote como lo anote la IA');
+{
+  /* La plática del dueño con el modelo real (13-sep-2026): salida el 15,
+     «17» al regreso, y la IA anotó regreso = 15. El ticket salió de un día. */
+  limpia();
+  const C = '5213366670070';
+  laIA = function (t) {
+    if (/a vallarta/.test(t)) return { respuesta: 'Vallarta, va. ¿Qué día salen?', datos: { destino: 'Puerto Vallarta' }, accion: 'seguir' };
+    if (/15 de noviembre/.test(t)) return { respuesta: 'El 15, va. ¿Y el regreso?', datos: { salida: '2026-11-15' }, accion: 'seguir' };
+    if (/^17$/.test(t.trim())) return { respuesta: 'Listo, ida y vuelta el 15. ¿Cuántos van?', datos: { regreso: '2026-11-15' }, accion: 'seguir' };
+    return { respuesta: 'Va.', datos: {}, accion: 'seguir' };
+  };
+  for (const m of ['hola', 'Cotizar un viaje', 'a vallarta', '15 de noviembre', '17']) await dice(m, C);
+  const charla = webhook.charlaDe(C) || {};
+  ok('«17» deja el regreso el 17, no el 15 que anotó la IA (quedó ' + charla.regreso + ')', charla.regreso === '2026-11-17');
+}
+
+/* ============================================================ */
 titulo('y al dueño, nada');
 {
   ok('en toda la batería no le llegó nada a su número', textos(process.env.DUENO_WHATSAPP).length === 0);

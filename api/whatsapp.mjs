@@ -2824,6 +2824,32 @@ async function loQueDiceElAgente(envio) {
       if (!hayFecha && !/\bmismo dia\b|\bese dia\b/.test(t)) {
         console.log('[agente] ' + campo + ' de la IA descartada: «' + String(texto).slice(0, 40) + '» no trae fecha');
         delete datosIA[campo];
+        continue;
+      }
+      /* Y si el cliente dijo UN día suelto, la fecha de la IA tiene que ser
+         ESE día. Prueba con el modelo real del 13-sep-2026 (la plática del
+         dueño): salida el 15, «¿qué día regresan?» → «17» → la IA anotó
+         regreso = 15 («Listo, ida y vuelta el 15») y el ticket salió como
+         un viaje de UN día. Traía fecha, así que el candado de arriba lo
+         dejaba pasar. El mes y el año se toman de la IA —ella sabe que «2»
+         después de un 28 de noviembre es diciembre—; el día, del cliente. */
+      const diaSuelto = /^\s*(?:el\s+)?(\d{1,2})\s*$/.exec(t);
+      if (diaSuelto && /^\d{4}-\d{2}-\d{2}$/.test(String(datosIA[campo]))) {
+        const dia = Number(diaSuelto[1]);
+        const deLaIA = String(datosIA[campo]);
+        if (dia >= 1 && dia <= 31 && Number(deLaIA.slice(8, 10)) !== dia) {
+          let corregida = deLaIA.slice(0, 8) + String(dia).padStart(2, '0');
+          if (antes.salida && campo === 'regreso' && corregida < antes.salida) {
+            const leida = conversacion.fechaDe(texto, antes.salida);
+            corregida = leida || null;
+          }
+          if (corregida) {
+            console.log('[agente] ' + campo + ' de la IA corregida: el cliente dijo «' + dia + '», la IA ' + deLaIA + ' → ' + corregida);
+            datosIA[campo] = corregida;
+          } else {
+            delete datosIA[campo];
+          }
+        }
       }
     }
     dicho.datos = datosIA;

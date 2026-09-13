@@ -1384,9 +1384,16 @@ function busesQueNombra(texto, todos) {
      los números de las señas dejaba empatados al i6 y al i6 51, y el
      cliente que escribió el nombre exacto recibía la pregunta de cuál. Una
      frase de dos palabras seguidas no aparece por accidente en «somos 51». */
+  /* Y con «de» en medio, que es como se dice: «el century de 49», «el i6 de
+     51». Al juntar esta rama con la de la página (13-sep-2026) el Century
+     pasó a ser dos unidades —«Irizar Century» y «Irizar Century 49»— y
+     «el century de 49» nombraba a las dos. */
   const porFrase = buses.filter(function (b) {
     const sinMarca = normaliza(b.name).replace(/^irizar\s*/, '');
-    return /\s/.test(sinMarca) && comoPalabra(sinMarca, t);
+    if (!/\s/.test(sinMarca)) return false;
+    if (comoPalabra(sinMarca, t)) return true;
+    const partes = sinMarca.split(/\s+/).map(function (p) { return p.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); });
+    return new RegExp('(?:^|[^a-z0-9])' + partes.join('\\s+(?:de\\s+)?') + '(?![a-z0-9])').test(t);
   });
   if (porFrase.length) return porFrase;
 
