@@ -9,22 +9,33 @@ pendiente se da por cerrado sin estarlo.
 
 ---
 
-## Primero: lo que está construido y apagado
+## ~~Primero: lo que está construido y apagado~~ · SUBIDO EL 13-SEP
 
-**Cinco commits terminados y sin subir.** Todo lo de abajo que dice «ya está
-hecho» está hecho **en la rama**, no en producción. Comprobado el 13-sep:
-`eurotravel-web.vercel.app` corre el código viejo —`COTIZACION.cotizaEnLinea`
-no existe allá y el `meta` todavía anuncia «Cotiza en línea»—.
+**Ya está en producción.** El dueño dijo «sube los commits y asegúrate que
+todo esté correcto», y los seis entraron a `main` en avance limpio
+(`6997431..4d48b20`).
 
-```
-9c3cac7  Google y WhatsApp seguian anunciando «cotiza en linea»
-6a18e1f  El acuse ya no promete un vendedor que no se entero
-f77ebed  El corte es cada quince dias, y el archivo ya no se pisa
-fccf7b7  El cierre del mes: junta lo que dejaron las conversaciones
-2f41310  R47: la pagina no da ningun precio, y el cliente abre la conversacion
-```
+Vercel desplegó `dpl_GrYxiRSFJ18mWYkxkJBHLGJP6jFo`: SHA `4d48b20`, rama `main`,
+estado **READY**, `aliasError: null`, y **12 funciones**
+(`lambdaRuntimeStats: {"nodejs":12}` — lo dice Vercel, no yo).
 
-`origin/main` no se ha movido: **0 detrás, 5 adelante**, entra limpio.
+Comprobado en `eurotravel-web.vercel.app`, en vivo:
+
+| | |
+|---|---|
+| `COTIZACION.PAGINA_DA_PRECIOS` | `false` |
+| La Sprinter cotiza en línea | `false` |
+| `/api/cotizar` · Vallarta | `requiereAsesor: true · total 0 · anticipo 0` |
+| Con `sinPrecio:false` en el cuerpo | sigue en `total 0` |
+| Los dos `meta` | corregidos |
+| Frases que prometían precio, en texto visible | **cero** |
+| Cifras en pesos en pantalla | **ninguna** |
+| Botones de pago | **cero** |
+| Errores de consola | **cero** |
+
+Y el recorrido completo del cliente, en producción: Guadalajara → Puerto
+Vallarta con Sprinter, sin precio, caja de captura, acuse, y el botón verde con
+el mensaje exacto al WhatsApp **no al teléfono**.
 
 ---
 
@@ -32,8 +43,8 @@ fccf7b7  El cierre del mes: junta lo que dejaron las conversaciones
 
 | # | Qué | Por qué urge | Cómo se comprueba |
 |---|---|---|---|
-| **1** | **Decir si subo los cinco commits** | Hasta entonces la página sigue dando precios y cobrando en línea | El `meta` de producción deja de decir «Cotiza en línea» |
-| **2** | **`RESEND_API_KEY` y `AVISOS_A` en Vercel** | Con R47 **todas** las cotizaciones salen por ese correo. Mal configurado, se pierden todas | Mandar una solicitud de prueba desde producción y ver si te llega |
+| ~~**1**~~ | ~~Decir si subo los commits~~ | **HECHO el 13-sep.** Ver arriba | ✅ |
+| **2** | **Confirmar que te LLEGÓ el correo de prueba** | Ver la nota de abajo: el servidor dice que salió, pero eso no es que haya llegado | Buscar en tu correo «PRUEBA DEL SISTEMA» |
 | **3** | **Crear el proyecto de Supabase y correr `docs/ALMACEN.sql`**, y poner `ALMACEN_URL` y `ALMACEN_CLAVE` | Hoy **no se guarda ni una conversación ni un precio**. Cada día que pasa no deja nada que aprender | `npm run corte` deja de decir «faltan las llaves» |
 | **4** | **`eurotravel.com.mx`: ¿se muda o no?** | Comprobado el 13-sep: ese dominio sirve un **WordPress**, no esta página. Y en Vercel el proyecto solo tiene los tres dominios `.vercel.app` | El dominio aparece en la lista del proyecto y abre esta página |
 | **5** | **Que el bot deje de cotizar la Sprinter** | Dijiste «ningún precio para nadie» incluyendo el bot. Es un renglón en `unidades.js`, pero mueve 100+ aserciones de las pruebas del bot: le toca a su rama | El bot contesta con ficha armada en vez de precio |
@@ -41,6 +52,20 @@ fccf7b7  El cierre del mes: junta lo que dejaron las conversaciones
 | **7** | **Las dos puertas de EuroSystem** (registrar abono y revertirlo) | Es el paso 4 de los abonos. Sin la de revertir, el sistema enseñaría dinero que ya no existe | Aparecen en `CONTRATOS-API.md` |
 | **8** | **`charge.refunded` y `charge.dispute.created` en Stripe** | Sin eso un contracargo pasa sin que nadie se entere | Llegan al webhook |
 | **9** | **Verificar `eurotravel.com.mx` en Resend** | Hoy los correos salen con el remitente de prueba | El correo llega desde el dominio bueno |
+
+### Sobre el #2: el correo al vendedor, medio cerrado
+
+Con R47 en producción, **todas** las cotizaciones salen por ese correo. Era el
+riesgo más grande del día, así que se probó: se mandaron **dos solicitudes de
+prueba** desde producción, las dos marcadas «PRUEBA DEL SISTEMA (no es un
+cliente)» y con el teléfono `3300000000`, que no es de nadie.
+
+Las dos contestaron **`conVendedor: true`**. O sea que `RESEND_API_KEY` está
+puesta, `AVISOS_A` apunta a algún lado, y Resend aceptó el correo.
+
+**Lo que eso NO prueba:** que haya llegado a tu bandeja. Podría estar en spam,
+o `AVISOS_A` podría apuntar a una dirección válida pero equivocada. Búscalas en
+tu correo y con eso se cierra del todo.
 
 ---
 
