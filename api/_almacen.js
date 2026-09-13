@@ -141,6 +141,42 @@ function llave(numero) {
   return String(numero || '').replace(/\D+/g, '').slice(-10);
 }
 
+/* ------------------------------------------------------------
+   B15 · UN VALOR QUE ENTRA A UN FILTRO PASA SIEMPRE POR AQUÍ
+   ------------------------------------------------------------
+   De la auditoría del 7-sep-2026: los caminos se arman pegando
+   texto y PostgREST separa sus filtros con `&`. Un valor que
+   traiga ese carácter no agrega un dato: agrega OTRO FILTRO. En
+   una base donde cada renglón es la conversación de un cliente,
+   un filtro de más es leer la de otro.
+
+   No es inyección de SQL —PostgREST no ejecuta SQL de fuera—, es
+   poder cambiar QUÉ RENGLONES DEVUELVE. Se comprobó rompiéndolo:
+   pasando un tope hostil, la consulta salía con DOS filtros de
+   número y traía la conversación de alguien más.
+
+   Quedó como deuda porque todo pasaba por `llave()`, que solo
+   deja dígitos. Se paga ahora porque el almacén está por
+   encenderse y, con R47, los destinos que entran a `precios`
+   vienen del campo libre de la página.
+
+   Y se arregla con un ayudante, no acordándose de escapar en
+   cada sitio: `probar-filtros-del-almacen.cjs` exige que en este
+   archivo no quede un solo valor pegado sin pasar por aquí.
+   ------------------------------------------------------------ */
+function val(v) {
+  return encodeURIComponent(String(v == null ? '' : v));
+}
+
+/* Y los topes son números, con techo. Sin el techo, un `limit`
+   disparatado se traería la tabla entera en una sola respuesta. */
+const TOPE_MAXIMO = 500;
+function tope(n, porOmision) {
+  const x = Math.floor(Number(n));
+  if (!Number.isFinite(x) || x < 1) return porOmision;
+  return Math.min(x, TOPE_MAXIMO);
+}
+
 /* ============================================================
    LAS FICHAS · en qué va cada cliente
    ============================================================ */
@@ -265,7 +301,7 @@ function deLaFila(f) {
 async function leeFicha(numero) {
   const k = llave(numero);
   if (!k) return null;
-  const filas = await pide('fichas?numero=eq.' + k + '&select=*&limit=1');
+  const filas = await pide('fichas?numero=eq.' + val(k) + '&select=*&limit=1');
   return (filas && filas[0]) ? deLaFila(filas[0]) : null;
 }
 
@@ -273,7 +309,7 @@ async function leeFicha(numero) {
    para ordenar 25 sería pagar el viaje completo por la primera
    cuadra. */
 async function fichasDelTablero(cuantas) {
-  const filas = await pide('fichas?select=*&order=visto.desc&limit=' + (cuantas || 60));
+  const filas = await pide('fichas?select=*&order=visto.desc&limit=' + tope(cuantas, 60));
   if (!filas) return null;
   return filas.map(deLaFila);
 }
@@ -296,7 +332,7 @@ async function fichasDeSeguimiento() {
 async function marcaToque(numero, de, a) {
   const k = llave(numero);
   if (!k) return false;
-  const filas = await pide('fichas?numero=eq.' + k + '&toques=eq.' + Number(de || 0), {
+  const filas = await pide('fichas?numero=eq.' + val(k) + '&toques=eq.' + val(Number(de) || 0), {
     metodo: 'PATCH',
     cabeceras: { 'Prefer': 'return=representation' },
     cuerpo: { toques: Number(a) }
@@ -320,7 +356,7 @@ async function guardaCharla(numero, estado) {
      un nulo, para no tener que distinguir después entre «no hay» y
      «hay, pero vacío». */
   if (!estado) {
-    return !!(await pide('charlas?numero=eq.' + k, {
+    return !!(await pide('charlas?numero=eq.' + val(k), {
       metodo: 'DELETE', sinRespuesta: true
     }));
   }
@@ -341,7 +377,7 @@ const VIDA_CHARLA_MS = 7 * 24 * 60 * 60 * 1000;
 async function leeCharla(numero) {
   const k = llave(numero);
   if (!k) return null;
-  const filas = await pide('charlas?numero=eq.' + k + '&select=*&limit=1');
+  const filas = await pide('charlas?numero=eq.' + val(k) + '&select=*&limit=1');
   if (!filas) return undefined;
   const f = filas[0];
   if (!f) return null;
@@ -404,8 +440,8 @@ async function anotaMensaje(numero, de, texto, tipo) {
 async function mensajesDe(numero, cuantos) {
   const k = llave(numero);
   if (!k) return null;
-  return await pide('mensajes?numero=eq.' + k +
-    '&select=*&order=cuando.desc&limit=' + (cuantos || 50));
+  return await pide('mensajes?numero=eq.' + val(k) +
+    '&select=*&order=cuando.desc&limit=' + tope(cuantos, 50));
 }
 
 /* Lo viejo se tira. Se llama de vez en cuando desde el webhook, no
@@ -413,13 +449,13 @@ async function mensajesDe(numero, cuantos) {
    puede caer sin que nadie lo note. */
 async function tiraLoViejo() {
   const corte = new Date(Date.now() - VIDA_DIAS * 24 * 3600 * 1000).toISOString();
-  await pide('mensajes?cuando=lt.' + corte, { metodo: 'DELETE', sinRespuesta: true });
-  await pide('charlas?cuando=lt.' + corte, { metodo: 'DELETE', sinRespuesta: true });
-  await pide('tickets?creado=lt.' + corte, { metodo: 'DELETE', sinRespuesta: true })
+  await pide('mensajes?cuando=lt.' + val(corte), { metodo: 'DELETE', sinRespuesta: true });
+  await pide('charlas?cuando=lt.' + val(corte), { metodo: 'DELETE', sinRespuesta: true });
+  await pide('tickets?creado=lt.' + val(corte), { metodo: 'DELETE', sinRespuesta: true })
     .catch(function () { return null; });
   /* Los ids vistos solo sirven contra el reintento de Meta (minutos). */
   const corteVistos = new Date(Date.now() - 2 * 24 * 3600 * 1000).toISOString();
-  await pide('vistos?cuando=lt.' + corteVistos, { metodo: 'DELETE', sinRespuesta: true })
+  await pide('vistos?cuando=lt.' + val(corteVistos), { metodo: 'DELETE', sinRespuesta: true })
     .catch(function () { return null; });
   return true;
 }
@@ -486,7 +522,7 @@ async function guardaTicket(id, cliente, carga) {
 /* Devuelve { cliente, carga } o null. */
 async function leeTicket(id) {
   if (!id) return null;
-  const filas = await pide('tickets?id=eq.' + encodeURIComponent(String(id)) +
+  const filas = await pide('tickets?id=eq.' + val(id) +
     '&select=*&limit=1').catch(function () { return null; });
   const f = filas && filas[0];
   return (f && f.cliente) ? { cliente: f.cliente, carga: f.carga || null } : null;
@@ -545,9 +581,9 @@ async function guardaPrecio(renglon) {
 
 async function preciosParecidos(clave, cuantos) {
   if (!clave) return [];
-  const filas = await pide('precios?clave=eq.' + encodeURIComponent(clave) +
+  const filas = await pide('precios?clave=eq.' + val(clave) +
     '&select=total,anticipo,pasajeros,salida,fijado,cuando&order=cuando.desc&limit=' +
-    (cuantos || 3)).catch(function () { return null; });
+    tope(cuantos, 3)).catch(function () { return null; });
   return Array.isArray(filas) ? filas : [];
 }
 
