@@ -71,11 +71,40 @@ tu correo y con eso se cierra del todo.
 
 ## Lo mío
 
-| # | Qué | Tamaño |
+| # | Qué | Estado |
 |---|---|---|
-| **A** | **El calendario en celular.** Cada día mide **36×34 px** y la guía de Apple y Google son **44×44** para algo que se toca con el dedo. El calendario abre bien y cabe (345 de 375), pero el día es un objetivo chico — y un dedazo ahí elige la fecha equivocada, que es el dato que más cuesta corregir después | chico, es CSS |
-| **B** | **Auditoría B15:** escapar los valores en `pide()` de `_almacen.js` | chico |
-| **C** | **Los 40 textos de seguimiento** de `_recordatorios.js` que ya no se usan con los toques de 22 h: dejarlos documentados como respaldo o quitarlos | decisión chica |
+| ~~**A**~~ | ~~El calendario en celular, 36×34 contra los 44×44 de la guía~~ | **HECHO el 13-sep.** Y de paso salió que el botón flotante **se comía un día**: el toque en el centro del 6 lo recibía el botón verde, o sea que el cliente tocaba un domingo y le abría WhatsApp |
+| ~~**B**~~ | ~~Auditoría B15: escapar los valores en `pide()`~~ | **HECHO el 13-sep**, antes de encender el almacén |
+| ~~**C**~~ | ~~Los 40 textos de seguimiento que «ya no se usan»~~ | **REVISADO el 13-sep, y la nota estaba mal.** Ver abajo |
+
+### Sobre la C: no eran cuarenta sin usar, eran diez — y no se borran
+
+La nota decía que los 40 textos de `_recordatorios.js` ya no se usaban. **No es
+cierto.** `A_LAS_HORAS` son `[22, 72, 168]` y los tres toques existen, así que
+**treinta** de ellos salen en cada recordatorio que se manda.
+
+Los únicos sin alcanzar son los **diez** de `SETENTA_Y_DOS_CON_CALENDARIO` —los
+que dicen «tu fecha sigue libre»— porque piden `fechaLibre: true` y los dos
+sitios de `whatsapp.mjs` pasan `false`.
+
+Y eso **no es olvido**: el propio código lo dice, *«nadie comprobó el calendario
+aquí»*. La regla 4 de ese módulo es que la escasez tiene que ser cierta, y
+afirmar que una fecha está libre sin haberlo visto es justo lo que no se vale.
+
+**Por eso no se borran: la consulta que falta ya existe.** `disponibilidadDe()`
+vive en el mismo archivo, le pregunta a EuroSystem y contesta `{ libres, total }`.
+Están a una llamada de servir, no muertos — borrarlos sería tirar trabajo que ya
+tiene su fuente de datos puesta.
+
+> **Queda como una decisión tuya, no como deuda:** ¿enganchamos `fechaLibre` a
+> la disponibilidad, para que el tercer toque pueda decir «tu fecha sigue
+> libre» cuando de verdad lo esté? Es una llamada, pero **cambia lo que le
+> llega a un cliente**, y por eso no lo hice solo. Necesita
+> `DISPONIBILIDAD_API_KEY` en Vercel.
+
+Mientras tanto quedó guardado por los dos lados en `probar-recordatorios.cjs`:
+si alguien engancha `fechaLibre`, comprueba que los diez funcionan; y si alguien
+los borra creyéndolos muertos, se entera ahí.
 
 ---
 

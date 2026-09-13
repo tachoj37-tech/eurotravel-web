@@ -88,7 +88,7 @@ Cuando las ocho pasen, se anuncia el número.
 | C | **Fase 3: acompañamiento** (recordatorios de saldo 30/15/5 d y de salida 15 d/72 h/24 h, post-viaje, aniversario, reconciliación diaria; prueba f) | Fase 2 y las plantillas de Meta de cada aviso |
 | D | **Auditoría B15** (escapar valores en `pide`), deuda menor | Nada; se hace en cualquier hueco |
 | E | **Verificar en el registro** cada cosa que cierres de arriba (1, 2, 3, 10) | Que las hagas |
-| F | **Los 40 textos de seguimiento por texto libre** (`_recordatorios.js`) ya no se usan con toques a 24 h+; dejarlos como respaldo documentado o quitarlos | Decisión chica, sin prisa |
+| ~~F~~ | ~~Los 40 textos de seguimiento por texto libre ya no se usan~~ · **REVISADO el 13-sep-2026 y la nota estaba MAL.** `A_LAS_HORAS` son `[22, 72, 168]`, los tres toques existen y **treinta** de los cuarenta salen en cada recordatorio. Los únicos sin alcanzar son los **diez** de `SETENTA_Y_DOS_CON_CALENDARIO`, que piden `fechaLibre: true` y los dos sitios pasan `false` — a propósito: no se afirma que una fecha está libre sin haberla visto. **No se borran**, porque `disponibilidadDe()` ya existe en el mismo archivo y están a una llamada de servir. Detalle en `docs/PENDIENTES-DE-LA-PAGINA.md` | Cerrado |
 
 ## Hecho el 8-sep-2026 (madrugada)
 
