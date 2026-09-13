@@ -32,6 +32,12 @@ process.env.WHATSAPP_API_BASE = 'https://api.dualhook.com/v25.0';
 delete process.env.WHATSAPP_APP_SECRET;
 /* El dueño existe: desde el 8-sep-2026 los toques sin plantilla le llegan a él. */
 process.env.DUENO_WHATSAPP = '5213319153931';
+
+/* 13-sep-2026: los avisos al dueño quedaron APAGADOS por omisión (dictado:
+   «no quiero que me mandes nada a mi número»). Esta batería prueba ese
+   canal, que sigue vivo detrás del interruptor, así que lo enciende. El
+   apagado se comprueba aparte, en probar-nada-al-dueno.mjs. */
+process.env.AVISOS_AL_DUENO = '1';
 process.env.ALMACEN_URL = 'https://abcdefghijklmnopqrst.supabase.co';
 process.env.ALMACEN_CLAVE = 'sb_secret_de_mentiras';
 delete process.env.WHATSAPP_PLANTILLA_TOQUE1;

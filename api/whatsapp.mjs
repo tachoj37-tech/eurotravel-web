@@ -2444,6 +2444,24 @@ async function loQueDiceElAgente(envio) {
   if (!hayCupoDeIA(hoy)) return false;
   const cliente = envio.para;
   const texto = envio.crudoDelCliente;
+  /* ------------------------------------------------------------
+     EL ESTADO DEL GUION SE GUARDA ANTES DE TOCARLO — 13-sep-2026
+     ------------------------------------------------------------
+     El webhook ya dejó guardado lo que el guion decidió con este mensaje
+     —la salida puesta Y el paso avanzado al regreso—. Más abajo, antes de
+     llamar a la IA, se adelantan datos partiendo del estado de ANTES del
+     guion y se guarda: eso pisaba el bueno. Si la IA contesta, lo arregla
+     ella; si NO contesta —caída, o el tope de 300 al día— el cliente
+     recibía el texto del guion («¿y qué día regresan?») pero quedaba
+     guardado un estado con el paso todavía en la salida.
+
+     Resultado, cazado probando el flujo sin IA: el cliente decía «el
+     mismo día» y el bot le volvía a preguntar «¿qué día salen?».
+
+     Se toma aquí, antes de cualquier cambio, y se devuelve si la IA no
+     contesta y el guion es quien responde.
+     ------------------------------------------------------------ */
+  const delGuion = webhook.charlaDe(cliente);
 
   /* La memoria corta: del almacén si esta instancia no la tiene. */
   if (!agente.historialDe(cliente).length && almacen.hayAlmacen()) {
@@ -2588,7 +2606,12 @@ async function loQueDiceElAgente(envio) {
        dado NO se le suelta al guion viejo, que leería el mensaje como un
        viaje nuevo (escenario b real, 8-sep-2026). */
     const neutra = esperaNeutraConPrecio(cliente);
-    if (!neutra) return false;
+    if (!neutra) {
+      /* Contesta el guion: que quede guardado SU estado, no el que se
+         armó para la IA. Ver la nota de `delGuion` arriba. */
+      webhook.guardaCharla(cliente, delGuion === undefined ? null : delGuion);
+      return false;
+    }
     console.error('[agente] la IA no contestó y hay precio en la ficha: contesta neutro, no el guion');
     await manda({ numeroDeOrigen: envio.numeroDeOrigen, para: cliente, texto: neutra, pasaAPersona: false, escribio: '[agente · neutra con precio]' });
     agente.recuerda(cliente, 'cliente', texto);
@@ -4089,6 +4112,31 @@ async function manda(envio) {
      neutro y el detalle está en el registro) y el acuse de texto del
      contrato registrado, porque el PDF ya le llega.
      ------------------------------------------------------------ */
+  /* ------------------------------------------------------------
+     A SU NÚMERO NO SE MANDA NADA SOLO — 13-sep-2026
+     ------------------------------------------------------------
+     Dictado del dueño: «no quiero que me mandes nada a mi número, solo
+     le mandas el ticket al cliente y ya».
+
+     El flujo cambió: el ticket ya no le llega a él por separado, se queda
+     EN EL CHAT del cliente y el vendedor lo lee ahí. Así que se apaga todo
+     lo que el bot le manda por su cuenta: los tickets de precio, «número
+     nuevo escribiendo», las dudas, el espejo de ESPIAR, los recordatorios.
+
+     Lo único que sigue pasando es la RESPUESTA A ALGO QUE ÉL ESCRIBIÓ:
+     si le manda «tablero» o «atajos» al bot, no contestarle sería un
+     comando roto, no un aviso de menos.
+
+     No se borra nada: la lista de arriba sigue viva detrás de
+     `AVISOS_AL_DUENO=1`, por si algún día los quiere de vuelta.
+     ------------------------------------------------------------ */
+  const RESPUESTA_A_SU_ORDEN = /^\[(?:tablero|ver\]|ver · |atajos\]|boton · |del dueño · |total actualizado|total · no aplicado|pago · autorizado|autorización · falta la otra|precio · (?:ticket equivocado|sin nada que confirmar))/;
+  if (esParaElDueno && String(process.env.AVISOS_AL_DUENO || '').trim() !== '1' &&
+      !RESPUESTA_A_SU_ORDEN.test(String(envio.escribio || ''))) {
+    console.log('[al-dueño] apagado ' + (envio.escribio || 'sin marca') +
+      ' (AVISOS_AL_DUENO no está en 1)');
+    return true;
+  }
   if (esParaElDueno && !MARCAS_PARA_EL_DUENO.test(String(envio.escribio || ''))) {
     console.log('[al-dueño] callado ' + (envio.escribio || 'sin marca') + ': ' +
       String(envio.texto || '[medio]').slice(0, 120).replace(/\n/g, ' '));

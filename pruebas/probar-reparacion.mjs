@@ -22,6 +22,12 @@ process.env.WHATSAPP_PHONE_ID = '111';
 process.env.WHATSAPP_VERIFY_TOKEN = 'v';
 process.env.ANTHROPIC_API_KEY = 'k';
 process.env.DUENO_WHATSAPP = '5213311112222';
+
+/* 13-sep-2026: los avisos al dueño quedaron APAGADOS por omisión (dictado:
+   «no quiero que me mandes nada a mi número»). Esta batería prueba ese
+   canal, que sigue vivo detrás del interruptor, así que lo enciende. El
+   apagado se comprueba aparte, en probar-nada-al-dueno.mjs. */
+process.env.AVISOS_AL_DUENO = '1';
 process.env.CONFIRMAR_PRECIOS = '1';
 process.env.AGENTE_IA = '1';
 /* ------------------------------------------------------------
