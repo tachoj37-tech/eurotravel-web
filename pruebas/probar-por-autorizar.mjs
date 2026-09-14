@@ -195,5 +195,49 @@ titulo('la página de la lista');
   ok('sin nada: lo dice, sin tabla vacía', /Todavía no hay/.test(vacia) && !/\|---\|/.test(vacia));
 }
 
+/* ------------------------------------------------------------
+   ¿EL MOTOR YA ATINA? (13-sep-2026, la D)
+   ------------------------------------------------------------
+   Dictado del dueño: «a 5 % o menos» cuenta como que le atinó. Se mide
+   contra SU precio, que es el que manda: en un viaje de $7,000, el
+   motor atina si dijo entre $6,650 y $7,350.
+   ------------------------------------------------------------ */
+titulo('la d · ¿el motor ya atina?');
+{
+  ok('la tolerancia es 5 %', volcado.TOLERANCIA_PARA_ATINAR === 0.05);
+
+  const filas = [
+    renglon({ cliente: '3310000001', total: 7000, calculado: 7000 }),   // exacto
+    renglon({ cliente: '3310000002', total: 7000, calculado: 6650 }),   // justo en el 5 %
+    renglon({ cliente: '3310000003', total: 7000, calculado: 6600 }),   // se pasó
+    renglon({ cliente: '3310000004', total: 7000, calculado: null }),   // no supo
+    renglon({ cliente: '3310000005', total: 38000, calculado: 40000, unidad: 'Irizar i6' }), // 5.26 %
+    renglon({ cliente: '5213366679001', total: 7000, calculado: 7000 }) // de prueba
+  ];
+  const a = volcado.aciertosDelMotor(filas);
+  const sprinter = a.find((u) => u.unidad === 'Sprinter');
+  const i6 = a.find((u) => u.unidad === 'Irizar i6');
+
+  ok('agrupa por unidad', sprinter && i6);
+  ok('la Sprinter: 3 comparables (el de prueba y el que no supo, fuera)', sprinter && sprinter.comparables === 3);
+  ok('  atinó 2 (el exacto y el del 5 % justo)', sprinter && sprinter.atino === 2);
+  ok('  y cuenta aparte en cuántos no supo', sprinter && sprinter.noSupo === 1);
+  ok('el i6: 5.26 % arriba NO es atinar', i6 && i6.atino === 0 && i6.comparables === 1);
+
+  /* Hacia dónde se equivoca, que es lo que sirve para corregirlo: un
+     motor que siempre cobra de menos pierde dinero aunque «casi» atine. */
+  ok('dice hacia dónde se equivoca: la Sprinter cobra de menos',
+    sprinter && sprinter.desvioPromedio < 0);
+  ok('  y el i6 de más', i6 && i6.desvioPromedio > 0);
+
+  const md = volcado.laListaParaAutorizar(volcado.porAutorizar(volcado.agrupa(filas), []), a);
+  ok('la lista trae la sección del motor', /¿El motor ya atina\?/.test(md));
+  ok('  con el 5 % escrito', /5 %/.test(md));
+  ok('  y la Sprinter 2 de 3', /Sprinter \| 3 \| 2 \(67 %\)/.test(md));
+
+  const nada = volcado.laListaParaAutorizar(volcado.porAutorizar(volcado.agrupa([]), []), []);
+  ok('sin comparables lo dice, sin tabla vacía', /Todavía no hay con qué medir/.test(nada));
+}
+
 console.log('\n' + buenas + ' buenas, ' + malas + ' malas');
 process.exit(malas ? 1 : 0);

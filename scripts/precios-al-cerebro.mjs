@@ -287,13 +287,85 @@ function porAutorizar(por, autorizados) {
   return r;
 }
 
+/* ------------------------------------------------------------
+   ¿EL MOTOR YA ATINA? (13-sep-2026)
+   ------------------------------------------------------------
+   Dictado del dueño: a 5 % o menos de SU precio, cuenta como que le
+   atinó. Se mide contra el suyo porque el suyo es el que manda.
+
+   Cuenta cada renglón, no cada viaje: cada vez que él contesta un ticket
+   es una prueba del motor. Los que el motor no supo (`calculado` nulo)
+   van aparte: no son fallos, son huecos del criterio.
+
+   El DESVÍO lleva signo, y es lo que más sirve: un motor que siempre
+   queda abajo pierde dinero aunque casi atine.
+   ------------------------------------------------------------ */
+const TOLERANCIA_PARA_ATINAR = 0.05;
+
+function aciertosDelMotor(filas) {
+  const por = new Map();
+  for (const f of filas || []) {
+    if (!f || !(f.total > 0)) continue;
+    if (DE_PRUEBA.test(String(f.cliente || ''))) continue;
+    const u = String(f.unidad || 'sin unidad').trim();
+    if (!por.has(u)) por.set(u, { unidad: u, comparables: 0, atino: 0, noSupo: 0, sumaDesvio: 0 });
+    const c = por.get(u);
+    const calc = Number(f.calculado);
+    if (!(calc > 0)) { c.noSupo++; continue; }
+    const desvio = (calc - f.total) / f.total;
+    c.comparables++;
+    c.sumaDesvio += desvio;
+    /* Con un poco de holgura por el redondeo del punto flotante: 6,650
+       contra 7,000 es exactamente 5 % y tiene que contar. */
+    if (Math.abs(desvio) <= TOLERANCIA_PARA_ATINAR + 1e-9) c.atino++;
+  }
+  return Array.from(por.values())
+    .map(function (c) {
+      return {
+        unidad: c.unidad, comparables: c.comparables, atino: c.atino, noSupo: c.noSupo,
+        desvioPromedio: c.comparables ? c.sumaDesvio / c.comparables : null
+      };
+    })
+    .sort(function (a, b) { return b.comparables - a.comparables || a.unidad.localeCompare(b.unidad); });
+}
+
+function laSeccionDelMotor(aciertos) {
+  const l = [];
+  l.push('## ¿El motor ya atina?');
+  l.push('');
+  l.push('Cada vez que contestas un ticket, se compara tu precio contra el que había');
+  l.push('calculado el motor. **Atina si quedó a ' + Math.round(TOLERANCIA_PARA_ATINAR * 100) +
+    ' % o menos del tuyo.**');
+  l.push('');
+  const conDatos = (aciertos || []).filter(function (a) { return a.comparables || a.noSupo; });
+  if (!conDatos.length) {
+    l.push('**Todavía no hay con qué medir.** Se llena cuando contestes tickets con precio.');
+    l.push('');
+    return l;
+  }
+  l.push('| unidad | veces | atinó | se equivoca en promedio | no supo |');
+  l.push('|---|---:|---:|---|---:|');
+  for (const a of conDatos) {
+    const pct = a.comparables ? Math.round(a.atino / a.comparables * 100) : 0;
+    const desvio = a.desvioPromedio === null ? '—'
+      : Math.abs(a.desvioPromedio) < 0.005 ? 'nada'
+        : (Math.abs(a.desvioPromedio) * 100).toFixed(1) + ' % ' + (a.desvioPromedio < 0 ? 'abajo' : 'arriba');
+    l.push('| ' + a.unidad + ' | ' + a.comparables + ' | ' + a.atino + ' (' + pct + ' %) | ' +
+      desvio + ' | ' + a.noSupo + ' |');
+  }
+  l.push('');
+  l.push('«No supo» no es un fallo: es un viaje que el criterio todavía no cubre.');
+  l.push('');
+  return l;
+}
+
 /* La clave lleva «|», que en una tabla parte la celda aunque vaya entre
    comillas de código. Se escapa. */
 function celdaDeClave(clave) {
   return '`' + String(clave).replace(/\|/g, '\\|') + '`';
 }
 
-function laListaParaAutorizar(r) {
+function laListaParaAutorizar(r, aciertos) {
   const l = [];
   l.push('# Precios por autorizar');
   l.push('');
@@ -367,6 +439,9 @@ function laListaParaAutorizar(r) {
 
   l.push('---');
   l.push('');
+  l.push.apply(l, laSeccionDelMotor(aciertos));
+  l.push('---');
+  l.push('');
   l.push('Ya autorizados y sin cambios: **' + r.autorizados + '**.');
   l.push('');
   return l.join('\n') + '\n';
@@ -380,7 +455,8 @@ function laListaParaAutorizar(r) {
    ------------------------------------------------------------ */
 export {
   agrupa, elQueMandaHoy, laPaginaDelCerebro, laTablaLarga, DE_PRUEBA,
-  porAutorizar, laListaParaAutorizar, MINIMO_PARA_PROPONER
+  porAutorizar, laListaParaAutorizar, MINIMO_PARA_PROPONER,
+  aciertosDelMotor, TOLERANCIA_PARA_ATINAR
 };
 
 const meLlamaronDirecto = process.argv[1] &&
@@ -412,7 +488,7 @@ if (meLlamaronDirecto) {
   const dondeLista = path.join(RAIZ, 'docs', 'PRECIOS-POR-AUTORIZAR.md');
   fs.writeFileSync(dondeCerebro, laPaginaDelCerebro(por), 'utf8');
   fs.writeFileSync(dondeDocs, laTablaLarga(filas, por), 'utf8');
-  fs.writeFileSync(dondeLista, laListaParaAutorizar(lista), 'utf8');
+  fs.writeFileSync(dondeLista, laListaParaAutorizar(lista, aciertosDelMotor(filas)), 'utf8');
 
   console.log('Leídos ' + filas.length + ' renglones del almacén.');
   console.log(por.size + ' viajes distintos, de ' +
