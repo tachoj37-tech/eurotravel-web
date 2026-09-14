@@ -220,12 +220,168 @@ function laTablaLarga(filas, por) {
 }
 
 /* ------------------------------------------------------------
+   LA LISTA PARA AUTORIZAR (13-sep-2026)
+   ------------------------------------------------------------
+   Lo que decidió el dueño, y está explicado en
+   `api/_precios-autorizados.js`: se propone un viaje cuando lo pidieron
+   TRES clientes distintos, con el precio MÁS RECIENTE, y autorizarlo no
+   lo publica — todavía no sale al cliente.
+
+   OJO, NO ES LA MISMA REGLA QUE EL TICKET. El ticket sugiere el último
+   que él FIJÓ a mano (`elQueMandaHoy`); para autorizar, él escogió el
+   más reciente. Casi siempre coinciden. Cuando no, la lista enseña los
+   anteriores para que se vea.
+
+   Clientes DISTINTOS y no renglones: tres cotizaciones del mismo cliente
+   son una sola opinión del precio. Un renglón sin cliente cuenta como
+   uno, porque no se sabe quién fue pero sí que alguien pidió.
+   ------------------------------------------------------------ */
+const MINIMO_PARA_PROPONER = 3;
+
+function clientesDistintos(lista) {
+  const vistos = new Set();
+  let sinNombre = 0;
+  for (const f of lista) {
+    if (f.cliente) vistos.add(String(f.cliente).slice(-10));
+    else sinNombre++;
+  }
+  return vistos.size + sinNombre;
+}
+
+function porAutorizar(por, autorizados) {
+  const yaDichos = new Map((autorizados || []).map(function (a) { return [a.clave, a]; }));
+  const r = { listos: [], cerca: [], cambiaron: [], autorizados: 0 };
+
+  for (const [clave, lista] of por) {
+    const reciente = lista[0];   // `agrupa` ya los dejó del más nuevo al más viejo
+    const viaje = {
+      clave: clave,
+      origen: reciente.origen || '?',
+      destino: reciente.destino || '?',
+      unidad: reciente.unidad || 'sin unidad',
+      dias: reciente.dias,
+      veces: clientesDistintos(lista),
+      propuesto: reciente.total,
+      anteriores: lista.slice(1).map(function (f) { return f.total; }),
+      /* Nulo si el motor no supo; ver `renglonDe` en _precios-aprendidos.js. */
+      motor: Number(reciente.calculado) > 0 ? Number(reciente.calculado) : null
+    };
+
+    const dicho = yaDichos.get(clave);
+    if (dicho) {
+      if (dicho.total === viaje.propuesto) { r.autorizados++; continue; }
+      /* Lo autorizó a un precio y después cobró otro: se le avisa, no se
+         calla ni se le vuelve a proponer como si fuera nuevo. */
+      r.cambiaron.push(Object.assign(viaje, { autorizado: dicho.total, fecha: dicho.fecha }));
+      continue;
+    }
+
+    if (viaje.veces >= MINIMO_PARA_PROPONER) r.listos.push(viaje);
+    else r.cerca.push(viaje);
+  }
+
+  const orden = function (a, b) {
+    return b.veces - a.veces || String(a.destino).localeCompare(String(b.destino));
+  };
+  r.listos.sort(orden); r.cerca.sort(orden); r.cambiaron.sort(orden);
+  return r;
+}
+
+/* La clave lleva «|», que en una tabla parte la celda aunque vaya entre
+   comillas de código. Se escapa. */
+function celdaDeClave(clave) {
+  return '`' + String(clave).replace(/\|/g, '\\|') + '`';
+}
+
+function laListaParaAutorizar(r) {
+  const l = [];
+  l.push('# Precios por autorizar');
+  l.push('');
+  l.push('Los viajes que ya pidieron **' + MINIMO_PARA_PROPONER + ' clientes distintos**, con el');
+  l.push('precio **más reciente** que se les dio.');
+  l.push('');
+  l.push('> **Autorizar uno todavía no sale al cliente.** Queda apuntado con su');
+  l.push('> fecha en `api/_precios-autorizados.js`, y ya no se vuelve a proponer.');
+  l.push('> Que salga al público es otra decisión, aparte.');
+  l.push('');
+  l.push('**Cómo se autoriza:** dile a Claude *«autoriza Chapala Sprinter 1 día»*');
+  l.push('(o el número del renglón), y queda apuntado y subido.');
+  l.push('');
+  l.push('> Se llena sola con `npm run precios:cerebro`. Si corrijo algo aquí a');
+  l.push('> mano, la siguiente corrida me la pisa.');
+  l.push('');
+
+  const motor = function (v) {
+    if (v.motor === null) return 'no supo';
+    const dif = v.propuesto - v.motor;
+    return pesos(v.motor) + (dif === 0 ? ' ✓' : ' (' + (dif > 0 ? '+' : '−') + pesos(Math.abs(dif)) + ')');
+  };
+
+  if (!r.listos.length && !r.cambiaron.length) {
+    l.push('---');
+    l.push('');
+    l.push('**Todavía no hay ninguno listo.**' +
+      (r.cerca.length ? ' Hay ' + r.cerca.length + ' viaje(s) a los que les falta poco, abajo.' : ''));
+    l.push('');
+  }
+
+  if (r.listos.length) {
+    l.push('---');
+    l.push('');
+    l.push('## Listos para autorizar');
+    l.push('');
+    l.push('| # | desde | a dónde | unidad | días | clientes | propuesto | antes | el motor decía | clave |');
+    l.push('|---:|---|---|---|---:|---:|---:|---|---|---|');
+    r.listos.forEach(function (v, i) {
+      l.push('| ' + (i + 1) + ' | ' + v.origen + ' | ' + v.destino + ' | ' + v.unidad + ' | ' +
+        (v.dias == null ? '?' : v.dias) + ' | ' + v.veces + ' | **' + pesos(v.propuesto) + '** | ' +
+        (v.anteriores.length ? v.anteriores.map(pesos).join(' · ') : '—') + ' | ' + motor(v) +
+        ' | ' + celdaDeClave(v.clave) + ' |');
+    });
+    l.push('');
+  }
+
+  if (r.cambiaron.length) {
+    l.push('## ⚠️ Los autorizaste, y después se cobró otra cosa');
+    l.push('');
+    l.push('| a dónde | unidad | días | autorizado | lo más reciente | clave |');
+    l.push('|---|---|---:|---:|---:|---|');
+    for (const v of r.cambiaron) {
+      l.push('| ' + v.destino + ' | ' + v.unidad + ' | ' + (v.dias == null ? '?' : v.dias) + ' | ' +
+        pesos(v.autorizado) + ' (' + v.fecha + ') | **' + pesos(v.propuesto) + '** | ' + celdaDeClave(v.clave) + ' |');
+    }
+    l.push('');
+  }
+
+  if (r.cerca.length) {
+    l.push('## Les falta poco');
+    l.push('');
+    l.push('| a dónde | unidad | días | clientes | lo más reciente |');
+    l.push('|---|---|---:|---:|---:|');
+    for (const v of r.cerca) {
+      l.push('| ' + v.destino + ' | ' + v.unidad + ' | ' + (v.dias == null ? '?' : v.dias) + ' | ' +
+        v.veces + ' de ' + MINIMO_PARA_PROPONER + ' | ' + pesos(v.propuesto) + ' |');
+    }
+    l.push('');
+  }
+
+  l.push('---');
+  l.push('');
+  l.push('Ya autorizados y sin cambios: **' + r.autorizados + '**.');
+  l.push('');
+  return l.join('\n') + '\n';
+}
+
+/* ------------------------------------------------------------
    Se exportan para poder probar el FORMATO sin tocar la red ni el
    almacén: `pruebas/probar-precios-al-cerebro.mjs` les da renglones de
    mentiras y comprueba lo que sale. Y por eso el script solo CORRE
    cuando se le llama directo, no cuando se le importa.
    ------------------------------------------------------------ */
-export { agrupa, elQueMandaHoy, laPaginaDelCerebro, laTablaLarga, DE_PRUEBA };
+export {
+  agrupa, elQueMandaHoy, laPaginaDelCerebro, laTablaLarga, DE_PRUEBA,
+  porAutorizar, laListaParaAutorizar, MINIMO_PARA_PROPONER
+};
 
 const meLlamaronDirecto = process.argv[1] &&
   path.resolve(process.argv[1]) === path.resolve(fileURLToPath(import.meta.url));
@@ -236,13 +392,27 @@ if (meLlamaronDirecto) {
     console.error('Son las mismas que están en Vercel.');
     process.exit(2);
   }
+  /* Antes de leer nada: el registro tiene que estar bien escrito. Una
+     clave repetida o un total con centavos es justo lo que no se nota
+     hasta que ya estorbó. */
+  const registro = (await import('../api/_precios-autorizados.js')).default;
+  const problemas = registro.revisa(registro.AUTORIZADOS);
+  if (problemas.length) {
+    console.error('api/_precios-autorizados.js tiene errores:');
+    for (const p of problemas) console.error('  · ' + p);
+    process.exit(4);
+  }
+
   const filas = await traeTodos();
   const por = agrupa(filas);
+  const lista = porAutorizar(por, registro.AUTORIZADOS);
 
   const dondeCerebro = path.join(RAIZ, 'cerebro', 'precios-que-he-dado.md');
   const dondeDocs = path.join(RAIZ, 'docs', 'PRECIOS-QUE-HE-DADO.md');
+  const dondeLista = path.join(RAIZ, 'docs', 'PRECIOS-POR-AUTORIZAR.md');
   fs.writeFileSync(dondeCerebro, laPaginaDelCerebro(por), 'utf8');
   fs.writeFileSync(dondeDocs, laTablaLarga(filas, por), 'utf8');
+  fs.writeFileSync(dondeLista, laListaParaAutorizar(lista), 'utf8');
 
   console.log('Leídos ' + filas.length + ' renglones del almacén.');
   console.log(por.size + ' viajes distintos, de ' +
@@ -250,6 +420,8 @@ if (meLlamaronDirecto) {
   console.log('');
   console.log('  ' + path.relative(RAIZ, dondeCerebro));
   console.log('  ' + path.relative(RAIZ, dondeDocs));
+  console.log('  ' + path.relative(RAIZ, dondeLista) + '   ← ' + lista.listos.length +
+    ' por autorizar' + (lista.cambiaron.length ? ', ' + lista.cambiaron.length + ' cambiaron' : ''));
   console.log('');
   console.log('Revísalos y súbelos con git si te cuadran.');
 }

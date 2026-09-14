@@ -45,7 +45,7 @@ el mensaje exacto al WhatsApp **no al teléfono**.
 |---|---|---|---|
 | ~~**1**~~ | ~~Decir si subo los commits~~ | **HECHO el 13-sep.** Ver arriba | ✅ |
 | **2** | **Confirmar que te LLEGÓ el correo de prueba** | Ver la nota de abajo: el servidor dice que salió, pero eso no es que haya llegado | Buscar en tu correo «PRUEBA DEL SISTEMA» |
-| **3** | **Conectar el almacén:** poner la dirección y la llave secreta de **eurotravel-almacen** en Vercel y redesplegar. El proyecto ya existe con sus tablas y su candado probado | Hoy las llaves de Vercel apuntan a algo que no contesta | El recordatorio automático lee el almacén sin tiempo agotado |
+| ~~**3**~~ | ~~Conectar el almacén~~ | **HECHO el 13-sep.** A las 21:00 UTC el recordatorio leyó `fichas` en eurotravel-almacen con la llave `sb_secret_`, 200 en 289 ms. **Falta ver que guarde**: desde el 11-sep 18:29 (GDL) no ha entrado ni un mensaje de WhatsApp al bot — mandarle uno de prueba. Y las llaves viejas SÍ conectaban a ratos: había otro almacén, con al menos el cliente del 11-sep | ✅ lee · ⏳ guarda |
 | **4** | **`eurotravel.com.mx`: ¿se muda o no?** | Comprobado el 13-sep: ese dominio sirve un **WordPress**, no esta página. Y en Vercel el proyecto solo tiene los tres dominios `.vercel.app` | El dominio aparece en la lista del proyecto y abre esta página |
 | **5** | **Que el bot deje de cotizar la Sprinter** | Dijiste «ningún precio para nadie» incluyendo el bot. Es un renglón en `unidades.js`, pero mueve 100+ aserciones de las pruebas del bot: le toca a su rama | El bot contesta con ficha armada en vez de precio |
 | **6** | **Cambio de fecha: ¿hay política?** | Hoy el bot te pasa al cliente sin explicar nada | Si dictas una, se escribe en el criterio |
@@ -76,6 +76,20 @@ tu correo y con eso se cierra del todo.
 | ~~**A**~~ | ~~El calendario en celular, 36×34 contra los 44×44 de la guía~~ | **HECHO el 13-sep.** Y de paso salió que el botón flotante **se comía un día**: el toque en el centro del 6 lo recibía el botón verde, o sea que el cliente tocaba un domingo y le abría WhatsApp |
 | ~~**B**~~ | ~~Auditoría B15: escapar los valores en `pide()`~~ | **HECHO el 13-sep**, antes de encender el almacén |
 | ~~**C**~~ | ~~Los 40 textos de seguimiento que «ya no se usan»~~ | **REVISADO el 13-sep, y la nota estaba mal.** Ver abajo |
+
+### La lista de precios por autorizar (13-sep, noche)
+
+Dictado del dueño: autoriza **diciéndoselo a Claude**; se propone con **tres
+clientes distintos**; con el precio **más reciente**; y **«EL PRECIO NO
+DEBERIA SALIR SOLO TODAVIA»**.
+
+- `npm run precios:cerebro` escribe ahora también `docs/PRECIOS-POR-AUTORIZAR.md`:
+  listos, los que les falta poco, y los autorizados que después se cobraron
+  distinto. Con lo que había calculado el motor al lado.
+- Lo autorizado se apunta en `api/_precios-autorizados.js`, con fecha y frase.
+  **Nadie del lado del cliente lo lee**, y `probar-por-autorizar.mjs` se pone
+  roja si alguien lo engancha (comprobado en rojo y en verde).
+- Que salga al público es otra decisión, aparte, y no está escrita.
 
 ### Sobre la C: no eran cuarenta sin usar, eran diez — y no se borran
 
