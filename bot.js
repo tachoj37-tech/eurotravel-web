@@ -334,6 +334,9 @@ function fechaDe(texto, hoy) {
      ------------------------------------------------------------ */
   const UN_EXTREMO = '(?:\\d{1,2}|lunes|martes|miercoles|jueves|viernes|sabado|domingo)';
   if (new RegExp('\\bdel?\\s+' + UN_EXTREMO + '\\b[\\s\\S]*\\bal\\s+' + UN_EXTREMO + '\\b').test(t)) return null;
+  /* Y los rangos sin «del … al» («15 a 20 de septiembre», «15-20 sep»):
+     la misma regla, ver `rangoDeFechas` (13-sep-2026). */
+  if (rangoDeFechas(t)) return null;
 
   const anioHoy = Number(base.slice(0, 4));
 
@@ -1627,6 +1630,40 @@ function mediosDe(idUnidad) {
    para contar personas no puede volver a usarse para contar días.
    ------------------------------------------------------------ */
 
+/* ------------------------------------------------------------
+   UN RANGO DE FECHAS, COMO LO ESCRIBE LA GENTE — 13-sep-2026
+   ------------------------------------------------------------
+   Esto solo entendía «del 15 al 20». Prueba del dueño desde su número:
+   «15 a 20 de septiembre» se leía como una sola fecha —el 20— y el
+   candado sobre la IA, que le preguntaba a este lector si el mensaje traía
+   fecha, tiró el regreso que la IA sí había leído bien. El bot volvió a
+   preguntar «¿y qué día regresan?».
+
+   Ahora: «del 15 al 20», «15 a 20 de septiembre», «15-20 septiembre»,
+   «15 al 20», «20 de dic a 2 de enero», «del 15 a 20 de sept».
+
+   Para no confundirlo con horas ni con gente, un rango sin «del» ni mes
+   solo vale con «al» («15 al 20»); «de 8 a 10» sin mes no es rango, y lo
+   que va seguido de horas o personas tampoco. */
+function rangoDeFechas(t) {
+  const MES = '(ene|feb|mar|abr|may|jun|jul|ago|sep|set|oct|nov|dic)[a-z]*';
+  const m = new RegExp('(?:^|[^a-z0-9])(?:(del?)\\s+)?(?:el\\s+)?(\\d{1,2})(?:(?:\\s+de)?\\s+' + MES +
+    ')?\\s*(al|a|-|–|hasta el|hasta)\\s*(?:el\\s+)?(\\d{1,2})(?:(?:\\s+de)?\\s+' + MES + ')?' +
+    '(?![0-9])(?!\\s*(?:horas?|hrs?|am|pm|de la|personas|pasajeros|pax|gente|dias|anos))').exec(t);
+  if (!m) return null;
+  const ida = Number(m[2]), vuelta = Number(m[5]);
+  if (ida < 1 || ida > 31 || vuelta < 1 || vuelta > 31) return null;
+  if (!m[1] && !m[3] && !m[6] && m[4] !== 'al') return null;
+  /* Los meses con la palabra entera como vino («septiembre», «dic»): se
+     sacan del pedazo que casó, en orden. */
+  const meses = m[0].match(/\b(?:ene|feb|mar|abr|may|jun|jul|ago|sep|set|oct|nov|dic)[a-z]*/g) || [];
+  let mesIda = '', mesVuelta = '';
+  if (m[3] && m[6]) { mesIda = meses[0]; mesVuelta = meses[1]; }
+  else if (m[3]) mesIda = meses[0];
+  else if (m[6]) mesVuelta = meses[0];
+  return { ida: ida, vuelta: vuelta, mesIda: mesIda, mesVuelta: mesVuelta };
+}
+
 /* Lo que, una vez leído como gente, deja de existir para la fecha. */
 const PEDAZOS_DE_GENTE = [
   /\bentre \d{1,3} y \d{1,3}\b/g,
@@ -1663,11 +1700,12 @@ function fragmentosDeFecha(t) {
      vienen los dos, cada uno se queda con el suyo, que es lo que hace
      falta para un viaje que cambia de mes (11-sep-2026).
      ------------------------------------------------------------ */
-  const rango = t.match(/\bdel?\s+(\d{1,2})(\s+de\s+[a-zñ]{3,10})?\s+al\s+(\d{1,2})(\s+de\s+[a-zñ]{3,10})?\b/);
+  const rango = rangoDeFechas(t);
   if (rango) {
-    const mesIda = rango[2] || rango[4] || '';
-    const mesVuelta = rango[4] || rango[2] || '';
-    return { salida: 'el ' + rango[1] + mesIda, regreso: 'el ' + rango[3] + mesVuelta };
+    const mesIda = rango.mesIda || rango.mesVuelta || '';
+    const mesVuelta = rango.mesVuelta || rango.mesIda || '';
+    return { salida: 'el ' + rango.ida + (mesIda ? ' de ' + mesIda : ''),
+      regreso: 'el ' + rango.vuelta + (mesVuelta ? ' de ' + mesVuelta : '') };
   }
 
   /* ------------------------------------------------------------

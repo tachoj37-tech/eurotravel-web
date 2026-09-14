@@ -2818,9 +2818,19 @@ async function loQueDiceElAgente(envio) {
     }
     for (const campo of ['salida', 'regreso']) {
       if (!datosIA[campo]) continue;
-      let hayFecha = false;
-      try { hayFecha = !!conversacion.fechaDe(texto, hoy) || !!(conversacion.leeDeUnJalon(texto, hoy) || {})[campo]; }
-      catch (e) { hayFecha = false; }
+      /* «¿Trae fecha?» NO se le pregunta solo al lector del guion: el
+         13-sep-2026, en la prueba del dueño desde su número, ese lector no
+         entendía «15 a 20 de septiembre» y este candado tiró el regreso que
+         la IA sí había leído bien. Basta con que el mensaje traiga algo con
+         forma de fecha —un número de día, un mes, un día de la semana, hoy,
+         mañana, pasado—; lo que se descarta es lo que no trae nada de eso,
+         como «dos días» o «regresamos». */
+      const PARECE_FECHA = /\b([12]?\d|3[01])\b|\b(ene|feb|mar|abr|may|jun|jul|ago|sep|set|oct|nov|dic)[a-z]*\b|\b(lunes|martes|miercoles|jueves|viernes|sabado|domingo|hoy|manana|pasado|semana|puente|finde|fin de semana)\b/;
+      let hayFecha = PARECE_FECHA.test(t);
+      if (!hayFecha) {
+        try { hayFecha = !!conversacion.fechaDe(texto, hoy) || !!(conversacion.leeDeUnJalon(texto, hoy) || {})[campo]; }
+        catch (e) { hayFecha = false; }
+      }
       if (!hayFecha && !/\bmismo dia\b|\bese dia\b/.test(t)) {
         console.log('[agente] ' + campo + ' de la IA descartada: «' + String(texto).slice(0, 40) + '» no trae fecha');
         delete datosIA[campo];
@@ -3669,7 +3679,13 @@ async function loQueDiceElAgente(envio) {
       if (corrigeElTicket && dicho.respuesta) {
         console.log('[agente] corrección del ticket: sale solo el ticket corregido, sin el texto de la IA');
       }
-      if (dicho.respuesta && !corrigeElTicket && !/precio|cotizaci/i.test(dicho.respuesta)) {
+      /* Y tampoco si PREGUNTA algo: el ticket que sale abajo ya cerró el
+         viaje. Con el modelo real (13-sep-2026, escenario bq) a «un día nos
+         movemos» dijo «¿cuál de los tres días es el que se andan moviendo?»
+         y en el mismo segundo llegó el ticket; el cliente contesta una
+         pregunta que ya no importa. */
+      const pregunta = /\?/.test(String(dicho.respuesta || ''));
+      if (dicho.respuesta && !corrigeElTicket && !pregunta && !/precio|cotizaci/i.test(dicho.respuesta)) {
         await manda({ numeroDeOrigen: envio.numeroDeOrigen, para: cliente, texto: dicho.respuesta,
           pasaAPersona: false, escribio: '[agente · antes del precio]' });
         agente.recuerda(cliente, 'bot', dicho.respuesta);

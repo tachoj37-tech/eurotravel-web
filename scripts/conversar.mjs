@@ -668,6 +668,16 @@ const escenarios = {
      escribió. Se quedó en «¿cuántos son?» después de «sería una sprinter». */
   bn: ['Hola', 'Cotizar un viaje', 'vamos a vta', 'vamos pasado', '17', 'regresamos', 'sería una sprinter', 'si', 'no nos movemos'],
 
+  /* bo–bt · FECHAS COMO LAS ESCRIBE LA GENTE (13-sep-2026). La segunda
+     prueba del dueño se cayó en «15 a 20 de septiembre»: el candado tiraba
+     el regreso. Cada una tiene que llegar al ticket con las dos fechas. */
+  bo: ['Hola', 'Cotizar un viaje', 'vallarta en sprinter', '15 a 20 de septiembre', 'si', 'no nos movemos'],
+  bp: ['Hola', 'Cotizar un viaje', 'a mazamitla', '15-17 octubre', 'somos 12', 'si', 'solo nos llevan'],
+  bq: ['Hola', 'Cotizar un viaje', 'guanajuato', 'del viernes 16 al domingo 18 de octubre', 'somos 18', 'si', 'un dia nos movemos'],
+  br: ['Hola', 'Cotizar un viaje', 'mazatlan, 20 de dic a 2 de enero, 45 personas', 'de guadalajara', 'el neobus', 'no nos movemos'],
+  bs: ['Hola', 'Cotizar un viaje', 'a tequila', 'el 25 de octubre', 'mismo dia', 'somos 15', 'si'],
+  bt: ['Hola', 'Cotizar un viaje', 'chapala', 'el sabado', 'regresamos el domingo', 'somos 10', 'si', 'no'],
+
   /* bm · CORRIGE LA FECHA Y LOS DÍAS DE MOVIMIENTO EN EL TICKET. */
   bm: ['a vallarta del 20 al 23 de noviembre, somos 40, de guadalajara, en el neobus, nos movemos un día allá',
     'mejor regresamos el 24 y nos movemos dos días', 'perfecto, todo bien']

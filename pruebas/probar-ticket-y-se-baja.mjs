@@ -261,6 +261,40 @@ titulo('un día suelto es ese día, lo anote como lo anote la IA');
 }
 
 /* ============================================================ */
+titulo('la segunda prueba del dueño: «15 a 20 de septiembre»');
+{
+  /* Tal cual, 13-sep-2026 5:59 p.m. La IA leyó bien las dos fechas y el
+     candado tiró el regreso porque el lector del guion no entendía «a». */
+  limpia();
+  const C = '5213366670080';
+  await dice('hola', C);
+  await dice('Cotizar un viaje', C);
+  laIA = function (t) {
+    if (/vallarta en sprinter/.test(t)) return { respuesta: 'Puerto Vallarta con Sprinter, perfecto. ¿Qué días salen y regresan?', datos: { destino: 'Puerto Vallarta' }, accion: 'seguir' };
+    if (/15 a 20/.test(t)) return { respuesta: 'Listo, del 15 al 20 de septiembre. ¿Salen de la zona metropolitana de Guadalajara?', datos: { salida: '2026-09-15', regreso: '2026-09-20' }, accion: 'seguir' };
+    return { respuesta: 'Perfecto.', datos: { origen: 'Guadalajara' }, accion: 'seguir' };
+  };
+  await dice('vallarta en sprinter', C);
+  await dice('15 a 20 de septiembre', C);
+  const charla = webhook.charlaDe(C) || {};
+  ok('se quedan las dos fechas (salida ' + charla.salida + ', regreso ' + charla.regreso + ')',
+    charla.salida === '2026-09-15' && charla.regreso === '2026-09-20');
+  const antes = textos(C).length;
+  await dice('si', C);
+  ok('  y a «si» no le vuelve a preguntar el regreso', !/regresan/i.test(textos(C).slice(antes).join('\n')));
+  /* Y del lado del guion, que es el respaldo. */
+  const bot = (await import(pathToFileURL(path.join(RAIZ, 'bot.js')).href)).default;
+  for (const [frase, ida, vuelta] of [['15 a 20 de septiembre', '2026-09-15', '2026-09-20'],
+    ['15-20 septiembre', '2026-09-15', '2026-09-20'], ['15 al 20', '2026-09-15', '2026-09-20'],
+    ['20 de dic a 2 de enero', '2026-12-20', '2027-01-02']]) {
+    const j = bot.leeDeUnJalon(frase, '2026-09-13') || {};
+    ok('el guion lee «' + frase + '» como rango', j.salida === ida && j.regreso === vuelta);
+  }
+  const bot2 = bot;
+  ok('«de 8 a 10 de la mañana» no es un rango de días', !(bot2.leeDeUnJalon('de 8 a 10 de la mañana', '2026-09-13') || {}).regreso);
+}
+
+/* ============================================================ */
 titulo('y al dueño, nada');
 {
   ok('en toda la batería no le llegó nada a su número', textos(process.env.DUENO_WHATSAPP).length === 0);
