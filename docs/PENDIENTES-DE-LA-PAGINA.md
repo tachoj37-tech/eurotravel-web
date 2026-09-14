@@ -124,6 +124,22 @@ los borra creyéndolos muertos, se entera ahí.
 
 ## Decidido, para no volver a preguntarlo
 
+Cuestionario del 13-sep-2026 (noche):
+
+- **Century de 49 con 49 personas:** *«Sí, va lleno»*. Sin cambios.
+- **Solo ida a destinos con paquete:** *«Sí, déjalo como está»*. Sin cambios.
+- **`eurotravel.com.mx`:** *«Sí, pero al lanzar»*. Pasa a la lista de lanzamiento.
+- **«Tu fecha sigue libre»:** *«Sí, comprobado de verdad»*. Enganchar `fechaLibre`
+  a `disponibilidadDe()`; solo se dice si EuroSystem confirma unidad libre.
+  Toca `api/whatsapp.mjs` (rama del bot) y necesita `DISPONIBILIDAD_API_KEY`.
+- **Cambio de fecha:** *«Siempre con vendedor»*. El bot no promete nada y pasa
+  al cliente, como hoy. Ya no es pendiente.
+- **Sprinter en el bot:** *«no da precios, de momento solo confirma»*. Es la
+  compuerta de siempre: el motor calcula, el dueño da el «va». Ya no es pendiente.
+- **Motor atina:** a 5 % o menos del precio del dueño.
+- **Almacén viejo:** no se copió `ALMACEN_URL`. Lo de antes del 13-sep queda
+  donde estaba, sin rescatar.
+
 - **Un precio aprendido NO sale solo a la página.** Entra a una tanda que él
   revisa, como la compuerta del dueño (dictado del 12-sep: «sí justo»).
 - **El corte es cada quince días**, no cada mes: el almacén purga a los 45 y

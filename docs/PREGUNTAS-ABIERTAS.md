@@ -56,6 +56,10 @@ pedir y le pone precio.
 
 Él pidió que se le recordara el 2-sep-2026. **El recordatorio está puesto.**
 
+> **Contestada el 13-sep-2026:** *«Sí, déjalo como está»*. Un destino con
+> paquete se puede pedir solo ida. Y desde R47 la página no le pone precio:
+> lo cotiza el vendedor.
+
 ---
 
 ## 3 · El asiento de margen del Century (12-sep-2026)
@@ -69,6 +73,9 @@ los de 49**: ésos van llenos.
 
 > **La pregunta:** ¿un grupo de 49 debe poder pedir el Century de 49, o
 > prefiere que también ahí quede un asiento de sobra? Es cambiar un número.
+
+> **Contestada el 13-sep-2026:** *«Sí, va lleno»*. Un grupo de 49 puede pedir
+> el Century de 49. Se queda como está.
 
 ## 4 · El chat se quedó sin puerta, y su número sigue escrito a mano (12-sep-2026)
 
