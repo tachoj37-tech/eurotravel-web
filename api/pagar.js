@@ -131,7 +131,11 @@ module.exports = async function handler(req, res) {
   const correo = limpia(cuerpo.correo, 120).toLowerCase();
   const telefono = limpia(cuerpo.telefono, 30);
   const nombre = limpia(cuerpo.nombre, 90);
-  const canal = cuerpo.canal === 'whatsapp' ? 'whatsapp' : 'correo';
+  /* 15-sep-2026 · El folio sale SOLO por correo. La página ofrecía «A mi
+     WhatsApp» y no se mandaba nada por ahí; se quitó la opción, y aquí ya no
+     se anota aunque llegue de una página vieja en caché: registrar una
+     promesa que nadie va a cumplir es peor que no registrarla. */
+  const canal = 'correo';
 
   if (!correoValido(correo)) { res.status(400).json({ error: 'correo inválido', aviso: 'Revisa tu correo.' }); return; }
   if (telefono.replace(/\D/g, '').length < 10) {

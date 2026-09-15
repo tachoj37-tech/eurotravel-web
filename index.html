@@ -745,14 +745,6 @@
 
   .pago-cuerpo { padding: 18px 20px; }
   .pago-cuerpo > p { font-size: 13.5px; color: var(--muted); line-height: 1.6; }
-  .pago-canal { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
-  .pago-canal label {
-    display: inline-flex; align-items: center; gap: 8px; cursor: pointer;
-    border: 1px solid var(--line); border-radius: 999px; padding: 8px 15px;
-    font-family: 'Archivo'; font-size: 13.5px; transition: all 180ms var(--ease);
-  }
-  .pago-canal label:hover { border-color: var(--ink); }
-  .pago-canal label.on { border-color: var(--red); background: rgba(219, 13, 13, 0.05); }
   .pago-acciones { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 18px; align-items: center; }
   .pago-error { display: none; font-size: 13px; color: var(--red); margin-top: 12px; }
   .pago-error.on { display: block; }
@@ -2992,8 +2984,9 @@ window.IMGS = {
             <svg aria-hidden="true"><use href="#i-shield" /></svg>
             <p>
               <b>Revisa bien estos datos.</b> Con ellos se genera tu contrato: el nombre va
-              impreso tal como lo escribas, y al teléfono y al correo te llegan el folio y las
-              instrucciones para abonar. Un dígito de más y no te encontramos.
+              impreso tal como lo escribas, a tu correo te llegan el folio y las instrucciones
+              para abonar, y al teléfono te buscamos si hace falta. Un dígito de más y no te
+              encontramos.
             </p>
           </div>
 
@@ -3225,11 +3218,10 @@ window.IMGS = {
               </div>
 
               <div class="pago-cuerpo">
-                <p id="pago-canal-texto">¿A dónde te mandamos el folio y las instrucciones para seguir abonando?</p>
-                <div class="pago-canal" id="pago-canal">
-                  <label class="on"><input type="radio" name="canal" value="correo" checked /> A mi correo</label>
-                  <label><input type="radio" name="canal" value="whatsapp" /> A mi WhatsApp</label>
-                </div>
+                <!-- 15-sep-2026 · Aquí se preguntaba «¿A dónde te mandamos el
+                     folio?» con «A mi correo» y «A mi WhatsApp». La segunda no
+                     hacía nada: siempre salía el correo. Ya no se ofrece. -->
+                <p id="pago-canal-texto">Te mandamos el folio y las instrucciones para seguir abonando a tu correo.</p>
 
                 <div class="pago-acciones">
                   <button class="btn btn-red" type="button" id="pago-ir">
@@ -4404,15 +4396,6 @@ window.IMGS = {
       var caja = byId('pago');
       if (!caja) return;
 
-      var canal = 'correo';
-      document.querySelectorAll('#pago-canal label').forEach(function (l) {
-        l.addEventListener('click', function () {
-          document.querySelectorAll('#pago-canal label').forEach(function (x) { x.classList.remove('on'); });
-          l.classList.add('on');
-          canal = l.querySelector('input').value;
-        });
-      });
-
       /* la llama armaResumen cada vez que se pinta la última pantalla */
       window.pintaPago = function () {
         var c = VIAJE.cotizacion;
@@ -5462,7 +5445,6 @@ window.IMGS = {
             nombre: (byId('f-nombre').value || '').trim(),
             correo: (byId('f-mail').value || '').trim(),
             telefono: (byId('f-tel').value || '').trim(),
-            canal: canal,
             unidad: VIAJE.unidad ? VIAJE.unidad.name : '',
             /* Dónde se recoge al grupo, con referencias. Va al contrato: el
                operador necesita un punto, no una ciudad. */
