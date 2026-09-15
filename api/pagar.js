@@ -306,6 +306,12 @@ module.exports = async function handler(req, res) {
         unidad: unidad,
         salida: limpia(cuerpo.salida, 20),
         regreso: limpia(cuerpo.regreso, 20),
+        /* SOLO IDA (15-sep-2026). Lo decide ESTE servidor —`redondo`, de
+           arriba, que es con lo que se sacó el precio— y no el navegador.
+           El webhook lo necesita: la puerta de EuroSystem exige un regreso
+           y un `tipoViaje`, y con el regreso vacío el pago se quedaba
+           cobrado sin contrato ni correo. */
+        viaje: redondo ? 'REDONDO' : 'SENCILLO',
         dias: String(dias),
         km: String(Math.round(kmTotal * 10) / 10),
         /* Dónde se recoge al grupo, con referencias. El contrato lo imprime. */

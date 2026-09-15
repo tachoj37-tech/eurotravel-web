@@ -176,6 +176,12 @@ function datosDelCorreo(m) {
     unidad: String(d.unidad || '').slice(0, 60),
     salida: String(d.salida || '').slice(0, 25),
     regreso: String(d.regreso || '').slice(0, 25),
+    /* Solo ida (15-sep-2026): sin esto el correo callaba el tipo de viaje y
+       el cliente no tenía cómo saber si le cobraron el redondo. Lo marca
+       `pagar.js` en `viaje`; las sesiones de antes solo traen el regreso
+       vacío, que es exactamente cuando `pagar.js` cobra solo ida. */
+    soloIda: String(d.viaje || '').toUpperCase() === 'SENCILLO' ||
+      (String(d.viaje || '').toUpperCase() !== 'REDONDO' && !d.regreso && !!d.salida),
     dias: String(d.dias || '').slice(0, 4),
     puntoSalida: String(d.puntoSalida || '').slice(0, 200),
     total: Number(d.total) || 0,
@@ -237,6 +243,7 @@ function mensajeDeContrato(metadata, pdfBase64, liga) {
         renglon('Va a', d.destino) +
         renglon('Salida', salida) +
         renglon('Regreso', regreso) +
+        renglon('Viaje', d.soloIda ? 'Solo ida' : '') +
         renglon('Días de servicio', d.dias) +
         renglon('Unidad', d.unidad) +
         renglon('Dónde los recogemos', d.puntoSalida) +
@@ -294,6 +301,7 @@ function mensajeDeContrato(metadata, pdfBase64, liga) {
     d.destino ? 'Va a:                ' + d.destino : null,
     salida ? 'Salida:              ' + salida : null,
     regreso ? 'Regreso:             ' + regreso : null,
+    d.soloIda ? 'Viaje:               Solo ida' : null,
     d.dias ? 'Días de servicio:    ' + d.dias : null,
     d.unidad ? 'Unidad:              ' + d.unidad : null,
     d.puntoSalida ? 'Dónde los recogemos: ' + d.puntoSalida : null,

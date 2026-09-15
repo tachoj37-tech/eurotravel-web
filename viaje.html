@@ -366,6 +366,9 @@
       r('Va a', d.destino) +
       r('Salida', fecha(d.salida)) +
       r('Regreso', fecha(d.regreso)) +
+      /* Solo ida (15-sep-2026): sin regreso, se dice qué tipo de viaje es en
+         vez de dejar el renglón en silencio. */
+      r('Viaje', (!d.regreso && d.salida) ? 'Solo ida' : '') +
       r('Días de servicio', d.dias || '') +
       r('Unidad', d.unidad) +
       r('Dónde los recogemos', d.puntoSalida) +

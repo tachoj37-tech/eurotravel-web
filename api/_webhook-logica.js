@@ -69,6 +69,54 @@ function conZona(fecha) {
   return '';
 }
 
+/* ------------------------------------------------------------
+   EL SOLO IDA (15-sep-2026)
+   ------------------------------------------------------------
+   La página manda `regreso: ''` cuando el viaje es solo ida, y
+   `/api/pagar` lo cobra como tal: `redondo` es falso justamente
+   cuando no hay regreso. Aquí ese vacío se volvía una fecha vacía,
+   la revisión de «fechas ilegibles» contestaba 200 y el pago se
+   quedaba COBRADO sin contrato y sin correo.
+
+   La puerta de EuroSystem exige `fechaRegreso` con zona y POSTERIOR
+   a la salida (CONTRATOS-API.md §2, `tipos.ts`). Así que el solo ida
+   se registra como SENCILLO con el regreso al cierre del mismo día,
+   igual que resolvió el bot los viajes de un día el 10-sep-2026. Las
+   observaciones dicen que esa hora no es un acuerdo.
+
+   Se reconoce por `viaje: 'SENCILLO'` —lo escribe `pagar.js` desde
+   hoy— o por el regreso vacío, que es como vienen las sesiones
+   pagadas antes de este arreglo (un OXXO se paga días después).
+   ------------------------------------------------------------ */
+function esSoloIda(m) {
+  if (String(m.viaje || '').toUpperCase() === 'SENCILLO') return true;
+  if (String(m.viaje || '').toUpperCase() === 'REDONDO') return false;
+  return !String(m.regreso || '').trim() && !!String(m.salida || '').trim();
+}
+
+/* El cierre del día de la salida, con zona. Si la salida ya es a esa hora
+   o después, el regreso pasa al primer minuto del día siguiente: un regreso
+   IGUAL a la salida también lo rechaza EuroSystem. Las fechas se arman con
+   Date.UTC sobre los números sueltos, sin leer texto como fecha local. */
+function regresoDelSoloIda(salida) {
+  const conz = conZona(salida);
+  const p = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})/.exec(conz);
+  if (!p) return '';
+  const cierre = p[1] + '-' + p[2] + '-' + p[3] + 'T23:59:59' + ZONA;
+  if (Date.parse(cierre) > Date.parse(conz)) return cierre;
+  const siguiente = new Date(Date.UTC(Number(p[1]), Number(p[2]) - 1, Number(p[3]) + 1));
+  const dd = function (n) { return String(n).padStart(2, '0'); };
+  return siguiente.getUTCFullYear() + '-' + dd(siguiente.getUTCMonth() + 1) + '-' +
+    dd(siguiente.getUTCDate()) + 'T00:59:00' + ZONA;
+}
+
+/* La liga del cliente vence 90 días después de su regreso. El solo ida no
+   tiene regreso, y sin fecha la liga vencía a los 30 días de HOY: un viaje a
+   seis meses se quedaba sin liga antes de salir. Se cuenta desde la salida. */
+function ultimoDiaDelViaje(m) {
+  return String(m.regreso || '').trim() || String(m.salida || '').trim();
+}
+
 /* AUTOBUS | SPRINTER | SUBURBAN, a partir de como se vende la unidad. */
 function claseDeUnidad(nombre) {
   const n = String(nombre || '').toLowerCase();
@@ -133,6 +181,12 @@ function contratoDesde(m, sesion) {
         : '')
     : '';
 
+  const soloIda = esSoloIda(m);
+  const notaSoloIda = soloIda
+    ? ' VIAJE SENCILLO (solo ida): el regreso de las 23:59 del contrato no es una hora ' +
+      'acordada, es el cierre del día que pide el sistema.'
+    : '';
+
   return {
     /* La misma reserva nunca genera dos contratos, y los folios de EuroSystem
        son consecutivos: un gemelo deja un hueco que ya no se cierra. El id de
@@ -148,6 +202,7 @@ function contratoDesde(m, sesion) {
          abajo es el valor por omisión de la puerta, no un dato del cliente, y
          hay que decirlo o la oficina se lo cree. */
       'PASAJEROS: no se capturan en línea, confirmar con el cliente.' +
+      notaSoloIda +
       extrasTexto,
     cliente: {
       nombre: partes[0] || nombre || 'Sin nombre',
@@ -157,14 +212,15 @@ function contratoDesde(m, sesion) {
     },
     servicio: {
       fechaSalida: conZona(m.salida),
-      fechaRegreso: conZona(m.regreso),
+      fechaRegreso: soloIda ? regresoDelSoloIda(m.salida) : conZona(m.regreso),
       origen: String(m.origen || '').trim() || 'Por confirmar',
       destino: String(m.destino || '').trim() || 'Por confirmar',
       /* El punto exacto donde se recoge al grupo, con referencias. Es un campo
          aparte del origen a propósito: «Guadalajara» no le sirve al operador
          a las seis de la mañana, «afuera del Tec, puerta 3» sí. */
       direccionSalida: String(m.puntoSalida || '').trim() || undefined,
-      tipoViaje: 'REDONDO',
+      /* Antes iba fijo en 'REDONDO', también para el solo ida. */
+      tipoViaje: soloIda ? 'SENCILLO' : 'REDONDO',
       /* Las paradas y los días con movimiento, que es exactamente para lo que
          existe este campo: «paradas, horarios, lo que se acordó». Van juntos
          porque el contrato tiene un solo itinerario, y separados por renglón
@@ -501,7 +557,7 @@ async function procesa(crudo, cabeceraFirma) {
      ------------------------------------------------------------ */
   if (sesion.livemode === false) {
     const liga = ligas.ligaDelViaje(defensas.PERMITIDOS[0], sesion.id,
-      (sesion.metadata || {}).regreso);
+      ultimoDiaDelViaje(sesion.metadata || {}));
     const envio = await correo.mandaContrato(sesion.metadata || {}, null, liga);
 
     console.log('[webhook] PAGO DE PRUEBA (' + sesion.id + '): no se registra en ' +
@@ -593,7 +649,7 @@ async function procesa(crudo, cabeceraFirma) {
          Poner el dominio a mano evitaría que la liga se pudiera desviar,
          pero también lo dejaría desactualizado el día que cambie. */
       const liga = ligas.ligaDelViaje(defensas.PERMITIDOS[0], sesion.id,
-        (sesion.metadata || {}).regreso);
+        ultimoDiaDelViaje(sesion.metadata || {}));
       if (!liga) {
         console.error('[webhook] sin LIGAS_SECRETO: el correo sale SIN liga al viaje. ' +
           'El cliente recibe folio y contrato, pero no puede entrar en línea.');
