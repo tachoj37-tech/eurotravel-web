@@ -41,16 +41,18 @@ const AUTOBUS = { id: 'irizar-i6s', name: 'Irizar i6S', cotizadorAutomatico: fal
 (async function () {
 
   /* ---------------- faltantes: la validación, a secas ---------------- */
+  /* 15-sep-2026 · Cambió de lado: ahora «completo» incluye cuántos van. Sin
+     pasajeros el contrato salía con «1 pasajero» (ver probar-pasajeros.cjs). */
   igual('borrador vacío: falta todo',
     COTIZACION.faltantes({}),
-    ['origen', 'destino', 'fecha', 'unidad']);
+    ['origen', 'destino', 'fecha', 'unidad', 'pasajeros']);
 
   igual('completo: no falta nada',
-    COTIZACION.faltantes({ origen: LUGAR_GDL, destino: LUGAR_PVR, salida: '2026-09-03T08:00', regreso: '2026-09-06T18:00', unidad: SPRINTER }),
+    COTIZACION.faltantes({ origen: LUGAR_GDL, destino: LUGAR_PVR, salida: '2026-09-03T08:00', regreso: '2026-09-06T18:00', unidad: SPRINTER, pasajeros: 12 }),
     []);
 
   igual('regreso antes de la salida: se acusa',
-    COTIZACION.faltantes({ origen: LUGAR_GDL, destino: LUGAR_PVR, salida: '2026-09-06T08:00', regreso: '2026-09-03T18:00', unidad: SPRINTER }),
+    COTIZACION.faltantes({ origen: LUGAR_GDL, destino: LUGAR_PVR, salida: '2026-09-06T08:00', regreso: '2026-09-03T18:00', unidad: SPRINTER, pasajeros: 12 }),
     ['fechasInvertidas']);
 
   /* ---------------- puntoDe: el armado del punto --------------------- */

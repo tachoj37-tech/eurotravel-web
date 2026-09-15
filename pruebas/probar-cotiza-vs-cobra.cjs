@@ -157,6 +157,7 @@ async function corre(metrosIda, metrosVuelta, salida, regreso, movimientos, dest
   await pagar({ method: 'POST', headers: cabeceras, body: Object.assign({}, cuerpo, {
     nombre: 'Quien Sea', correo: 'x@y.mx', telefono: '3300000000',
     canal: 'correo', unidad: 'Sprinter', rutaTexto: 'A a B',
+    pasajeros: 12,        // 15-sep-2026: /api/pagar los exige
     movimientos: dias
   }) }, r2);
 
@@ -383,7 +384,8 @@ function dia(fecha, inicio, fin) {
     const c2 = res();
     await pagar({ method: 'POST', headers: cab, body: Object.assign({}, cuerpo, {
       nombre: 'Quien Sea', correo: 'x@y.mx', telefono: '3300000000',
-      canal: 'correo', unidad: 'Sprinter', rutaTexto: 'A a B', movimientos: largos
+      canal: 'correo', unidad: 'Sprinter', rutaTexto: 'A a B', movimientos: largos,
+      pasajeros: 12        // 15-sep-2026: /api/pagar los exige
     }) }, c2);
 
     /*  La Huasteca AHORA tiene precio de lista, y son dos reglas distintas
@@ -493,7 +495,11 @@ function dia(fecha, inicio, fin) {
         placeId: DESTINO.placeId + 'unidad', direccion: 'Puerto Vallarta, Jalisco, México' }),
       salida: '2026-09-03T08:00', regreso: '2026-09-06T18:00', redondo: true,
       nombre: 'Quien Sea', correo: 'x@y.mx', telefono: '3300000000',
-      canal: 'correo', rutaTexto: 'A a B'
+      canal: 'correo', rutaTexto: 'A a B',
+      /* 15-sep-2026: /api/pagar exige pasajeros. Cinco caben en TODAS las
+         unidades —la Suburban es de seis—, así que lo que rechaza abajo es
+         el candado de la unidad y no el de la capacidad. */
+      pasajeros: 5
     };
 
     async function cobra(unidad) {
@@ -517,7 +523,8 @@ function dia(fecha, inicio, fin) {
     for (const unidad of ['Irizar i6S', 'Irizar i6', 'Irizar PB', 'Neobus', 'Suburban',
                           'Marcopolo', 'lo que sea', '']) {
       const r = await cobra(unidad);
-      igual('«' + (unidad || '(vacío)') + '» no se puede cobrar', r._status, 422);
+      igual('«' + (unidad || '(vacío)') + '» no se puede cobrar',
+        [r._status, r._json && r._json.error], [422, 'unidad no cotizable']);
     }
   }
 

@@ -65,6 +65,13 @@
        días que se cobran: se revisa aunque sea de más */
     if (b.salida && b.regreso && b.regreso < b.salida) f.push('fechasInvertidas');
     if (!b.unidad) f.push('unidad');
+    /* Cuántos van (15-sep-2026). Obligatorio, entero, y que quepan en la
+       unidad escogida —`max` en unidades.js—. El servidor lo vuelve a revisar
+       en /api/pagar: esto solo le ahorra el viaje a quien se equivocó. */
+    var texto = String(b.pasajeros == null ? '' : b.pasajeros).trim();
+    var n = /^\d{1,4}$/.test(texto) ? Number(texto) : 0;
+    var cabe = b.unidad && Number(b.unidad.max) > 0 ? Number(b.unidad.max) : Infinity;
+    if (n < 1 || n > cabe) f.push('pasajeros');
     return f;
   }
 
@@ -172,6 +179,7 @@
       origen: null, destino: null,
       salida: '', regreso: '',
       unidad: null, redondo: true,
+      pasajeros: 0,
       movimientos: [],
       cotizacion: null
     };
@@ -209,6 +217,7 @@
         estado.regreso = viaje.regreso || '';
         estado.unidad = viaje.unidad || null;
         estado.redondo = viaje.redondo !== false;
+        estado.pasajeros = Math.max(0, Math.floor(Number(viaje.pasajeros) || 0));
         /* Los movimientos se sueltan a propósito: si cambiaron las fechas,
            los días capturados pueden haber quedado fuera del viaje. Se
            vuelven a poner cuando el cliente los confirme. */

@@ -181,6 +181,13 @@ function contratoDesde(m, sesion) {
         : '')
     : '';
 
+  /* Los pasajeros que anotó `pagar.js`, ya revisados contra la unidad. Se
+     vuelven a acotar al rango de la puerta (1–90): un número fuera de ahí
+     haría que EuroSystem rechazara el contrato ENTERO con un 422. */
+  const paxCrudo = String(m.pasajeros == null ? '' : m.pasajeros).trim();
+  const paxNum = /^\d{1,3}$/.test(paxCrudo) ? Number(paxCrudo) : 0;
+  const pasajerosDados = (paxNum >= 1 && paxNum <= 90) ? paxNum : 0;
+
   const soloIda = esSoloIda(m);
   const notaSoloIda = soloIda
     ? ' VIAJE SENCILLO (solo ida): el regreso de las 23:59 del contrato no es una hora ' +
@@ -197,11 +204,14 @@ function contratoDesde(m, sesion) {
       '. Anticipo pagado con Stripe' +
       (sesion.payment_method_types && sesion.payment_method_types.length
         ? ' (' + sesion.payment_method_types.join(', ') + ')' : '') + '. ' +
-      /* El cotizador en línea pregunta TIPO DE UNIDAD, no cuántos van: el
-         precio sale de los kilómetros, no de las cabezas. Así que el «1» de
-         abajo es el valor por omisión de la puerta, no un dato del cliente, y
-         hay que decirlo o la oficina se lo cree. */
-      'PASAJEROS: no se capturan en línea, confirmar con el cliente.' +
+      /* Desde el 15-sep-2026 el cotizador SÍ pregunta cuántos van y
+         `/api/pagar` los revisa contra la capacidad de la unidad. Las
+         sesiones pagadas antes no los traen: ahí el «1» de abajo es el valor
+         por omisión de la puerta, no un dato del cliente, y hay que decirlo o
+         la oficina se lo cree. */
+      (pasajerosDados
+        ? 'Pasajeros: ' + pasajerosDados + ', los capturó el cliente en línea.'
+        : 'PASAJEROS: no se capturaron en línea, confirmar con el cliente.') +
       notaSoloIda +
       extrasTexto,
     cliente: {
@@ -239,7 +249,7 @@ function contratoDesde(m, sesion) {
          días con movimiento se pagaron y qué se capturó en cada uno. */
       tipoUnidad: claseDeUnidad(m.unidad) || undefined,
       tipoUnidadDetalle: String(m.unidad || '').trim() || undefined,
-      pasajeros: 1
+      pasajeros: pasajerosDados || 1
     },
     cobro: {
       montoTotal: Number(m.total) || 0,

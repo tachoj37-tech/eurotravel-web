@@ -554,7 +554,8 @@
   }
   /* Origen y destino cargan la ayuda más larga, así que se llevan más ancho
      que las fechas —que solo enseñan dos días— y que la unidad. */
-  @media (min-width: 980px) { .search-card { grid-template-columns: 1.32fr 1.32fr 1.46fr 0.8fr auto; align-items: end; padding: 18px; } }
+  /* 15-sep-2026: se sumó «Pasajeros», angosto — solo lleva un número. */
+  @media (min-width: 980px) { .search-card { grid-template-columns: 1.32fr 1.32fr 1.46fr 0.8fr 0.5fr auto; align-items: end; padding: 18px; } }
   /* La tarjeta se sale del ancho del texto para darle aire a los campos: los
      cuatro venían apretados y las ayudas se cortaban.
 
@@ -2827,6 +2828,16 @@ window.IMGS = {
               <span class="msg">Elige la unidad.</span>
             </div>
 
+            <!-- Cuántos van (15-sep-2026). Obligatorio: sin él el contrato salía
+                 con «1 pasajero». Tope = capacidad de la unidad (unidades.js);
+                 /api/pagar lo vuelve a revisar. `type="text"` con teclado
+                 numérico, y no `type="number"`: ése acepta «3.5» y «1e2». -->
+            <div class="field" id="fw-pax">
+              <label for="s-pax">Pasajeros</label>
+              <input id="s-pax" type="text" inputmode="numeric" autocomplete="off" maxlength="3" placeholder="¿Cuántos?" />
+              <span class="msg" id="s-pax-msg">¿Cuántos van?</span>
+            </div>
+
             <div class="field">
               <button class="btn btn-red" id="s-go" type="button" style="height: 44px">
                 <svg aria-hidden="true"><use href="#i-search" /></svg> Buscar
@@ -4346,6 +4357,13 @@ window.IMGS = {
     unidadSel.addEventListener('change', function () { setUnidad(this.value); });
     pintaBotonBuscar();
 
+    /* Pasajeros: solo dígitos, y el error se quita al corregir. */
+    byId('s-pax').addEventListener('input', function () {
+      var limpio = this.value.replace(/\D/g, '').slice(0, 3);
+      if (limpio !== this.value) this.value = limpio;
+      byId('fw-pax').classList.remove('err');
+    });
+
     document.querySelectorAll('input[name="trip"]').forEach(function (r) {
       r.addEventListener('change', function () {
         var redondo = document.querySelector('input[name="trip"]:checked').value === 'redondo';
@@ -5432,6 +5450,8 @@ window.IMGS = {
             salida: VIAJE.salida,
             regreso: VIAJE.regreso,
             redondo: VIAJE.redondo,
+            /* Cuántos van. El servidor los revisa otra vez contra la unidad. */
+            pasajeros: VIAJE.pasajeros,
             nombre: (byId('f-nombre').value || '').trim(),
             correo: (byId('f-mail').value || '').trim(),
             telefono: (byId('f-tel').value || '').trim(),
@@ -5842,6 +5862,9 @@ window.IMGS = {
       var sel = byId('s-unidad');
       if (sel.value) l.push(sel.options[sel.selectedIndex].textContent);
 
+      var pax = (byId('s-pax').value || '').trim();
+      if (pax) l.push(pax + ' pasajeros');
+
       return l.join('\n');
     }
 
@@ -5936,6 +5959,7 @@ window.IMGS = {
           (VIAJE.regreso ? ' → ' + fmtFechaHora(VIAJE.regreso) : ' · solo ida'));
       }
       if (VIAJE.unidad) partes.push(VIAJE.unidad.name);
+      if (VIAJE.pasajeros) partes.push(VIAJE.pasajeros + ' pasajeros');
       return partes.join('  ·  ');
     }
 
@@ -5962,6 +5986,7 @@ window.IMGS = {
           (VIAJE.regreso ? ' → ' + fmtFechaHora(VIAJE.regreso) : ' · solo ida'));
       }
       if (VIAJE.unidad) partes.push(VIAJE.unidad.name);
+      if (VIAJE.pasajeros) partes.push(VIAJE.pasajeros + ' pasajeros');
       /* Si no alcanzó a escoger nada, se manda el saludo de siempre y no
          un «Hola, quiero cotizar este viaje:» con nada debajo. */
       return partes.length > 1 ? partes.join('\n') : '';
@@ -6066,6 +6091,8 @@ window.IMGS = {
           /* Los días NO se mandan: los cuenta el servidor con el mismo
              contador del cotizador y del cobro. */
           unidad: VIAJE.unidad ? VIAJE.unidad.name : '',
+          /* Va a la ficha del vendedor: «44 pasajeros». */
+          pasajeros: VIAJE.pasajeros || '',
           nombre: (byId('f-nombre').value || '').trim()
         })
       }).then(function (r) {
@@ -6311,7 +6338,8 @@ window.IMGS = {
         salida: byId('s-salida').value,
         regreso: byId('s-regreso').value,
         unidad: unidadPorId(tipoUnidad),
-        redondo: document.querySelector('input[name="trip"]:checked').value === 'redondo'
+        redondo: document.querySelector('input[name="trip"]:checked').value === 'redondo',
+        pasajeros: (byId('s-pax').value || '').trim()
       };
       var faltan = COTIZACION.faltantes(borrador);
 
@@ -6326,6 +6354,13 @@ window.IMGS = {
         byId('fw-fechas').classList.add('err');
       }
       if (faltan.indexOf('unidad') >= 0) byId('fw-unidad').classList.add('err');
+      if (faltan.indexOf('pasajeros') >= 0) {
+        var cabenAqui = borrador.unidad && borrador.unidad.max;
+        byId('s-pax-msg').textContent = (cabenAqui && Number(borrador.pasajeros) > cabenAqui)
+          ? 'Caben hasta ' + cabenAqui + '.'
+          : '¿Cuántos van?';
+        byId('fw-pax').classList.add('err');
+      } else byId('fw-pax').classList.remove('err');
 
       if (faltan.length) return;
 
@@ -6385,7 +6420,8 @@ window.IMGS = {
         ['Destino', VIAJE.destino ? VIAJE.destino.place[0] : ''],
         ['Salida', fmtFechaHora(VIAJE.salida)],
         [VIAJE.regreso ? 'Regreso' : 'Viaje', VIAJE.regreso ? fmtFechaHora(VIAJE.regreso) : 'Solo ida'],
-        ['Unidad', VIAJE.unidad ? VIAJE.unidad.name : '']
+        ['Unidad', VIAJE.unidad ? VIAJE.unidad.name : ''],
+        ['Pasajeros', VIAJE.pasajeros ? String(VIAJE.pasajeros) : '']
       ];
       byId('viaje-datos').innerHTML = filas.map(function (f) {
         return '<div><b>' + f[0] + '</b><span>' + esc(f[1]) + '</span></div>';
@@ -6833,6 +6869,7 @@ window.IMGS = {
       if (VIAJE.regreso) filas.push(['Regreso', fmtFechaHora(VIAJE.regreso)]);
       else filas.push(['Viaje', 'Solo ida']);
       filas.push(['Unidad', VIAJE.unidad ? VIAJE.unidad.name + ' · ' + VIAJE.unidad.cap : '']);
+      if (VIAJE.pasajeros) filas.push(['Pasajeros', String(VIAJE.pasajeros)]);
       filas.push(['Servicio', servicioDe(VIAJE.unidad)]);
 
       CAMPOS_DATOS.forEach(function (c) {

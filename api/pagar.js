@@ -28,6 +28,7 @@ const rutas = require('./_rutas');
 const defensas = require('./_defensas');   // origen, freno, sitio e IP, en un lugar
 const stripe = require('./_stripe');       // y todo lo de Stripe, en otro
 const publico = require('./_publico');     // y qué puede ver el cliente, en otro
+const pasajeros = require('./_pasajeros'); // cuántos caben, de unidades.js
 
 /* El seguro contra cobrar de verdad antes de tiempo —PERMITIR_COBRO_REAL—
    ya no vive aqui: se mudo a `_stripe.js`. Asi cualquier cobro que se agregue
@@ -135,6 +136,22 @@ module.exports = async function handler(req, res) {
   if (!correoValido(correo)) { res.status(400).json({ error: 'correo inválido', aviso: 'Revisa tu correo.' }); return; }
   if (telefono.replace(/\D/g, '').length < 10) {
     res.status(400).json({ error: 'teléfono inválido', aviso: 'Revisa tu teléfono a diez dígitos.' });
+    return;
+  }
+
+  /* ------------------------------------------------------------
+     CUÁNTOS VAN, Y SI CABEN (15-sep-2026)
+     ------------------------------------------------------------
+     Antes no se preguntaba y el contrato salía con «1 pasajero». La
+     pantalla ya los pide, pero aquí se vuelven a revisar contra la
+     capacidad de la unidad en `unidades.js`: una petición armada a
+     mano podía apartar una Sprinter de veinte para treinta personas.
+     Va ANTES de medir la ruta: rechazar esto no cuesta una llamada a
+     Google.
+     ------------------------------------------------------------ */
+  const pax = pasajeros.revisa(cuerpo.pasajeros, cuerpo.unidad);
+  if (!pax.ok) {
+    res.status(422).json({ error: pax.error, aviso: pax.aviso });
     return;
   }
 
@@ -312,6 +329,8 @@ module.exports = async function handler(req, res) {
            y un `tipoViaje`, y con el regreso vacío el pago se quedaba
            cobrado sin contrato ni correo. */
         viaje: redondo ? 'REDONDO' : 'SENCILLO',
+        /* Ya revisados contra la capacidad de la unidad, arriba. */
+        pasajeros: String(pax.pasajeros),
         dias: String(dias),
         km: String(Math.round(kmTotal * 10) / 10),
         /* Dónde se recoge al grupo, con referencias. El contrato lo imprime. */

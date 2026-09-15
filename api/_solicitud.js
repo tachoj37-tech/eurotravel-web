@@ -155,7 +155,12 @@ function revisa(cuerpo) {
        separar de la primera, y el vendedor cotiza con este número. */
     dias: salida ? tarifa.diasDeServicio(salida, regreso) : 0,
     unidad: texto(c.unidad, 60),
-    gente: Math.max(0, Math.min(200, Math.floor(Number(c.gente) || 0))),
+    /* La pantalla los manda como `pasajeros` desde el 15-sep-2026 (el mismo
+       nombre que en /api/pagar); `gente` se queda por quien ya lo mandaba.
+       Aquí NO se rechaza por capacidad: es una solicitud, no un cobro, y un
+       grupo de 60 que escogió un camión de 51 es justo lo que el vendedor
+       tiene que leer para ofrecerle dos. */
+    gente: Math.max(0, Math.min(200, Math.floor(Number(c.pasajeros != null && c.pasajeros !== '' ? c.pasajeros : c.gente) || 0))),
     notas: texto(c.notas, 400)
   };
 

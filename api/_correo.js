@@ -183,6 +183,9 @@ function datosDelCorreo(m) {
     soloIda: String(d.viaje || '').toUpperCase() === 'SENCILLO' ||
       (String(d.viaje || '').toUpperCase() !== 'REDONDO' && !d.regreso && !!d.salida),
     dias: String(d.dias || '').slice(0, 4),
+    /* Cuántos van, desde el 15-sep-2026. Solo un entero chico: es texto
+       que el cliente capturó y va dentro de un correo. */
+    pasajeros: /^\d{1,3}$/.test(String(d.pasajeros || '').trim()) ? String(d.pasajeros).trim() : '',
     puntoSalida: String(d.puntoSalida || '').slice(0, 200),
     total: Number(d.total) || 0,
     anticipo: Number(d.anticipo) || 0,
@@ -246,6 +249,7 @@ function mensajeDeContrato(metadata, pdfBase64, liga) {
         renglon('Viaje', d.soloIda ? 'Solo ida' : '') +
         renglon('Días de servicio', d.dias) +
         renglon('Unidad', d.unidad) +
+        renglon('Pasajeros', d.pasajeros) +
         renglon('Dónde los recogemos', d.puntoSalida) +
       '</table>' +
 
@@ -304,6 +308,7 @@ function mensajeDeContrato(metadata, pdfBase64, liga) {
     d.soloIda ? 'Viaje:               Solo ida' : null,
     d.dias ? 'Días de servicio:    ' + d.dias : null,
     d.unidad ? 'Unidad:              ' + d.unidad : null,
+    d.pasajeros ? 'Pasajeros:           ' + d.pasajeros : null,
     d.puntoSalida ? 'Dónde los recogemos: ' + d.puntoSalida : null,
     '',
     pdfBase64 ? 'Tu contrato va adjunto en este correo, en PDF. Guárdalo.' : null,
