@@ -39,7 +39,11 @@ function igual(nombre, dio, esperado) {
 }
 function cierto(nombre, v) { igual(nombre, !!v, true); }
 
-process.env.STRIPE_WEBHOOK_SECRET = '';          // cuerpo como objeto: se consulta a Stripe
+/* El secreto SI va puesto: sin el, el webhook contesta 500 y no procesa nada
+   (probar-webhook.cjs lo cuida). Lo que se prueba aqui es la otra situacion,
+   la de produccion: el secreto esta, pero el cuerpo llega como OBJETO, sin
+   bytes que firmar, y entonces manda la consulta a Stripe. */
+process.env.STRIPE_WEBHOOK_SECRET = 'whsec_de_mentiras';
 process.env.CONTRATOS_API_KEY = 'llave_de_mentiras';
 process.env.STRIPE_SECRET_KEY = 'sk_test_de_mentiras';
 process.env.RESEND_API_KEY = 're_de_mentiras';

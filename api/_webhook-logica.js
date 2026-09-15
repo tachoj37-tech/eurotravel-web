@@ -27,14 +27,22 @@
    Stripe reintenta hasta tres dias mientras la respuesta no sea
    2xx. Eso se aprovecha:
 
-     · 200  procesado, o algo que reintentar no arregla (datos que
-            EuroSystem rechaza). Reintentar mil veces un 422 solo
-            hace ruido.
-     · 500  algo que SI se puede arreglar: falta configurar una
-            llave, o EuroSystem no contesto. Que Stripe insista
-            le da a la oficina tres dias para acomodarlo, y el
-            pago no se pierde.
+     · 200  el contrato EXISTE en EuroSystem —recien creado o
+            «ya existia»— y el cliente tiene su correo. Tambien
+            para lo que no nos toca: un evento que se ignora, una
+            sesion ajena, un OXXO sin pagar todavia.
+     · 500  el cobro esta hecho y el contrato NO existe, sea cual
+            sea la razon: falta una llave, EuroSystem no contesto,
+            o rechazo los datos. Que Stripe insista le da tres dias
+            a la oficina para acomodarlo y que el contrato se cree
+            solo. Insistir es gratis: la puerta es idempotente por
+            `referenciaExterna` (§5) y jamas hace un gemelo.
      · 400  la firma no cuadra. No es Stripe.
+
+   LA REGLA, EN UNA LINEA: nunca 200 sobre un cobro cuyo contrato
+   no existe. Un 200 es Stripe dando el aviso por entregado y no
+   volviendo nunca; despues de eso, del cobro solo queda un renglon
+   en el registro que nadie va a ir a leer.
 
    LA LLAVE DE EUROSYSTEM ES DE SERVIDOR A SERVIDOR
    ------------------------------------------------
@@ -48,10 +56,13 @@ const firma = require('./_firma-stripe');
 // El dominio definitivo de EuroSystem (dictado del dueño, 5-sep-2026); la dirección vieja redirige.
 const EUROSYSTEM = process.env.EUROSYSTEM_URL || 'https://eurosystem.site';
 const PUERTA = '/api/contratos/externo';
-/* La puerta de reversas. TODAVIA NO EXISTE en EuroSystem: esta pedida en
-   docs/superpowers/specs/2026-08-25-abonos-en-linea-design.md. Mientras no
-   exista, la llamada falla con 404 y el aviso a la oficina hace el trabajo. */
-const PUERTA_REVERSA = '/api/contratos/reversa-externa';
+/* La puerta de reversas, la de verdad: CONTRATOS-API.md §13.
+   Estuvo apuntando a `/api/contratos/reversa-externa`, que NO EXISTE ni
+   existió nunca — era el nombre que se le puso de memoria a una puerta que
+   todavía se estaba pidiendo. El 404 constante se leía como «aún no está» y
+   el correo a la oficina tapaba el hueco, así que ninguna reversa se registró
+   jamás en EuroSystem y nadie lo notaba. */
+const PUERTA_REVERSA = '/api/contratos/abono-externo/revertir';
 
 /* El centro de Mexico. Fijo, no calculado: Mexico dejo el horario de verano en
    2022, asi que -06:00 vale todo el año. La puerta de EuroSystem RECHAZA una
@@ -284,16 +295,19 @@ const defensas = require('./_defensas');
    EL ORDEN DE LO QUE IMPORTA
 
      1. que alguien se entere ............ el correo a la oficina
-     2. que el sistema lo registre ....... EuroSystem
+     2. que el sistema lo registre ....... EuroSystem, §13
      3. que Stripe no lo reintente ....... el 200
 
-   Por eso el 200 solo se da si SE AVISO. Si el correo no salió,
-   se contesta 500 y Stripe insiste tres días: vale más que Stripe
-   siga tocando la puerta a que el dinero se pierda en silencio.
+   El 200 pide las DOS primeras. Si el correo no salió, 500. Si
+   EuroSystem no la registró, 500 también —lo exige §13 para el
+   404, y vale igual para cualquier otro «no»—: vale más que Stripe
+   siga tocando la puerta tres días a que el dinero se pierda en
+   silencio.
 
-   EL AVISO SE MANDA SIEMPRE, aunque EuroSystem conteste bien. Una
-   reversa no es un movimiento de rutina: es una llamada que
-   alguien tiene que hacerle al cliente antes del día del viaje.
+   EL AVISO SE MANDA SIEMPRE, aunque EuroSystem conteste bien, y
+   antes de decidir qué se contesta. Una reversa no es un
+   movimiento de rutina: es una llamada que alguien tiene que
+   hacerle al cliente antes del día del viaje.
    ============================================================ */
 async function atiendeReversa(tipo, objeto, firmado) {
   const pago = reversas.pagoDelAviso(objeto);
@@ -382,7 +396,7 @@ async function atiendeReversa(tipo, objeto, firmado) {
     ', ' + monto + ' — pago ' + pago +
     (clase === 'ANTICIPO' ? ' — HAY QUE QUEMAR EL FOLIO' : ''));
 
-  /* ---- 1. que EuroSystem lo registre, si su puerta ya existe ---- */
+  /* ---- 1. que EuroSystem lo registre ---- */
   const llave = (process.env.CONTRATOS_API_KEY || '').trim();
   let registrada = false, porQueNo = 'sin CONTRATOS_API_KEY';
   if (llave) {
@@ -392,10 +406,13 @@ async function atiendeReversa(tipo, objeto, firmado) {
         headers: { 'Content-Type': 'application/json', 'x-api-key': llave },
         body: JSON.stringify(reversas.cuerpoParaEuroSystem(datos))
       });
+      /* §13: el 200 es `{revertido:true}` o `{yaEstaba:true}`. Los dos son
+         éxito — el segundo es el reintento que ya no tiene nada que hacer—,
+         así que basta con que la respuesta sea buena. */
       registrada = r.ok;
       if (!r.ok) {
         porQueNo = r.status === 404
-          ? 'esa puerta todavía no existe en EuroSystem'
+          ? 'EuroSystem no tiene registrado todavía ese cobro (' + pago + ')'
           : 'EuroSystem contestó ' + r.status;
       }
     } catch (e) {
@@ -409,7 +426,9 @@ async function atiendeReversa(tipo, objeto, firmado) {
     console.error('[reversa] EuroSystem NO la registró: ' + porQueNo + '. Va por correo.');
   }
 
-  /* ---- 2. que una persona se entere. ESTO es lo que no puede fallar ---- */
+  /* ---- 2. que una persona se entere. ESTO es lo que no puede fallar ----
+     Va SIEMPRE, y va antes de decidir qué se le contesta a Stripe: el dinero
+     ya salió de la cuenta y eso no espera tres días de reintentos. */
   const aviso = reversas.avisoDeReversa(datos);
   const envio = await correo.mandaALaOficina(aviso.asunto, aviso.texto);
 
@@ -419,6 +438,29 @@ async function atiendeReversa(tipo, objeto, firmado) {
     console.error('[reversa] EL AVISO NO SALIO (' + envio.motivo + '). ' +
       'Folio ' + (datos.folio || '?') + ', pago ' + pago + '. Stripe reintentará.');
     return { status: 500, cuerpo: { error: 'no se pudo avisar de la reversa' } };
+  }
+
+  /* ---- 3. y solo ahora, qué se le contesta a Stripe ----------------------
+     Lo manda CONTRATOS-API.md §13 con todas sus letras: «Si contesta 404 (esa
+     referencia aún no está registrada), quien llama DEBE contestarle a Stripe
+     con un error (no 2xx) para que Stripe reintente el aviso. Contestar 200
+     pierde la reversa».
+
+     No es un tecnicismo: un reembolso puede llegar ANTES de que su cobro
+     alcanzara a registrarse, y en ese caso el reintento de dentro de un rato
+     sí encuentra el abono y lo revierte solo. Contestar 200 sería cerrar esa
+     puerta para siempre y dejar a EuroSystem diciendo que el viaje está
+     pagado cuando el dinero ya se fue.
+
+     Lo mismo para cualquier otro «no» —401, 422, 429, 500, o ni contestó—:
+     ninguno significa que la reversa quedó registrada, y todos se pueden
+     arreglar dentro de los tres días que Stripe insiste. La oficina ya fue
+     avisada arriba, así que un reintento de más no cuesta nada.
+     ---------------------------------------------------------------------- */
+  if (!registrada) {
+    console.error('[reversa] ' + motivo + ' de ' + pago + ' AVISADA pero NO registrada en ' +
+      'EuroSystem (' + porQueNo + '). Stripe reintentará hasta tres días.');
+    return { status: 500, cuerpo: { error: 'reversa no registrada en EuroSystem', avisada: true } };
   }
 
   return {
@@ -435,6 +477,38 @@ async function procesa(crudo, cabeceraFirma) {
   /* Ojo: aqui NO va el guardia de origen de _defensas. Stripe llama de
      servidor a servidor y no manda cabecera Origin ni Referer; exigirla
      cerraria la puerta justo a quien tiene que entrar. */
+
+  /* ============================================================
+     SIN EL SECRETO NO SE LE CREE A NADIE. VA PRIMERO.
+     ------------------------------------------------------------
+     `.env.example` lo prometía desde siempre —«Sin él,
+     /api/webhook-stripe contesta 500 y Stripe reintenta hasta tres
+     días»— y el código hacía otra cosa: se saltaba la verificación y
+     seguía adelante consultando a Stripe. O sea que una variable sin
+     poner APAGABA el primer candado en silencio, y el único rastro
+     era un renglón del registro que nadie lee.
+
+     Hay que distinguir dos cosas que no se parecen:
+
+       · «el entorno me parseó el cuerpo y ya no hay bytes que
+         firmar» — eso le pasa a TODO el tráfico bueno de Stripe en
+         Vercel, y por eso se sigue adelante apoyándose en la consulta
+         a Stripe, que es más fuerte;
+
+       · «nadie configuró el secreto» — eso es una puerta sin
+         cerradura, y no es un caso a manejar: es algo que hay que
+         arreglar. Se contesta 500 y Stripe insiste tres días: el
+         cobro no se pierde, se queda esperando a que alguien ponga
+         la variable.
+     ============================================================ */
+  const secreto = (process.env.STRIPE_WEBHOOK_SECRET || '').trim();
+  if (!secreto) {
+    console.error('[webhook] FALTA STRIPE_WEBHOOK_SECRET: no hay con qué comprobar ' +
+      'ninguna firma, así que NO se procesa nada — ni un pago ni una reversa. ' +
+      'Stripe reintentará hasta tres días. Ponla en las variables de Vercel ' +
+      '(la da Stripe al dar de alta el endpoint; empieza con whsec_).');
+    return { status: 500, cuerpo: { error: 'sin STRIPE_WEBHOOK_SECRET' } };
+  }
 
   let evento;
   const traeBytes = Buffer.isBuffer(crudo) || typeof crudo === 'string';
@@ -468,9 +542,8 @@ async function procesa(crudo, cabeceraFirma) {
      que se hace es CARGAR EL DATO: abajo, todo lo que valga dinero exige
      ademas que Stripe lo confirme, y `firmado` decide como se trata lo que
      no cuadra. */
-  const secreto = (process.env.STRIPE_WEBHOOK_SECRET || '').trim();
   let firmado = false;
-  if (traeBytes && secreto) {
+  if (traeBytes) {
     const v = firma.verifica(crudo, cabeceraFirma, secreto);
     if (!v.ok) {
       // El motivo se queda en el registro. A quien toco la puerta no se le
@@ -479,8 +552,6 @@ async function procesa(crudo, cabeceraFirma) {
       return { status: 400, cuerpo: { error: 'firma inválida' } };
     }
     firmado = true;
-  } else if (!secreto) {
-    console.error('[webhook] sin STRIPE_WEBHOOK_SECRET: no se pudo verificar la firma');
   } else {
     console.error('[webhook] el cuerpo no llegó crudo: no se pudo verificar la firma; ' +
       'se procede consultando a Stripe, que es la fuente de verdad');
@@ -690,18 +761,40 @@ async function procesa(crudo, cabeceraFirma) {
         : { status: 200, cuerpo: { recibido: true, folio: d.folio, correo: false } };
     }
 
-    /* 401/422 no se arreglan reintentando: la llave está mal o los datos no
-       pasan la validación. Se acusa recibo para que Stripe deje de insistir, y
-       se grita en el registro para que alguien lo capture a mano. */
-    if (r.status === 401 || r.status === 422 || r.status === 400) {
-      console.error('[webhook] EuroSystem rechazó el contrato (' + r.status + '): ' +
-        JSON.stringify(d).slice(0, 400) + ' — sesión ' + sesion.id + '. REGISTRAR A MANO.');
-      return { status: 200, cuerpo: { recibido: true, error: 'rechazado por EuroSystem' } };
-    }
+    /* ------------------------------------------------------------
+       CUALQUIER «NO» DE EUROSYSTEM SE REINTENTA. EL DINERO YA SE COBRO.
+       ------------------------------------------------------------
+       Aquí vivía el defecto más caro de este archivo, y estaba escrito
+       como si fuera criterio: un 401, un 422 o un 400 se contestaban
+       200 «para que Stripe deje de insistir», con un `console.error`
+       que decía REGISTRAR A MANO.
 
-    // 429, 500, 503: sí se arreglan esperando. Que Stripe reintente.
-    console.error('[webhook] EuroSystem contestó ' + r.status + '; Stripe reintentará. Sesión ' + sesion.id);
-    return { status: 500, cuerpo: { error: 'EuroSystem no disponible' } };
+       Suena razonable y es falso donde importa. Con un 200, Stripe da
+       el aviso por entregado y NO VUELVE NUNCA. El cliente ya pagó, el
+       contrato no existe, no le llega correo, y lo único que queda del
+       cobro es un renglón del registro que hay que ir a buscar. Nadie
+       va a buscarlo.
+
+       Con un 500, Stripe insiste hasta tres días. Eso no arregla solo
+       un dato mal escrito, pero le da a la oficina tres días para
+       arreglar la llave o el dato y que el contrato se cree SOLO, sin
+       que nadie tenga que enterarse a tiempo.
+
+       Insistir es gratis porque la puerta es idempotente por
+       `referenciaExterna` (CONTRATOS-API.md §5): el reintento que sí
+       entra devuelve el MISMO folio con `repetido: true`, y de ahí
+       sigue el camino de arriba —correo al cliente y 200—. No hay
+       forma de que esto genere un contrato gemelo.
+
+       Y el «ya existía» nunca llega por aquí: es un 200 (§4), o sea
+       que entra por el `r.ok` de arriba. Todo lo que cae en esta rama
+       es un contrato que NO SE CREO.
+       ------------------------------------------------------------ */
+    console.error('[webhook] EuroSystem NO registró el contrato (' + r.status + '): ' +
+      JSON.stringify(d).slice(0, 400) + ' — sesión ' + sesion.id +
+      '. EL COBRO YA ESTA HECHO Y NO HAY CONTRATO. Stripe reintentará tres días; ' +
+      'si no se arregla en ese plazo, hay que capturarlo A MANO.');
+    return { status: 500, cuerpo: { error: 'EuroSystem no registró el contrato', euro: r.status } };
   } catch (e) {
     console.error('[webhook] no se pudo hablar con EuroSystem: ' + e.message + '; Stripe reintentará.');
     return { status: 500, cuerpo: { error: 'EuroSystem inalcanzable' } };

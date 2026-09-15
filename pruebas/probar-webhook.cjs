@@ -143,11 +143,55 @@ function euroDice(status, datos) {
 
 (async function () {
 
+  /* ============================================================
+     SIN EL SECRETO NO SE LE CREE A NADIE
+     ------------------------------------------------------------
+     `.env.example` lo dice desde siempre: «Sin el, /api/webhook-stripe
+     contesta 500 y Stripe reintenta hasta tres dias». El codigo hacia
+     otra cosa: se saltaba la firma y seguia adelante consultando a
+     Stripe. O sea que una variable sin poner APAGABA el primer candado
+     en silencio, y el unico aviso era un renglon en el registro.
+
+     No es lo mismo «no pude comprobar la firma porque el entorno me
+     parseo el cuerpo» —eso pasa en produccion con todo el trafico bueno
+     y por eso se sigue— que «nadie configuro el secreto». Lo segundo es
+     una puerta sin cerradura, y se contesta 500: el cobro no se pierde,
+     se queda esperando tres dias a que alguien ponga la variable.
+     ============================================================ */
+  let r = res();
+  {
+    const guardado = process.env.STRIPE_WEBHOOK_SECRET;
+    ultimoEnvio = null;
+    sesionEnStripe = sesionPagada;
+    euroDice(201, { folio: 1 });
+
+    for (const falta of ['', '   ', undefined]) {
+      if (falta === undefined) delete process.env.STRIPE_WEBHOOK_SECRET;
+      else process.env.STRIPE_WEBHOOK_SECRET = falta;
+
+      ultimoEnvio = null;
+      r = res();
+      await handler(pide({ type: 'checkout.session.completed', data: { object: sesionPagada } }), r);
+      igual('sin STRIPE_WEBHOOK_SECRET (' + JSON.stringify(falta) + '): 500, no se procesa',
+        r._status, 500);
+      igual('sin STRIPE_WEBHOOK_SECRET: NO se llamó a EuroSystem', ultimoEnvio, null);
+    }
+
+    /* Ni siquiera una reversa, que es lo que mas caro sale dejar pasar. */
+    ultimoEnvio = null;
+    r = res();
+    await handler(pide({ type: 'charge.refunded',
+      data: { object: { id: 'ch_1', payment_intent: 'pi_ABC123', amount_refunded: 520000 } } }), r);
+    igual('sin secreto, ni una reversa se atiende: 500', r._status, 500);
+
+    process.env.STRIPE_WEBHOOK_SECRET = guardado;
+  }
+
   /* -------- firma inventada: no se registra NADA -------- */
   ultimoEnvio = null;
   sesionEnStripe = sesionPagada;
   euroDice(201, { folio: 1 });
-  let r = res();
+  r = res();
   await handler(pide({ type: 'checkout.session.completed', data: { object: sesionPagada } },
                      { secreto: 'whsec_del_atacante' }), r);
   igual('evento con firma falsa: 400', r._status, 400);
@@ -220,12 +264,63 @@ function euroDice(status, datos) {
     data: { object: Object.assign({}, sesionPagada, { payment_method_types: ['oxxo'] }) } }), r);
   igual('OXXO pagado despues: registra', [r._status, r._json.folio], [200, 44001]);
 
-  /* -------- semantica de reintentos -------- */
+  /* ============================================================
+     SEMANTICA DE REINTENTOS · UN COBRO NO SE PIERDE NUNCA
+     ------------------------------------------------------------
+     Aqui esta el defecto mas caro que tuvo este archivo, y estuvo
+     escrito como acierto durante semanas:
+
+         «EuroSystem rechaza por datos (422): 200, que Stripe NO insista»
+
+     Eso suena razonable —reintentar mil veces un 422 solo hace
+     ruido— y es falso donde importa: EL DINERO YA SE COBRO. Con un
+     200, Stripe da el aviso por entregado y NO VUELVE. El contrato
+     no existe, el cliente no recibe nada, y lo unico que queda del
+     cobro es un renglon de `console.error` que nadie lee.
+
+     Con un 500, Stripe insiste hasta tres dias. Eso le da a la
+     oficina tres dias para arreglar la llave o el dato y que el
+     contrato se cree solo. Si al tercer dia no se arreglo, el cobro
+     esta igual de perdido que antes — pero se tuvieron tres dias
+     para no perderlo.
+
+     La idempotencia por `referenciaExterna` (CONTRATOS-API.md §5)
+     es lo que hace que insistir sea gratis: el reintento que SI
+     entra devuelve el mismo folio con `repetido: true`.
+
+     Y una sola cosa mas, que es la que le toca al cliente: EL
+     CORREO NO SALE si el contrato no se creo. Prometerle un
+     contrato que no existe es peor que no escribirle.
+     ============================================================ */
+  /* Con clave de correo puesta: si no, «no salio correo» seria cierto por
+     una variable que falta y la asercion no probaria nada. */
+  process.env.RESEND_API_KEY = 're_de_mentiras';
+  RESEND_DICE = { ok: true, status: 200, cuerpo: { id: 'em_1' } };
+
+  for (const codigo of [400, 422, 401]) {
+    ultimoCorreo = null;
+    sesionEnStripe = sesionPagada;
+    euroDice(codigo, { error: 'no pasa', detalle: [] });
+    r = res();
+    await handler(pide({ type: 'checkout.session.completed', data: { object: sesionPagada } }), r);
+    igual('EuroSystem rechaza (' + codigo + '): 500, que Stripe insista tres dias', r._status, 500);
+    igual('EuroSystem rechaza (' + codigo + '): y NUNCA 200', r._status === 200, false);
+    igual('EuroSystem rechaza (' + codigo + '): NO se le promete al cliente un contrato que no existe',
+      ultimoCorreo, null);
+  }
+
+  /* El reintento que SI entra: EuroSystem contesta «ya existia». No se
+     duplica nada —mismo folio— y de ahi en adelante todo sigue como en el
+     camino bueno: correo al cliente y 200 para que Stripe se quede en paz. */
+  ultimoCorreo = null;
   sesionEnStripe = sesionPagada;
-  euroDice(422, { error: 'validación', detalle: [] });
+  euroDice(200, { folio: 51099, repetido: true, pdfBase64: 'JVBERi0xLjMK' });
   r = res();
   await handler(pide({ type: 'checkout.session.completed', data: { object: sesionPagada } }), r);
-  igual('EuroSystem rechaza por datos (422): 200, que Stripe NO insista', r._status, 200);
+  igual('reintento con contrato ya creado: 200 y el MISMO folio',
+    [r._status, r._json.folio, r._json.repetido], [200, 51099, true]);
+  cierto('y el correo al cliente si sale, una sola vez', !!ultimoCorreo);
+  igual('al correo del cliente', ultimoCorreo.cuerpo.to, ['quien@sea.mx']);
 
   euroDice(503, { error: 'sin llave' });
   r = res();

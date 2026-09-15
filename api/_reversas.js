@@ -22,11 +22,17 @@
 
    EL CORREO A LA OFICINA ES LA GARANTIA, NO EL ADORNO
 
-   La puerta de reversas de EuroSystem todavía no existe. Mientras
-   no exista, lo único que impide perder el dinero es que una
-   persona se entere. Por eso el aviso se manda SIEMPRE, aunque
-   EuroSystem conteste bien, y por eso el webhook solo se da por
-   satisfecho cuando alguien fue avisado.
+   El aviso se manda SIEMPRE, aunque EuroSystem lo registre bien:
+   una reversa no es un movimiento de rutina, es una llamada que
+   alguien tiene que hacerle al cliente antes del día del viaje. Y
+   se manda ANTES de decidir qué se le contesta a Stripe, porque el
+   dinero ya salió de la cuenta y eso no espera reintentos.
+
+   Para que EuroSystem la registre se llama a la puerta de
+   CONTRATOS-API.md §13. Si esa puerta dice que no —incluido el 404
+   de «ese cobro aún no está registrado»— se le contesta a Stripe
+   con un 500 para que insista: lo pide la propia §13, y sin eso la
+   reversa se pierde.
 
    El nombre empieza con guion bajo para que Vercel no lo publique
    como una dirección más del sitio.
@@ -137,25 +143,31 @@ function claseDePago(metadata) {
 /* ------------------------------------------------------------
    LO QUE SE LE PIDE A EUROSYSTEM
    ------------------------------------------------------------
-   Una sola puerta para los dos casos, con `tipo` diciendo cuál.
-   Idempotente por `referenciaPago`: el mismo pago revertido nunca
-   puede quemar dos folios ni descontar dos veces.
+   `POST /api/contratos/abono-externo/revertir`, CONTRATOS-API.md §13.
+   DOS campos, ni uno más, y EuroSystem rechaza con 422 lo que no
+   entienda:
 
-   ESTA PUERTA TODAVIA NO EXISTE en EuroSystem. Está pedida en
-   docs/superpowers/specs/2026-08-25-abonos-en-linea-design.md.
-   Mientras no exista, este cuerpo se arma igual, la llamada falla,
-   y el aviso a la oficina hace el trabajo.
+     referencia   el `pi_…` de Stripe — EXACTAMENTE el mismo con el
+                  que la página registra el abono al cobrarlo, que es
+                  lo que hace idempotente a la puerta: el mismo pago
+                  revertido nunca descuenta dos veces ni quema dos
+                  folios.
+     motivo       'reembolso' o 'contracargo'. EN MINUSCULAS: lo que
+                  se usa aquí adentro —REEMBOLSO, CONTRACARGO— es
+                  para que la oficina lo lea, no para EuroSystem.
+
+   Lo demás que antes viajaba aquí —el tipo, el monto, la referencia
+   del contrato, un detalle escrito— no lo pide esa puerta: EuroSystem
+   ya sabe de qué contrato es el abono, y el monto lo tiene anotado de
+   cuando entró. Todo eso sigue yendo al correo de la oficina, que es
+   quien sí lo necesita para actuar.
    ------------------------------------------------------------ */
+const MOTIVO_EUROSYSTEM = { REEMBOLSO: 'reembolso', CONTRACARGO: 'contracargo' };
+
 function cuerpoParaEuroSystem(datos) {
   return {
-    referenciaExterna: datos.referenciaExterna,
-    referenciaPago: datos.pago,
-    tipo: datos.clase,                 // ANTICIPO | ABONO
-    motivo: datos.motivo,              // REEMBOLSO | CONTRACARGO
-    monto: datos.monto,
-    detalle: datos.clase === 'ANTICIPO'
-      ? 'El pago que creó este contrato se revirtió en Stripe. El viaje no está pagado.'
-      : 'Un abono de este contrato se revirtió en Stripe.'
+    referencia: datos.pago,
+    motivo: MOTIVO_EUROSYSTEM[datos.motivo] || 'reembolso'
   };
 }
 

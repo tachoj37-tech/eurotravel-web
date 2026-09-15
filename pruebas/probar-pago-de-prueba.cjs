@@ -29,6 +29,9 @@
 'use strict';
 
 process.env.LIGAS_SECRETO = 'secreto-de-prueba-1234567890';
+/* Sin secreto de firma el webhook contesta 500 sin mirar nada — lo cuida
+   probar-webhook.cjs—, y aqui lo que se prueba es lo de mas adentro. */
+process.env.STRIPE_WEBHOOK_SECRET = 'whsec_de_prueba';
 process.env.STRIPE_SECRET_KEY = 'sk_test_x';
 process.env.RESEND_API_KEY = 're_x';
 process.env.CONTRATOS_API_KEY = 'llave-de-prueba';
@@ -77,10 +80,19 @@ global.fetch = async function (url, opc) {
 };
 
 const logica = require('../api/_webhook-logica.js');
+const firma = require('../api/_firma-stripe.js');
 
 function aviso() {
   return JSON.stringify({ type: 'checkout.session.completed',
     data: { object: { id: SESION.id } } });
+}
+
+/* El aviso va FIRMADO. Antes iba con la firma vacía y pasaba igual, porque
+   sin `STRIPE_WEBHOOK_SECRET` la verificación se saltaba sola; eso era el
+   hueco, no una comodidad de la prueba. Aquí se prueba el pago de prueba, no
+   la firma: que entre por la puerta buena. */
+function manda(cuerpo) {
+  return logica.procesa(cuerpo, firma.firmaDePrueba(cuerpo, process.env.STRIPE_WEBHOOK_SECRET));
 }
 
 (async function () {
@@ -90,7 +102,7 @@ function aviso() {
      «no registrar» pierde una venta y nadie se entera. */
   {
     arma(true);
-    const r = await logica.procesa(aviso(), '');
+    const r = await manda(aviso());
     igual('un pago real contesta bien', r.status, 200);
     cierto('SI se registra en EuroSystem', TOCO_EUROSYSTEM);
     igual('con su folio de EuroSystem', r.cuerpo.folio, '51001');
@@ -105,7 +117,7 @@ function aviso() {
      del campo, cualquier cosa: ante la duda, SE REGISTRA. */
   {
     arma(true); delete SESION.livemode;
-    const sinCampo = await logica.procesa(aviso(), '');
+    const sinCampo = await manda(aviso());
     cierto('sin el campo, se registra igual', TOCO_EUROSYSTEM);
     falso('y no se marca como prueba', sinCampo.cuerpo.prueba);
 
@@ -113,7 +125,7 @@ function aviso() {
     const noRegistrados = [];
     for (let i = 0; i < rarezas.length; i++) {
       arma(true); SESION.livemode = rarezas[i];
-      await logica.procesa(aviso(), '');
+      await manda(aviso());
       if (!TOCO_EUROSYSTEM) noRegistrados.push(JSON.stringify(rarezas[i]));
     }
     igual('ningún valor raro impide registrar un cobro', noRegistrados, []);
@@ -122,7 +134,7 @@ function aviso() {
   /* ============ 3. UN PAGO DE PRUEBA NO TOCA EUROSYSTEM ============ */
   {
     arma(false);
-    const r = await logica.procesa(aviso(), '');
+    const r = await manda(aviso());
     igual('contesta bien, no es un error', r.status, 200);
     falso('NO se registró en EuroSystem', TOCO_EUROSYSTEM);
     cierto('y se dice que fue prueba', r.cuerpo.prueba);
@@ -133,7 +145,7 @@ function aviso() {
      Que es justo lo que el dueño quiere poder ver. */
   {
     arma(false);
-    await logica.procesa(aviso(), '');
+    await manda(aviso());
 
     igual('salen DOS correos: el del cliente y el de la oficina', CORREOS.length, 2);
 
@@ -162,7 +174,7 @@ function aviso() {
       type: 'checkout.session.completed',
       data: { object: { id: SESION.id, livemode: false } }
     });
-    await logica.procesa(mentiroso, '');
+    await manda(mentiroso);
     cierto('un aviso que dice «es prueba» NO impide registrar un cobro real',
       TOCO_EUROSYSTEM);
   }

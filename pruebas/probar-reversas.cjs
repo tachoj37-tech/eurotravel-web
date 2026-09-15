@@ -44,10 +44,14 @@ process.env.AVISOS_A = 'ventas@eurotravel.com.mx';
    caso; los casos en que Stripe NO confirma se prueban aparte, abajo. */
 let CARGO = { id: 'ch_1', amount: 520000, amount_refunded: 520000, disputed: true };
 let SESION_POR_PAGO = null;
-let EUROSYSTEM_REVERSA = { ok: false, status: 404 };   // por omision: no existe
+/* La puerta de reversas YA EXISTE en EuroSystem: es
+   `POST /api/contratos/abono-externo/revertir` (CONTRATOS-API.md §13). Por
+   omision contesta lo bueno; los casos feos se encienden uno por uno. */
+let EUROSYSTEM_REVERSA = { ok: true, status: 200, datos: { revertido: true } };
 let RESEND = { ok: true };
 let CORREOS = [];
 let LLAMADAS_EURO = [];
+let LLAMADAS_EURO_CRUDAS = [];
 
 global.fetch = function (url, opc) {
   const u = String(url);
@@ -59,10 +63,15 @@ global.fetch = function (url, opc) {
     return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({
       data: SESION_POR_PAGO ? [SESION_POR_PAGO] : [] }) });
   }
-  if (u.indexOf('reversa-externa') >= 0) {
+  /* La puerta se reconoce por su direccion EXACTA, no por un pedazo del
+     nombre: esta prueba existe justamente porque el codigo apuntaba a una
+     direccion que no existe y nadie lo notaba. */
+  if (u.indexOf('/api/contratos/') >= 0) {
     LLAMADAS_EURO.push(JSON.parse(opc.body));
+    LLAMADAS_EURO_CRUDAS.push({ url: u, opciones: opc });
+    if (EUROSYSTEM_REVERSA.tronar) return Promise.reject(new Error('sin red'));
     return Promise.resolve({ ok: EUROSYSTEM_REVERSA.ok, status: EUROSYSTEM_REVERSA.status,
-      json: () => Promise.resolve({}) });
+      json: () => Promise.resolve(EUROSYSTEM_REVERSA.datos || {}) });
   }
   if (u.indexOf('api.resend.com') >= 0) {
     if (!RESEND.ok) return Promise.resolve({ ok: false, status: 500,
@@ -91,7 +100,7 @@ function sesionCon(extra) {
 }
 
 async function avisa(tipo, objeto) {
-  CORREOS = []; LLAMADAS_EURO = [];
+  CORREOS = []; LLAMADAS_EURO = []; LLAMADAS_EURO_CRUDAS = [];
   const ev = JSON.stringify({ type: tipo, data: { object: objeto } });
   return logica.procesa(ev, firma.firmaDePrueba(ev, 'whsec_x'));
 }
@@ -121,18 +130,36 @@ const CONTRACARGO = { id: 'dp_1', charge: 'ch_1', payment_intent: 'pi_ABC123', a
   /* ============ 2. SI SE CAE EL ANTICIPO, SE QUEMA EL FOLIO ============ */
   {
     SESION_POR_PAGO = sesionCon();          // sin `tipo`, o sea el anticipo
-    EUROSYSTEM_REVERSA = { ok: true, status: 200 };
+    EUROSYSTEM_REVERSA = { ok: true, status: 200, datos: { revertido: true } };
     const r = await avisa('charge.refunded', REEMBOLSO);
 
     igual('el anticipo revertido se marca como ANTICIPO', r.cuerpo.clase, 'ANTICIPO');
     igual('y se dice de qué folio', r.cuerpo.folio, 'ET-Q7TW-K3R');
 
-    /* lo que se le pide a EuroSystem */
-    igual('a EuroSystem se le pide revertir el ANTICIPO', LLAMADAS_EURO[0].tipo, 'ANTICIPO');
-    igual('con el pago como llave de idempotencia', LLAMADAS_EURO[0].referenciaPago, 'pi_ABC123');
-    igual('y el contrato al que va', LLAMADAS_EURO[0].referenciaExterna, 'WEB-cs_test_ANA');
-    igual('con el motivo', LLAMADAS_EURO[0].motivo, 'REEMBOLSO');
-    igual('y el monto en pesos, no en centavos', LLAMADAS_EURO[0].monto, 5200);
+    /* ------------------------------------------------------------
+       LA PUERTA DE VERDAD, LA QUE ESTA DOCUMENTADA
+
+       Esto estuvo apuntando a `/api/contratos/reversa-externa`, que NO
+       EXISTE en EuroSystem y nunca existio: era el nombre que se le
+       puso de memoria a una puerta que todavia se estaba pidiendo. El
+       404 constante se leia como «la puerta aun no esta» y el correo a
+       la oficina tapaba el hueco — asi que ninguna reversa se registro
+       jamas, y nadie lo notaba.
+
+       La puerta real es `POST /api/contratos/abono-externo/revertir`
+       (CONTRATOS-API.md §13) y su cuerpo son DOS campos, ni uno mas:
+       `referencia` (el `pi_…`, que es lo que la pagina manda al
+       registrar el abono) y `motivo`, en minusculas.
+       ------------------------------------------------------------ */
+    igual('se llama a la puerta documentada, la direccion EXACTA',
+      LLAMADAS_EURO_CRUDAS[0].url, 'https://eurosystem.site/api/contratos/abono-externo/revertir');
+    igual('con la llave en la cabecera',
+      LLAMADAS_EURO_CRUDAS[0].opciones.headers['x-api-key'], 'llave_x');
+    igual('y con POST', LLAMADAS_EURO_CRUDAS[0].opciones.method, 'POST');
+    igual('el cuerpo es exactamente el de §13: referencia y motivo, nada mas',
+      LLAMADAS_EURO[0], { referencia: 'pi_ABC123', motivo: 'reembolso' });
+    igual('la referencia es el mismo `pi_…` con el que se registra el abono',
+      LLAMADAS_EURO[0].referencia, 'pi_ABC123');
 
     /* lo que lee la oficina */
     const aviso = CORREOS[0];
@@ -149,12 +176,15 @@ const CONTRACARGO = { id: 'dp_1', charge: 'ch_1', payment_intent: 'pi_ABC123', a
   {
     SESION_POR_PAGO = sesionCon({ metadata: Object.assign({}, sesionCon().metadata,
       { tipo: 'abono' }) });
-    EUROSYSTEM_REVERSA = { ok: true, status: 200 };
+    EUROSYSTEM_REVERSA = { ok: true, status: 200, datos: { revertido: true } };
     const r = await avisa('charge.dispute.created', CONTRACARGO);
 
     igual('un abono revertido se marca como ABONO', r.cuerpo.clase, 'ABONO');
     igual('y el motivo es contracargo', r.cuerpo.motivo, 'CONTRACARGO');
-    igual('a EuroSystem se le pide revertir el ABONO', LLAMADAS_EURO[0].tipo, 'ABONO');
+    /* La puerta de §13 solo acepta `reembolso` o `contracargo`, en minusculas:
+       el `CONTRACARGO` de adentro es para la oficina, no para EuroSystem. */
+    igual('a EuroSystem el motivo le va en minusculas, como pide §13',
+      LLAMADAS_EURO[0], { referencia: 'pi_ABC123', motivo: 'contracargo' });
 
     const aviso = CORREOS[0];
     cierto('el asunto habla de un abono', /SE REVIRTIO UN ABONO/.test(aviso.subject));
@@ -163,24 +193,67 @@ const CONTRACARGO = { id: 'dp_1', charge: 'ch_1', payment_intent: 'pi_ABC123', a
     cierto('y explica que fue el banco', /banco del cliente/.test(aviso.text));
   }
 
-  /* ============ 4. SIN LA PUERTA DE EUROSYSTEM, EL CORREO TRABAJA ============
-     Es la situacion de HOY: esa puerta todavia no existe. Lo unico que impide
-     perder el dinero es que una persona se entere. */
+  /* ============ 4. EL 404: LA REVERSA LLEGO ANTES QUE SU COBRO ============
+     Lo manda §13 con todas sus letras: «Si contesta 404 (esa referencia aún
+     no está registrada), quien llama DEBE contestarle a Stripe con un error
+     (no 2xx) para que Stripe reintente el aviso».
+
+     Y tiene razon de ser: un reembolso puede llegar ANTES de que su cobro
+     alcanzara a registrarse. Contestar 200 ahi es perder la reversa para
+     siempre — el sistema se queda diciendo que el viaje esta pagado. */
   {
     SESION_POR_PAGO = sesionCon();
-    EUROSYSTEM_REVERSA = { ok: false, status: 404 };
+    EUROSYSTEM_REVERSA = { ok: false, status: 404, datos: { error: 'No hay un abono con esa referencia.' } };
     RESEND = { ok: true };
     const r = await avisa('charge.refunded', REEMBOLSO);
 
-    igual('sin puerta en EuroSystem, la reversa NO se pierde', r.status, 200);
-    igual('se acusa que EuroSystem no la registró', r.cuerpo.registrada, false);
-    igual('pero SI se avisó', r.cuerpo.avisada, true);
+    igual('404 de EuroSystem: 500 para que Stripe reintente, como manda §13', r.status, 500);
+    igual('y NUNCA 200: contestar 200 pierde la reversa', r.status === 200, false);
 
+    /* Pero la oficina se entera IGUAL, y en el primer intento: el dinero ya
+       salio de la cuenta y eso no espera tres dias de reintentos. */
+    igual('y aun asi se le avisó a la oficina', CORREOS.length, 1);
     const aviso = CORREOS[0];
-    cierto('y el aviso lo dice, para que se haga a mano',
+    cierto('el aviso dice que EuroSystem no lo registró',
       /NO pudo registrarlo/.test(aviso.text));
-    cierto('nombrando el motivo', /todavía no existe/.test(aviso.text));
     cierto('y pidiendo que se haga a mano', /A MANO/.test(aviso.text));
+  }
+
+  /* ============ 4bis. `yaEstaba`: el reintento que ya no tiene que hacer nada ====
+     §13: un 200 con `yaEstaba` es un abono que ya se habia revertido. Es la
+     otra cara del 404: cuando Stripe reintenta y el de antes SI entro, esto
+     tiene que contestar 200 y dejar de insistir. */
+  {
+    SESION_POR_PAGO = sesionCon();
+    EUROSYSTEM_REVERSA = { ok: true, status: 200, datos: { yaEstaba: true } };
+    RESEND = { ok: true };
+    const r = await avisa('charge.refunded', REEMBOLSO);
+
+    igual('`yaEstaba`: 200, Stripe deja de insistir', r.status, 200);
+    igual('y cuenta como registrada, porque lo está', r.cuerpo.registrada, true);
+    igual('se avisó igual', r.cuerpo.avisada, true);
+  }
+
+  /* ============ 4ter. EUROSYSTEM CAIDO O MAL CONFIGURADO ============
+     Ni 200 ni 404: la puerta esta, pero no contesta bien. Tampoco se da por
+     buena — el abono sigue sin revertirse en EuroSystem. */
+  {
+    for (const caso of [{ status: 500 }, { status: 401 }, { status: 429 }]) {
+      SESION_POR_PAGO = sesionCon();
+      EUROSYSTEM_REVERSA = { ok: false, status: caso.status, datos: {} };
+      RESEND = { ok: true };
+      const r = await avisa('charge.refunded', REEMBOLSO);
+      igual('EuroSystem contesta ' + caso.status + ': 500, que Stripe reintente', r.status, 500);
+      igual('EuroSystem contesta ' + caso.status + ': y la oficina se entera igual',
+        CORREOS.length, 1);
+    }
+
+    /* Y si ni se le pudo hablar. */
+    SESION_POR_PAGO = sesionCon();
+    EUROSYSTEM_REVERSA = { ok: false, status: 0, tronar: true };
+    const r = await avisa('charge.refunded', REEMBOLSO);
+    igual('EuroSystem inalcanzable: 500, que Stripe reintente', r.status, 500);
+    igual('y la oficina se entera igual', CORREOS.length, 1);
   }
 
   /* ============ 5. SI NI EL CORREO SALE, QUE STRIPE INSISTA ============
@@ -188,12 +261,17 @@ const CONTRACARGO = { id: 'dp_1', charge: 'ch_1', payment_intent: 'pi_ABC123', a
      que el dinero se pierda en silencio. */
   {
     SESION_POR_PAGO = sesionCon();
-    EUROSYSTEM_REVERSA = { ok: false, status: 404 };
+    EUROSYSTEM_REVERSA = { ok: false, status: 404, datos: {} };
     RESEND = { ok: false };
     const r = await avisa('charge.refunded', REEMBOLSO);
 
     igual('si nadie se enteró, se contesta 500', r.status, 500);
     igual('y NUNCA 200', r.status === 200, false);
+
+    /* Ni con EuroSystem contento: el aviso a una persona es la garantía. */
+    EUROSYSTEM_REVERSA = { ok: true, status: 200, datos: { revertido: true } };
+    const r2 = await avisa('charge.refunded', REEMBOLSO);
+    igual('aunque EuroSystem la registre, sin aviso a nadie se contesta 500', r2.status, 500);
   }
 
   /* ============ 6. LOS CASOS QUE NO SON NUESTROS ============ */
@@ -315,7 +393,13 @@ const CONTRACARGO = { id: 'dp_1', charge: 'ch_1', payment_intent: 'pi_ABC123', a
     CARGO = { id: 'ch_1', amount: 520000, amount_refunded: 100000, disputed: false };
     r = await avisa('charge.refunded', { id: 'ch_1', payment_intent: 'pi_ABC123',
       amount: 999999999, amount_refunded: 999999999 });
-    igual('el monto sale de Stripe ($1,000), no del aviso', LLAMADAS_EURO[0].monto, 1000);
+    /* El monto ya no viaja a EuroSystem —§13 solo quiere `referencia` y
+       `motivo`— pero es lo primero que la oficina necesita leer, asi que la
+       regla se comprueba donde ahora vive: en el aviso. */
+    cierto('el monto sale de Stripe ($1,000), no del aviso de Stripe',
+      /Monto que se fue: \$1,000/.test(CORREOS[0].text));
+    igual('y el monto inventado del aviso no aparece por ningún lado',
+      /9,999,999/.test(JSON.stringify(CORREOS[0])), false);
 
     /* --- f) las piezas, por separado --- */
     igual('sin devolución, no hay reembolso que atender',
