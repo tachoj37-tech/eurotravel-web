@@ -659,21 +659,62 @@ function dia(fecha, inicio, fin) {
      sin cerrar `/api/pagar` no sirve de nada, porque una peticion
      armada a mano apartaria el viaje con folio, contrato y cobro.
      ============================================================ */
+  /* CAMBIÓ DE LADO EL 15-sep-2026. Aquí se exigía que en producción el
+     interruptor estuviera APAGADO (R47). Decisión del dueño del 15-sep-2026:
+     la Sprinter vuelve a cotizar y a apartarse en línea; camiones y Suburban
+     siguen con asesor. Se exigen las dos mitades de esa decisión, y además
+     se sigue probando que el candado de «apagado» funciona, porque el día
+     que se vuelva a apagar tiene que cerrar las dos puertas igual que antes. */
   tarifa.PAGINA_DA_PRECIOS = APAGADO_EN_PRODUCCION;
-  igual('en produccion el interruptor esta apagado', tarifa.PAGINA_DA_PRECIOS, false);
+  igual('en produccion el interruptor esta encendido (15-sep-2026)', tarifa.PAGINA_DA_PRECIOS, true);
 
+  {
+    METROS_IDA = 610000; METROS_VUELTA = 600000;
+    const hoy = await corre(610000, 600000, '2026-09-03T08:00', '2026-09-06T18:00',
+      [], { direccion: 'Puerto Vallarta, Jalisco, México' });
+    igual('hoy la Sprinter a Vallarta sí da precio y se cobra lo mismo',
+      [hoy.estados, hoy.cotiza.requiereAsesor, hoy.cobra && hoy.cobra.total],
+      [[200, 200], false, hoy.cotiza.total]);
+    igual('y es el de la lista', hoy.cotiza.total, 19000);
+
+    /* Los camiones y la Suburban, con el interruptor ENCENDIDO: ni precio
+       por /api/cotizar ni cobro por /api/pagar, aunque la petición venga
+       armada a mano. */
+    for (const unidad of ['Irizar i6S', 'Marcopolo Paradiso G8', 'Suburban']) {
+      const marca = 'hoy' + (++corrida);
+      const cuerpoCamion = {
+        origen: Object.assign({}, ORIGEN, { placeId: ORIGEN.placeId + marca }),
+        destino: Object.assign({}, DESTINO, { placeId: DESTINO.placeId + marca,
+                                              direccion: 'Puerto Vallarta, Jalisco, México' }),
+        salida: '2026-09-03T08:00', regreso: '2026-09-06T18:00', redondo: true, unidad: unidad
+      };
+      const rc = res();
+      await cotizar({ method: 'POST', headers: cabecerasDe(corrida), body: cuerpoCamion }, rc);
+      const rp = res();
+      await pagar({ method: 'POST', headers: cabecerasDe(corrida), body: Object.assign({}, cuerpoCamion, {
+        nombre: 'Quien Sea', correo: 'x@y.mx', telefono: '3300000000', rutaTexto: 'A a B', pasajeros: 5
+      }) }, rp);
+      igual('encendido, «' + unidad + '» NO da precio por /api/cotizar',
+        [rc._status, rc._json && rc._json.error, rc._json && rc._json.total], [422, 'unidad no cotizable', undefined]);
+      igual('encendido, «' + unidad + '» NO se cobra por /api/pagar',
+        [rp._status, rp._json && rp._json.error], [422, 'unidad no cotizable']);
+    }
+  }
+
+  tarifa.PAGINA_DA_PRECIOS = false;
   {
     METROS_IDA = 610000; METROS_VUELTA = 600000;
     const apagado = await corre(610000, 600000, '2026-09-03T08:00', '2026-09-10T18:00',
       [], { direccion: 'Puerto Vallarta, Jalisco, México' });
 
-    igual('apagado, Vallarta ya no da los $19,000 por /api/cotizar',
+    igual('si se vuelve a apagar, Vallarta ya no da los $19,000 por /api/cotizar',
       [apagado.cotiza.requiereAsesor, apagado.cotiza.total, apagado.cotiza.anticipo],
       [true, 0, 0]);
     igual('y /api/pagar lo rechaza en vez de cobrarlo',
       [apagado.estados[1], apagado.cobra && apagado.cobra.error],
       [422, 'requiere asesor']);
   }
+  tarifa.PAGINA_DA_PRECIOS = APAGADO_EN_PRODUCCION;
 
   igual('sin fallas', fallas, []);
 

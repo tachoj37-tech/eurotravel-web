@@ -5,15 +5,17 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <!-- R47 · Decía «Cotiza en línea» y la página ya no cotiza. Esto es lo que
      sale en Google: prometerlo ahí es traer gente a buscar un precio que no
-     va a encontrar, y perderla en la primera pantalla. -->
-<meta name="description" content="Eurotravel — renta de autobuses, Sprinters y Suburbans en Tlaquepaque, Jalisco. Turismo, empresas y eventos con operador profesional, seguro de viajero y monitoreo GPS. Pide tu cotización y te respondemos el mismo día hábil." />
+     va a encontrar, y perderla en la primera pantalla.
+     15-sep-2026 · La Sprinter vuelve a tener precio en línea; se dice SOLO
+     de ella, y que lo demás lo cotiza un asesor. -->
+<meta name="description" content="Eurotravel — renta de autobuses, Sprinters y Suburbans en Tlaquepaque, Jalisco. Turismo, empresas y eventos con operador profesional, seguro de viajero y monitoreo GPS. La Sprinter tiene precio en línea a nuestros destinos frecuentes; autobuses y Suburbans te los cotiza un asesor el mismo día hábil." />
 <meta name="theme-color" content="#db0d0d" />
 <link rel="icon" type="image/png" href="img/icon.png" />
 <meta property="og:type" content="website" />
 <meta property="og:title" content="Eurotravel — Renta de autobuses" />
 <!-- R47 · Y ésta es la que se ve cuando alguien PEGA EL LINK EN WHATSAPP,
      que es como se comparte esta página. Mismo motivo. -->
-<meta property="og:description" content="Autobuses, Sprinters y Suburbans para grupos de 6 a 51 pasajeros. Armas tu viaje y te pasamos el precio el mismo día hábil." />
+<meta property="og:description" content="Autobuses, Sprinters y Suburbans para grupos de 6 a 51 pasajeros. La Sprinter tiene precio en línea a nuestros destinos frecuentes; lo demás te lo cotiza un asesor el mismo día hábil." />
 <meta property="og:image" content="img/hero2.jpg" />
 <title>Eurotravel</title>
 
@@ -3343,8 +3345,9 @@ window.IMGS = {
           <img id="logo-icon" alt="" />
           <h3>¿Ya tienes fechas?</h3>
           <!-- R47 · Decía «Cotiza en línea y te devolvemos una tarifa cerrada».
-               Lo segundo sigue siendo verdad; lo primero ya no. -->
-          <p>Armas tu viaje aquí y te pasamos la tarifa cerrada el mismo día hábil, sin sorpresas de última hora.</p>
+               Lo segundo sigue siendo verdad; lo primero ya no.
+               15-sep-2026 · Vuelve el precio en línea, pero SOLO de la Sprinter. -->
+          <p>La Sprinter tiene precio en línea a nuestros destinos frecuentes y la apartas con tu anticipo. Autobuses y Suburbans te los cotiza un asesor el mismo día hábil.</p>
           <button class="btn btn-red btn-block" data-go="cotizar">Ir a cotizaciones <svg class="arw" aria-hidden="true"><use href="#i-arrow" /></svg></button>
           <button class="btn btn-white btn-block" style="margin-top: 10px" data-go="unidades">Ver unidades</button>
         </div>
@@ -4335,10 +4338,11 @@ window.IMGS = {
     unidadSel.insertBefore(new Option('Selecciona una unidad', ''), unidadSel.firstChild);
     unidadSel.value = '';
 
-    /* Quién cotiza en línea lo decide UNA regla, en la máquina (R47). Hoy
-       está apagada para todos, así que el botón dice «Solicitar cotización»
-       siempre — y eso es justo lo que tiene que decir: prometer «Cotizar» y
-       acabar pidiendo el teléfono es la manera más rápida de perder a alguien. */
+    /* Quién cotiza en línea lo decide UNA regla, en la máquina (R47). Desde
+       el 15-sep-2026 solo la Sprinter dice «Cotizar»; camiones y Suburban
+       dicen «Solicitar cotización» — y eso es justo lo que tienen que decir:
+       prometer «Cotizar» y acabar pidiendo el teléfono es la manera más
+       rápida de perder a alguien. */
     function pintaBotonBuscar() {
       var u = unidadPorId(tipoUnidad);
       var auto = COTIZACION.cotizaEnLinea(u);
@@ -4414,6 +4418,9 @@ window.IMGS = {
         var c = VIAJE.cotizacion;
         if (!c || !c.anticipo) {
           caja.classList.remove('on');
+          /* Si antes cotizó una Sprinter y luego cambió a un camión, el título
+             se quedaba diciendo «aparta» sin botón de apartar. */
+          byId('listo-titulo').textContent = 'Revisa y envía tu solicitud';
           return;
         }
         byId('pago-total').textContent = pesos.format(c.total);
@@ -6481,11 +6488,15 @@ window.IMGS = {
          del cotizador: el vendedor necesita el punto para poner el
          precio —«del centro de la ciudad» y «del hotel» no cuestan lo
          mismo— y el día del viaje el operador necesita una dirección,
-         no una ciudad. Lo que se cambia es lo que se le promete. */
+         no una ciudad. Lo que se cambia es lo que se le promete.
+
+         15-sep-2026 · Con la Sprinter cotizando otra vez, «te pasamos el
+         precio» ya no vale para todos: a la Sprinter se lo enseñamos en
+         pantalla. Queda lo que es cierto para cualquier unidad. */
       byId('pide-exacto-texto').innerHTML =
         '<b>Nos falta la dirección exacta ' + cual + '.</b> Por ahora tomamos el centro de ' +
-        'la ciudad. Marca el hotel, el salón o el domicilio: con el punto exacto te pasamos ' +
-        'el precio más ajustado, y el día del viaje el operador sabe dónde llegar.';
+        'la ciudad. Marca el hotel, el salón o el domicilio: el día del viaje el operador ' +
+        'sabe exactamente a dónde llegar.';
       caja.style.display = '';
     }
 
@@ -6612,8 +6623,16 @@ window.IMGS = {
         /* R47 · Decía «se cobra aparte y se suma a tu total». Ya no hay
            total al que sumarle; lo que sigue siendo verdad es que el día
            con movimientos cuesta aparte, y que por eso se pregunta. */
-        'Cada día con movimientos cuesta aparte, así que dinos cuáles ' +
-        'llevan recorrido y el vendedor te los incluye en el precio.';
+        /* 15-sep-2026 · Dos casos: la Sprinter con precio en pantalla recotiza
+           con los días que marque (el total del resumen ya los trae), y lo
+           demás lo cotiza un asesor. Se decide por la cotización que SÍ
+           llegó, no por la unidad: un destino fuera del criterio también va
+           con asesor aunque sea Sprinter. */
+        ((VIAJE.cotizacion && VIAJE.cotizacion.anticipo && !VIAJE.cotizacion.requiereAsesor)
+          ? 'Cada día con movimientos cuesta aparte: márcalos aquí y el total ' +
+            'del resumen ya los incluye.'
+          : 'Cada día con movimientos cuesta aparte, así que dinos cuáles ' +
+            'llevan recorrido y el asesor te los incluye en el precio.');
       pintaInterruptor();
     }
 

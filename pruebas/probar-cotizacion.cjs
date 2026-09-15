@@ -203,24 +203,35 @@ const AUTOBUS = { id: 'irizar-i6s', name: 'Irizar i6S', cotizadorAutomatico: fal
     (m2.pon({ origen: LUGAR_GDL, destino: LUGAR_PVR, salida: '2026-10-01', regreso: '', unidad: SPRINTER }),
      m2.estadoVivo().cotizacion === null));
 
-  /* ---------------- R47 · y como está de verdad ----------------------
+  /* ---------------- y como está de verdad ----------------------------
      Se devuelve el interruptor a como vive en el archivo y se comprueba
-     lo que ve un cliente hoy: la Sprinter —la única que cotizaba— ya no
-     manda ni una petición. Sin esto, la sección de arriba se quedaría
-     encendida y la prueba diría que la página cotiza cuando no. */
-  COTIZACION.PAGINA_DA_PRECIOS = APAGADO;
-  igual('el interruptor vuelve a como está en el archivo', COTIZACION.PAGINA_DA_PRECIOS, false);
+     lo que ve un cliente hoy.
 
-  let pedidasApagado = 0;
-  const m6 = COTIZACION.crea({
-    pide: function () {
-      pedidasApagado++;
-      return Promise.resolve({ ok: true, json: function () { return Promise.resolve({ total: 1 }); } });
-    }
-  });
+     CAMBIÓ DE LADO EL 15-sep-2026. Con R47 (12-sep) esto exigía que el
+     interruptor estuviera apagado y que la Sprinter contestara «manual».
+     Decisión del dueño del 15-sep-2026: la Sprinter vuelve a cotizar en
+     línea con precio y se aparta con anticipo; camiones y Suburban siguen
+     con un asesor. Así que ahora se exige lo nuevo Y lo que no cambió: el
+     autobús sigue sin mandar ni una petición. */
+  COTIZACION.PAGINA_DA_PRECIOS = APAGADO;
+  igual('el interruptor vuelve a como está en el archivo: encendido (15-sep-2026)',
+    COTIZACION.PAGINA_DA_PRECIOS, true);
+
+  let pedidasHoy = 0;
+  const pideContando = function () {
+    pedidasHoy++;
+    return Promise.resolve({ ok: true, json: function () { return Promise.resolve({ total: 1 }); } });
+  };
+  const m6 = COTIZACION.crea({ pide: pideContando });
   m6.pon({ origen: LUGAR_GDL, destino: LUGAR_PVR, salida: '2026-09-03', regreso: '2026-09-06', unidad: SPRINTER, redondo: true });
-  igual('apagado, la Sprinter contesta manual', (await m6.cotiza()).tipo, 'manual');
-  igual('y sin gastar una petición', pedidasApagado, 0);
+  igual('hoy la Sprinter SÍ pide su precio', (await m6.cotiza()).tipo, 'listo');
+  igual('con una sola petición', pedidasHoy, 1);
+
+  pedidasHoy = 0;
+  const m7 = COTIZACION.crea({ pide: pideContando });
+  m7.pon({ origen: LUGAR_GDL, destino: LUGAR_PVR, salida: '2026-09-03', regreso: '2026-09-06', unidad: AUTOBUS, redondo: true });
+  igual('el autobús sigue contestando manual', (await m7.cotiza()).tipo, 'manual');
+  igual('y sin gastar una petición', pedidasHoy, 0);
 
   console.log('\n' + buenas + ' buenas, ' + malas + ' malas');
   process.exit(malas ? 1 : 0);

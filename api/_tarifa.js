@@ -96,8 +96,16 @@
    NO SE APAGA EL CÁLCULO. Todo lo de abajo sigue vivo y probado: lo
    necesitan el bot para estimar, la pantalla del dueño para revisar
    de dónde sale un costo, y el aprendizaje de precios.
+
+   15-sep-2026 · ENCENDIDO OTRA VEZ. Decisión del dueño: la página
+   cotiza SOLO la Sprinter con precio en línea y se aparta pagando el
+   anticipo con Stripe (también el solo ida). Camiones y Suburban no
+   llevan precio: van con un asesor. Encenderlo NO abre los camiones:
+   eso lo cuidan `UNIDADES_QUE_COTIZAN` (abajo) y `cotizadorAutomatico`
+   en `unidades.js`, y `soloDelCriterio` sigue mandando a asesor los
+   destinos que no están en el criterio. Ver docs/SIN-PRECIOS.md.
    ------------------------------------------------------------ */
-const PAGINA_DA_PRECIOS = false;
+const PAGINA_DA_PRECIOS = true;
 
 const BASE_TRASLADO = 6500;
 const POR_KM = 22;

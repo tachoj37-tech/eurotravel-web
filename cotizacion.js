@@ -143,8 +143,13 @@
      en Node, donde `window.CONFIG` no existe, y un interruptor que
      depende del orden de las etiquetas <script> es un interruptor
      que un día amanece apagado sin que nadie lo haya tocado.
+
+     15-sep-2026 · ENCENDIDO, junto con el del servidor: la Sprinter
+     vuelve a cotizar en línea (decisión del dueño). Los camiones y la
+     Suburban siguen sin precio porque `cotizaEnLinea` también exige
+     `cotizadorAutomatico`, que solo la Sprinter tiene.
      ------------------------------------------------------------ */
-  var PAGINA_DA_PRECIOS = false;
+  var PAGINA_DA_PRECIOS = true;
 
   /* ¿Esta unidad enseña precio en línea? Una sola regla para los tres
      lugares que lo preguntan —las dos tarjetas de la pantalla y la

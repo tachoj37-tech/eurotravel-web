@@ -1,5 +1,18 @@
 # R47 · Ningún precio para nadie
 
+> **15-sep-2026 · Sprinter vuelve a cotizar en línea.** Decisión del dueño:
+> la página cotiza **solo la Sprinter** con precio y se aparta pagando el
+> anticipo con Stripe, **también el solo ida**. Camiones y Suburban siguen sin
+> precio: los cotiza un asesor. Se encendieron los dos interruptores
+> (`api/_tarifa.js` y `cotizacion.js`). Lo que mantiene fuera a los camiones no
+> es el interruptor sino `cotizadorAutomatico` (solo la Sprinter) y
+> `UNIDADES_QUE_COTIZAN`; `soloDelCriterio` sigue mandando a asesor los
+> destinos que no están en el criterio. Las pruebas que exigían «apagado»
+> cambiaron de lado con nota, y ahora exigen además que con el interruptor
+> encendido los camiones no den precio ni se cobren. Textos de portada, meta y
+> caja de contacto: la Sprinter «tiene precio en línea», lo demás «te lo
+> cotiza un asesor». El resto de este documento es la historia de R47.
+
 **12-sep-2026.** Lo dictó el dueño así:
 
 > «Exacto, ningún precio para nadie. Lo que hace el bot es mandar el mensaje

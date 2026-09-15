@@ -96,8 +96,14 @@ function precioDe(texto, dias, opciones) {
   igual('el de la página y el del servidor dicen lo mismo',
     COTIZACION.PAGINA_DA_PRECIOS, tarifa.PAGINA_DA_PRECIOS);
 
-  cierto('HOY está apagado (dictado del 12-sep-2026)',
-    tarifa.PAGINA_DA_PRECIOS === false);
+  /* CAMBIÓ DE LADO EL 15-sep-2026. Decía «HOY está apagado (dictado del
+     12-sep-2026)». Decisión del dueño del 15-sep-2026: la Sprinter vuelve a
+     cotizar en línea y se aparta con anticipo; camiones y Suburban siguen
+     con asesor. Lo que protege a los camiones no es este interruptor sino
+     `cotizadorAutomatico` en la página y `UNIDADES_QUE_COTIZAN` en el
+     servidor, y eso se exige abajo con el interruptor encendido. */
+  cierto('HOY está encendido (decisión del 15-sep-2026)',
+    tarifa.PAGINA_DA_PRECIOS === true);
 
   /* ------------------------------------------------------------
      2 · NO SALE NÚMERO, NI PARA LOS DEL CRITERIO
@@ -200,30 +206,72 @@ function precioDe(texto, dias, opciones) {
   const SPRINTER = { id: 'sprinter', name: 'Sprinter', cotizadorAutomatico: true };
   const AUTOBUS = { id: 'irizar-i6s', name: 'Irizar i6S', cotizadorAutomatico: false };
 
-  cierto('la Sprinter ya no cotiza en línea',
-    COTIZACION.cotizaEnLinea(SPRINTER) === false);
-  cierto('el autobús tampoco (nunca lo hizo)',
+  /* CAMBIÓ DE LADO EL 15-sep-2026: la Sprinter vuelve a cotizar en línea.
+     Los camiones y la Suburban NO, y eso es lo que más importa aquí: con el
+     interruptor encendido, lo único que los separa del precio de la van es
+     `cotizadorAutomatico` (página) y `UNIDADES_QUE_COTIZAN` (servidor). */
+  const SUBURBAN = { id: 'suburban', name: 'Suburban', cotizadorAutomatico: false };
+
+  cierto('la Sprinter cotiza en línea (15-sep-2026)',
+    COTIZACION.cotizaEnLinea(SPRINTER) === true);
+  cierto('el autobús NO (nunca lo hizo)',
     COTIZACION.cotizaEnLinea(AUTOBUS) === false);
+  cierto('la Suburban tampoco',
+    COTIZACION.cotizaEnLinea(SUBURBAN) === false);
   cierto('sin unidad, tampoco truena',
     COTIZACION.cotizaEnLinea(null) === false);
 
-  let pedidas = 0;
-  const maquina = COTIZACION.crea({
-    pide: function () {
-      pedidas++;
-      return Promise.resolve({ ok: true, json: function () { return Promise.resolve({}); } });
-    }
-  });
-  maquina.pon({
+  /* Y en el catálogo de verdad: SOLO la Sprinter tiene cotizador automático.
+     Si alguien le pusiera `true` a un camión, con el interruptor encendido
+     la pantalla le enseñaría precio y botón de pagar. */
+  global.window = global.window || {};
+  require('../unidades.js');
+  const conAutomatico = (global.window.UNIDADES || [])
+    .filter(function (u) { return u.cotizadorAutomatico; })
+    .map(function (u) { return u.id; });
+  igual('en unidades.js solo la Sprinter cotiza sola', conAutomatico, ['sprinter']);
+
+  const pideContando = function () {
+    pedidas++;
+    return Promise.resolve({ ok: true, json: function () { return Promise.resolve({}); } });
+  };
+  const viajeDePrueba = {
     origen: { place: ['Guadalajara', 'Jalisco', 'ciudad'], coords: '20.6597, -103.3496' },
     destino: { place: ['Puerto Vallarta', 'Jalisco', 'playa'], coords: '20.6534, -105.2253' },
-    salida: '2026-09-21T08:00', regreso: '2026-09-24T18:00', unidad: SPRINTER, redondo: true
-  });
-  cierto('con la Sprinter, cotizaEnAutomatico dice que no',
-    maquina.cotizaEnAutomatico() === false);
+    salida: '2026-09-21T08:00', regreso: '2026-09-24T18:00', redondo: true, pasajeros: 12
+  };
+
+  let pedidas = 0;
+  const maquina = COTIZACION.crea({ pide: pideContando });
+  maquina.pon(Object.assign({}, viajeDePrueba, { unidad: SPRINTER }));
+  cierto('con la Sprinter, cotizaEnAutomatico dice que sí',
+    maquina.cotizaEnAutomatico() === true);
   const v = await maquina.cotiza();
-  igual('y cotizar contesta "manual"', v.tipo, 'manual');
-  igual('sin mandar una sola petición', pedidas, 0);
+  igual('y cotizar pide el precio', v.tipo, 'listo');
+  igual('con una petición', pedidas, 1);
+
+  for (const unidad of [AUTOBUS, SUBURBAN]) {
+    pedidas = 0;
+    const m = COTIZACION.crea({ pide: pideContando });
+    m.pon(Object.assign({}, viajeDePrueba, { unidad: unidad, pasajeros: 5 }));
+    const vv = await m.cotiza();
+    igual(unidad.name + ': cotizar contesta "manual"', vv.tipo, 'manual');
+    igual(unidad.name + ': sin mandar una sola petición', pedidas, 0);
+  }
+
+  /* Y la puerta, que es la que defiende: con el interruptor ENCENDIDO, el
+     núcleo de /api/cotizar rechaza un camión o una Suburban aunque la
+     petición venga armada a mano. Y la llave de Google va en null a
+     propósito: la unidad se rechaza antes de medir nada. */
+  for (const nombre of ['Irizar i6S', 'Marcopolo Paradiso G8', 'Suburban']) {
+    const r = await nucleo.cotiza({
+      origen: { placeId: '', lat: null, lng: null, direccion: 'Guadalajara, Jalisco, México' },
+      destino: { placeId: '', lat: null, lng: null, direccion: 'Puerto Vallarta, Jalisco, México' },
+      salida: '2026-09-21T08:00', regreso: '2026-09-24T18:00', unidad: nombre
+    }, null, { soloDelCriterio: true, sinPrecio: !tarifa.PAGINA_DA_PRECIOS });
+    igual('encendido, «' + nombre + '» NO sale con precio por /api/cotizar',
+      [r.ok, r.error, r.precio && r.precio.total], [false, 'unidad no cotizable', undefined]);
+  }
 
   /* Las dos tarjetas de la pantalla leen la MISMA regla. Antes cada
      una miraba `u.cotizadorAutomatico` por su cuenta: con el
@@ -275,15 +323,18 @@ function precioDe(texto, dias, opciones) {
     'se suma a tu total',
     'Ya está sumado al total',
     'el precio todavía se puede mover',
-    'la tarifa queda firme',
-    /* Éstas salieron de caminar las cinco pestañas con la página abierta.
-       Las dos primeras son las que MÁS se ven y las que nadie mira al
-       cambiar código: la `meta description` es lo que sale en Google, y
-       `og:description` es lo que se previsualiza cuando alguien pega el
-       link en WhatsApp —que es como se comparte esta página—.
+    'la tarifa queda firme'
+  ];
+  /* Éstas salieron de caminar las cinco pestañas con la página abierta.
+     Son las que MÁS se ven y las que nadie mira al cambiar código: la
+     `meta description` es lo que sale en Google, y `og:description` es lo
+     que se previsualiza cuando alguien pega el link en WhatsApp —que es
+     como se comparte esta página—.
 
-       Prometer «cotiza en línea» ahí es traer gente a buscar un precio
-       que no va a encontrar, y perderla en la primera pantalla. */
+     15-sep-2026 · Pasaron a prohibirse SIEMPRE, encendido o apagado: con
+     la Sprinter cotizando, «cotiza tu viaje en línea» a secas le promete
+     precio también al que busca un autobús, y ése va con asesor. */
+  const PROMESAS_PARA_TODOS = [
     'Cotiza en línea',
     'Cotiza tu viaje en línea'
   ];
@@ -317,6 +368,34 @@ function precioDe(texto, dias, opciones) {
         VISIBLE.indexOf(frase) === -1);
     });
   }
+
+  PROMESAS_PARA_TODOS.forEach(function (frase) {
+    cierto('la pantalla NO promete a todos «' + frase + '»', VISIBLE.indexOf(frase) === -1);
+  });
+
+  /* Y lo que SÍ tiene que decir, desde el 15-sep-2026, en los tres lugares
+     que resumen la oferta: que la Sprinter tiene precio en línea y que lo
+     demás lo cotiza un asesor. */
+  function metaDe(atributo) {
+    const m = new RegExp('<meta\\s+' + atributo + '\\s+content="([^"]*)"').exec(INDEX);
+    return m ? m[1] : '';
+  }
+  const cbox = (/<div class="cbox">([\s\S]*?)<\/div>/.exec(VISIBLE) || [])[1] || '';
+  [['meta description', metaDe('name="description"')],
+   ['og:description', metaDe('property="og:description"')],
+   ['la caja de contacto', cbox]].forEach(function (par) {
+    if (tarifa.PAGINA_DA_PRECIOS) {
+      cierto(par[0] + ' dice que la Sprinter tiene precio en línea',
+        /Sprinter[^.]*precio en línea/.test(par[1]));
+      cierto(par[0] + ' dice que lo demás lo cotiza un asesor', /asesor/.test(par[1]));
+    }
+  });
+
+  /* Los camiones no llegan al botón de pagar: la caja de pago solo se
+     enciende con una cotización que traiga anticipo, y los camiones nunca
+     la tienen (`cotiza` contesta «manual», probado arriba). */
+  cierto('la caja de pago solo sale con anticipo cotizado',
+    /window\.pintaPago = function \(\) \{\s*var c = VIAJE\.cotizacion;\s*if \(!c \|\| !c\.anticipo\)/.test(INDEX));
 
   console.log('\n' + buenas + ' buenas, ' + malas + ' malas');
   if (malas) process.exit(1);
