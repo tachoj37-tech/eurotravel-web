@@ -89,5 +89,30 @@ publicas.forEach(function (f) {
   igual('vercel.json no trae llaves que Vercel rechace', raras, []);
 }
 
+/* ------------------------------------------------------------
+   LO INTERNO NO SE PUBLICA (15-sep-2026)
+   ------------------------------------------------------------
+   Vercel sirve como archivo suelto TODO lo que no esté en
+   `.vercelignore`. Se comprobó en producción: `docs/CRITERIO-DE-PRECIOS.md`
+   y `docs/REVISION-DE-SEGURIDAD.md` contestaban 200 a cualquiera — el
+   criterio de precios entero y el mapa de las defensas.
+   ------------------------------------------------------------ */
+{
+  const ignorados = fs.readFileSync(path.join(__dirname, '..', '.vercelignore'), 'utf8')
+    .split(/\r?\n/).map((l) => l.trim()).filter((l) => l && !l.startsWith('#'));
+  const DEBEN_ESTAR = [
+    'docs/', 'cerebro/', 'pruebas/', 'pendiente/', 'scripts/',
+    'conversaciones/', 'chats-reales/',
+    'prueba-bot.html', 'prueba-whatsapp.html', 'datos-bot.json',
+    'CONTEXT.md', 'README.md', 'servidor-local.cjs', 'skills-lock.json'
+  ];
+  igual('lo interno no se publica', DEBEN_ESTAR.filter((x) => !ignorados.includes(x)), []);
+  /* Y lo que la página SÍ necesita no puede quedar fuera por error. */
+  const NECESARIOS = ['index.html', 'viaje.html', 'config.js', 'cotizacion.js', 'unidades.js',
+    'bot.js', 'bot-navegador.js', 'lugares.js', 'movimientos.js', 'medios-unidades.js',
+    'errores.js', 'img/', 'api/', 'package.json', 'vercel.json'];
+  igual('lo que la página usa sí se publica', NECESARIOS.filter((x) => ignorados.includes(x)), []);
+}
+
 console.log('\n' + buenas + ' buenas, ' + malas + ' malas');
 process.exit(malas ? 1 : 0);

@@ -20,3 +20,19 @@ pruebas/
 # Se comprobo antes con pendiente/: Vercel sirve como archivo suelto todo
 # lo que no se excluya.
 cerebro/
+
+# 15-sep-2026: docs/ SI estaba publicado. docs/CRITERIO-DE-PRECIOS.md y
+# docs/REVISION-DE-SEGURIDAD.md contestaban 200 a cualquiera: el criterio de
+# precios entero y el mapa de las defensas. Lo interno no sale al aire.
+# `pruebas/probar-despliegue.cjs` exige esta lista.
+docs/
+scripts/
+conversaciones/
+chats-reales/
+prueba-bot.html
+prueba-whatsapp.html
+datos-bot.json
+CONTEXT.md
+README.md
+servidor-local.cjs
+skills-lock.json
