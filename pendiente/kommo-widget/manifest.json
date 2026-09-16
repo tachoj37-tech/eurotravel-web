@@ -3,9 +3,9 @@
     "name": "widget.name",
     "description": "widget.description",
     "short_description": "widget.short_description",
-    "version": "1.0.1",
+    "version": "1.0.3",
     "interface_version": 2,
-    "init_once": false,
+    "init_once": true,
     "locale": [
       "en",
       "es"
@@ -49,8 +49,7 @@
           "type": "text",
           "manual": true
         }
-      },
-      "logo": "/images/logo_main.png"
+      }
     }
   }
 }

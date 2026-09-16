@@ -5185,12 +5185,18 @@ async function trabajoDeKommo(crudo) {
     return { ok: false, motivo: aviso.error };
   }
   const secreto = String(process.env.KOMMO_SECRETO || '').trim();
-  const firma = kommo.verificaTokenDeWidget(aviso.token, secreto);
+  /* Desde un «Paso personalizado (código)» del Salesbot el aviso llega
+     SIN token (Kommo solo lo firma en el bloque de un widget). Los
+     candados que quedan son el tramo interno y que el return_url sea de
+     nuestra cuenta (16-sep-2026). Con token, se comprueba como siempre. */
+  const sinToken = !String(aviso.token || '').trim() || /^{{.*}}$/.test(String(aviso.token || '').trim());
+  const firma = sinToken ? null : kommo.verificaTokenDeWidget(aviso.token, secreto);
+  if (sinToken) console.error('[kommo-trabajo] aviso sin token (paso de código): se acepta por el tramo interno y el return_url');
   if (firma === false) {
     console.error('[kommo-trabajo] aviso con token inválido para el lead ' + aviso.leadId + '; no se contesta');
     return { ok: false, motivo: 'token inválido' };
   }
-  if (firma === null) console.error('[kommo-trabajo] sin KOMMO_SECRETO en Vercel: el token del widget no se comprueba');
+  if (firma === null && !sinToken) console.error('[kommo-trabajo] sin KOMMO_SECRETO en Vercel: el token del widget no se comprueba');
 
   /* El mismo aviso que mandaría Meta, para que el cerebro no note la
      diferencia. WABA y número salen de Vercel (los del modo Dualhook) o,
@@ -5237,6 +5243,11 @@ async function trabajoDeKommo(crudo) {
     (!!mensaje && (!resultado || resultado.status !== 200));
   const status = termino ? 'fin' : 'sigue';
   const handlers = kommo.handlersDeEnvios(alCliente, { canal: process.env.KOMMO_CANAL });
+  /* Desde un paso de código el bot no tiene salida «fail»: cuando el
+     cerebro terminó (ticket mandado o pasó a persona) se le pide a Kommo
+     que pare el bot ahí mismo, para que el chat quede con el vendedor y
+     no siga dando vueltas por la pausa (16-sep-2026). */
+  if (termino) handlers.push({ handler: 'stop', params: [] });
   console.log('[kommo-trabajo] lead ' + aviso.leadId + ' · ' + alCliente.length + ' envíos · ' + status +
     (resultado && resultado.status !== 200 ? ' · el cerebro contestó ' + resultado.status : ''));
 

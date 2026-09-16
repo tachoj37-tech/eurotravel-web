@@ -146,13 +146,17 @@ function peticion(cuerpo, cabeceras, llave) {
   ok('token mal firmado: 200 pero no se contesta ni se llama a Kommo', res.cuerpo && res.cuerpo.ok === false && continuaciones.length === 2);
 
   res = respuesta();
+  const sinToken = aviso('hola, quiero cotizar'); delete sinToken.token;
+  await atiende(peticion(sinToken, { 'x-interno': process.env.WHATSAPP_RUTA_SECRETA }), res);
+  ok('sin token (paso de código del Salesbot): se contesta igual', res.cuerpo && res.cuerpo.ok === true && continuaciones.length === 3);
+  res = respuesta();
   await atiende(peticion(aviso('hola'), { 'x-interno': 'otra-llave' }), res);
   ok('sin el tramo interno: 404', res.codigo === 404);
 
   res = respuesta();
   const ajeno = aviso('hola'); ajeno.return_url = 'https://otra.kommo.com/api/v4/salesbot/1/continue/z';
   await atiende(peticion(ajeno, { 'x-interno': process.env.WHATSAPP_RUTA_SECRETA }), res);
-  ok('return_url ajeno: no se contesta', res.cuerpo && res.cuerpo.ok === false && continuaciones.length === 2);
+  ok('return_url ajeno: no se contesta', res.cuerpo && res.cuerpo.ok === false && continuaciones.length === 3);
 
   global.fetch = fetchDeAntes;
 

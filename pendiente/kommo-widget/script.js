@@ -26,6 +26,17 @@ define(['jquery'], function ($) {
       settings: function () { return true; },
       onSave: function () { return true; },
       destroy: function () {},
+      /* Kommo lo llama al picar «+ Agregar» en el diseñador: aquí se
+         declaran las dos salidas del bloque. Sin este callback el
+         diseñador truena («reading 'id'») y el bloque sale vacío (16-sep). */
+      salesbotDesignerSettings: function ($body, renderRow, params) {
+        return {
+          exits: [
+            { code: 'success', title: 'El cerebro sigue platicando' },
+            { code: 'fail', title: 'El cerebro terminó (ticket o persona)' }
+          ]
+        };
+      },
       onSalesbotDesignerSave: function (handler_code, params) {
         var url = (params && params.url) ? String(params.url) : '';
         var flujo = [
