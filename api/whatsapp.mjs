@@ -5110,8 +5110,15 @@ async function atiendeKommo(a, b, esWeb) {
   try {
     crudo = esWeb ? await a.text() : await crudoDeNode(a);
   } catch (e) {
-    console.error('[kommo] no se pudo leer el aviso: ' + e.message);
+    /* Aquí no hay firma que comprobar, así que si el entorno ya parseó
+       el cuerpo se toma tal cual y se vuelve a serializar. */
+    if (!esWeb && a.body && typeof a.body === 'object') crudo = JSON.stringify(a.body);
+    else console.error('[kommo] no se pudo leer el aviso: ' + e.message);
   }
+  /* Qué forma trae lo que manda Kommo (para diagnosticar; sin el token). */
+  const tipo = esWeb ? a.headers.get('content-type') : (a.headers && a.headers['content-type']);
+  console.log('[kommo] aviso · ' + String(tipo || 'sin content-type') + ' · ' + String(crudo || '').length + ' bytes · ' +
+    String(crudo || '').replace(/[A-Za-z0-9\-_]{40,}/g, '…').slice(0, 160).replace(/\s+/g, ' '));
 
   /* El disparo. No se espera la respuesta —el trabajo puede tardar un
      minuto— pero sí se le da un momento para que salga. El aborto es lo

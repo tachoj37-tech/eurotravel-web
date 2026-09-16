@@ -262,15 +262,48 @@ function verificaTokenDeWidget(token, secreto) {
    widget. El `return_url` TIENE que ser de la cuenta configurada: es a
    donde se le va a contestar al cliente, y un aviso ajeno no puede
    apuntarnos a otro lado. */
+/* Un cuerpo `application/x-www-form-urlencoded` con llaves anidadas al
+   estilo PHP (`data[message]=hola`) convertido a objeto. Devuelve null si
+   no parece un formulario (sin ningún `=`). */
+function deFormulario(texto) {
+  const s = String(texto || '').trim();
+  if (!s || s.indexOf('=') < 0 || /^[\[{]/.test(s)) return null;
+  const raiz = {};
+  let pares;
+  try { pares = Array.from(new URLSearchParams(s).entries()); } catch (e) { return null; }
+  if (!pares.length) return null;
+  for (const par of pares) {
+    const llave = par[0], valor = par[1];
+    const partes = llave.replace(/\]/g, '').split('[').filter(function (p) { return p !== ''; });
+    if (!partes.length) continue;
+    let nodo = raiz;
+    for (let i = 0; i < partes.length - 1; i++) {
+      if (!nodo[partes[i]] || typeof nodo[partes[i]] !== 'object') nodo[partes[i]] = {};
+      nodo = nodo[partes[i]];
+    }
+    nodo[partes[partes.length - 1]] = valor;
+  }
+  /* Algunos envíos traen `data` como JSON dentro del formulario. */
+  if (typeof raiz.data === 'string') {
+    try { raiz.data = JSON.parse(raiz.data); } catch (e) { /* se queda como texto */ }
+  }
+  return raiz;
+}
+
 function leeAvisoDeWidget(crudo, opciones) {
   const o = opciones || {};
   const c = config();
   const sub = o.subdominio || (c ? c.base.replace(/^https:\/\//, '').split('.')[0] : '');
+  const texto = Buffer.isBuffer(crudo) ? crudo.toString('utf8') : String(crudo || '');
   let aviso;
   try {
-    aviso = JSON.parse(Buffer.isBuffer(crudo) ? crudo.toString('utf8') : String(crudo || ''));
+    aviso = JSON.parse(texto);
   } catch (e) {
-    return { error: 'cuerpo ilegible' };
+    /* El `widget_request` del Salesbot puede mandar el aviso como
+       formulario (`token=…&data[message]=…&return_url=…`) en vez de
+       JSON (visto en producción el 16-sep-2026). Se lee igual. */
+    aviso = deFormulario(texto);
+    if (!aviso) return { error: 'cuerpo ilegible' };
   }
   if (!aviso || typeof aviso !== 'object') return { error: 'cuerpo vacío' };
   const datos = (aviso.data && typeof aviso.data === 'object') ? aviso.data : {};

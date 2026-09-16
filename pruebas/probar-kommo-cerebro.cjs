@@ -69,6 +69,13 @@ function peticion(cuerpo, cabeceras, llave) {
   ok('un return_url que no es kommo se rechaza', !!kommo.leeAvisoDeWidget(JSON.stringify(Object.assign({}, bueno, { return_url: 'https://eurotravel.kommo.com.evil.com/x' }))).error);
   ok('sin lead no hay aviso', !!kommo.leeAvisoDeWidget(JSON.stringify(Object.assign({}, bueno, { data: { message: 'hola' } }))).error);
   ok('un cuerpo ilegible no truena', kommo.leeAvisoDeWidget('{no').error === 'cuerpo ilegible');
+  /* Kommo mandó el aviso como formulario en producción (16-sep-2026). */
+  const formulario = 'token=x.y.z&data%5Bfrom%5D=kommo&data%5Bmessage%5D=hola+que+tal&data%5Blead_id%5D=26818280' +
+    '&data%5Bcontact_phone%5D=%2B52+1+344+102+9307&return_url=' + encodeURIComponent(bueno.return_url);
+  const f = kommo.leeAvisoDeWidget(formulario);
+  ok('un cuerpo de formulario (data[message]=…) se lee igual', f.leadId === '26818280' && f.mensaje === 'hola que tal' && f.numero === '5213441029307' && f.token === 'x.y.z');
+  const f2 = kommo.leeAvisoDeWidget('token=x.y.z&data=' + encodeURIComponent(JSON.stringify(bueno.data)) + '&return_url=' + encodeURIComponent(bueno.return_url));
+  ok('un formulario con data en JSON también', f2.leadId === '26818280' && f2.mensaje === 'hola');
 
   titulo('el token del widget');
   ok('sin llave: null (se avisa, no se frena)', kommo.verificaTokenDeWidget('a.b.c', '') === null);
