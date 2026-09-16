@@ -3786,7 +3786,9 @@ async function loQueDiceElAgente(envio) {
           return v !== ultimo && previos.slice(-3).indexOf(v) < 0;
         }) || variantes.find(function (v) { return v !== ultimo; }) || variantes[0];
         await manda({ numeroDeOrigen: envio.numeroDeOrigen, para: cliente, texto: alCliente,
-          pasaAPersona: false, escribio: '[agente · dato del dueño]' });
+          /* `esPersona` lo lee la puerta de Kommo: con «quiero hablar con
+             una persona» el Salesbot tiene que PARAR ahí (16-sep-2026). */
+          pasaAPersona: false, esPersona: esPersona, escribio: '[agente · dato del dueño]' });
         agente.recuerda(cliente, 'bot', alCliente);
       }
       const dueno = tickets.numeroDelDueno(process.env);
@@ -5239,7 +5241,7 @@ async function trabajoDeKommo(crudo) {
   });
   const ficha = tickets.fichaDe(aviso.numero);
   const termino = !!(ficha && ficha.enManosDe === 'dueno') ||
-    alCliente.some(function (e) { return e.pasaAPersona; }) ||
+    alCliente.some(function (e) { return e.pasaAPersona || e.esPersona; }) ||
     (!!mensaje && (!resultado || resultado.status !== 200));
   const status = termino ? 'fin' : 'sigue';
   const handlers = kommo.handlersDeEnvios(alCliente, { canal: process.env.KOMMO_CANAL });
