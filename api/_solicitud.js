@@ -161,7 +161,38 @@ function revisa(cuerpo) {
        grupo de 60 que escogió un camión de 51 es justo lo que el vendedor
        tiene que leer para ofrecerle dos. */
     gente: Math.max(0, Math.min(200, Math.floor(Number(c.pasajeros != null && c.pasajeros !== '' ? c.pasajeros : c.gente) || 0))),
-    notas: texto(c.notas, 400)
+    notas: texto(c.notas, 400),
+
+    /* ------------------------------------------------------------
+       LO QUE EL CLIENTE YA HABÍA ESCRITO Y NO LLEGABA · 15-sep-2026
+       ------------------------------------------------------------
+       Lo pidió el dueño: los camiones y la Suburban los cotiza una
+       persona, y esa persona cotiza CON LO QUE TENGA. Media docena
+       de datos que el cliente ya había tecleado en la pantalla se
+       quedaban en el navegador, así que el vendedor tenía que
+       volver a preguntarlos por WhatsApp —o cotizar a ojo—.
+
+       Nada de esto se inventa: cada campo sale de un campo que la
+       pantalla YA tiene. Los que no existen en ninguna pantalla no
+       se agregaron.
+       ------------------------------------------------------------ */
+
+    /* Solo ida o redondo. Cambia el precio entero y no se deduce del
+       regreso vacío: un regreso sin llenar puede ser un redondo a medio
+       capturar. Se manda explícito. `redondo` llega como booleano; si no
+       llega, se cae del lado de lo normal —redondo— y la ficha se calla. */
+    redondo: c.redondo === false ? false : true,
+
+    /* De dónde se recoge al grupo. El vendedor arma el servicio con esto:
+       una ciudad no le dice a qué hora tiene que salir la unidad. */
+    calle: texto(c.calle, 160),
+    colonia: texto(c.colonia, 80),
+    referencia: texto(c.referencia, 160),
+
+    /* Si se mueven allá, y a dónde. Son días de servicio que se cobran, y
+       el cliente ya los capturó en el paso de datos. */
+    movimientos: Math.max(0, Math.min(60, Math.floor(Number(c.movimientos) || 0))),
+    notasMovimientos: texto(c.notasMovimientos, 400)
   };
 
   return { ok: true, solicitud: solicitud };
@@ -215,17 +246,43 @@ function fichaParaElVendedor(s) {
     dias: s.dias || '?',
     unidadNombre: s.unidad,
     gente: s.gente,
-    movimientos: 0,
+    /* Los días con movimiento ya venían con su renglón en el ticket del bot
+       —«🔁 2 días con movimiento»— y aquí se mandaba un cero fijo, así que
+       el vendedor leía «Sin movimientos» de un grupo que sí se mueve. */
+    movimientos: s.movimientos || 0,
     cliente: s.telefono || s.correo
   });
 
   const cola = ['', '🌐 *Entró por la página*, no por WhatsApp.'];
+
+  /* ------------------------------------------------------------
+     LA COLA DE LA FICHA · lo que solo tiene un viaje de la página
+     ------------------------------------------------------------
+     La lee UNA PERSONA EN UN TELÉFONO, a lo mejor entre dos
+     llamadas. Un renglón por dato, y ninguno si no hay nada que
+     decir: seis renglones vacíos se leen peor que una ficha corta.
+     ------------------------------------------------------------ */
+
+  /* Solo ida va con aviso propio porque cambia el precio entero y el ticket
+     de arriba, con un regreso vacío, se lee igual que un redondo a medias.
+     El redondo no se dice: es lo normal, y sus dos fechas ya salen. */
+  if (s.redondo === false) cola.push('➡️ *Solo ida*, no hay regreso.');
   /* La hora sí importa para armar el servicio, y en el ticket de arriba no
      cabe: va aquí, con el resto de lo que solo tiene un viaje de la página. */
   if (/T\d{2}:\d{2}/.test(String(s.salida))) {
     cola.push('🕗 Sale ' + comoSeLee(s.salida) +
       (s.regreso ? ' · regresa ' + comoSeLee(s.regreso) : ''));
   }
+  /* Dónde se recoge al grupo, en un solo renglón: son tres campos cortos y
+     tres renglones para una dirección es desarmarla para volverla a armar. */
+  const donde = [s.calle, s.colonia ? 'Col. ' + s.colonia : '', s.referencia ? 'Ref: ' + s.referencia : '']
+    .filter(function (t) { return t; });
+  if (donde.length) cola.push('📌 Recoger en: ' + donde.join(' · '));
+
+  /* A dónde van los días que se mueven. El «cuántos días» ya salió arriba,
+     en el renglón de siempre del ticket. */
+  if (s.notasMovimientos) cola.push('🗺️ En el destino: ' + s.notasMovimientos);
+
   cola.push(s.nombre ? '🙋 ' + s.nombre : '🙋 No dejó nombre');
   if (s.telefono) cola.push('📱 WhatsApp: ' + s.telefono);
   if (s.correo) cola.push('✉️ Correo: ' + s.correo);

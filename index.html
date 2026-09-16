@@ -6072,6 +6072,38 @@ window.IMGS = {
       }
       if (VIAJE.unidad) partes.push(VIAJE.unidad.name);
       if (VIAJE.pasajeros) partes.push(VIAJE.pasajeros + ' pasajeros');
+
+      /* ------------------------------------------------------------
+         LO MISMO QUE LLEVA LA FICHA DEL CORREO · 15-sep-2026
+         ------------------------------------------------------------
+         Este mensaje y el correo al vendedor son la MISMA ficha vista
+         desde dos lados, y llevaban datos distintos: el correo se
+         quedaba corto y éste más todavía. Si el cliente pica el botón,
+         lo que abre la conversación tiene que traer lo mismo, porque
+         es lo que el vendedor va a leer primero.
+
+         Se arma con lo que hay EN LA PANTALLA en este momento: quien
+         no llegó al paso 2 no tiene nada de esto y no se le inventa.
+         ------------------------------------------------------------ */
+      var donde = [];
+      if (LOC.origen) {
+        if (LOC.origen.calle) donde.push(LOC.origen.calle);
+        if (LOC.origen.col) donde.push('Col. ' + LOC.origen.col);
+        if (LOC.origen.ref) donde.push('Ref: ' + LOC.origen.ref);
+      }
+      if (donde.length) partes.push('Recoger en: ' + donde.join(' · '));
+
+      if (MOV.incluye && MOV.dias.length) {
+        partes.push('Se mueven allá: ' + MOV.dias.length +
+          (MOV.dias.length === 1 ? ' día' : ' días'));
+        if (MOV.notas) partes.push('En el destino: ' + MOV.notas);
+      }
+
+      var nombre = (byId('f-nombre').value || '').trim();
+      if (nombre) partes.push('Soy ' + nombre);
+      var notas = (byId('f-notas').value || '').trim();
+      if (notas) partes.push(notas);
+
       /* Si no alcanzó a escoger nada, se manda el saludo de siempre y no
          un «Hola, quiero cotizar este viaje:» con nada debajo. */
       return partes.length > 1 ? partes.join('\n') : '';
@@ -6178,7 +6210,36 @@ window.IMGS = {
           unidad: VIAJE.unidad ? VIAJE.unidad.name : '',
           /* Va a la ficha del vendedor: «44 pasajeros». */
           pasajeros: VIAJE.pasajeros || '',
-          nombre: (byId('f-nombre').value || '').trim()
+          nombre: (byId('f-nombre').value || '').trim(),
+
+          /* ------------------------------------------------------------
+             LA FICHA VA COMPLETA · 15-sep-2026
+             ------------------------------------------------------------
+             Lo pidió el dueño: quien cotiza un camión o una Suburban es
+             una persona, y cotiza con lo que tenga. Todo esto el cliente
+             YA lo escribió en la pantalla y se quedaba aquí, así que el
+             vendedor lo volvía a preguntar por WhatsApp.
+
+             Lo de `f-*` y lo de MOV se captura en el paso 2, y esta caja
+             sale en el paso 1: la primera vez van vacíos y no estorban.
+             Pero `cotizaViaje()` se vuelve a llamar al pasar del paso 2 al
+             resumen —y con una unidad que no cotiza sola vuelve a abrir
+             esta caja—, y ahí sí van llenos. Es justo el camino de los
+             camiones, que es el que le importa al vendedor.
+             ------------------------------------------------------------ */
+          /* Solo ida o redondo: cambia el precio entero. */
+          redondo: VIAJE.redondo,
+          /* De dónde se recoge al grupo. Del ORIGEN, que es donde sube la
+             gente; lo del destino no le sirve al que arma la salida. */
+          calle: LOC.origen ? LOC.origen.calle : '',
+          colonia: LOC.origen ? LOC.origen.col : '',
+          referencia: LOC.origen ? LOC.origen.ref : '',
+          /* Si se mueven allá. Los días se cuentan de los que capturó, no
+             de una casilla: la casilla se puede quedar prendida con cero
+             días adentro. */
+          movimientos: MOV.incluye ? MOV.dias.length : 0,
+          notasMovimientos: MOV.incluye ? (MOV.notas || '') : '',
+          notas: (byId('f-notas').value || '').trim()
         })
       }).then(function (r) {
         return r.json().then(function (j) { return { status: r.status, datos: j || {} }; });

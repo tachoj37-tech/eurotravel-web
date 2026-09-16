@@ -239,6 +239,58 @@ titulo('desde el cotizador, el mensaje lleva la ficha del viaje');
   cierto('la liga escapa el texto', /encodeURIComponent/.test(armador));
 }
 
+/* ============================================================
+   LA FICHA QUE MANDA EL CLIENTE VA COMPLETA · 15-sep-2026
+   ------------------------------------------------------------
+   El botón «Mándanos tu viaje por WhatsApp» del acuse y el correo
+   que le llega al vendedor son la MISMA ficha vista desde dos
+   lados. Llevaban datos distintos —el mensaje se quedaba en ruta,
+   fechas, unidad y pasajeros— y es el que abre la conversación:
+   es lo primero que el vendedor lee.
+
+   Se comprueba sobre el texto del armador, que es donde vive la
+   decisión. `probar-solicitud.cjs` cuida la otra mitad, la del
+   servidor, con datos de verdad.
+   ============================================================ */
+titulo('el mensaje del acuse lleva lo mismo que la ficha del vendedor');
+{
+  const index = lee('index.html');
+  const desde = index.indexOf('function fichaParaWhatsApp(');
+  const armador = desde >= 0 ? index.slice(desde, index.indexOf('\n    }', desde)) : '';
+  cierto('el armador existe', !!armador);
+
+  [['la ruta', /LOC\.origen\.place\[0\]/],
+    ['las fechas', /VIAJE\.salida/],
+    ['si es solo ida', /solo ida/],
+    ['la unidad', /VIAJE\.unidad\.name/],
+    ['cuántos van', /VIAJE\.pasajeros/],
+    ['de dónde se recoge · la calle', /LOC\.origen\.calle/],
+    ['  la colonia', /LOC\.origen\.col\b/],
+    ['  y la referencia', /LOC\.origen\.ref\b/],
+    ['si se mueven allá', /MOV\.incluye/],
+    ['  y a dónde van esos días', /MOV\.notas/],
+    ['su nombre', /f-nombre/],
+    ['sus comentarios', /f-notas/]
+  ].forEach(function (p) {
+    cierto('el mensaje lleva ' + p[0], p[1].test(armador));
+  });
+
+  /* Y la otra mitad: que la solicitud que sale al servidor mande esos
+     mismos datos. Si solo viajaran en el mensaje de WhatsApp, el vendedor
+     que lee el correo seguiría a ciegas. */
+  const abre = index.indexOf("accion: 'solicitud'");
+  /* Hasta el cierre del cuerpo, no un puñado de caracteres a ojo: los
+     comentarios de en medio crecen y una ventana fija se queda corta sin
+     avisar —así se puso roja esta prueba cuando ya estaba bien—. */
+  const envio = index.slice(abre, index.indexOf('}).then(', abre));
+  ['redondo', 'calle', 'colonia', 'referencia', 'movimientos',
+    'notasMovimientos', 'notas', 'pasajeros', 'nombre'
+  ].forEach(function (campo) {
+    cierto('la solicitud al servidor manda `' + campo + '`',
+      new RegExp('\\n\\s*' + campo + ':').test(envio));
+  });
+}
+
 /* ============================================================ */
 titulo('el servidor manda al mismo número');
 {

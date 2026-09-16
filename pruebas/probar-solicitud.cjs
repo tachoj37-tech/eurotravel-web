@@ -179,6 +179,95 @@ titulo('la ficha del vendedor es la misma de siempre, con el contacto');
   cierto('  y trae el correo', /alguien@ejemplo\.com/.test(fichaCorreo));
 }
 
+/* ============================================================
+   LA FICHA VA COMPLETA · 15-sep-2026
+   ------------------------------------------------------------
+   Lo pidió el dueño: los camiones y la Suburban los cotiza una
+   persona, y esa persona cotiza CON LO QUE TENGA. Media docena de
+   datos que el cliente ya había escrito en la pantalla no llegaban
+   a la ficha, así que el vendedor tenía que volver a preguntarlos
+   por WhatsApp — o cotizar a ojo.
+
+   Lo que faltaba, en orden de lo que más cuesta preguntar otra vez:
+
+     · cuántos van          (el campo nuevo del cotizador)
+     · si es solo ida       (cambia el precio entero)
+     · de dónde se recoge   (calle, colonia y referencia)
+     · si se mueven allá    (y sus notas)
+     · su nombre            (decía «No dejó nombre» casi siempre)
+     · sus comentarios
+
+   La ficha la lee una persona EN UN TELÉFONO: los renglones nuevos
+   solo salen cuando hay algo que decir.
+   ============================================================ */
+titulo('la ficha lleva todo lo que el cliente ya escribió');
+{
+  const completo = solicitud.revisa(viaje({
+    telefono: '3324002285',
+    pasajeros: 44,
+    redondo: false,
+    calle: 'Av. Alba 1666',
+    colonia: 'Lomas de San Pedrito',
+    referencia: 'Frente a la gasolinera',
+    movimientos: 2,
+    notasMovimientos: 'Queremos ir al Malecón y un día a Sayulita',
+    nombre: 'Ana Ruiz',
+    notas: 'Somos de una escuela, van 4 maestros'
+  }));
+  cierto('con todo lleno, pasa', completo.ok);
+  const f = solicitud.fichaParaElVendedor(completo.solicitud);
+
+  cierto('cuántos van', /44 pasajeros/.test(f));
+  cierto('que es solo ida', /[Ss]olo ida/.test(f));
+  cierto('de dónde se recoge · la calle', /Av\. Alba 1666/.test(f));
+  cierto('  la colonia', /Lomas de San Pedrito/.test(f));
+  cierto('  y la referencia', /Frente a la gasolinera/.test(f));
+  cierto('que se mueven allá', /2 días con movimiento/.test(f));
+  cierto('  y a dónde van esos días', /Malec[óo]n/.test(f));
+  cierto('su nombre', /Ana Ruiz/.test(f));
+  igual('  y ya no dice que no lo dejó', /No dejó nombre/.test(f), false);
+  cierto('sus comentarios', /4 maestros/.test(f));
+
+  /* Y sigue sin precio: esta puerta existe para los viajes que no lo tienen. */
+  igual('y sigue sin ningún precio', /\$\s?\d/.test(f), false);
+}
+
+titulo('lo que no escribió no ensucia la ficha');
+{
+  /* Una ficha con seis renglones vacíos se lee peor que una corta. El
+     vendedor la abre en el teléfono, entre dos llamadas. */
+  const pelado = solicitud.revisa(viaje({ telefono: '3324002285', nombre: '' }));
+  const f = solicitud.fichaParaElVendedor(pelado.solicitud);
+
+  igual('sin dirección, no hay renglón de dirección', /📌/.test(f), false);
+  igual('sin movimientos, no se inventan', /días con movimiento/.test(f), false);
+  igual('sin comentarios, no hay renglón vacío', /📝\s*$/m.test(f), false);
+  /* Un viaje redondo no lo dice: es lo normal, y el ticket ya enseña las dos
+     fechas. Lo que hay que gritar es el SOLO IDA. */
+  igual('un viaje redondo no lleva el aviso de solo ida', /[Ss]olo ida/.test(f), false);
+}
+
+titulo('los datos nuevos se recortan como todos los demás');
+{
+  const largo = 'x'.repeat(5000);
+  const r = solicitud.revisa(viaje({
+    telefono: '3324002285',
+    calle: largo, colonia: largo, referencia: largo, notasMovimientos: largo
+  }));
+  const s = datos(r);
+  igual('la calle se recorta', (s.calle || '').length, 160);
+  igual('la colonia también', (s.colonia || '').length, 80);
+  igual('la referencia también', (s.referencia || '').length, 160);
+  igual('y las notas de movimientos', (s.notasMovimientos || '').length, 400);
+
+  /* Los días con movimiento los manda el navegador y llevan tope, como la
+     gente: nadie se mueve trescientos días en el destino. */
+  igual('los días con movimiento se acotan',
+    datos(solicitud.revisa(viaje({ telefono: '3324002285', movimientos: 9999 }))).movimientos, 60);
+  igual('  y no admiten negativos',
+    datos(solicitud.revisa(viaje({ telefono: '3324002285', movimientos: -3 }))).movimientos, 0);
+}
+
 /* ============================================================ */
 titulo('el acuse del cliente es corto y trae su viaje');
 {
