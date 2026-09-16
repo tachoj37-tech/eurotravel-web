@@ -5244,18 +5244,18 @@ async function trabajoDeKommo(crudo) {
     alCliente.some(function (e) { return e.pasaAPersona || e.esPersona; }) ||
     (!!mensaje && (!resultado || resultado.status !== 200));
   const status = termino ? 'fin' : 'sigue';
-  const handlers = kommo.handlersDeEnvios(alCliente, { canal: process.env.KOMMO_CANAL });
-  /* Desde un paso de código el bot no tiene salida «fail»: cuando el
-     cerebro terminó (ticket mandado o pasó a persona) se le pide a Kommo
-     que pare el bot ahí mismo, para que el chat quede con el vendedor y
-     no siga dando vueltas por la pausa (16-sep-2026). */
-  if (termino) handlers.push({ handler: 'stop', params: [] });
+  /* Lo que dice el cerebro va en `data.texto` (el bloque «Mensaje» del
+     bot lo pinta con {{json.texto}}) y el estado en `data.status`: el
+     bloque de condición del bot decide si sigue (pausa) o para. Kommo no
+     admite más que `show` (80 letras) y `goto` en execute_handlers. */
+  const texto = kommo.textoParaKommo(alCliente, { sitio: process.env.SITIO_URL });
+  const handlers = [];
   console.log('[kommo-trabajo] lead ' + aviso.leadId + ' · ' + alCliente.length + ' envíos · ' + status +
     (resultado && resultado.status !== 200 ? ' · el cerebro contestó ' + resultado.status : ''));
 
-  const seguido = await kommo.continuaSalesbot(aviso.returnUrl, { data: { status: status }, execute_handlers: handlers });
+  const seguido = await kommo.continuaSalesbot(aviso.returnUrl, { data: { status: status, texto: texto }, execute_handlers: handlers });
   if (!seguido) console.error('[kommo-trabajo] Kommo no aceptó la continuación del lead ' + aviso.leadId + ': el cliente se quedó sin respuesta');
-  return { ok: seguido, status: status, envios: alCliente.length };
+  return { ok: seguido, status: status, envios: alCliente.length, texto: texto };
 }
 
 async function atiende(a) {

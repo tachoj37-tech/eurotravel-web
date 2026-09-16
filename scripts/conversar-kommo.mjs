@@ -122,13 +122,15 @@ async function corre(nombre, lead, guion) {
       fallas++; continue;
     }
     for (const c of nuevas) {
+      /* Lo que Kommo pinta con {{json.texto}} en su bloque «Mensaje». */
+      if (c.data.texto) console.log('BOT:     ' + String(c.data.texto).replace(/\n/g, '\n         '));
       for (const h of c.execute_handlers) console.log('BOT:     ' + pinta(h).replace(/\n/g, '\n         '));
-      console.log('         · status ' + c.data.status);
-      const trae = c.execute_handlers.some(h => h.handler === 'stop');
-      if (c.data.status === 'fin' && !trae) { console.log('✗ FALLA: status fin sin la orden de parar'); fallas++; }
-      if (c.data.status === 'sigue' && trae) { console.log('✗ FALLA: status sigue con orden de parar'); fallas++; }
-      const largos = c.execute_handlers.filter(h => h.handler === 'show' && h.params.type === 'buttons' && h.params.buttons.some(b => b.length > 20));
-      if (largos.length) { console.log('✗ FALLA: botón de más de 20'); fallas++; }
+      console.log('         · status ' + c.data.status + (c.data.status === 'fin' ? ' ⏹ (el bot para)' : ''));
+      const noAdmitidos = c.execute_handlers.filter(h => h.handler !== 'show' && h.handler !== 'goto');
+      if (noAdmitidos.length) { console.log('✗ FALLA: handler que Kommo no admite: ' + noAdmitidos.map(h => h.handler).join(',')); fallas++; }
+      const largos = c.execute_handlers.filter(h => h.handler === 'show' && String(h.params.value || '').length > 80);
+      if (largos.length) { console.log('✗ FALLA: show de más de 80 letras'); fallas++; }
+      if (!c.data.texto && !c.execute_handlers.length) { console.log('✗ FALLA: Kommo no recibió nada que decir'); fallas++; }
     }
   }
   console.log('\n(gastado hasta aquí: $' + gastado.toFixed(3) + ' USD)');

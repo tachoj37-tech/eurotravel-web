@@ -349,6 +349,32 @@ function handlersDeEnvios(envios, opciones) {
   return salida;
 }
 
+/* ------------------------------------------------------------
+   TODO LO QUE VA AL CLIENTE, EN UN SOLO TEXTO (16-sep-2026)
+   ------------------------------------------------------------
+   La doc oficial del `continue` de Kommo solo admite handlers `show` y
+   `goto`, y el `show` tope 80 letras. Así que lo que dice el cerebro no
+   viaja en `execute_handlers`: viaja en `data.texto` y lo pinta un bloque
+   «Mensaje» del bot con `{{json.texto}}`. Las fotos van como liga (el
+   bloque no puede adjuntar dinámico) y los botones como renglones.
+   ------------------------------------------------------------ */
+function textoParaKommo(envios, opciones) {
+  const o = opciones || {};
+  const sitio = String(o.sitio || '').replace(/\/+$/, '');
+  const liga = function (l) { const x = String(l || ''); return /^https?:/i.test(x) ? x : sitio + '/' + x.replace(/^\/+/, ''); };
+  const partes = [];
+  for (const e of (Array.isArray(envios) ? envios : [])) {
+    if (!e) continue;
+    const texto = String(e.texto || '').trim();
+    if (e.ligaDeFoto) { partes.push((texto ? texto + '\n' : '') + liga(e.ligaDeFoto)); continue; }
+    if (e.ligaDeDocumento) { partes.push((texto ? texto + '\n' : '') + liga(e.ligaDeDocumento)); continue; }
+    if (!texto) continue;
+    const ops = (Array.isArray(e.opciones) ? e.opciones : []).map(function (x) { return String(x || '').trim(); }).filter(Boolean);
+    partes.push(ops.length ? texto + '\n' + ops.map(function (x) { return '· ' + x; }).join('\n') : texto);
+  }
+  return partes.join('\n\n');
+}
+
 /* La segunda mitad del paso: Kommo ya recibió su 200 y ahora se le dice
    qué mandar y por qué salida seguir. Va con el token de la cuenta. */
 async function continuaSalesbot(returnUrl, cuerpo, opciones) {
@@ -378,7 +404,7 @@ async function continuaSalesbot(returnUrl, cuerpo, opciones) {
 module.exports = {
   hayKommo, pruebaDeVida, mueveDeEtapa, guardaPrecio, leadsConPrecio,
   /* El paso EuroBot. */
-  leeAvisoDeWidget, verificaTokenDeWidget, handlersDeEnvios, continuaSalesbot, uuidDeFoto,
+  leeAvisoDeWidget, verificaTokenDeWidget, handlersDeEnvios, textoParaKommo, continuaSalesbot, uuidDeFoto,
   /* Para las pruebas y para el día del alta. */
   config, mapaDeEtapas, pide
 };

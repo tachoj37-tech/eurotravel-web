@@ -130,15 +130,18 @@ function peticion(cuerpo, cabeceras, llave) {
   ok('la puerta contesta 200 con ok', res.codigo === 200 && res.cuerpo && res.cuerpo.ok === true);
   ok('se llamó a return_url con el token de la cuenta', continuaciones.length === 1 && continuaciones[0].auth === 'Bearer token-de-mentiras');
   const c1 = continuaciones[0] && continuaciones[0].body;
-  ok('el cerebro sigue (status sigue) y mandó al menos un texto',
-    c1 && c1.data.status === 'sigue' && Array.isArray(c1.execute_handlers) && c1.execute_handlers.length >= 1 &&
-    c1.execute_handlers.every(function (x) { return x.handler === 'show' || x.handler === 'send_message'; }));
-  if (c1) console.log('   → ' + c1.execute_handlers.map(function (x) { return (x.params.value || x.params.text || '').replace(/\n/g, ' ').slice(0, 90); }).join(' | '));
+  /* Kommo solo admite `show` (80 letras) y `goto` en execute_handlers, así
+     que lo que dice el cerebro va en data.texto y lo pinta el bloque
+     «Mensaje» del bot con {{json.texto}} (16-sep-2026). */
+  ok('el cerebro sigue (status sigue) y el texto va en data.texto, sin handlers',
+    c1 && c1.data.status === 'sigue' && typeof c1.data.texto === 'string' && c1.data.texto.length > 0 &&
+    Array.isArray(c1.execute_handlers) && c1.execute_handlers.length === 0);
+  if (c1) console.log('   → ' + String(c1.data.texto).replace(/\n/g, ' ').slice(0, 120));
 
   res = respuesta();
   await atiende(peticion(aviso(''), { 'x-interno': process.env.WHATSAPP_RUTA_SECRETA }), res);
   const c2 = continuaciones[1] && continuaciones[1].body;
-  ok('sin texto (audio/foto) pide que lo escriba y sigue', c2 && c2.data.status === 'sigue' && /escribes/.test(c2.execute_handlers[0].params.value));
+  ok('sin texto (audio/foto) pide que lo escriba y sigue', c2 && c2.data.status === 'sigue' && /escribes/.test(c2.data.texto));
 
   res = respuesta();
   const malo = aviso('hola'); malo.token = jwt({ iss: 'x' }, 'otro-secreto');
