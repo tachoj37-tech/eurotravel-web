@@ -377,14 +377,71 @@ igual('cada ruta de window.IMGS existe en la carpeta',
   cierto('el manejador de «Tus datos» se encuentra', !!valida);
   cierto('«Tus datos» revisa el teléfono, no solo que esté lleno',
     /telefonoBueno\(/.test(valida));
-  cierto('  y el correo cuando lo escribieron', /correoBueno\(/.test(valida));
+  cierto('  y el correo por la regla de siempre', /motivoDelCorreo\(/.test(valida));
 
-  /* El correo NO es obligatorio —el dueño pide un solo dato— pero si lo
-     escriben tiene que servir: un correo con dedazo es peor que ninguno,
-     porque el vendedor cree que tiene por dónde escribir. */
-  cierto('  y el correo sigue sin ser obligatorio',
-    /f-mail/.test(valida) && !/data-req[^]*f-mail/.test(html.slice(
+  /* La forma del correo se sigue revisando, solo que desde su ayudante: un
+     correo con dedazo es peor que ninguno, porque el vendedor cree que tiene
+     por dónde escribir y nadie se entera de que no llegó. */
+  const motivoCorreo = entre('function motivoDelCorreo()', 'function validaDatos()');
+  cierto('el ayudante del correo se encuentra', !!motivoCorreo);
+  cierto('  y usa la regla compartida de la forma', /correoBueno\(/.test(motivoCorreo));
+
+  /* ------------------------------------------------------------
+     Y CUANDO EL VIAJE SE PAGA EN LÍNEA, EL CORREO SÍ ES OBLIGATORIO
+     ------------------------------------------------------------
+     16-sep-2026, recorriendo producción: Sprinter, Guadalajara →
+     Chapala, 12 pasajeros, precio en pantalla. El formulario pedía el
+     correo como opcional —sin asterisco y sin `required`—, «Ver
+     resumen» lo dejó pasar vacío, y dos pantallas después «Pagar
+     anticipo» contestó un «Revisa tu correo.» pegado al botón: lejos
+     del campo y sin decir por qué.
+
+     No era manía del servidor: por ese correo van el folio, el
+     contrato y el recibo del pago, y Stripe lo pide para el suyo. Lo
+     que estaba mal era la pantalla, que lo pedía como si diera igual.
+
+     Por el camino del asesor —camiones y Suburban— sigue siendo
+     opcional: ahí basta con el WhatsApp, y así lo pidió el dueño.
+     ------------------------------------------------------------ */
+  const MOTIVO =
+    'Necesitamos tu correo: ahí te llegan el folio, el contrato y el recibo del pago.';
+  igual('el motivo del correo se escribe una sola vez',
+    html.split(MOTIVO).length - 1, 1);
+
+  igual('hay una sola regla de cuándo el correo es obligatorio',
+    (html.match(/function correoObligatorio\(/g) || []).length, 1);
+  cierto('  y sale de la misma que decide si se cotiza en línea',
+    /function correoObligatorio\(\)[^]{0,600}cotizaEnAutomatico\(\)/.test(html));
+  cierto('  el ayudante del correo la consulta antes de dejar pasar el vacío',
+    /correoObligatorio\(\)/.test(motivoCorreo));
+
+  /* El asterisco y el `required` los pone el guion, porque el mismo
+     formulario sirve a los dos caminos. Nace sin ellos: si el guion no
+     corriera, pedir de más deja fuera a quien sí podía pasar. */
+  cierto('el formulario no marca el correo obligatorio de nacimiento',
+    !/data-req[^]*f-mail/.test(html.slice(
       html.indexOf('id="f-mail"') - 200, html.indexOf('id="f-mail"'))));
+  const marca = entre('function marcaCorreo()', 'function motivoDelCorreo()');
+  cierto('el marcador del correo se encuentra', !!marca);
+  cierto('  pone el asterisco en la etiqueta', /Correo electrónico' \+ \(obliga/.test(marca));
+  cierto('  y el `required` en el campo', /setAttribute\('required'/.test(marca));
+  cierto('  y lo quita por el camino del asesor', /removeAttribute\('required'/.test(marca));
+  cierto('  y se marca al entrar a «Tus datos»',
+    /marcaCorreo\(\);[^]{0,400}verPantalla\('paso-datos'\)/.test(html));
+
+  /* Y el botón de pagar no vuelve a mandar un correo vacío para que el
+     servidor conteste por él. El 400 de /api/pagar sigue ahí —es la última
+     raya—, pero quien lo dice primero es la pantalla, en el campo. */
+  const pagar = entre("byId('pago-ir').addEventListener", "fetch('/api/pagar'");
+  cierto('el botón de pagar se encuentra', !!pagar);
+  cierto('  y revisa el correo antes de mandar nada', /motivoDelCorreo\(/.test(pagar));
+  cierto('  avisando con el motivo, no con un «Revisa tu correo.» pelón',
+    /pideElCorreo\(/.test(pagar));
+  const pide = entre('function pideElCorreo(', 'function marcaCorreo()');
+  cierto('el aviso del correo se encuentra', !!pide);
+  cierto('  regresa a la pantalla donde está el campo',
+    /verPantalla\('paso-datos'\)/.test(pide));
+  cierto('  y le pone el cursor encima', /\.focus\(\)/.test(pide));
 
   /* Y la caja de captura de la fase 2 usa los MISMOS, no una copia. */
   const captura = entre('function mandaSolicitud()', "byId('captura-ir').addEventListener");

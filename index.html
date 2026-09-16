@@ -3093,11 +3093,22 @@ window.IMGS = {
               <span class="msg">Escribe un teléfono de contacto.</span>
             </div>
             <div class="field">
-              <label for="f-mail">Correo electrónico</label>
+              <label for="f-mail" id="f-mail-etiqueta">Correo electrónico</label>
               <input id="f-mail" type="email" placeholder="tucorreo@ejemplo.com" autocomplete="email" />
-              <!-- El correo no es obligatorio, pero si lo escriben tiene que
-                   servir, y necesita dónde decirlo. Nace escondido: `.msg`
-                   solo se ve cuando el campo lleva `.err`. -->
+              <!-- Obligatorio o no SEGÚN LA UNIDAD: este mismo formulario
+                   sirve a los dos caminos. Con la que se paga en línea el
+                   correo es indispensable —por ahí van el folio, el contrato
+                   y el recibo— y quien le pone el asterisco y el `required`
+                   es `marcaCorreo()` al entrar a esta pantalla. Con las que
+                   cotiza un asesor se queda opcional, que ahí basta el
+                   WhatsApp.
+
+                   Nace sin asterisco a propósito: si el guion no corriera,
+                   pedir de más deja fuera a quien sí podía pasar.
+
+                   El `.msg` nace escondido: solo se ve cuando el campo
+                   lleva `.err`, y el texto se lo escribe `motivoDelCorreo()`
+                   según lo que haya pasado. -->
               <span class="msg">Ese correo no se entiende.</span>
             </div>
             <div class="field">
@@ -5620,6 +5631,14 @@ window.IMGS = {
         var c = VIAJE.cotizacion;
         if (!c) return;
 
+        /* El correo, antes de molestar al servidor. /api/pagar lo exige y
+           contesta «Revisa tu correo.», que junto a este botón —dos
+           pantallas después del campo— no le dice a nadie qué hacer. Su 400
+           se queda ahí de última raya; el motivo lo da la pantalla, en el
+           campo y en cristiano. */
+        var motivoCorreo = motivoDelCorreo();
+        if (motivoCorreo) { pideElCorreo(motivoCorreo); return; }
+
         var boton = byId('pago-ir'), error = byId('pago-error');
         error.classList.remove('on');
         boton.disabled = true;
@@ -6690,6 +6709,9 @@ window.IMGS = {
       pintaResumenViaje();
       refrescaBloqueMovimientos();
       pideDireccionExacta();
+      /* Aquí —y no antes— ya se sabe qué unidad eligió, que es lo que
+         decide si el correo lleva asterisco. */
+      marcaCorreo();
       verPantalla('paso-datos');
     });
 
@@ -6757,6 +6779,79 @@ window.IMGS = {
     });
 
     /* ------------------------------------------------------------
+       EL CORREO: OPCIONAL CON EL ASESOR, INDISPENSABLE CON EL PAGO
+       ------------------------------------------------------------
+       16-sep-2026, recorriendo producción. Sprinter, Guadalajara →
+       Chapala, 12 pasajeros, $6,500 en pantalla. El formulario pedía el
+       correo SIN asterisco y sin `required`, «Ver resumen» lo dejó pasar
+       vacío, y dos pantallas después «Pagar anticipo» contestó lo que
+       contesta /api/pagar: «Revisa tu correo.», pegado al botón. Al
+       cliente se le dijo que el dato era opcional y luego se le frenó
+       con un aviso lejos del campo y sin motivo.
+
+       El servidor tenía razón: por ese correo le llegan el folio, el
+       contrato y el recibo del pago, y Stripe lo pide para el suyo. La
+       que estaba mal era la pantalla. Se arregla donde nace —aquí—, y
+       el 400 de /api/pagar se queda como última raya: nunca se relaja
+       el servidor para que la pantalla se vea bien.
+
+       Por el camino del asesor —camiones y Suburban— sigue siendo
+       opcional: ahí el dueño pide un solo dato de contacto y el
+       WhatsApp basta.
+       ------------------------------------------------------------ */
+    var MOTIVO_DEL_CORREO =
+      'Necesitamos tu correo: ahí te llegan el folio, el contrato y el recibo del pago.';
+
+    /* La MISMA regla que decide si hay caja de pago. Si se pregunta de otra
+       manera, algún día una pantalla cobrará por un camino en el que el
+       correo nunca se pidió. */
+    function correoObligatorio() {
+      return maquina.cotizaEnAutomatico();
+    }
+
+    /* Marca el campo en rojo con su motivo, regresa a «Tus datos» y le pone
+       el cursor encima. El aviso tiene que salir DONDE se arregla: junto al
+       botón de pagar, dos pantallas más adelante, no le dice a nadie qué
+       hacer. */
+    function pideElCorreo(motivo) {
+      var campo = byId('f-mail');
+      var caja = campo.closest('.field');
+      caja.classList.add('err');
+      var msg = caja.querySelector('.msg');
+      if (msg) {
+        if (msg.dataset.original === undefined) msg.dataset.original = msg.textContent;
+        msg.textContent = motivo;
+      }
+      verPantalla('paso-datos');
+      campo.focus();
+    }
+
+    /* El asterisco y el `required` se ponen desde aquí y no en el HTML:
+       cuál de los dos caminos es no se sabe hasta que el cliente eligió
+       unidad, y el formulario es uno solo. */
+    function marcaCorreo() {
+      var obliga = correoObligatorio();
+      byId('f-mail-etiqueta').textContent = 'Correo electrónico' + (obliga ? ' *' : '');
+      var campo = byId('f-mail');
+      if (obliga) campo.setAttribute('required', 'required');
+      else campo.removeAttribute('required');
+      campo.setAttribute('aria-required', obliga ? 'true' : 'false');
+    }
+
+    /* Qué hay que decirle del correo, o '' si no hay nada que decir. Una
+       sola respuesta para las dos puertas —«Ver resumen» y «Pagar
+       anticipo»—, para que no puedan contestar cosas distintas. */
+    function motivoDelCorreo() {
+      var v = (byId('f-mail').value || '').trim();
+      /* Vacío: solo estorba cuando el viaje se paga aquí. */
+      if (!v) return correoObligatorio() ? MOTIVO_DEL_CORREO : '';
+      /* Y escrito, tiene que servir por los dos caminos: un correo con
+         dedazo es peor que ninguno, porque el vendedor cree que tiene por
+         dónde escribir y nadie se entera de que no llegó. */
+      return correoBueno(v) ? '' : 'Ese correo no se entiende. Revisa que lleve arroba y punto.';
+    }
+
+    /* ------------------------------------------------------------
        «TUS DATOS», EL FORMULARIO QUE LLEVA A APARTAR
        ------------------------------------------------------------
        Miraba solo que los obligatorios no estuvieran vacíos, así que
@@ -6803,15 +6898,13 @@ window.IMGS = {
         }
       });
 
-      /* El correo NO es obligatorio —el dueño pidió un solo dato de
-         contacto— pero si lo escriben tiene que servir: un correo con
-         dedazo es peor que ninguno, porque el vendedor cree que tiene por
-         dónde escribir y nadie se entera de que no llegó. */
+      /* El correo, con la regla de arriba: opcional por el camino del
+         asesor, indispensable por el del pago. Aquí solo se pinta lo que
+         `motivoDelCorreo` haya decidido. */
       var mail = byId('f-mail');
       mail.closest('.field').classList.remove('err');
-      if (mail.value.trim() && !correoBueno(mail.value)) {
-        falla(mail, 'Ese correo no se entiende. Revisa que lleve arroba y punto.');
-      }
+      var motivoCorreo = motivoDelCorreo();
+      if (motivoCorreo) { falla(mail, motivoCorreo); }
 
       return ok;
     }
