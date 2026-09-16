@@ -264,3 +264,27 @@ después del widget (Kommo documenta `{{json.*}}` para los pasos siguientes).
     prueba: 26818280 (Ernesto) y 26838770 («Papá»).
 16. «Rastrear clics en links» (ajuste global de la cuenta) acorta las ligas
     a kommo.cc, incluido el video de YouTube. No se tocó: decisión del dueño.
+
+### §10 ter · fotos al elegir y orden de fotos (16-sep, tarde-noche)
+
+17. **Al quedar una unidad en la plática salen sus 3 fotos + video, una
+    vez** (`fotosDeLaUnidadRecienElegida` en whatsapp.mjs; commit 26119c5).
+    Si ya las pidió o ya se mandaron, no se repiten (`fotosVistas` /
+    `ficha.fotos`). Con el precio ya no va foto (ya las vio).
+18. **Orden de las fotos**: `orden` en medios-unidades.js, revisadas una
+    por una (exterior primero). Lo usan bot.js y el widget (1.0.7, tabla
+    generada con generar-fotos.mjs). Al cambiar `orden` hay que regenerar
+    la tabla, subir el widget y volver a guardar el bot (o registrar el
+    `widget_source` con el POST a /private/ajax/v2/json/salesbot/widgets/).
+19. **Subir el zip cuando el pegado en base64 falla**: el zip se sube al
+    repo y el navegador lo trae de raw.githubusercontent.com (manda CORS);
+    127.0.0.1 no se puede desde la página de Kommo.
+20. **Lo que se anota para aprender**: en el almacén (Supabase) cada
+    mensaje, cada ficha del viaje, cada turno de la IA y cada ticket. Lo
+    que NO se anota en Kommo: el precio que el vendedor escribe en el chat
+    de Kommo (el cerebro no lo ve); los precios aprendidos solo entran
+    cuando el dueño contesta el ticket por WhatsApp con el «va».
+21. **Persona ↔ bot desde Kommo**: en la ficha del lead, «Bots: 1» → ⏹
+    detiene el bot y el chat queda con la persona; para volver a lanzarlo,
+    en la caja del chat escribir «/» y elegir «EuroBot cerebro» (o el
+    disparador con una conversación nueva).
