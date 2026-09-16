@@ -12,16 +12,29 @@
    ============================================================ */
 import fs from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const AQUI = path.dirname(fileURLToPath(import.meta.url));
 const RAIZ = path.resolve(AQUI, '..', '..');
 const tabla = JSON.parse(fs.readFileSync(path.join(RAIZ, 'api', '_kommo-fotos.json'), 'utf8'));
 
+/* El orden (exterior primero) es el mismo que usa el chat: `orden` en
+   medios-unidades.js, que es un archivo de navegador y se carga con un
+   `window` prestado. */
+global.window = global.window || {};
+await import(pathToFileURL(path.join(RAIZ, 'medios-unidades.js')).href);
+const MEDIOS = global.window.MEDIOS_UNIDADES || {};
+
 const fotos = {};
 for (const carpeta of Object.keys(tabla)) {
   const nombres = Object.keys(tabla[carpeta]).sort();
-  fotos[carpeta] = nombres.slice(0, 3).map(function (n) { return tabla[carpeta][n]; });
+  const orden = (MEDIOS[carpeta] && Array.isArray(MEDIOS[carpeta].orden)) ? MEDIOS[carpeta].orden : [1, 2, 3];
+  const escogidas = orden
+    .map(function (n) { return carpeta + '-' + (n < 10 ? '0' : '') + n + '.jpg'; })
+    .filter(function (nombre) { return !!tabla[carpeta][nombre]; })
+    .slice(0, 3);
+  const finales = escogidas.length ? escogidas : nombres.slice(0, 3);
+  fotos[carpeta] = finales.map(function (n) { return tabla[carpeta][n]; });
 }
 
 const archivo = path.join(AQUI, 'script.js');

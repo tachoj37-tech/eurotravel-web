@@ -149,9 +149,19 @@ titulo('la plática de un cliente real, ahora con el agente');
   await dice('a vta', C);
   await dice('pasado', C);
   await dice('regresamos el 9', C);
+  const antesDeLos12 = mandados.length;
   await dice('somos aprox 12', C);
+  /* Dictado del dueño, 16-sep-2026: «cuando alguien elija una unidad le
+     mande fotos». Con 12 la unidad es la Sprinter y queda elegida en ese
+     turno: salen sus tres fotos, la de afuera primero (`orden` en
+     medios-unidades.js), con pie, y una sola vez por plática. */
+  const fotosAlElegir = mandados.slice(antesDeLos12).filter((m) => mismo(m.to, C) && m.image && m.image.link);
+  ok('al quedar la Sprinter salen sus 3 fotos', fotosAlElegir.length, 3);
+  okQue('  la primera es la de afuera (sprinter-01) y lleva pie con el nombre',
+    /sprinter-01\.jpg$/.test(fotosAlElegir[0] ? fotosAlElegir[0].image.link : '') && /Sprinter/.test((fotosAlElegir[0] && fotosAlElegir[0].image.caption) || ''));
   await dice('salimos de gdl', C);
   const antesDelPrecio = textos(C).length;
+  const mandadosAntesDeLaEspera = mandados.length;
   await dice('solo nos llevan y traen', C);
   const alCliente = textos(C).slice(antesDelPrecio).join('\n');
   const alDueno = textos(DUENO).join('\n');
@@ -169,8 +179,8 @@ titulo('la plática de un cliente real, ahora con el agente');
     /algo de arriba está mal/i.test(alCliente));
   /* Reparación Falla 6 (8-sep-2026): la foto va con el PRECIO, no con la
      espera (esa queda apagada por bandera FOTO_CON_LA_ESPERA). */
-  const fotosAlCliente = mandados.filter((m) => mismo(m.to, C) && m.image && m.image.link);
-  ok('  y con la espera NO va foto (va con el precio)', fotosAlCliente.length, 0);
+  const fotosAlCliente = mandados.slice(mandadosAntesDeLaEspera).filter((m) => mismo(m.to, C) && m.image && m.image.link);
+  ok('  y con la espera NO va foto (ya las vio al elegir; y la del precio va con el precio)', fotosAlCliente.length, 0);
   const instrucciones = JSON.stringify(sistemasVistos[sistemasVistos.length - 1] || []);
   okQue('  la IA sabe que para Tequila/Chapala pregunta «¿Es ida y vuelta el mismo día?»', /Es ida y vuelta el mismo d[ií]a/.test(instrucciones));
   okQue('  y que nombra la unidad en el mismo mensaje en que le dicen cuántos', /EN EL MISMO MENSAJE/.test(instrucciones));

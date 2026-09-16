@@ -32,13 +32,13 @@ define(['jquery'], function ($) {
       ],
       "irizar-i6": [
         "b382cae9-aff2-43c1-aa4e-2397910ab2b8",
-        "a759f257-707e-400d-b063-82ac604cc291",
-        "e31b3169-9484-4e4f-91ba-5f64afbdf14b"
+        "e31b3169-9484-4e4f-91ba-5f64afbdf14b",
+        "36fda9cf-4d78-4b27-baae-d6f512bd575b"
       ],
       "neobus": [
         "9f9d639c-98a0-44db-8c2b-fc6c9f357993",
         "107b01bf-9684-4e47-81dc-db916024086d",
-        "f0a54a1a-ab31-47c4-a70f-cab3388d0a20"
+        "3d487c23-3796-49a7-ab15-c53f31d958fa"
       ],
       "g8": [
         "919f9d98-2778-4929-890d-ec1d6e821ace",
@@ -46,24 +46,24 @@ define(['jquery'], function ($) {
         "7b8dd8c6-3325-4dee-992b-fe12a5d63d12"
       ],
       "irizar-pb": [
-        "facf948a-28a9-47b7-9a60-3fbd1a1c42f2",
         "5ececb31-6e39-46a9-87fd-9d7645bf12cf",
+        "4118ba50-02ef-4cca-9689-e9036857e5a0",
         "770d097c-3b48-4831-ab76-6276b7ec61a2"
       ],
       "irizar": [
-        "d6979585-1541-4088-bd2d-72418fcb7559",
         "fbc7f099-39d1-4ab3-9e2e-71d9f1833bef",
-        "d0812156-41f3-4ef3-bdf3-5d02cad3d137"
+        "d6979585-1541-4088-bd2d-72418fcb7559",
+        "1c7155f5-7c50-4986-a5f0-bb40410e7d5b"
       ],
       "sprinter": [
         "1425607b-1656-4d0f-b6e7-74fc3fbce778",
-        "a4c63001-ef8a-40d8-9ceb-e68cb7f5cffa",
-        "c5465275-4640-4c9a-a9fd-3278e9f83b1d"
+        "83a9c6fb-a307-4093-a695-925d45a76fe1",
+        "3550e19f-2d3a-4ce0-ac10-f6521cf9081d"
       ],
       "suburban": [
-        "d239267c-78f1-48f7-93ac-a66b131ba0b2",
-        "0484deed-2673-491a-900b-ec072c81a700",
-        "52f06bae-4583-4358-ba75-c96db5350431"
+        "32bfe766-a1ce-4498-b6c0-0bb78fdc5bae",
+        "52f06bae-4583-4358-ba75-c96db5350431",
+        "c941808e-127e-4e53-b4f0-69cf8f7dd9fe"
       ]
     } /* FOTOS:FIN */;
 

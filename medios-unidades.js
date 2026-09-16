@@ -23,13 +23,25 @@ window.MEDIOS_UNIDADES = {
 
   /* La única que la página cotiza sola. Su carpeta es la que más
      se va a usar. */
-  'sprinter':     { fotos: 7,  video: 'vOgRwIfsCAo' },
+  /* ------------------------------------------------------------
+     `orden` · LAS TRES QUE SE MANDAN, Y EN QUÉ ORDEN (16-sep-2026)
+     ------------------------------------------------------------
+     Dictado del dueño: «necesito relevancia en fotos: la primera foto
+     del PB fue un volante; primero es la unidad por fuera, después
+     interiores». Los archivos vienen numerados como los bajó el sitio,
+     no por importancia (la 01 del PB es el tablero; la 01 de la
+     Suburban, una rueda). `orden` dice qué tres se mandan y en qué
+     orden: exterior primero, luego pasillo o asientos. Se revisaron
+     una por una. Lo usan el chat, WhatsApp (bot.js) y el widget de
+     Kommo (pendiente/kommo-widget/generar-fotos.mjs).
+     ------------------------------------------------------------ */
+  'sprinter':     { fotos: 7,  video: 'vOgRwIfsCAo', orden: [1, 5, 6] },
 
-  'suburban':     { fotos: 11, video: null },   // la única sin video en el sitio
-  'neobus':       { fotos: 8,  video: 'm7t-c0GDTKw' },
-  'irizar-i6s':   { fotos: 7,  video: 'EzYe5KtLzVY' },
-  'irizar-i6':    { fotos: 7,  video: 'GfHNhM8FIkA' },
-  'irizar-pb':    { fotos: 6,  video: 'F6UTzxOxIQs' },
+  'suburban':     { fotos: 11, video: null, orden: [6, 3, 4] },   // la única sin video en el sitio
+  'neobus':       { fotos: 8,  video: 'm7t-c0GDTKw', orden: [1, 2, 7] },
+  'irizar-i6s':   { fotos: 7,  video: 'EzYe5KtLzVY', orden: [1, 2, 3] },
+  'irizar-i6':    { fotos: 7,  video: 'GfHNhM8FIkA', orden: [1, 3, 6] },
+  'irizar-pb':    { fotos: 6,  video: 'F6UTzxOxIQs', orden: [2, 4, 3] },
 
   /* ------------------------------------------------------------
      EL i6 DE 51 · sin fotos propias, y se dice
@@ -54,7 +66,7 @@ window.MEDIOS_UNIDADES = {
 
      Llevaba meses con sus fotos bajadas y sin estar en `unidades.js`,
      así que el bot no la podía ofrecer. Ya está dada de alta. */
-  'irizar':       { fotos: 6,  video: '4bUMR2BYDog' },
+  'irizar':       { fotos: 6,  video: '4bUMR2BYDog', orden: [2, 1, 4] },
 
   /* EL CENTURY DE 49 · mismas fotos que el de 47, y se dice
      ------------------------------------------------------------
@@ -81,7 +93,7 @@ window.MEDIOS_UNIDADES = {
      La 01 es el exterior de tres cuartos a propósito: es la que sale
      junto al precio y la que el cliente reenvía a su grupo.
      ------------------------------------------------------------ */
-  'g8':           { fotos: 5,  video: null }
+  'g8':           { fotos: 5,  video: null, orden: [1, 2, 3] }
 };
 
 /* EL AMARILLO NO VA · El sitio tiene un `irizar-i6-am` —un Volvo

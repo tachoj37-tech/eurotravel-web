@@ -3857,7 +3857,67 @@ async function loQueDiceElAgente(envio) {
   await manda({ numeroDeOrigen: envio.numeroDeOrigen, para: cliente, texto: respuestaFinal,
     pasaAPersona: false, escribio: respuestaFinal === dicho.respuesta ? '[agente]' : '[agente · lista corregida]' });
   agente.recuerda(cliente, 'bot', respuestaFinal);
+  await fotosDeLaUnidadRecienElegida(envio, cliente, antes, nuevo);
   return true;
+}
+
+/* ------------------------------------------------------------
+   AL ELEGIR UNIDAD, SUS FOTOS (dictado del dueño, 16-sep-2026)
+   ------------------------------------------------------------
+   «Cuando alguien elija una unidad le mande fotos; ojo, solo si no pidió
+   fotos: si pidió fotos antes ya no le mandes otra vez». Así que en el
+   turno en que la plática se queda con una unidad —«el i6», «somos 12»
+   (Sprinter)— salen sus tres fotos (exterior primero, ver `orden` en
+   medios-unidades.js) y el video, UNA vez por unidad y por plática:
+   `fotosVistas` en la plática y `fotos` en la ficha son el candado, el
+   mismo que usa la acción «fotos». Si ya las vio, no pasa nada.
+   ------------------------------------------------------------ */
+async function fotosDeLaUnidadRecienElegida(envio, cliente, antes, nuevo) {
+  try {
+    const sitio = String(process.env.SITIO_URL || '').replace(/\/+$/, '');
+    if (!sitio || !nuevo || !nuevo.unidadNombre) return false;
+    const u = unidadDelCatalogo(nuevo.unidadId || nuevo.unidadNombre || nuevo.unidad);
+    if (!u) return false;
+    const yaTenia = antes && (antes.unidadId || antes.unidadNombre);
+    const mismaDeAntes = yaTenia && conversacion.normaliza(String(antes.unidadNombre || antes.unidadId)) ===
+      conversacion.normaliza(String(nuevo.unidadNombre || nuevo.unidadId));
+    if (mismaDeAntes) return false;
+    const ficha = tickets.fichaDe(cliente);
+    const vistas = (Array.isArray(nuevo.fotosVistas) ? nuevo.fotosVistas : [])
+      .concat((ficha && Array.isArray(ficha.fotos)) ? ficha.fotos : []);
+    if (vistas.indexOf(u.id) >= 0) return false;
+    const medios = conversacion.mediosDe(u.id);
+    if (!medios || !medios.fotos || !medios.fotos.length) return false;
+    const pie = 'Ésta es la *' + u.name + '*' + (u.cap ? ' — ' + u.cap : '') + ' 📸';
+    let primera = true, mandadas = 0;
+    for (const foto of medios.fotos.slice(0, 3)) {
+      if (await manda({ numeroDeOrigen: envio.numeroDeOrigen, para: cliente,
+        ligaDeFoto: sitio + '/' + foto, texto: primera ? pie : '', pasaAPersona: false, escribio: '[agente · foto al elegir]' })) mandadas++;
+      primera = false;
+    }
+    if (!mandadas) return false;
+    if (medios.video) {
+      const v = 'Y el video por dentro 👇\n' + medios.video;
+      await manda({ numeroDeOrigen: envio.numeroDeOrigen, para: cliente, texto: v, pasaAPersona: false, escribio: '[agente · video al elegir]' });
+    }
+    agente.recuerda(cliente, 'bot', '[Acción: envié ' + mandadas + ' fotos de ' + u.name + ']');
+    /* El candado: en la plática y en la ficha, como en la acción «fotos». */
+    const lista = Array.isArray(nuevo.fotosVistas) ? nuevo.fotosVistas.slice() : [];
+    if (lista.indexOf(u.id) < 0) lista.push(u.id);
+    nuevo.fotosVistas = lista;
+    webhook.guardaCharla(cliente, nuevo);
+    const fichaTras = tickets.fichaDe(cliente);
+    const enFicha = (fichaTras && Array.isArray(fichaTras.fotos)) ? fichaTras.fotos.slice() : [];
+    if (enFicha.indexOf(u.id) < 0) {
+      enFicha.push(u.id);
+      tickets.anotaEtapa(cliente, fichaTras ? fichaTras.etapa : 'escribio', { fotos: enFicha }, Date.now());
+    }
+    console.log('[agente] eligió ' + u.name + ': salieron sus fotos');
+    return true;
+  } catch (e) {
+    console.error('[agente] no se pudieron mandar las fotos de la unidad elegida: ' + (e && e.message));
+    return false;
+  }
 }
 
 /* Clientes a los que el agente contestó en esta vuelta (se vacía en cada

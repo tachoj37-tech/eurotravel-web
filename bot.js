@@ -1606,7 +1606,14 @@ function mediosDe(idUnidad) {
   const u = porId(id) || porId('sprinter');
   const dueñaDeLasFotos = m.prestadas ? porId(m.prestadas) : null;
   const fotos = [];
-  for (let i = 1; i <= Math.min(3, cuantas); i++) {
+  /* Las tres que se mandan y su orden vienen de `orden` en
+     medios-unidades.js (exterior primero; dictado del dueño, 16-sep-2026).
+     Sin `orden`, las tres primeras del archivo. */
+  const dueñaDelOrden = m.prestadas ? dePrestado : m;
+  const orden = (Array.isArray(dueñaDelOrden.orden) && dueñaDelOrden.orden.length)
+    ? dueñaDelOrden.orden.filter(function (n) { return n >= 1 && n <= cuantas; }).slice(0, 3)
+    : [1, 2, 3].filter(function (n) { return n <= cuantas; });
+  for (const i of orden) {
     fotos.push('img/unidades/' + deDonde + '/' + deDonde + '-' + (i < 10 ? '0' : '') + i + '.jpg');
   }
   return {
