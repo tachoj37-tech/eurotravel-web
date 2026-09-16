@@ -5111,9 +5111,12 @@ async function atiendeKommo(a, b, esWeb) {
     crudo = esWeb ? await a.text() : await crudoDeNode(a);
   } catch (e) {
     /* Aquí no hay firma que comprobar, así que si el entorno ya parseó
-       el cuerpo se toma tal cual y se vuelve a serializar. */
-    if (!esWeb && a.body && typeof a.body === 'object') crudo = JSON.stringify(a.body);
-    else console.error('[kommo] no se pudo leer el aviso: ' + e.message);
+       el cuerpo se toma tal cual: un formulario vuelve a ser formulario
+       (las llaves `data[x]` se conservan) y un JSON vuelve a ser JSON. */
+    const tipoRecibido = String((esWeb ? a.headers.get('content-type') : (a.headers && a.headers['content-type'])) || '');
+    if (!esWeb && a.body && typeof a.body === 'object') {
+      crudo = /x-www-form-urlencoded/i.test(tipoRecibido) ? new URLSearchParams(a.body).toString() : JSON.stringify(a.body);
+    } else console.error('[kommo] no se pudo leer el aviso: ' + e.message);
   }
   /* Qué forma trae lo que manda Kommo (para diagnosticar; sin el token). */
   const tipo = esWeb ? a.headers.get('content-type') : (a.headers && a.headers['content-type']);
@@ -5130,7 +5133,11 @@ async function atiendeKommo(a, b, esWeb) {
       await fetch(destino, {
         method: 'POST',
         signal: AbortSignal.timeout(ESPERA_DEL_DISPARO_MS),
-        headers: { 'Content-Type': 'application/json', 'x-interno': secretoInterno() },
+        /* Como texto plano a propósito: si va como application/json y
+           Kommo mandó un formulario, Vercel intenta parsearlo, falla y la
+           segunda puerta recibe el cuerpo vacío («cuerpo ilegible», visto
+           el 16-sep-2026 a las 21:34). Como texto llega byte por byte. */
+        headers: { 'Content-Type': 'text/plain; charset=utf-8', 'x-interno': secretoInterno() },
         body: crudo || '{}'
       });
     } catch (e) {

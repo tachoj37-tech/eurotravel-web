@@ -119,8 +119,13 @@ function peticion(cuerpo, cabeceras, llave) {
       continuaciones.push({ url: u, body: JSON.parse(init.body), auth: init.headers.Authorization });
       return { ok: true, status: 200, text: async function () { return ''; }, json: async function () { return {}; } };
     }
+    if (/\/kommo-trabajo$/.test(u)) {
+      reenvios.push({ url: u, tipo: init.headers['Content-Type'], body: init.body });
+      return { ok: true, status: 200, text: async function () { return ''; }, json: async function () { return {}; } };
+    }
     throw new Error('la prueba no debía llamar a ' + u);
   };
+  const reenvios = [];
   const mod = await import('file://' + path.join(RAIZ, 'api/whatsapp.mjs').replace(/\\/g, '/') + '?cerebro=' + Date.now());
   const atiende = mod.default;
 
@@ -167,6 +172,23 @@ function peticion(cuerpo, cabeceras, llave) {
   const ajeno = aviso('hola'); ajeno.return_url = 'https://otra.kommo.com/api/v4/salesbot/1/continue/z';
   await atiende(peticion(ajeno, { 'x-interno': process.env.WHATSAPP_RUTA_SECRETA }), res);
   ok('return_url ajeno: no se contesta', res.cuerpo && res.cuerpo.ok === false && continuaciones.length === 3);
+
+  titulo('la primera puerta reenvía el aviso tal cual');
+  /* Kommo manda un formulario; la segunda puerta lo recibe byte por byte
+     como texto plano (con application/json Vercel lo parseaba, fallaba y
+     llegaba vacío: «cuerpo ilegible», 16-sep-2026). */
+  res = respuesta();
+  await atiende(peticion(formulario, { 'content-type': 'application/x-www-form-urlencoded' }, 'kommo'), res);
+  ok('contesta 200 ok a Kommo', res.codigo === 200 && res.cuerpo && res.cuerpo.ok === true);
+  ok('reenvía como text/plain y con el mismo cuerpo', reenvios.length === 1 && /^text\/plain/.test(reenvios[0].tipo) && String(reenvios[0].body) === formulario);
+  /* Si el entorno ya parseó el formulario (req.body objeto), se rearma. */
+  res = respuesta();
+  const parseada = peticion('', { 'content-type': 'application/x-www-form-urlencoded' }, 'kommo');
+  delete parseada.rawBody; parseada.body = { token: 'x.y.z', 'data[lead_id]': '26818280', 'data[message]': 'hola', return_url: bueno.return_url };
+  parseada[Symbol.asyncIterator] = async function* () {};
+  await atiende(parseada, res);
+  const rearmado = reenvios[1] && kommo.leeAvisoDeWidget(reenvios[1].body);
+  ok('un cuerpo ya parseado se rearma como formulario y se lee', rearmado && rearmado.leadId === '26818280' && rearmado.mensaje === 'hola');
 
   global.fetch = fetchDeAntes;
 
