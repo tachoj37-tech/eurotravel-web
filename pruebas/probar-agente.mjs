@@ -857,5 +857,27 @@ titulo('la lista de autobuses con los asientos mal (i6 «47» en vez de «47 y 5
   okQue('  y no queda ningún «— 47 asientos» del i6 o del Century', !/Irizar i6 — Premium — 47 asientos/.test(lista) && !/Century — Clásico — 47 asientos/.test(lista));
 }
 
+/* ============================================================ */
+titulo('«4» contestando «¿cuántos van?» es gente, no fecha; y «14 al 17 de octubre» manda sobre el estado (plática real del 16-sep-2026)');
+{
+  mandados = [];
+  const C = '5213366670498';
+  laIA = function (t) {
+    if (/^vta$/i.test(t)) return { respuesta: '¿Puerto Vallarta? ¿Cuántos van y qué días?', datos: { destino: 'Puerto Vallarta' }, accion: 'seguir' };
+    if (/^4$/.test(t.trim())) return { respuesta: 'Perfecto, 4 personas. ¿Qué día salen?', datos: { gente: 4 }, accion: 'seguir' };
+    /* El modelo, con «salida=…» enfrente, solo mueve el regreso. */
+    if (/14 al 17 de octubre/i.test(t)) return { respuesta: 'Listo, regresan el 17. ¿Salen de la zona metropolitana de Guadalajara?', datos: { regreso: '2026-10-17' }, accion: 'seguir' };
+    return { respuesta: 'Va.', datos: {}, accion: 'seguir' };
+  };
+  await dice('vta', C);
+  await dice('4', C);
+  const charla4 = webhook.charlaDe(C);
+  okQue('«4» tras «¿cuántos van?» no fija la salida en el 4 de octubre', !(charla4 && charla4.salida));
+  await dice('14 al 17 de octubre', C);
+  const charla = webhook.charlaDe(C);
+  ok('el rango escrito manda: salida 14 de octubre', charla && charla.salida, '2026-10-14');
+  ok('  y regreso 17 de octubre', charla && charla.regreso, '2026-10-17');
+}
+
 console.log('\n' + buenas + ' buenas, ' + malas + ' malas');
 process.exit(malas ? 1 : 0);

@@ -288,3 +288,29 @@ después del widget (Kommo documenta `{{json.*}}` para los pasos siguientes).
     detiene el bot y el chat queda con la persona; para volver a lanzarlo,
     en la caja del chat escribir «/» y elegir «EuroBot cerebro» (o el
     disparador con una conversación nueva).
+
+### §10 quater · el debug de la noche (16-sep, con el «dale» del dueño)
+
+Corrida con el modelo real por la puerta de Kommo (escenarios u, i, s, p de
+`scripts/conversar-kommo.mjs`, $0.06 USD) + registro de Vercel de 12 h +
+almacén. Lo que salió y lo que se arregló:
+
+22. **Lista de autobuses con los asientos viejos.** A «somos 45» el modelo
+    copió un ejemplo del prompt («Irizar i6 — 47 asientos»). Se corrigió el
+    ejemplo y el guardia de la lista ahora también compara los asientos de
+    cada renglón con el catálogo (commit 51f51c7).
+23. **«4» contestando «¿cuántos van?» quedaba también como fecha** (salida 4
+    de octubre) y **un rango escrito («14 al 17 de octubre») no movía la
+    salida** porque el modelo veía «YA SE SABE: salida=…». Plática real del
+    teléfono de «Papá»: el ticket salió «del 4 al 17 · 14 días». Ahora un
+    número suelto tras «¿cuántos?» es gente, y un rango explícito del
+    cliente manda sobre el estado.
+24. **Lo que dice el bot por Kommo no se anotaba en `mensajes`** (solo lo
+    del cliente). Ya se anota igual que por Meta.
+25. **El almacén vence el tope (4 s) unas cinco veces al día**: ahora se
+    reintenta una vez antes de darlo por perdido.
+26. Aviso que sigue: `KOMMO_SECRETO` no está en Vercel, así que el token
+    del widget no se comprueba (el candado es el tramo interno + el
+    return_url de la cuenta). Si el dueño quiere, se pone la llave secreta
+    de la integración «Claude Pruebas» en Vercel.
+27. `charlas` en 0 no es falla: la plática se borra al salir el ticket.

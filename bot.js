@@ -6120,7 +6120,7 @@ module.exports = {
   leeDeUnJalon, origenDeLaFrase, destinoDeLaFrase, limpiaDestino, esAgencia,
   /* Para probar la tolerancia a faltas sin pasar por todo el bot. */
   esLaPalabra, fonetica, distancia,
-  normaliza, cuantaGente, unidadPara, fechaDe, fechaEnPalabras, hoyISO, mensajeDeTodosLosAutobuses,
+  normaliza, cuantaGente, unidadPara, fechaDe, rangoDeFechas, fechaEnPalabras, hoyISO, mensajeDeTodosLosAutobuses,
   esDelExtranjero, esSoloIda, comoDestino, comoOrigen, esUnLugar,
   /* `pregunta` y `diasEntre` se exportan para poder vigilarlos desde las
      pruebas: que ninguna opción se pase de los topes de WhatsApp —3

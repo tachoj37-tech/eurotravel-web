@@ -101,11 +101,19 @@ function hayAlmacen() { return !!config(); }
 let ultimoError = null;
 const ESPERA_ALMACEN_MS = 4000;
 
-async function pide(camino, opciones) {
+async function pide(camino, opciones, reintento) {
   const c = config();
   if (!c) return null;
   const o = opciones || {};
   ultimoError = null;
+  /* Un tope vencido se reintenta UNA vez (16-sep-2026: cinco «aborted
+     due to timeout» en un día; cada uno era un estado de plática o una
+     ficha que no se guardó y la siguiente instancia no supo nada). */
+  const conReintento = async function (e) {
+    if (reintento || !e || (e.name !== 'TimeoutError' && e.name !== 'AbortError')) return null;
+    console.error('[almacen] tope vencido en ' + camino + ': se reintenta una vez');
+    return pide(camino, opciones, true);
+  };
   try {
     const r = await fetch(c.url + '/rest/v1/' + camino, {
       method: o.metodo || 'GET',
@@ -128,6 +136,8 @@ async function pide(camino, opciones) {
     if (o.sinRespuesta) return true;
     return await r.json();
   } catch (e) {
+    const otraVez = await conReintento(e);
+    if (otraVez !== null) return otraVez;
     console.error('[almacen] no se pudo: ' + e.message);
     return null;
   }

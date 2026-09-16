@@ -166,6 +166,12 @@ function peticion(cuerpo, cabeceras, llave) {
     throw new Error('la prueba no debía llamar a ' + u);
   };
   const reenvios = [];
+  /* Lo que el bot dice por Kommo también queda en la conversación del
+     almacén (16-sep-2026): se espía `anotaMensaje` en el mismo módulo
+     que usa whatsapp.mjs (es el mismo objeto de `module.exports`). */
+  const almacen = require(path.join(RAIZ, 'api/_almacen.js'));
+  const anotados = [];
+  almacen.anotaMensaje = async function (numero, de, texto, tipo) { anotados.push({ de: de, texto: String(texto).slice(0, 40), tipo: tipo }); return true; };
   const mod = await import('file://' + path.join(RAIZ, 'api/whatsapp.mjs').replace(/\\/g, '/') + '?cerebro=' + Date.now());
   const atiende = mod.default;
 
@@ -192,6 +198,8 @@ function peticion(cuerpo, cabeceras, llave) {
     Array.isArray(c1.execute_handlers) && c1.execute_handlers.length === 1 &&
     c1.execute_handlers[0].handler === 'goto' && c1.execute_handlers[0].params.step === 1);
   if (c1) console.log('   → ' + String(c1.data.texto).replace(/\n/g, ' ').slice(0, 120));
+  ok('lo que dijo el bot por Kommo quedó anotado en la conversación del almacén',
+    anotados.some(function (a) { return a.de === 'bot' && a.tipo === 'texto' && a.texto.length > 0; }));
 
   res = respuesta();
   await atiende(peticion(aviso(''), { 'x-interno': process.env.WHATSAPP_RUTA_SECRETA }), res);

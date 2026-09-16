@@ -263,6 +263,10 @@ titulo('un día suelto es ese día, lo anote como lo anote la IA');
 /* ============================================================ */
 titulo('la segunda prueba del dueño: «15 a 20 de septiembre»');
 {
+  /* Siempre un mes futuro: el próximo año, en septiembre. */
+  const ANIO_FUTURO = String(new Date().getFullYear() + 1);
+  const MES_NUM = '09';
+  const MES_FUTURO = 'septiembre';
   /* Tal cual, 13-sep-2026 5:59 p.m. La IA leyó bien las dos fechas y el
      candado tiró el regreso porque el lector del guion no entendía «a». */
   limpia();
@@ -271,14 +275,17 @@ titulo('la segunda prueba del dueño: «15 a 20 de septiembre»');
   await dice('Cotizar un viaje', C);
   laIA = function (t) {
     if (/vallarta en sprinter/.test(t)) return { respuesta: 'Puerto Vallarta con Sprinter, perfecto. ¿Qué días salen y regresan?', datos: { destino: 'Puerto Vallarta' }, accion: 'seguir' };
-    if (/15 a 20/.test(t)) return { respuesta: 'Listo, del 15 al 20 de septiembre. ¿Salen de la zona metropolitana de Guadalajara?', datos: { salida: '2026-09-15', regreso: '2026-09-20' }, accion: 'seguir' };
+    /* Las fechas van un año adelante del reloj real: la prueba original
+       decía «septiembre de 2026» y caducó el 15-sep-2026 (una fecha
+       pasada se tira, y con razón). Ver [[eurotravel-pruebas-que-caducan]]. */
+    if (/15 a 20/.test(t)) return { respuesta: 'Listo, del 15 al 20 de ' + MES_FUTURO + '. ¿Salen de la zona metropolitana de Guadalajara?', datos: { salida: ANIO_FUTURO + '-' + MES_NUM + '-15', regreso: ANIO_FUTURO + '-' + MES_NUM + '-20' }, accion: 'seguir' };
     return { respuesta: 'Perfecto.', datos: { origen: 'Guadalajara' }, accion: 'seguir' };
   };
   await dice('vallarta en sprinter', C);
-  await dice('15 a 20 de septiembre', C);
+  await dice('15 a 20 de ' + MES_FUTURO + ' de ' + ANIO_FUTURO, C);
   const charla = webhook.charlaDe(C) || {};
   ok('se quedan las dos fechas (salida ' + charla.salida + ', regreso ' + charla.regreso + ')',
-    charla.salida === '2026-09-15' && charla.regreso === '2026-09-20');
+    charla.salida === ANIO_FUTURO + '-' + MES_NUM + '-15' && charla.regreso === ANIO_FUTURO + '-' + MES_NUM + '-20');
   const antes = textos(C).length;
   await dice('si', C);
   ok('  y a «si» no le vuelve a preguntar el regreso', !/regresan/i.test(textos(C).slice(antes).join('\n')));

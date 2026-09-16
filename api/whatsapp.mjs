@@ -2582,7 +2582,13 @@ async function loQueDiceElAgente(envio) {
         if (m) paraLeer = soloDia[1] + ' de ' + m[1];
       }
       let laFecha = null;
-      try { laFecha = conversacion.fechaDe(paraLeer, hoy); } catch (e) { laFecha = null; }
+      /* Un número suelto contestando «¿cuántos van?» es gente, no un día
+         (plática real del 16-sep-2026: «¿Cuántos van y qué días?» → «4»
+         quedó como 4 personas Y como salida el 4 de octubre, y de ahí el
+         ticket salió con la fecha equivocada). */
+      const contestaCuantos = !!soloDia && /cu[aá]ntos/i.test(ultimoTexto) && Number(soloDia[1]) <= 60;
+      if (contestaCuantos) console.error('[agente] «' + soloDia[1] + '» contesta «¿cuántos van?»: no se lee como fecha');
+      else try { laFecha = conversacion.fechaDe(paraLeer, hoy); } catch (e) { laFecha = null; }
       if (laFecha) {
         console.error('[agente] viaje conocido sin fecha: «' + String(texto).slice(0, 40) + '» fija la salida en ' + laFecha);
         antes = Object.assign({}, antes, { salida: laFecha }); cambio = true;
@@ -2872,6 +2878,40 @@ async function loQueDiceElAgente(envio) {
     dicho.datos = datosIA;
   }
   const nuevo = conversacion.pegaDatos(antes, dicho.datos);
+  /* ------------------------------------------------------------
+     UN RANGO DE FECHAS ESCRITO POR EL CLIENTE MANDA (16-sep-2026)
+     ------------------------------------------------------------
+     Plática real: la salida había quedado en el 4 de octubre (por un
+     «4» mal leído) y el cliente escribió «14 al 17 de octubre». El
+     modelo, con «YA SE SABE: salida=2026-10-04» enfrente, solo cambió el
+     regreso y el ticket salió «del 4 al 17 · 14 días». Un rango explícito
+     en el mensaje es la fecha, diga lo que diga el estado: se lee con
+     el mismo lector del guion (`rangoDeFechas` + `fechaDe`) y se aplica.
+     Sin mes en el mensaje, se toma el de la fecha que ya se tenía.
+     ------------------------------------------------------------ */
+  try {
+    const rango = conversacion.rangoDeFechas(conversacion.normaliza(String(texto || '')));
+    /* Sin mes y con gente en el mismo mensaje («somos de 10 a 12») no es
+       un rango de fechas: se deja como lo leyó el modelo. */
+    const conMes = !!(rango && (rango.mesIda || rango.mesVuelta));
+    if (rango && (conMes || !(dicho.datos && dicho.datos.gente))) {
+      const mesDe = function (iso) {
+        const n = Number(String(iso || '').slice(5, 7));
+        return n ? ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'][n - 1] : '';
+      };
+      const mesIda = rango.mesIda || rango.mesVuelta || mesDe(nuevo.salida) || mesDe(nuevo.regreso);
+      const mesVuelta = rango.mesVuelta || rango.mesIda || mesDe(nuevo.regreso) || mesDe(nuevo.salida);
+      if (mesIda && mesVuelta) {
+        const salida = conversacion.fechaDe(rango.ida + ' de ' + mesIda, hoy);
+        const regreso = conversacion.fechaDe(rango.vuelta + ' de ' + mesVuelta, hoy);
+        if (salida && regreso && regreso >= salida && (salida !== nuevo.salida || regreso !== nuevo.regreso)) {
+          console.error('[agente] rango escrito por el cliente («' + String(texto).slice(0, 40) + '»): salida ' + salida + ' y regreso ' + regreso +
+            ' (antes ' + (nuevo.salida || '—') + ' / ' + (nuevo.regreso || '—') + ')');
+          nuevo.salida = salida; nuevo.regreso = regreso;
+        }
+      }
+    }
+  } catch (e) { /* si el lector truena, se queda lo que dijo el modelo */ }
   /* «Solo de ida» dicho a la IA. El agente no extrae ese dato —no está en
      su esquema— así que lo lee el código, igual que el guion. Va aquí
      arriba, pegado a `pegaDatos`, porque si se lee más abajo el bot ya
@@ -4581,6 +4621,16 @@ async function manda(envio) {
   const colector = colectorKommo.getStore();
   if (colector) {
     colector.envios.push(envio);
+    /* Y queda anotado en la conversación del almacén igual que por Meta
+       (16-sep-2026: en `mensajes` solo había lo del cliente; lo que dijo
+       el bot por Kommo no se veía). Sin esperar: no puede frenar al bot. */
+    if (!envio.esTicket && envio.para && envio.ligaDeFoto) {
+      almacen.anotaMensaje(envio.para, 'bot',
+        '[Acción: envié foto' + (envio.texto ? ' — ' + String(envio.texto).slice(0, 80) : '') + ']', 'foto')
+        .catch(function () {});
+    } else if (!envio.esTicket && envio.para && envio.texto && !envio.plantilla) {
+      almacen.anotaMensaje(envio.para, 'bot', envio.texto, 'texto').catch(function () {});
+    }
     return true;
   }
   try {
