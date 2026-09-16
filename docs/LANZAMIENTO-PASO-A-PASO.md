@@ -125,3 +125,7 @@ Proyecto **`eurosystem`**:
 - [ ] D10 · `probar-ticket-y-se-baja.mjs` caducó con el calendario el 16-sep («15 a 20
       de septiembre» ya pasó y el bot descarta la salida). Es del bot: no se toca sin
       que el dueño lo pida.
+- [ ] D11 · Quien llega a Stripe y regresa con «Atrás» encuentra el cotizador vacío:
+      origen, destino, fechas y datos se pierden y tiene que capturar todo otra vez.
+      Lo vio el recorrido con Playwright del 16-sep. Guardar el viaje en
+      `sessionStorage` y rehidratarlo al volver.
