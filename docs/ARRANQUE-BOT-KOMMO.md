@@ -166,3 +166,14 @@ Lo que hace el servidor con eso (`trabajoDeKommo`):
 Falta del lado del dueño: `KOMMO_TOKEN` en Vercel (sin él, la ruta contesta 404
 y el bot se queda mudo), y borrar el EuroBot de bloques (84528) para que no
 contesten dos bots en PRUEBAS. `KOMMO_SECRETO` ya no es obligatorio.
+
+
+### Corrección del paso 2 (16-sep, tarde)
+- 2 · Mensaje «Va 🙌 Ahorita te contesta una persona por aquí mismo.» (solo canal
+  PRUEBAS) + `stop`. El diseñador no dejó poner «Parar» (el menú de esa salida
+  auto-creaba una Pausa) y además guardaba un `wait_answer` de vuelta al
+  cerebro y `send_to_all_chat_sources:true`; se corrigió guardando el bot por
+  `PUT /ajax/v2/salesbot/84562` con el mismo cuerpo que manda el diseñador
+  (`{salesbot:{text, positions, …}}`), cambiando solo el paso 2. OJO: si se
+  vuelve a guardar desde el diseñador, revisar que el paso 2 siga con `stop`.
+  El «Sin respuesta» del saludo va a una pausa de 1 min (paso 5) y termina.
