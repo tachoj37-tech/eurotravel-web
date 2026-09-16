@@ -150,7 +150,11 @@ function cargaSiExiste(ruta) {
   }
   {
     let alSistema = null, alCorreo = null;
+    /* `payment_intent` y `amount_total` los trae siempre una sesión pagada, y
+       desde el 15-sep-2026 el webhook los lee para anotar el anticipo como
+       abono en el contrato. */
     const sesion = { id: 'cs_live_PAXFULL', livemode: true, payment_status: 'paid', status: 'complete',
+      payment_intent: 'pi_PAXFULL', amount_total: 400000,
       payment_method_types: ['card'], metadata: META, customer_details: { email: META.correo } };
     global.fetch = function (url, opc) {
       const u = String(url);
@@ -160,6 +164,11 @@ function cargaSiExiste(ruta) {
       if (u.indexOf('api.resend.com') >= 0) {
         alCorreo = JSON.parse(opc.body);
         return Promise.resolve({ ok: true, status: 200, json: function () { return Promise.resolve({ id: 'em' }); } });
+      }
+      /* La del abono no se apunta: lo que se mira aquí es el CONTRATO, y
+         confundir las dos puertas dejaría la aserción mirando otro cuerpo. */
+      if (u.indexOf('/abono-externo') > 0) {
+        return Promise.resolve({ ok: true, status: 201, json: function () { return Promise.resolve({ registrado: true }); } });
       }
       alSistema = JSON.parse(opc.body);
       return Promise.resolve({ ok: true, status: 201, json: function () { return Promise.resolve({ folio: 53001 }); } });

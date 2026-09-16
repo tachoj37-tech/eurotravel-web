@@ -542,6 +542,16 @@ function ahoraConZona(cuando) {
     dd(local.getUTCMinutes()) + ':' + dd(local.getUTCSeconds()) + ZONA;
 }
 
+/* El `pi_…` del cobro. Es LA referencia de los abonos: con ella EuroSystem
+   no anota dos veces el mismo pago, y con ella `_reversas.js` encuentra el
+   abono cuando ese dinero se devuelve. Stripe la manda como texto; expandida
+   llega como objeto, así que se aceptan las dos formas. */
+function pagoDeLaSesion(sesion) {
+  const pi = (sesion || {}).payment_intent;
+  if (typeof pi === 'string') return pi;
+  return (pi && typeof pi.id === 'string') ? pi.id : '';
+}
+
 /* A dónde se le escribe al cliente. En el portal no hay metadata con su
    correo —§12 no lo devuelve, y con razón—: el correo es el que él mismo
    tecleó en la pantalla de Stripe. */
@@ -583,8 +593,7 @@ async function atiendeAbono(sesion) {
   const m = sesion.metadata || {};
   const contrato = contratoDeLaMetadata(m);
   const monto = pesosCobrados(sesion);
-  const pago = typeof sesion.payment_intent === 'string' ? sesion.payment_intent
-             : (sesion.payment_intent && sesion.payment_intent.id) || '';
+  const pago = pagoDeLaSesion(sesion);
   const fecha = ahoraConZona();
   const correoDelCliente = correoDelCobro(sesion);
 
@@ -703,6 +712,83 @@ async function atiendeAbono(sesion) {
       repetido: !!respuesta.repetido, contrato: contrato, correo: !!envio.ok
     }
   };
+}
+
+/* ============================================================
+   EL ANTICIPO, ANOTADO COMO ABONO EN EL CONTRATO RECIEN CREADO
+   ------------------------------------------------------------
+   Decisión del dueño, 15-sep-2026. Un contrato que llega de la
+   página con el anticipo YA COBRADO nace CONFIRMADO —`pagado:
+   true` en el cuerpo de §2—, y un contrato confirmado con el
+   saldo completo es una mentira igual de cara que un BORRADOR:
+   jura que el cliente no ha pagado nada.
+
+   Así que el anticipo se anota como abono por la puerta de §13,
+   LA MISMA que usan los abonos del portal, con el mismo cuerpo y
+   la misma idempotencia. Aquí no hay una puerta nueva ni un
+   formato nuevo: es el mismo dinero entrando por el mismo lugar.
+
+   POR QUE VA AQUI Y NO ANTES
+
+   Necesita el folio, y el folio lo asigna EuroSystem al crear el
+   contrato. Antes del contrato no hay dónde anotarlo; §13 contesta
+   404 a un folio que no existe o que no está confirmado —de ahí
+   que el `pagado: true` y esto vayan juntos y en este orden—.
+
+   POR QUE VA ANTES DEL CORREO
+
+   Si esto falla se contesta 500 y Stripe insiste tres días. Con el
+   correo antes, el cliente recibiría un comprobante por cada
+   reintento. Las dos puertas son idempotentes —el contrato por
+   `referenciaExterna`, el abono por `referencia`—, así que
+   insistir no duplica ni un contrato ni un peso.
+
+   LA REFERENCIA ES EL `pi_…`
+
+   Exactamente la misma que busca `_reversas.js`. Con cualquier
+   otra cosa, el reembolso de un anticipo no encontraría nada que
+   revertir, EuroSystem contestaría 404, y el saldo del cliente se
+   quedaría bajo con un dinero que ya salió.
+   ============================================================ */
+async function anotaElAnticipo(folio, sesion, llave) {
+  /* El monto sale de Stripe —`amount_total`, en centavos—, no de la
+     metadata: la metadata la escribió la página al abrir el cobro y Stripe
+     la copia sin revisarla. Es la MISMA fuente que lee la reversa, que es lo
+     que hace que un reembolso cuadre contra lo que entró. */
+  const monto = pesosCobrados(sesion);
+  const pago = pagoDeLaSesion(sesion);
+
+  if (!pago || !monto) {
+    /* Sin referencia no hay idempotencia y sin monto no hay abono. Los dos
+       los trae siempre una sesión pagada, así que esto no debería pasar
+       nunca; si pasa —una respuesta a medias de Stripe—, que insista, igual
+       que en la rama de los abonos del portal. */
+    console.error('[anticipo] la sesión ' + (sesion.id || '') + ' del contrato ' + folio +
+      ' no trae pago (' + pago + ') o monto (' + monto + '): el anticipo NO se anotó. ' +
+      'Stripe reintentará.');
+    return { ok: false, porQueNo: 'la sesión no trae pi_ o monto' };
+  }
+
+  try {
+    const r = await fetch(EUROSYSTEM + PUERTA_ABONO, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-api-key': llave },
+      body: JSON.stringify({ folio: folio, monto: monto, referencia: pago,
+        fecha: ahoraConZona() })
+    });
+    const d = await r.json().catch(function () { return {}; });
+    /* §13: 201 `{registrado:true}` y 200 `{repetido:true}` son los dos éxito.
+       El segundo es el reintento que ya no tiene nada que hacer. */
+    if (r.ok) {
+      console.log('[anticipo] $' + monto + ' al contrato ' + folio +
+        (d.repetido ? ' (ya estaba anotado)' : ' anotado') + ' — pago ' + pago);
+      return { ok: true, repetido: !!d.repetido };
+    }
+    return { ok: false, porQueNo: 'EuroSystem contestó ' + r.status + ': ' +
+      JSON.stringify(d).slice(0, 200) };
+  } catch (e) {
+    return { ok: false, porQueNo: 'no se pudo hablar con EuroSystem: ' + (e && e.message) };
+  }
 }
 
 async function procesa(crudo, cabeceraFirma) {
@@ -934,14 +1020,40 @@ async function procesa(crudo, cabeceraFirma) {
       headers: { 'Content-Type': 'application/json', 'x-api-key': llave },
       /* `incluirPdf` para que la respuesta traiga el contrato y se pueda
          ADJUNTAR al correo. Su `urlPdf` vence a los 30 días; el adjunto no.
-         El cliente tiene que poder abrir su contrato en marzo. */
-      body: JSON.stringify(Object.assign({ incluirPdf: true }, cuerpo))
+         El cliente tiene que poder abrir su contrato en marzo.
+
+         `pagado: true` — decisión del dueño del 15-sep-2026: un contrato que
+         llega de la página con el anticipo ya cobrado nace CONFIRMADO, no
+         BORRADOR. Va fijo y no como variable porque para llegar a este
+         renglón hay que haber pasado por los dos candados de arriba: que
+         Stripe —preguntado con nuestra clave, no el aviso— diga que la
+         sesión está pagada, y que el cobro sea de verdad (`livemode`). Si
+         alguno fallara, aquí no se llega. */
+      body: JSON.stringify(Object.assign({ incluirPdf: true, pagado: true }, cuerpo))
     });
     const d = await r.json().catch(function () { return {}; });
 
     if (r.ok) {
       console.log('[webhook] contrato ' + d.folio + (d.repetido ? ' (ya existía)' : ' creado') +
         ' para la sesión ' + sesion.id);
+
+      /* ------------------------------------------------------------
+         EL ANTICIPO, ANTES QUE EL CORREO
+
+         El contrato acaba de nacer CONFIRMADO. Si el abono no entra,
+         queda un contrato confirmado que jura que nadie ha pagado —y el
+         cliente con un comprobante en la mano—. Eso no se acusa con un
+         200: se contesta 500 y Stripe insiste tres días, que es tiempo
+         para que entre solo. Lo explica `anotaElAnticipo`.
+         ------------------------------------------------------------ */
+      const anticipo = await anotaElAnticipo(d.folio, sesion, llave);
+      if (!anticipo.ok) {
+        console.error('[webhook] contrato ' + d.folio + ' creado PERO EL ANTICIPO NO SE ANOTÓ: ' +
+          anticipo.porQueNo + ' — sesión ' + sesion.id + '. El contrato queda confirmado con el ' +
+          'saldo completo. Stripe reintentará tres días; si no se arregla, hay que capturar el ' +
+          'abono A MANO.');
+        return { status: 500, cuerpo: { error: 'EuroSystem no anotó el anticipo', folio: d.folio } };
+      }
 
       /* ------------------------------------------------------------
          Y AHORA SI, EL CORREO

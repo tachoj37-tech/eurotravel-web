@@ -66,6 +66,9 @@ const META_SOLO_IDA = {
 function sesionDe(meta, id) {
   return {
     id: id, livemode: true, payment_status: 'paid', status: 'complete',
+    /* Los trae siempre una sesión pagada, y desde el 15-sep-2026 el webhook
+       los lee para anotar el anticipo como abono en el contrato. */
+    payment_intent: 'pi_' + id, amount_total: Number(meta.anticipo) * 100,
     payment_method_types: ['card'], metadata: meta,
     customer_details: { email: meta.correo }
   };
@@ -85,6 +88,12 @@ function finge(folio) {
     if (u.indexOf('api.resend.com') >= 0) {
       alCorreo = JSON.parse(opc.body);
       return Promise.resolve({ ok: true, status: 200, json: function () { return Promise.resolve({ id: 'em_1' }); } });
+    }
+    /* La del abono no se apunta: aquí se mira el CONTRATO, y confundir las
+       dos puertas dejaría la aserción mirando otro cuerpo. */
+    if (u.indexOf('/abono-externo') > 0) {
+      return Promise.resolve({ ok: true, status: 201,
+        json: function () { return Promise.resolve({ registrado: true }); } });
     }
     alSistema = { url: u, cuerpo: JSON.parse(opc.body) };
     return Promise.resolve({ ok: true, status: 201,

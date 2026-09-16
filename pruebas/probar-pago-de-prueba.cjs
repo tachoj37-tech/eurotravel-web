@@ -52,13 +52,17 @@ const METADATA = {
   total: 6500, anticipo: 3250, saldo: 3250, unidad: 'Sprinter', pasajeros: 12
 };
 
-let TOCO_EUROSYSTEM, CORREOS, SESION;
+let TOCO_EUROSYSTEM, TOCO_EL_ABONO, CORREOS, SESION;
 
 function arma(livemode) {
   TOCO_EUROSYSTEM = false;
+  TOCO_EL_ABONO = false;
   CORREOS = [];
   SESION = {
     id: 'cs_test_' + '9'.repeat(20), payment_status: 'paid', status: 'complete',
+    /* Los trae siempre una sesión pagada, y desde el 15-sep-2026 el webhook
+       los lee para anotar el anticipo como abono en el contrato. */
+    payment_intent: 'pi_DE_PRUEBA', amount_total: 325000,
     customer: 'cus_00000000000001', livemode: livemode, metadata: METADATA
   };
 }
@@ -71,6 +75,13 @@ global.fetch = async function (url, opc) {
   if (u.indexOf('/contratos/externo') >= 0) {
     TOCO_EUROSYSTEM = true;
     return { ok: true, status: 200, json: async () => ({ folio: '51001', pdfBase64: 'JVBERi0x' }) };
+  }
+  /* El anticipo, anotado como abono en el contrato recién creado
+     (15-sep-2026). Un pago de prueba no llega aquí: no crea contrato, así
+     que no hay folio al que anotarle nada. */
+  if (u.indexOf('/abono-externo') >= 0) {
+    TOCO_EL_ABONO = true;
+    return { ok: true, status: 201, json: async () => ({ registrado: true }) };
   }
   if (u.indexOf('resend') >= 0) {
     CORREOS.push(JSON.parse(opc.body));
@@ -106,6 +117,7 @@ function manda(cuerpo) {
     igual('un pago real contesta bien', r.status, 200);
     cierto('SI se registra en EuroSystem', TOCO_EUROSYSTEM);
     igual('con su folio de EuroSystem', r.cuerpo.folio, '51001');
+    cierto('y con su anticipo anotado como abono', TOCO_EL_ABONO);
     falso('y no se marca como prueba', r.cuerpo.prueba);
     igual('sale UN correo, el del cliente', CORREOS.length, 1);
     igual('a él', CORREOS[0].to, ['ana@ejemplo.mx']);
@@ -137,6 +149,7 @@ function manda(cuerpo) {
     const r = await manda(aviso());
     igual('contesta bien, no es un error', r.status, 200);
     falso('NO se registró en EuroSystem', TOCO_EUROSYSTEM);
+    falso('ni se le anotó un abono a un contrato que no existe', TOCO_EL_ABONO);
     cierto('y se dice que fue prueba', r.cuerpo.prueba);
     falso('sin folio de EuroSystem, porque no lo hubo', r.cuerpo.folio);
   }

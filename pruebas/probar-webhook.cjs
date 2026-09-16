@@ -109,8 +109,14 @@ const META = {
   unidad: 'Sprinter', salida: '2026-09-03T08:00', regreso: '2026-09-06T18:00',
   dias: '4', km: '621.2', total: '21700', anticipo: '4340', saldo: '17360'
 };
+/* `payment_intent` y `amount_total` los trae SIEMPRE una sesión de cobro ya
+   pagada; aquí faltaban porque hasta hoy nadie los leía. Desde el 15-sep-2026
+   son el corazón del anticipo: el `pi_…` es la referencia con la que se anota
+   el abono —y con la que la reversa lo busca—, y `amount_total` es lo que
+   Stripe cobró de verdad, en centavos. */
 const sesionPagada = {
   id: 'cs_test_ABC', payment_status: 'paid', payment_method_types: ['card'],
+  payment_intent: 'pi_DEL_ANTICIPO', amount_total: 434000,
   metadata: META, customer_details: { email: 'quien@sea.mx' }
 };
 
@@ -118,6 +124,11 @@ const sesionPagada = {
    EuroSystem. `sesionEnStripe` es lo que Stripe contesta cuando se le
    pregunta por la sesion; el aviso del webhook ya no manda. */
 let ultimoEnvio = null;
+/* Desde el 15-sep-2026 el camino del contrato toca DOS puertas de EuroSystem:
+   la del contrato y, con el folio en la mano, la del abono. Se apuntan por
+   separado para que una aserción sobre el contrato no termine mirando el
+   cuerpo del abono, que es lo que traía el apunte único. */
+let ultimoAbono = null;
 let sesionEnStripe = null;
 /* Y un tercero: Resend, desde que el cliente recibe su contrato por correo.
    Se apunta aparte porque lo que se le manda a Resend NO puede confundirse
@@ -135,7 +146,9 @@ function euroDice(status, datos) {
       return Promise.resolve({ ok: RESEND_DICE.ok, status: RESEND_DICE.status,
         json: function () { return Promise.resolve(RESEND_DICE.cuerpo); } });
     }
-    ultimoEnvio = { url: url, opciones: opc, cuerpo: JSON.parse(opc.body) };
+    const llamada = { url: url, opciones: opc, cuerpo: JSON.parse(opc.body) };
+    if (String(url).indexOf('/abono-externo') > 0) ultimoAbono = llamada;
+    else ultimoEnvio = llamada;
     return Promise.resolve({ ok: status >= 200 && status < 300, status: status,
       json: function () { return Promise.resolve(datos); } });
   };
@@ -221,6 +234,7 @@ function euroDice(status, datos) {
 
   /* -------- el camino bueno -------- */
   ultimoEnvio = null;
+  ultimoAbono = null;
   sesionEnStripe = sesionPagada;
   euroDice(201, { folio: 43773, repetido: false });
   r = res();
@@ -244,6 +258,7 @@ function euroDice(status, datos) {
   igual('el nombre se parte en nombre y apellidos',
     [enviado.cliente.nombre, enviado.cliente.apellidos], ['Juana', 'Pérez López']);
   igual('los montos van completos', [enviado.cobro.montoTotal, enviado.cobro.anticipo], [21700, 4340]);
+  cierto('y el anticipo se anota en el contrato recién creado', !!ultimoAbono);
 
   /* -------- OXXO: voucher generado, dinero NO entrado -------- */
   ultimoEnvio = null;
@@ -607,6 +622,161 @@ function euroDice(status, datos) {
     await handler(pide({ type: 'checkout.session.completed', data: { object: sinPagar } }), r);
     igual('abono con voucher sin pagar: 200 y NO se registra',
       [r._status, AEUROSYSTEM.length], [200, 0]);
+  }
+
+  /* ============================================================
+     EL ANTICIPO: EL CONTRATO NACE CONFIRMADO Y EL DINERO SE ANOTA
+     ------------------------------------------------------------
+     Decisión del dueño, 15-sep-2026. Un contrato que llega de la
+     página con el anticipo YA COBRADO no puede nacer en BORRADOR:
+     el dinero entró. EuroSystem acepta `pagado` en el cuerpo de
+     §2, y con `true` el contrato nace CONFIRMADO.
+
+     Pero un contrato confirmado con el saldo completo es una
+     mentira igual de cara: dice que el cliente no ha pagado nada.
+     Así que el anticipo se anota como abono por la puerta de §13,
+     la MISMA que usan los abonos del portal.
+
+     LO QUE SE JUEGA, y el orden importa:
+
+       1. el contrato ................ §2, ahora con `pagado: true`
+       2. el anticipo, con su folio .. §13, con el `pi_…`
+       3. y SOLO ENTONCES el correo al cliente
+
+     El correo va al final porque si el paso 2 falla se contesta
+     500 y Stripe insiste tres días: con el correo antes, el
+     cliente recibiría un comprobante por cada reintento. Las dos
+     puertas son idempotentes —el contrato por `referenciaExterna`,
+     el abono por `referencia`— así que insistir no duplica ni un
+     contrato ni un peso.
+
+     Y la referencia es el `pi_…`, no el `cs_…`: es el mismo que
+     busca `_reversas.js` cuando ese dinero se devuelve. Con otra
+     cosa, un reembolso del anticipo no encontraría nada que
+     revertir y el saldo del cliente se quedaría bajo.
+     ============================================================ */
+  process.env.RESEND_API_KEY = 're_de_mentiras';
+  RESEND_DICE = { ok: true, status: 200, cuerpo: { id: 'em_anticipo' } };
+
+  let PUERTAS = [];
+  let CORREOS = [];
+  /* Cada puerta con su propia respuesta: el contrato puede decir que sí y el
+     abono que no, que es justo el caso que hay que cuidar. */
+  function euroDicePorPuerta(delContrato, delAbono) {
+    PUERTAS = [];
+    CORREOS = [];
+    global.fetch = function (url, opc) {
+      const u = String(url);
+      if (u.indexOf('api.stripe.com') >= 0) {
+        return Promise.resolve({ ok: !!sesionEnStripe, status: sesionEnStripe ? 200 : 404,
+          json: function () { return Promise.resolve(sesionEnStripe || { error: { message: 'no' } }); } });
+      }
+      if (u.indexOf('api.resend.com') >= 0) {
+        CORREOS.push(JSON.parse(opc.body));
+        return Promise.resolve({ ok: RESEND_DICE.ok, status: RESEND_DICE.status,
+          json: function () { return Promise.resolve(RESEND_DICE.cuerpo); } });
+      }
+      const cual = u.indexOf('/abono-externo') > 0 ? delAbono : delContrato;
+      PUERTAS.push({ url: u, opciones: opc, cuerpo: JSON.parse(opc.body) });
+      return Promise.resolve({ ok: cual.status >= 200 && cual.status < 300, status: cual.status,
+        json: function () { return Promise.resolve(cual.datos); } });
+    };
+  }
+  function laDelContrato() {
+    return PUERTAS.filter(function (l) { return l.url.indexOf('/contratos/externo') > 0; })[0] || NINGUNA;
+  }
+  /* Nunca `undefined`: una puerta que no se tocó tiene que leerse como una
+     aserción en rojo, no como un tronado que se lleva el resto del archivo. */
+  const NINGUNA = { url: '', opciones: { headers: {} }, cuerpo: {} };
+  function laDelAnticipo() {
+    return PUERTAS.filter(function (l) { return l.url.indexOf('/abono-externo') > 0; })[0] || NINGUNA;
+  }
+  function alCliente() {
+    return CORREOS.filter(function (c) { return (c.to || []).indexOf('quien@sea.mx') >= 0; });
+  }
+
+  /* -------- el camino bueno -------- */
+  sesionEnStripe = sesionPagada;
+  euroDicePorPuerta({ status: 201, datos: { folio: 52001, pdfBase64: 'JVBERi0xLjMK' } },
+                    { status: 201, datos: { registrado: true } });
+  r = res();
+  await handler(pide({ type: 'checkout.session.completed', data: { object: sesionPagada } }), r);
+
+  igual('anticipo pagado: 200 y su folio', [r._status, r._json.folio], [200, 52001]);
+  igual('el contrato nace CONFIRMADO: va `pagado: true`',
+    laDelContrato().cuerpo.pagado, true);
+  cierto('y el anticipo se anota por la puerta de abonos de §13', laDelAnticipo() !== NINGUNA);
+  igual('primero el contrato y luego el abono: sin folio no hay dónde anotarlo',
+    PUERTAS.map(function (l) { return l.url.indexOf('/abono-externo') > 0; }), [false, true]);
+  igual('la llave del abono va en la cabecera, no en el cuerpo',
+    laDelAnticipo().opciones.headers['x-api-key'], 'llave_de_mentiras');
+
+  {
+    const abono = laDelAnticipo().cuerpo;
+    igual('el folio del abono es el NÚMERO DE CONTRATO que devolvió EuroSystem',
+      abono.folio, 52001);
+    igual('el monto es lo que Stripe cobró de verdad, en pesos y no en centavos',
+      abono.monto, 4340);
+    igual('la referencia es el mismo pi_ que buscará la reversa',
+      abono.referencia, 'pi_DEL_ANTICIPO');
+    cierto('y la fecha lleva zona horaria', /[+-]\d{2}:\d{2}$/.test(String(abono.fecha)));
+    igual('no se manda nada más', Object.keys(abono).sort(),
+      ['fecha', 'folio', 'monto', 'referencia']);
+  }
+
+  igual('y UN solo correo al cliente, después de las dos puertas', alCliente().length, 1);
+  cierto('con su contrato adjunto', !!(alCliente()[0].attachments || []).length);
+
+  /* -------- EuroSystem anota el contrato pero NO el abono --------
+     El dinero ya se cobró y el contrato ya dice CONFIRMADO. Contestar 200
+     aquí sería dejar un contrato confirmado que jura que nadie ha pagado. */
+  for (const codigo of [404, 422, 401, 500]) {
+    euroDicePorPuerta({ status: 201, datos: { folio: 52002, pdfBase64: 'JVBERi0xLjMK' } },
+                      { status: codigo, datos: { error: 'no' } });
+    r = res();
+    await handler(pide({ type: 'checkout.session.completed', data: { object: sesionPagada } }), r);
+    igual('EuroSystem no anota el anticipo (' + codigo + '): NO es 2xx, que Stripe insista',
+      r._status >= 300, true);
+    igual('EuroSystem no anota el anticipo (' + codigo + '): y NO se le escribe al cliente',
+      CORREOS.length, 0);
+  }
+
+  /* -------- EuroSystem inalcanzable justo en el abono -------- */
+  euroDicePorPuerta({ status: 201, datos: { folio: 52005, pdfBase64: 'JVBERi0xLjMK' } }, null);
+  {
+    const conRed = global.fetch;
+    global.fetch = function (url, opc) {
+      if (String(url).indexOf('/abono-externo') > 0) return Promise.reject(new Error('sin red'));
+      return conRed(url, opc);
+    };
+  }
+  r = res();
+  await handler(pide({ type: 'checkout.session.completed', data: { object: sesionPagada } }), r);
+  igual('EuroSystem inalcanzable en el abono: NO es 2xx', r._status >= 300, true);
+  igual('  y sin correo al cliente', CORREOS.length, 0);
+
+  /* -------- el reintento que ya estaba todo hecho --------
+     Las dos puertas contestan «ya estaba»: 200, el mismo folio, y UN correo.
+     Aquí es donde se comprueba que insistir no le escribe dos veces. */
+  euroDicePorPuerta({ status: 200, datos: { folio: 52003, repetido: true, pdfBase64: 'JVBERi0xLjMK' } },
+                    { status: 200, datos: { repetido: true } });
+  r = res();
+  await handler(pide({ type: 'checkout.session.completed', data: { object: sesionPagada } }), r);
+  igual('reintento con todo ya registrado: 200 y el MISMO folio',
+    [r._status, r._json.folio, r._json.repetido], [200, 52003, true]);
+  igual('y se tocaron las dos puertas, una vez cada una', PUERTAS.length, 2);
+  igual('un solo correo al cliente, nunca dos', alCliente().length, 1);
+
+  /* -------- un pago de PRUEBA no anota ningún abono --------
+     No crea contrato, así que no hay folio al que anotarle nada. */
+  {
+    const dePrueba = Object.assign({}, sesionPagada, { livemode: false });
+    sesionEnStripe = dePrueba;
+    euroDicePorPuerta({ status: 201, datos: { folio: 1 } }, { status: 201, datos: { registrado: true } });
+    r = res();
+    await handler(pide({ type: 'checkout.session.completed', data: { object: dePrueba } }), r);
+    igual('pago de prueba: 200 y NI contrato NI abono', [r._status, PUERTAS.length], [200, 0]);
+    sesionEnStripe = sesionPagada;
   }
 
   console.log('\n' + buenas + ' buenas, ' + malas + ' malas');

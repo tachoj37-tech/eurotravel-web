@@ -76,6 +76,19 @@ trata el resto de este documento.
 
 ## 3 · Los abonos: ya están diseñados, y falta UNA cosa
 
+> **Al día · 15-sep-2026.** Lo de abajo ya se cumplió y esta sección se lee
+> como historia. Las dos puertas de EuroSystem existen (§13), los abonos del
+> portal se registran solos, y **el anticipo también**: desde hoy, cuando
+> Stripe confirma el pago, `api/_webhook-logica.js` crea el contrato con
+> `pagado: true` —**nace CONFIRMADO, no BORRADOR**— y enseguida anota el
+> anticipo como abono por `POST /api/contratos/abono-externo`, con el `pi_…`
+> como referencia: el mismo que busca la reversa si ese dinero se devuelve.
+>
+> El orden es contrato → abono → correo al cliente, y no es casual: si el
+> abono falla se contesta 500 y Stripe insiste tres días; con el correo antes,
+> el cliente recibiría un comprobante por cada reintento. Las dos puertas son
+> idempotentes, así que insistir no duplica ni un contrato ni un peso.
+
 **No hay que inventar nada.** Existe `docs/superpowers/specs/2026-08-25-abonos-en-linea-design.md`,
 escrito y aprobado por el dueño, con el diseño completo. Y una parte del
 camino ya está construida: `api/_reversas.js` ya sabe distinguir un abono
