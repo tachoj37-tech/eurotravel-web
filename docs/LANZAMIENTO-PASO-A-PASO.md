@@ -119,3 +119,9 @@ Proyecto **`eurosystem`**:
 - [ ] D6 · Asistente de EuroSystem suma abonos sin aprobar como pagados
 - [ ] D7 · Alta rápida de cliente parte «Juan Pablo» en nombre y apellido
 - [ ] D8 · «Tu fecha sigue libre» con el calendario real (`DISPONIBILIDAD_API_KEY`)
+- [ ] D9 · La página pesa 2.9 MB al abrir: 2 MB son seis JPG de fondo (`viaje-*.jpg`,
+      `dest-*.jpg`) que bajan completos desde el primer segundo aunque están al final.
+      Cambiarlos a `<img loading="lazy">` o cargarlos al llegar; el HTML pesa 380 KB.
+- [ ] D10 · `probar-ticket-y-se-baja.mjs` caducó con el calendario el 16-sep («15 a 20
+      de septiembre» ya pasó y el bot descarta la salida). Es del bot: no se toca sin
+      que el dueño lo pida.
