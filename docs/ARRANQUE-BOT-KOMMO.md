@@ -127,3 +127,42 @@ El dueño rechazó el bot de bloques (84528) y eligió **«A»**: el cerebro ori
 - Por verificar en vivo: fotos por `send_message` con adjunto del drive dentro de
   `execute_handlers` (si no, cae a liga en texto), audios (llega sin texto → pide que lo escriba),
   y que el ticket cierre con `status: fin`.
+
+---
+
+## 9. Cómo quedó de verdad: Salesbot «EuroBot cerebro» (id 84562) · 16-sep, mediodía
+
+El bloque de widget NO sirvió en el diseñador: Kommo pinta el bloque pero nunca
+carga el script del widget en la página de bots (`AMOCRM.widgets.list` no lo
+trae; el bloque sale vacío y truena `reading 'id'`). Probé `salesbotDesignerSettings`,
+`init_once:true`, abrirlo desde el embudo: nada. Así que el cerebro va en un
+**Paso personalizado (código)** con el mismo `widget_request`, que Kommo sí
+acepta (se guarda como handler `widget_request` en el paso 3).
+
+Flujo guardado (pasos del bot):
+- 0 · Mensaje de saludo (solo canal Eurotravel PRUEBAS) con botones «Nueva
+  cotización» y «Hablar con un agente». Botón agente → paso 2; cualquier otra
+  cosa (incluido «Nueva cotización» y texto libre) → paso 3.
+- 2 · Mensaje «Va 🙌 Ahorita te contesta una persona por aquí mismo.» → pausa de
+  1 min (paso 5) y termina. (No dejó ponerle «Parar»: el menú de esa salida
+  siempre auto-creaba una Pausa; funcionalmente es lo mismo.)
+- 3 · Código: `{"handler":"widget_request","params":{"url":".../api/whatsapp/kommo",
+  "data":{"from":"kommo","message":"{{message_text}}","lead_id":"{{lead.id}}",
+  "contact_name":"{{contact.name}}","contact_phone":"{{contact.phone}}",
+  "talk_id":"{{talk.id}}"}}}` → paso 4.
+- 4 · Pausa «Hasta recibir mensaje» → de vuelta al paso 3.
+- Disparador: «En un mensaje recibido desde Eurotravel PRUEBAS (con una pausa
+  de un día)». La pausa de un día significa que, terminada una plática, el
+  mismo lead no relanza el bot hasta el día siguiente (o hasta que se cierre la
+  conversación). Para probar varias veces seguidas, bajar esa pausa.
+
+Lo que hace el servidor con eso (`trabajoDeKommo`):
+- Desde un paso de código el aviso llega SIN token: se acepta con el tramo
+  interno y el `return_url` de la cuenta como candados (commit 02f8034).
+- Cuando el cerebro termina (ticket o persona) manda `{"handler":"stop"}` en
+  `execute_handlers` para que el bot pare ahí; si Kommo lo ignora, la pausa
+  sigue esperando y el cerebro contesta callado (ficha en manos del dueño).
+
+Falta del lado del dueño: `KOMMO_TOKEN` en Vercel (sin él, la ruta contesta 404
+y el bot se queda mudo), y borrar el EuroBot de bloques (84528) para que no
+contesten dos bots en PRUEBAS. `KOMMO_SECRETO` ya no es obligatorio.
