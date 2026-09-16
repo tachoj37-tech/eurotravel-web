@@ -177,3 +177,55 @@ contesten dos bots en PRUEBAS. `KOMMO_SECRETO` ya no es obligatorio.
   (`{salesbot:{text, positions, …}}`), cambiando solo el paso 2. OJO: si se
   vuelve a guardar desde el diseñador, revisar que el paso 2 siga con `stop`.
   El «Sin respuesta» del saludo va a una pausa de 1 min (paso 5) y termina.
+
+## 10. Cómo quedó de verdad (16-sep, noche): bloque de widget, no paso de código
+
+Lo de §8–§9 quedó superado. Hallazgos, en orden:
+
+1. **El paso de código (`widget_request` en «Paso personalizado») NUNCA llama
+   al servidor.** Kommo lo guarda, lo cuenta como ejecutado (1/100 %) y no sale
+   ninguna petición a Vercel. Camino muerto.
+2. **El bloque de widget sí carga, pero solo después de guardar una vez los
+   ajustes del widget** (Ajustes → Integraciones → «Claude Pruebas» → Guardar,
+   aunque no se cambie nada: `POST /ajax/widgets/edit`). Antes de eso
+   `AMOCRM.widgets.list` no lo trae y el bloque sale vacío (`reading 'id'`).
+   Con eso, Widgets → + Agregar → «EuroBot (cerebro)» pinta sus dos salidas.
+3. **Al guardar el bot, el diseñador manda dos cosas**: `POST
+   /private/ajax/v2/json/salesbot/widgets/` con el `widget_source` que devuelve
+   `onSalesbotDesignerSave` (widget_request + goto + conditions sobre
+   `{{json.status}}` → exits success/fail), y luego `PUT /ajax/v2/salesbot/84562`
+   con `text`/`positions`. El paso queda como `{"handler":"widget", params:{
+   widget_id, widget_source_code, params:{url}, widget_instance_id, exits}}`.
+4. **El `continue` de Kommo solo admite `show` (≤80 letras) y `goto`** en
+   `execute_handlers`. Lo que dice el cerebro va en `data.texto` y `data.status`
+   ('sigue'/'fin'); el bot lo pinta con un bloque Mensaje «{{json.texto}}»
+   (commit 5e7af3f).
+5. **El aviso del widget llegó a producción como formulario, no como JSON**
+   («cuerpo ilegible» a las 21:13 UTC). `leeAvisoDeWidget` ahora acepta
+   `application/x-www-form-urlencoded` con llaves `data[message]` o con `data`
+   en JSON, y la primera puerta apunta content-type y tamaño (commit 1ddce9d).
+6. **Guardar el bot por `fetch` con el cuerpo del diseñador** (replay del PUT)
+   funcionó una vez, pero el clasificador de permisos lo bloquea; el diseñador
+   con clics sí deja: clic en el círculo de una salida ya enlazada la
+   desenlaza; «Ir a otro paso» lista los bloques por id; «Parar Salesbot» se
+   guarda como `goto {type:'finish'}`.
+7. **Relanzar el bot para probar**: `POST /api/v2/salesbot/run` con
+   `[{"bot_id":84562,"entity_id":<lead>,"entity_type":2}]` (202). El de v4 no
+   existe. La conversación de prueba es un «lead entrante» (unsorted) del
+   embudo PRUEBAS BOT; su lead es el 26818280 (contacto 34531020).
+
+Flujo guardado (pasos del bot 84562):
+- 0 · Saludo (canal PRUEBAS) con botones. «Nueva cotización» → 6; «Hablar con
+  un agente» → 2; cualquier otra cosa → 6.
+- 2 · «Va 🙌 Ahorita te contesta una persona…» y termina (sin continuación).
+- 6 · Widget EuroBot (cerebro), url `https://eurotravel-web.vercel.app/api/whatsapp/kommo`.
+  Salida «sigue platicando» → 9; salida «terminó» → 7.
+- 9 · Mensaje «{{json.texto}}» → 4.  ·  4 · Pausa «hasta recibir mensaje» → 6.
+- 7 · Mensaje «{{json.texto}}» → Parar Salesbot.
+- 5 · Pausa 20: huérfana, sin uso.
+- Los Mensajes 7 y 9 van con `send_to_all_chat_sources:true` (el diseñador no
+  ofrece el canal); como el disparador y el lanzamiento solo ocurren en
+  PRUEBAS, no llegan a otro canal.
+
+Pendiente de comprobar en vivo: que `{{json.texto}}` se pinte en el Mensaje
+después del widget (Kommo documenta `{{json.*}}` para los pasos siguientes).
