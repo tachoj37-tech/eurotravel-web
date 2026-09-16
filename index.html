@@ -236,23 +236,6 @@
   .intro-bar i { display: block; height: 100%; width: 100%; background: var(--red); transform: scaleX(0); transform-origin: left; animation: barGrow 2600ms var(--ease) forwards; }
   @keyframes barGrow { to { transform: scaleX(1); } }
 
-  .intro-skip {
-    position: absolute;
-    bottom: 24px;
-    right: 24px;
-    background: none;
-    border: 1px solid var(--line);
-    color: var(--muted);
-    border-radius: 999px;
-    padding: 8px 16px;
-    font-family: 'Archivo', sans-serif;
-    font-size: 12px;
-    cursor: pointer;
-    transition: all 200ms var(--ease);
-  }
-
-  .intro-skip:hover { border-color: var(--ink); color: var(--ink); }
-
   /* ================= LA ESPERA: EL CAMIONCITO =================
      Lo pidió el dueño el 15-sep-2026: «en todos los tiempos de espera,
      pongas el camioncito que tenemos, el camioncito que se pone al
@@ -2400,7 +2383,6 @@ window.IMGS = {
     <div class="intro-tag">Renta de autobuses · Tlaquepaque, Jalisco</div>
     <div class="intro-bar"><i></i></div>
   </div>
-  <button class="intro-skip" type="button" id="skip">Saltar</button>
 </div>
 
 <!-- ============ NAV ============ -->
@@ -3852,30 +3834,22 @@ window.IMGS = {
     }
 
     /* ============================================================
-       LA ANIMACIÓN DE ENTRADA CORRE UNA VEZ POR VISITA
+       LA ENTRADA SOLO MIENTRAS LA PANTALLA CARGA DE VERDAD
        ------------------------------------------------------------
-       «Si la animación de ese botón es opcional, pues no, nomás úsala
-       cuando tengas que de verdad recargar», dijo el dueño. Es bonita
-       la primera vez y es un estorbo en la segunda: quien va y viene
-       del cotizador a las unidades no tiene por qué verla cada vez.
+       «te dije que quitaras el botón de omitir, eso solo sale cuando
+       genuinamente está cargando la pantalla» (el dueño, 16-sep-2026).
 
-       Se recuerda en `sessionStorage` —la visita, no el navegador: al
-       día siguiente la vuelve a ver, que es cuando sigue siendo bonita.
+       Antes era un reloj fijo de 3.2 s con botón «Saltar» y recuerdo
+       en sessionStorage. Ya no: el camioncito tapa la página mientras
+       la primera pantalla no está lista —la foto del cartel y las
+       letras— y se va en cuanto lo está. Si eso tarda, se ve; si viene
+       del caché, casi ni se nota. Ni botón ni reloj bonito.
+
+       Un tope de seguridad de 4 s: si una foto nunca llega, la página
+       no se queda tapada por un adorno.
        ============================================================ */
     var intro = byId('intro');
     var introDone = false;
-
-    /* Se marca AL EMPEZAR, no al acabar. Antes esto vivía dentro de
-       `endIntro()`: quien recargaba al segundo y medio nunca llegaba ahí
-       y volvía a ver la animación completa, que es justo lo que molesta.
-
-       Y va en try/catch porque `sessionStorage` TRUENA —no devuelve
-       nulo, truena— en navegación privada de algunos navegadores y con
-       las cookies del sitio bloqueadas. Si truena, la animación se ve:
-       ése es el lado seguro. */
-    function marcaIntroVista() {
-      try { sessionStorage.setItem('et_intro', '1'); } catch (e) {}
-    }
 
     function endIntro() {
       if (introDone) return;
@@ -3885,17 +3859,29 @@ window.IMGS = {
       setTimeout(function () { if (intro.parentNode) intro.parentNode.removeChild(intro); }, 760);
     }
 
-    var vista = false;
-    try { vista = sessionStorage.getItem('et_intro') === '1'; } catch (e) {}
+    /* «Lista» = la foto grande del cartel ya está (la misma que se
+       precarga arriba con <link rel="preload">, así que no se baja dos
+       veces) y las letras ya cargaron. Una foto que falla también
+       libera: sin foto se ve el degradado, no una página tapada. */
+    function pantallaLista() {
+      var foto = new Promise(function (listo) {
+        var im = new Image();
+        im.onload = im.onerror = function () { listo(); };
+        im.src = 'img/noche.webp';
+      });
+      var letras = (document.fonts && document.fonts.ready)
+        ? document.fonts.ready.then(function () {}, function () {})
+        : Promise.resolve();
+      return Promise.all([foto, letras]);
+    }
 
-    if (vista || reduce) {
+    if (reduce) {
       if (intro.parentNode) intro.parentNode.removeChild(intro);
       introDone = true;
     } else {
-      marcaIntroVista();
       document.body.style.overflow = 'hidden';
-      setTimeout(endIntro, 3200);
-      byId('skip').addEventListener('click', endIntro);
+      setTimeout(endIntro, 4000);
+      pantallaLista().then(function () { endIntro(); });
     }
 
     /* ================= pestañas ================= */

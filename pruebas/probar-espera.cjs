@@ -168,47 +168,56 @@ cierto('viaje.html: sin guion sigue diciendo «Buscando tu viaje…»',
   /<p class="cargando">Buscando tu viaje…<\/p>/.test(VIAJE));
 
 /* ============================================================
-   4 · LA ANIMACIÓN DE ENTRADA: UNA VEZ POR VISITA
+   4 · LA ENTRADA SOLO MIENTRAS LA PANTALLA CARGA DE VERDAD
+   ------------------------------------------------------------
+   El 16-sep-2026 el dueño corrigió lo que se había entendido:
+
+     «te dije que quitaras el botón de omitir, eso solo sale cuando
+      genuinamente está cargando la pantalla»
+
+   O sea: NO hay botón «Saltar», NO hay reloj fijo de 3.2 s y NO hay
+   recuerdo en sessionStorage. El camioncito tapa la página mientras la
+   primera pantalla no está lista —la foto del cartel y las letras— y
+   se va en cuanto lo está. Con un tope por si una foto nunca llega.
    ============================================================ */
 
 cierto('index.html: la animación de entrada sigue existiendo',
   /<div id="intro">/.test(INDEX) && /class="intro-bus"/.test(INDEX));
 
-cierto('index.html: el botón «Saltar» sigue ahí',
-  /class="intro-skip"[^>]*id="skip"[^>]*>Saltar</.test(INDEX));
+cierto('index.html: ya NO hay botón «Saltar»',
+  !/id="skip"/.test(INDEX_S) && !/intro-skip/.test(INDEX_S) && !/byId\('skip'\)/.test(INDEX_S));
+
+cierto('index.html: ya NO se recuerda la visita en sessionStorage',
+  !/et_intro/.test(INDEX_S));
 
 const bloqueIntro = INDEX_S.slice(
   INDEX_S.indexOf('var intro = byId(\'intro\')'),
   INDEX_S.indexOf('var VIEWS =')
 );
+cierto('index.html: el bloque de la entrada existe', bloqueIntro.length > 0);
 
-cierto('index.html: se acuerda de la visita en sessionStorage',
-  /sessionStorage\.getItem\('et_intro'\)/.test(bloqueIntro));
+cierto('index.html: la entrada se va cuando la pantalla está lista (pantallaLista → endIntro)',
+  /pantallaLista\(\)\s*\.then\(\s*function\s*\(\)\s*\{[^}]*endIntro\(\)/.test(bloqueIntro));
 
-cierto('index.html: leer el recuerdo va dentro de try/catch',
-  /try\s*\{[^}]*sessionStorage\.getItem\('et_intro'\)[^}]*\}\s*catch/.test(bloqueIntro));
+cierto('index.html: «lista» = la foto del cartel cargó (la misma que se precarga)',
+  /new Image\(\)/.test(bloqueIntro) && /img\/noche\.webp/.test(bloqueIntro) &&
+  /<link rel="preload" as="image" href="img\/noche\.webp"/.test(INDEX));
 
-cierto('index.html: si no hay recuerdo, la animación corre (lado seguro)',
-  /var\s+vista\s*=\s*false\s*;/.test(bloqueIntro));
+cierto('index.html: «lista» también espera las letras (document.fonts.ready)',
+  /document\.fonts\.ready/.test(bloqueIntro));
 
-cierto('index.html: la segunda carga se salta la animación',
-  /if\s*\(vista\s*\|\|\s*reduce\)\s*\{[\s\S]{0,220}?removeChild\(intro\)/.test(bloqueIntro));
+cierto('index.html: la foto que falla también libera la pantalla (onerror)',
+  /onerror/.test(bloqueIntro));
 
-/* Se marca AL EMPEZAR, no al acabar. Antes el recuerdo se escribía en
-   `endIntro()`: quien recargaba al segundo y medio no había llegado ahí
-   y volvía a ver la animación completa. */
-const ramaQueCorre = bloqueIntro.slice(bloqueIntro.indexOf('} else {'));
-cierto('index.html: el recuerdo se marca al EMPEZAR la animación',
-  /marcaIntroVista\(\)/.test(ramaQueCorre) && /setTimeout\(endIntro/.test(ramaQueCorre));
-
-igual('index.html: el recuerdo se escribe en un solo lugar',
-  (INDEX_S.match(/sessionStorage\.setItem\('et_intro'/g) || []).length, 1);
-
-cierto('index.html: escribir el recuerdo va dentro de try/catch',
-  /function\s+marcaIntroVista[\s\S]{0,300}?try\s*\{[^}]*sessionStorage\.setItem\('et_intro'[^}]*\}\s*catch/.test(INDEX_S));
+/* El tope: si una foto nunca llega, la página no se queda tapada por un
+   adorno. Y no puede ser un reloj «bonito»: es de seguridad, corto. */
+const tope = bloqueIntro.match(/setTimeout\(endIntro,\s*(\d+)\)/);
+cierto('index.html: hay un tope de seguridad para la entrada', !!tope);
+cierto('index.html: el tope es de seguridad, no un reloj fijo (≤ 5 s)', tope && +tope[1] <= 5000);
+igual('index.html: un solo reloj sobre la entrada', (bloqueIntro.match(/setTimeout\(endIntro/g) || []).length, 1);
 
 cierto('index.html: con movimiento reducido no hay animación de entrada',
-  /vista\s*\|\|\s*reduce/.test(bloqueIntro));
+  /if\s*\(reduce\)\s*\{[\s\S]{0,220}?removeChild\(intro\)/.test(bloqueIntro));
 
 console.log('\n' + buenas + ' buenas, ' + malas + ' malas');
 process.exit(malas > 0 ? 1 : 0);
