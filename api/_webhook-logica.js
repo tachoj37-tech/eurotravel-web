@@ -282,6 +282,7 @@ const correo = require('./_correo');   // el correo al cliente, en un solo dueñ
 const ligas = require('./_ligas');         // y su liga propia, firmada
 const reversas = require('./_reversas');   // cuando el dinero se regresa
 const defensas = require('./_defensas');
+const saldos = require('./_saldo');        // quién es un abono, en un solo dueño
 
 /* `crudo` puede ser el cuerpo tal cual (Buffer/texto) o el objeto ya
    parseado, segun lo que deje pasar el entorno. */
@@ -472,6 +473,238 @@ async function atiendeReversa(tipo, objeto, firmado) {
   };
 }
 
+/* ============================================================
+   UN ABONO DEL CLIENTE, QUE NO ES UNA COMPRA NUEVA
+   ------------------------------------------------------------
+   Sale de «Abona a tu viaje»: el cliente acertó su número de
+   contrato y su apellido, y pagó una parte de lo que debe. Para
+   Stripe es un cobro más; para nosotros NO es una reserva.
+
+   LO QUE HABIA ANTES: SE PERDIA.
+
+   Un cobro con `tipo: 'abono'` caía en la rama de los contratos.
+   Se armaba un contrato con la metadata de un abono —sin nombre,
+   sin fechas—, la revisión de «fechas ilegibles» contestaba 200 y
+   ahí moría: el cliente pagaba, Stripe cobraba, y en EuroSystem no
+   aparecía nada. Ni un correo.
+
+   EL ORDEN, Y POR QUE ES ESE
+
+     1. EuroSystem lo registra ......... §13, con el `pi_…`
+     2. y SOLO ENTONCES, el correo al cliente
+
+   Al revés no: si el registro falla se contesta 500 para que
+   Stripe insista tres días, y con el correo antes el cliente
+   recibiría un comprobante por cada reintento. Registrar es
+   idempotente por la referencia —el mismo `pi_…` nunca se anota
+   dos veces— así que insistir no duplica ningún peso.
+
+   LA REFERENCIA ES EL `pi_…`, Y NO ES UN DETALLE
+
+   Es el MISMO que manda `_reversas.js` cuando ese dinero se
+   devuelve. Si aquí se mandara otra cosa, la reversa buscaría un
+   abono que no existe, EuroSystem contestaría 404 y el saldo del
+   cliente se quedaría bajo con un dinero que ya salió.
+   ============================================================ */
+const PUERTA_ABONO = '/api/contratos/abono-externo';
+
+/* El número de contrato de EuroSystem, tal como viaja en la metadata del
+   cobro. Solo un entero: lo demás no nombra ningún contrato. */
+function contratoDeLaMetadata(m) {
+  const t = String((m || {}).contrato || '').trim();
+  return /^\d{1,8}$/.test(t) && Number(t) > 0 ? Number(t) : 0;
+}
+
+/* Lo que de verdad se cobró, en pesos. Manda Stripe —`amount_total`, en
+   centavos— y no la metadata: la metadata la escribió la página al abrir el
+   cobro y Stripe la copia sin revisarla. Si Stripe no lo dice, se cae a lo
+   que decía la metadata antes que quedarse sin monto. */
+function pesosCobrados(sesion) {
+  const centavos = Number((sesion || {}).amount_total);
+  if (isFinite(centavos) && centavos > 0) return Math.round(centavos) / 100;
+  const dicho = Number(((sesion || {}).metadata || {}).monto);
+  return isFinite(dicho) && dicho > 0 ? Math.round(dicho) : 0;
+}
+
+/* El momento en que entró el dinero, con zona. Es AHORA a propósito: este
+   aviso llega de Stripe en cuanto el cobro se completa —también el de OXXO,
+   que es `async_payment_succeeded`—, así que la hora de ahora es la del pago.
+   `created` de la sesión sería la del voucher, que en un OXXO puede ser de
+   tres días antes. */
+function ahoraConZona(cuando) {
+  const d = cuando instanceof Date ? cuando : new Date();
+  const dd = function (n) { return String(n).padStart(2, '0'); };
+  /* -06:00 es fijo (México dejó el horario de verano en 2022), así que la
+     hora local del centro se saca restándole seis a la UTC. */
+  const local = new Date(d.getTime() - 6 * 3600000);
+  return local.getUTCFullYear() + '-' + dd(local.getUTCMonth() + 1) + '-' +
+    dd(local.getUTCDate()) + 'T' + dd(local.getUTCHours()) + ':' +
+    dd(local.getUTCMinutes()) + ':' + dd(local.getUTCSeconds()) + ZONA;
+}
+
+/* A dónde se le escribe al cliente. En el portal no hay metadata con su
+   correo —§12 no lo devuelve, y con razón—: el correo es el que él mismo
+   tecleó en la pantalla de Stripe. */
+function correoDelCobro(sesion) {
+  const s = sesion || {};
+  return String((s.metadata || {}).correo ||
+    (s.customer_details && s.customer_details.email) || '').trim();
+}
+
+function avisoDeAbono(datos) {
+  const renglones = [
+    datos.registrado
+      ? 'Un cliente abonó en línea. EuroSystem ya lo tiene anotado, SIN APROBAR.'
+      : 'Un cliente abonó en línea y NO SE PUDO REGISTRAR EN EUROSYSTEM. ' +
+        'HAY QUE CAPTURARLO A MANO.',
+    '',
+    'Contrato:         ' + (datos.contrato || '—'),
+    'Monto:            $' + Number(datos.monto || 0).toLocaleString('es-MX'),
+    'Cuándo:           ' + datos.fecha,
+    'Correo:           ' + (datos.correo || '—'),
+    'Pago de Stripe:   ' + (datos.pago || '—'),
+    '',
+    datos.registrado
+      ? 'QUÉ HAY QUE HACER\n  Aprobarlo en el contrato para que le baje el saldo al cliente.'
+      : 'QUÉ HAY QUE HACER\n  Capturar el abono en el contrato. El dinero YA está cobrado.\n' +
+        '  Motivo: ' + (datos.porQueNo || 'sin detalle'),
+    '',
+    'Verlo en Stripe: https://dashboard.stripe.com/payments/' + (datos.pago || '')
+  ];
+  return {
+    asunto: (datos.registrado ? 'Abono en línea' : 'ABONO EN LÍNEA SIN REGISTRAR') +
+      ' · contrato ' + (datos.contrato || '—') +
+      ' · $' + Number(datos.monto || 0).toLocaleString('es-MX'),
+    texto: renglones.join('\n')
+  };
+}
+
+async function atiendeAbono(sesion) {
+  const m = sesion.metadata || {};
+  const contrato = contratoDeLaMetadata(m);
+  const monto = pesosCobrados(sesion);
+  const pago = typeof sesion.payment_intent === 'string' ? sesion.payment_intent
+             : (sesion.payment_intent && sesion.payment_intent.id) || '';
+  const fecha = ahoraConZona();
+  const correoDelCliente = correoDelCobro(sesion);
+
+  const datos = { contrato: contrato, monto: monto, fecha: fecha, pago: pago,
+    correo: correoDelCliente, registrado: false };
+
+  /* ---- un abono de prueba no toca EuroSystem ----
+     Misma polaridad que el anticipo: solo se salta cuando Stripe dice
+     EXPRESAMENTE que el pago no es real. */
+  if (sesion.livemode === false) {
+    console.log('[abono] PAGO DE PRUEBA (' + sesion.id + '): no se registra en EuroSystem.');
+    if (correoDelCliente) await correo.mandaAbono(datos);
+    return { status: 200, cuerpo: { recibido: true, abono: true, prueba: true } };
+  }
+
+  /* ---- sin número de contrato no hay dónde anotarlo ----
+     Son los abonos que salen de la pantalla del viaje, con liga: esa pantalla
+     conoce el folio de la página (`ET-…`) y NO el número de EuroSystem, que
+     lo asigna EuroSystem al crear el contrato.
+
+     Aquí no se contesta 500. Reintentar tres días no le va a agregar a esa
+     sesión una metadata que ya está escrita; lo único que arregla esto es una
+     persona. Así que se le avisa a la oficina —que es lo que sí puede actuar—
+     y se acusa recibo. */
+  if (!contrato) {
+    console.error('[abono] cobro ' + (sesion.id || '') + ' SIN número de contrato en la ' +
+      'metadata: no hay dónde registrarlo. Va por correo a la oficina.');
+    datos.porQueNo = 'el cobro no traía el número de contrato de EuroSystem';
+    const aviso = avisoDeAbono(datos);
+    const alaOficina = await correo.mandaALaOficina(aviso.asunto, aviso.texto);
+    if (correoDelCliente) await correo.mandaAbono(datos);
+    if (!alaOficina.ok) {
+      console.error('[abono] Y EL AVISO NO SALIÓ (' + alaOficina.motivo + '). ' +
+        'Stripe reintentará: es la última red que queda.');
+      return { status: 500, cuerpo: { error: 'no se pudo avisar del abono' } };
+    }
+    return { status: 200, cuerpo: { recibido: true, abono: true, registrado: false } };
+  }
+
+  const llave = (process.env.CONTRATOS_API_KEY || '').trim();
+  if (!llave) {
+    console.error('[abono] falta CONTRATOS_API_KEY: el abono de ' + monto + ' al contrato ' +
+      contrato + ' NO se registró. Stripe reintentará.');
+    return { status: 500, cuerpo: { error: 'sin llave de EuroSystem' } };
+  }
+
+  if (!pago || !monto) {
+    /* Sin referencia no hay idempotencia y sin monto no hay abono. Los dos
+       salen de Stripe, así que esto no debería pasar nunca; si pasa, que
+       insista —puede ser una respuesta a medias— y que quede escrito. */
+    console.error('[abono] cobro ' + (sesion.id || '') + ' sin pago (' + pago +
+      ') o sin monto (' + monto + '). No se registra. Stripe reintentará.');
+    return { status: 500, cuerpo: { error: 'abono sin referencia o sin monto' } };
+  }
+
+  /* ---- 1. que EuroSystem lo registre (§13) ---- */
+  let respuesta = null, porQueNo = '';
+  try {
+    const r = await fetch(EUROSYSTEM + PUERTA_ABONO, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-api-key': llave },
+      body: JSON.stringify({ folio: contrato, monto: monto, referencia: pago, fecha: fecha })
+    });
+    const d = await r.json().catch(function () { return {}; });
+    /* §13: 201 `{registrado:true}` y 200 `{repetido:true}` son los dos éxito.
+       El segundo es el reintento que ya no tiene nada que hacer. */
+    if (r.ok) respuesta = d;
+    else porQueNo = 'EuroSystem contestó ' + r.status + ': ' + JSON.stringify(d).slice(0, 200);
+  } catch (e) {
+    porQueNo = 'no se pudo hablar con EuroSystem: ' + (e && e.message);
+  }
+
+  if (!respuesta) {
+    /* EL DINERO YA SE COBRO. Cualquier «no» se reintenta, igual que con el
+       contrato: tres días de insistencia salen gratis —la puerta es
+       idempotente por la referencia— y son tres días para que alguien
+       arregle la llave o confirme el contrato sin que nadie tenga que
+       enterarse a tiempo. */
+    console.error('[abono] NO SE REGISTRÓ el abono de $' + monto + ' al contrato ' +
+      contrato + ' (' + porQueNo + '). Pago ' + pago + '. Stripe reintentará tres días.');
+    return { status: 500, cuerpo: { error: 'EuroSystem no registró el abono' } };
+  }
+
+  datos.registrado = true;
+  console.log('[abono] $' + monto + ' al contrato ' + contrato +
+    (respuesta.repetido ? ' (ya estaba registrado)' : ' registrado') + ' — pago ' + pago);
+
+  /* ---- 2. y ahora sí, el comprobante del cliente y el aviso de la oficina ----
+     El aviso a la oficina va SIEMPRE: el abono entra sin aprobar y alguien
+     tiene que aprobarlo para que le baje el saldo al cliente. */
+  const aviso = avisoDeAbono(datos);
+  await correo.mandaALaOficina(aviso.asunto, aviso.texto);
+
+  if (!correoDelCliente) {
+    console.error('[abono] el cobro ' + (sesion.id || '') + ' no trae correo del cliente: ' +
+      'queda registrado pero sin comprobante.');
+    return { status: 200, cuerpo: { recibido: true, abono: true, registrado: true,
+      repetido: !!respuesta.repetido, correo: false } };
+  }
+
+  const envio = await correo.mandaAbono(datos);
+  if (!envio.ok) {
+    console.error('[abono] abono registrado pero EL COMPROBANTE NO SALIÓ: ' + envio.motivo +
+      (envio.reintentar ? ' — Stripe reintentará.' : ' — NO se reintenta. MANDARLO A MANO.'));
+    /* Si el fallo es pasajero, que Stripe insista: registrar otra vez no
+       duplica nada y el comprobante tiene tres días más de oportunidades. */
+    if (envio.reintentar) {
+      return { status: 500, cuerpo: { error: 'comprobante no enviado', contrato: contrato } };
+    }
+  }
+
+  return {
+    status: 200,
+    cuerpo: {
+      recibido: true, abono: true, registrado: true,
+      repetido: !!respuesta.repetido, contrato: contrato, correo: !!envio.ok
+    }
+  };
+}
+
 async function procesa(crudo, cabeceraFirma) {
 
   /* Ojo: aqui NO va el guardia de origen de _defensas. Stripe llama de
@@ -604,6 +837,19 @@ async function procesa(crudo, cabeceraFirma) {
   if (!pagado) {
     console.log('[webhook] ' + tipo + ' sin pago aún (' + sesion.payment_status + '), no se registra');
     return { status: 200, cuerpo: { recibido: true, pendiente: true } };
+  }
+
+  /* ---------------------------------------------------------------------
+     ¿ES UN ABONO O UNA COMPRA?
+
+     Lo dice la metadata que se escribió al abrir el cobro, no el monto ni
+     la forma: adivinar aquí terminaría creando un contrato por cada abono.
+
+     Va antes de todo lo del contrato —incluido el pago de prueba, que
+     manda el correo del CONTRATO y aquí no toca—.
+     --------------------------------------------------------------------- */
+  if (String((sesion.metadata || {}).tipo || '') === saldos.TIPO_ABONO) {
+    return await atiendeAbono(sesion);
   }
 
 

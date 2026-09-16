@@ -613,11 +613,82 @@ async function mandaContrato(metadata, pdfBase64, liga) {
   return manda(mensajeDeContrato(metadata, pdfBase64, liga));
 }
 
+/* ============================================================
+   EL COMPROBANTE DE UN ABONO
+   ------------------------------------------------------------
+   El cliente acaba de abonar desde «Abona a tu viaje» y lo único
+   que vio fue la pantalla de Stripe. Esto es lo que le queda.
+
+   TIENE QUE DECIR LA VERDAD DE LO QUE PASA DESPUES. El abono
+   entra a EuroSystem SIN APROBAR (CONTRATOS-API.md §13): aparece
+   como «en revisión» hasta que la oficina lo aprueba. Si el correo
+   dijera «ya se descontó de tu saldo», el cliente entraría a
+   consultar, vería el mismo saldo de antes y creería que su dinero
+   se perdió. Así que se le dice tal cual, y por eso no promete
+   ningún plazo: quién aprueba y cuándo no depende de la página.
+
+   LO QUE NO LLEVA: ni el saldo nuevo —no lo sabemos hasta que la
+   oficina apruebe— ni nada del viaje. Solo lo que él acaba de
+   hacer.
+   ============================================================ */
+function mensajeDeAbono(datos) {
+  const d = datos || {};
+  const monto = pesos.format(Number(d.monto) || 0);
+  const contrato = String(d.contrato || '').slice(0, 20);
+  const cuando = fechaLarga(d.fecha);
+
+  const html =
+    '<div style="font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;' +
+    'max-width:440px;margin:0 auto;color:#1d1d1b;line-height:1.55">' +
+      '<p style="font-size:15px;margin:0 0 20px">Hola,</p>' +
+      '<p style="font-size:15px;margin:0 0 22px">Recibimos tu abono' +
+        (contrato ? ' al contrato <b>' + esc(contrato) + '</b>' : '') + ':</p>' +
+      '<div style="border:2px solid #1d1d1b;border-radius:12px;padding:20px;text-align:center">' +
+        '<div style="font-size:34px;font-weight:700">' + esc(monto) + '</div>' +
+        (cuando ? '<div style="font-size:13px;color:#6e6e6a;margin-top:6px">' +
+          esc(cuando) + '</div>' : '') +
+      '</div>' +
+      '<p style="font-size:13.5px;color:#6e6e6a;margin:20px 0 0">' +
+        'Queda anotado en tu contrato como <b>en revisión</b> hasta que la oficina ' +
+        'lo apruebe. Puedes ver cómo va en «Abona a tu viaje», con tu número de ' +
+        'contrato y tu apellido.</p>' +
+      '<p style="font-size:12.5px;color:#6e6e6a;margin:26px 0 0;padding-top:16px;' +
+        'border-top:1px solid #e6e6e3">Eurotravel · San Pedro Tlaquepaque, Jalisco</p>' +
+    '</div>';
+
+  const texto = [
+    'Hola,',
+    '',
+    'Recibimos tu abono' + (contrato ? ' al contrato ' + contrato : '') + ':',
+    '',
+    '    ' + monto + (cuando ? '  ·  ' + cuando : ''),
+    '',
+    'Queda anotado en tu contrato como EN REVISION hasta que la oficina lo',
+    'apruebe. Puedes ver cómo va en «Abona a tu viaje», con tu número de',
+    'contrato y tu apellido.',
+    '',
+    'Eurotravel · San Pedro Tlaquepaque, Jalisco'
+  ].join('\n');
+
+  return {
+    from: DE,
+    to: [String(d.correo || '').trim().toLowerCase()],
+    subject: 'Recibimos tu abono de ' + monto + (contrato ? ' · contrato ' + contrato : ''),
+    html: html,
+    text: texto
+  };
+}
+
+async function mandaAbono(datos) {
+  return manda(mensajeDeAbono(datos));
+}
+
 module.exports = {
   DE, hayClave, porQueNoSePuede, pistaDelFallo,
   fechaLarga, datosDelCorreo, mensajeDeContrato, mensajeDeCodigo,
   mensajeDeCuenta, mandaCodigoDeCuenta,
   mensajeDeClaveNueva, mandaCodigoDeClave,
   aDondeAvisar, mandaALaOficina,
-  manda, mandaContrato
+  manda, mandaContrato,
+  mensajeDeAbono, mandaAbono
 };

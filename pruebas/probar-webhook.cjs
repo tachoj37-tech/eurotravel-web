@@ -444,6 +444,171 @@ function euroDice(status, datos) {
   igual('y no se le pide a Stripe que reintente por una variable que falta',
     r._json.correo, false);
 
+  /* ============================================================
+     UN ABONO DEL CLIENTE NO ES UNA COMPRA NUEVA
+     ------------------------------------------------------------
+     Hasta hoy, un cobro con `tipo: 'abono'` caía en la rama de los
+     contratos: se armaba un contrato con la metadata de un abono
+     —sin nombre, sin fechas—, la revisión de «fechas ilegibles»
+     contestaba 200 y EL DINERO SE PERDIA EN SILENCIO. El cliente
+     abonaba, Stripe cobraba, y en EuroSystem no aparecía nada.
+
+     Ahora tiene su propia rama, y lo que se juega es lo de siempre:
+
+       1. se registra en EuroSystem por la puerta de §13, con el
+          `pi_…` como referencia —EL MISMO que usa la reversa, que
+          es lo que hace idempotente a las dos puertas—
+       2. si esa puerta dice que no, 500: que Stripe insista tres
+          días. El dinero ya se cobró.
+       3. y EL CORREO AL CLIENTE VA DESPUES de registrar, para que
+          el reintento no le escriba dos veces
+       4. NUNCA se crea un contrato con un abono
+     ============================================================ */
+  process.env.RESEND_API_KEY = 're_de_mentiras';
+  RESEND_DICE = { ok: true, status: 200, cuerpo: { id: 'em_abono' } };
+
+  /* Un abono del portal: lleva el número de contrato de EuroSystem y el
+     `pi_…` del cobro, y NO lleva folio de la página. */
+  const sesionDeAbono = {
+    id: 'cs_test_ABONO', payment_status: 'paid', payment_method_types: ['card'],
+    payment_intent: 'pi_DEL_ABONO', amount_total: 500000,
+    customer_details: { email: 'quien@sea.mx' },
+    metadata: { tipo: 'abono', contrato: '43773', monto: '5000', origen: 'WEB-PORTAL' }
+  };
+
+  /* Los envíos, separados por puerta: el de contratos no puede confundirse
+     con el de abonos, que es justo el defecto que se está tapando. */
+  let AEUROSYSTEM = [];
+  function euroDiceAlAbono(status, datos) {
+    AEUROSYSTEM = [];
+    global.fetch = function (url, opc) {
+      const u = String(url);
+      if (u.indexOf('api.stripe.com') >= 0) {
+        return Promise.resolve({ ok: !!sesionEnStripe, status: sesionEnStripe ? 200 : 404,
+          json: function () { return Promise.resolve(sesionEnStripe || { error: { message: 'no' } }); } });
+      }
+      if (u.indexOf('api.resend.com') >= 0) {
+        ultimoCorreo = { cabeceras: opc.headers, cuerpo: JSON.parse(opc.body) };
+        return Promise.resolve({ ok: RESEND_DICE.ok, status: RESEND_DICE.status,
+          json: function () { return Promise.resolve(RESEND_DICE.cuerpo); } });
+      }
+      AEUROSYSTEM.push({ url: u, cuerpo: JSON.parse(opc.body) });
+      return Promise.resolve({ ok: status >= 200 && status < 300, status: status,
+        json: function () { return Promise.resolve(datos); } });
+    };
+  }
+  function laDelAbono() {
+    return AEUROSYSTEM.filter(function (l) { return l.url.indexOf('/abono-externo') > 0; })[0];
+  }
+  function alosCorreos(quien) {
+    return ultimoCorreo && ultimoCorreo.cuerpo.to.indexOf(quien) >= 0;
+  }
+
+  /* -------- el camino bueno -------- */
+  ultimoCorreo = null;
+  sesionEnStripe = sesionDeAbono;
+  euroDiceAlAbono(201, { registrado: true });
+  r = res();
+  await handler(pide({ type: 'checkout.session.completed', data: { object: sesionDeAbono } }), r);
+
+  igual('abono pagado: 200 y lo dice', [r._status, r._json.abono], [200, true]);
+  cierto('se llamó a la puerta de abonos de §13', !!laDelAbono());
+  igual('  y NUNCA a la de contratos',
+    AEUROSYSTEM.filter(function (l) { return l.url.indexOf('/contratos/externo') > 0; }).length, 0);
+
+  {
+    const enviado = laDelAbono().cuerpo;
+    igual('el folio que se manda es el NÚMERO DE CONTRATO de EuroSystem',
+      enviado.folio, 43773);
+    igual('el monto es lo que de verdad se cobró, en pesos', enviado.monto, 5000);
+    igual('la referencia es el mismo pi_ que usa la reversa',
+      enviado.referencia, 'pi_DEL_ABONO');
+    cierto('y la fecha lleva zona horaria', /[+-]\d{2}:\d{2}$/.test(String(enviado.fecha)));
+    igual('no se manda nada más', Object.keys(enviado).sort(),
+      ['fecha', 'folio', 'monto', 'referencia']);
+  }
+
+  cierto('le llega su comprobante al cliente', alosCorreos('quien@sea.mx'));
+  cierto('  y dice cuánto abonó',
+    ultimoCorreo.cuerpo.text.indexOf('5,000') >= 0 ||
+    ultimoCorreo.cuerpo.text.indexOf('5000') >= 0);
+
+  /* -------- el reintento que ya estaba registrado -------- */
+  ultimoCorreo = null;
+  euroDiceAlAbono(200, { repetido: true });
+  r = res();
+  await handler(pide({ type: 'checkout.session.completed', data: { object: sesionDeAbono } }), r);
+  igual('«ya estaba registrado»: 200 y no se duplica',
+    [r._status, r._json.repetido], [200, true]);
+
+  /* -------- EuroSystem dice que no: el cobro NO se pierde -------- */
+  for (const codigo of [404, 422, 401, 500]) {
+    ultimoCorreo = null;
+    euroDiceAlAbono(codigo, { error: 'no' });
+    r = res();
+    await handler(pide({ type: 'checkout.session.completed', data: { object: sesionDeAbono } }), r);
+    igual('EuroSystem rechaza el abono (' + codigo + '): 500 para que Stripe insista',
+      r._status, 500);
+    igual('EuroSystem rechaza el abono (' + codigo + '): NO se le escribe al cliente todavía',
+      ultimoCorreo, null);
+  }
+
+  /* -------- EuroSystem inalcanzable -------- */
+  ultimoCorreo = null;
+  global.fetch = function (url) {
+    if (String(url).indexOf('api.stripe.com') >= 0) {
+      return Promise.resolve({ ok: true, status: 200,
+        json: function () { return Promise.resolve(sesionDeAbono); } });
+    }
+    return Promise.reject(new Error('sin red'));
+  };
+  r = res();
+  await handler(pide({ type: 'checkout.session.completed', data: { object: sesionDeAbono } }), r);
+  igual('EuroSystem inalcanzable: 500, que Stripe reintente', r._status, 500);
+  igual('  y sin correo al cliente', ultimoCorreo, null);
+
+  /* -------- un abono SIN número de contrato --------
+     Son los de la pantalla del viaje, que salen de una liga y no conocen el
+     número de EuroSystem. Reintentar no arregla una metadata que no va a
+     cambiar nunca, así que se avisa a la oficina y se acusa recibo. */
+  {
+    const sinContrato = Object.assign({}, sesionDeAbono, {
+      id: 'cs_test_ABONO_VIEJO',
+      metadata: { tipo: 'abono', folio: 'ET-K3M9-4Q2', monto: '5000', origen: 'WEB' }
+    });
+    ultimoCorreo = null;
+    sesionEnStripe = sinContrato;
+    euroDiceAlAbono(201, { registrado: true });
+    r = res();
+    await handler(pide({ type: 'checkout.session.completed', data: { object: sinContrato } }), r);
+    igual('abono sin número de contrato: 200, no se reintenta en balde', r._status, 200);
+    igual('  y NO se le inventa un folio a EuroSystem', AEUROSYSTEM.length, 0);
+    cierto('  pero la oficina se entera', !!ultimoCorreo);
+  }
+
+  /* -------- un abono de PRUEBA no se registra -------- */
+  {
+    const dePrueba = Object.assign({}, sesionDeAbono, { livemode: false });
+    ultimoCorreo = null;
+    sesionEnStripe = dePrueba;
+    euroDiceAlAbono(201, { registrado: true });
+    r = res();
+    await handler(pide({ type: 'checkout.session.completed', data: { object: dePrueba } }), r);
+    igual('abono con tarjeta de prueba: 200 y NO se registra',
+      [r._status, AEUROSYSTEM.length], [200, 0]);
+  }
+
+  /* -------- un abono sin pagar (voucher de OXXO) no registra nada -------- */
+  {
+    const sinPagar = Object.assign({}, sesionDeAbono, { payment_status: 'unpaid' });
+    sesionEnStripe = sinPagar;
+    euroDiceAlAbono(201, { registrado: true });
+    r = res();
+    await handler(pide({ type: 'checkout.session.completed', data: { object: sinPagar } }), r);
+    igual('abono con voucher sin pagar: 200 y NO se registra',
+      [r._status, AEUROSYSTEM.length], [200, 0]);
+  }
+
   console.log('\n' + buenas + ' buenas, ' + malas + ' malas');
   process.exit(malas ? 1 : 0);
 })();
