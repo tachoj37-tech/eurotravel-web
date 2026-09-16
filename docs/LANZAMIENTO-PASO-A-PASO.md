@@ -14,21 +14,34 @@ instantáneo construido y apagado hasta que se pongan sus variables.
 
 ## Bloque A · Lo del dueño, se puede hacer ya
 
-### A1 · Stripe: la cuenta nueva (15 min)
-- [ ] Activar la cuenta: datos del negocio y cuenta bancaria
-- [ ] Settings → Payment methods: **tarjeta y OXXO**, en pesos
-- [ ] Settings → Public details: el nombre que ve el cliente dice **Eurotravel**
-- ✅ Queda cuando Stripe ya no pide completar nada
+### A1 · Stripe: la cuenta YA cobra, no se toca nada de lo que existe
+La cuenta recibe hoy los pagos de la página vieja, con un webhook que hizo
+otro programador. **Regla del dueño (16-sep): que nada de esto afecte esa
+recepción.** Por eso, en Stripe:
+- **NO** rotar («Roll key») ni borrar la llave secreta que existe: la usa la
+  página vieja
+- **NO** tocar, editar ni desactivar el webhook que ya está
+- **NO** cambiar métodos de pago, datos del negocio ni nombre público
+- Solo se **agregan** dos cosas nuevas, que conviven con lo viejo (A2)
+- La página ya distingue sus cobros de los de la página vieja
+  (`esDeLaPagina`, `pruebas/probar-pagos-ajenos.cjs`): un pago o un
+  reembolso de la página vieja que llegue a nuestro webhook se contesta
+  «ajeno» y no dispara nada.
 
-### A2 · Stripe: llave y webhook (10 min)
-- [ ] Modo real (apagar «test mode») → Developers → API keys → copiar la **`sk_live_…`**
-- [ ] Developers → Webhooks → Add endpoint → `https://eurotravel-web.vercel.app/api/webhook-stripe`
+### A2 · Stripe: UNA llave nueva y UN webhook nuevo (10 min)
+- [ ] Modo real (apagar «test mode») → Developers → API keys → en «Standard
+      keys» → **«Create secret key»** (crear una NUEVA, nombre
+      `eurotravel-web`) → copiar la **`sk_live_…`** que te enseña.
+      Nunca «Roll key» sobre la que ya existe.
+- [ ] Developers → Webhooks → **Add endpoint** (uno nuevo, junto al viejo) →
+      `https://eurotravel-web.vercel.app/api/webhook-stripe`
 - [ ] Palomear los **5 eventos**: `checkout.session.completed`,
       `checkout.session.async_payment_succeeded`, `charge.refunded`,
       `charge.dispute.created`, `charge.dispute.funds_withdrawn`
-- [ ] Copiar el **`whsec_…`** de ese webhook (es distinto al de pruebas)
+- [ ] Copiar el **`whsec_…`** de ESE webhook nuevo (cada endpoint tiene el suyo)
 - ⚠️ La firma ya se comprueba de verdad: un `whsec_` equivocado hace que
   Stripe reciba 400 y reintente hasta que se corrija.
+- ✅ Queda cuando en Webhooks se ven DOS endpoints: el viejo intacto y el nuevo.
 
 ### A3 · Resend: los correos al cliente (10 min + espera de DNS)
 - [ ] Domains → Add Domain → `eurotravel.com.mx` → agregar los registros DNS

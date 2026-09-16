@@ -387,6 +387,15 @@ async function atiendeReversa(tipo, objeto, firmado) {
   }
 
   const sesion = hallada.sesion;
+
+  /* Un cobro de la página vieja (misma cuenta de Stripe, otro webhook)
+     no tiene contrato ni abono aquí: ni alarma, ni EuroSystem, ni 500. */
+  if (!esDeLaPagina(sesion)) {
+    console.log('[reversa] ' + motivo + ' de ' + pago + ': la sesión ' + (sesion.id || '') +
+      ' no es de esta página, no aplica.');
+    return { status: 200, cuerpo: { recibido: true, ajeno: true } };
+  }
+
   const m = sesion.metadata || {};
   const clase = reversas.claseDePago(m);
 
@@ -972,6 +981,15 @@ async function procesa(crudo, cabeceraFirma) {
      Va antes de todo lo del contrato —incluido el pago de prueba, que
      manda el correo del CONTRATO y aquí no toca—.
      --------------------------------------------------------------------- */
+  /* Antes que nada: ¿es de esta página? Los cobros de la página vieja
+     llegan aquí también (misma cuenta de Stripe) y no son un contrato
+     ni un abono nuestro. 200 y nada más. */
+  if (!esDeLaPagina(sesion)) {
+    console.log('[webhook] ' + tipo + ' de la sesión ' + (sesion.id || '') +
+      ' no es de esta página (sin folio ET- ni abono del portal), se ignora.');
+    return { status: 200, cuerpo: { recibido: true, ajeno: true } };
+  }
+
   if (String((sesion.metadata || {}).tipo || '') === saldos.TIPO_ABONO) {
     return await atiendeAbono(sesion);
   }
@@ -1238,4 +1256,29 @@ async function procesa(crudo, cabeceraFirma) {
   }
 }
 
-module.exports = { procesa, contratoDesde, conZona, claseDeUnidad };
+/* ============================================================
+   ¿ESTA SESIÓN ES DE ESTA PÁGINA? (16-sep-2026)
+   ------------------------------------------------------------
+   La cuenta de Stripe es la misma que ya cobra la página vieja (el
+   WordPress, con su propio webhook de otro programador). El dueño
+   pidió que nada de esto afecte esos cobros. Un endpoint nuevo no
+   estorba al viejo, pero SÍ recibe copia de todos sus eventos: cada
+   compra y cada reembolso de la página vieja también toca aquí.
+
+   Una sola regla, en un solo lugar: es nuestra si la metadata la
+   escribió esta página al abrir el cobro:
+     · compra desde la página  → `folio` de la forma ET-…  (pagar.js)
+     · abono desde el portal   → `tipo: abono` + `contrato` (viaje.js)
+   Todo lo demás es ajeno: se contesta 200 con `ajeno: true` y no se
+   hace NADA más, ni correo, ni EuroSystem, ni aviso. Se contesta 200
+   a propósito: no es un error, es un evento que no nos toca, y un 500
+   haría que Stripe lo reintentara tres días.
+   ============================================================ */
+function esDeLaPagina(sesion) {
+  const m = (sesion && sesion.metadata) || {};
+  if (/^ET-/.test(String(m.folio || ''))) return true;
+  if (String(m.tipo || '') === saldos.TIPO_ABONO && String(m.contrato || '').trim()) return true;
+  return false;
+}
+
+module.exports = { procesa, contratoDesde, conZona, claseDeUnidad, esDeLaPagina };
