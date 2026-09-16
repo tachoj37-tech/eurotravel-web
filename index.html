@@ -2371,7 +2371,11 @@ window.IMGS = {
       <!-- La cuenta se puede abrir sin comprar nada, y quien ya compró de
            invitado entra aquí: el servidor le monta la cuenta encima de la
            ficha que ya tiene, así que sus viajes viejos no se quedan fuera. -->
-      <div class="nav-cuenta-caja">
+      <!-- Lleva `id` además de la clase porque el interruptor de las cuentas
+           (`CONFIG.CUENTAS`) apaga esta caja entera por su id, como a las
+           otras tres. La clase se queda: el menú la usa para saber si el clic
+           cayó adentro. -->
+      <div class="nav-cuenta-caja" id="nav-cuenta-caja">
         <button class="btn btn-line btn-sm nav-cuenta" type="button" id="nav-cuenta"
                 aria-haspopup="true" aria-expanded="false">
           <svg aria-hidden="true"><use href="#i-user" /></svg>
@@ -2565,15 +2569,21 @@ window.IMGS = {
   <div class="celular-texto">
     <h2>Tus viajes, en tu celular.</h2>
     <div class="celular-cuerpo">
-      <!-- Este texto decía «no hay que abrir cuenta ni recordar contraseñas»,
-           y era cierto cuando la liga era el único camino. Sigue siéndolo para
-           quien compra como invitado, pero ya no es lo único: desde el
-           26-ago-2026 se puede crear cuenta antes de pagar. -->
-      <p>Cuando apartas tu viaje te llega un folio por correo o WhatsApp. Con ese folio entras desde el celular y ves todo lo tuyo, sin abrir cuenta. Y si prefieres tenerlos todos juntos, puedes crear una cuenta al pagar.</p>
+      <!-- 15-sep-2026 · REPASO DEL LANZAMIENTO. Este párrafo decía «con ese
+           folio entras desde el celular … sin abrir cuenta», y con el folio
+           no se entra a ningún lado: la liga la manda el correo y además pide
+           un código. Se dice lo que de verdad pasa, y las dos puertas que
+           existen —la liga del correo y la consulta con número de contrato y
+           apellido de `viaje.html`—. -->
+      <p>Cuando apartas tu viaje te llega un correo con tu liga y tu contrato. Abres esa liga desde el celular, confirmas con el código que te mandamos ahí mismo y ves todo lo tuyo. Y si apartaste por teléfono, entras en «Abona a tu viaje» con tu número de contrato y tu apellido.</p>
       <ul class="celular-lista">
         <li><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><use href="#ei-escudo"/></svg>Cuánto llevas abonado y cuánto falta</li>
         <li><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><use href="#ei-gente"/></svg>Tu contrato y tus datos a la mano</li>
-        <li><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><use href="#ei-pin"/></svg>Dónde viene la unidad el día de la salida</li>
+        <!-- Decía «Dónde viene la unidad el día de la salida». No existe: no
+             hay rastreo del cliente en ninguna pantalla, ni está planeado.
+             Esto otro sí lo enseña la pantalla del viaje, renglón por
+             renglón. -->
+        <li><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><use href="#ei-pin"/></svg>A dónde vas, cuándo sales y en qué unidad</li>
       </ul>
     </div>
   </div>
@@ -3668,6 +3678,41 @@ window.IMGS = {
     var byId = function (id) { return document.getElementById(id); };
     var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
+    /* ============================================================
+       LAS CUENTAS, GUARDADAS PARA DESPUÉS · 15-sep-2026
+       ------------------------------------------------------------
+       El dueño decidió lanzar sin cuentas de cliente e integrarlas
+       más adelante. Aquí no se borra nada: se apagan las cuatro
+       cajas por donde el cliente entraba a ellas, y el día que se
+       enciendan vuelven completas.
+
+         · nav-cuenta-caja  el botón «Iniciar sesión» y su menú
+                            (Mis viajes · Configuración · Cerrar sesión)
+         · celular          la banda «Tus viajes, en tu celular»
+         · cuenta-caminos   «Continuar como invitado / Crear cuenta»
+         · cuentamodal      el cuadro que abría el botón de la barra
+
+       LO QUE NO SE APAGA ES PAGAR COMO INVITADO. `cuenta-caminos`
+       es una caja aparte dentro del cuadro de pago: el título, los
+       montos y el botón «Pagar anticipo» quedan fuera y el cliente
+       paga con los mismos clics de siempre —de hecho con uno menos,
+       porque ya no tiene que escoger camino—. Lo comprueba
+       `probar-pantallas.cjs`, midiendo qué cae dentro de qué caja.
+
+       Esto va HASTA ARRIBA del guion a propósito: si se quedara
+       abajo, cualquier tropiezo de en medio dejaría las cuentas a la
+       vista en una página que no las tiene.
+       ============================================================ */
+    var CUENTAS_ENCENDIDAS = !!(window.CONFIG || {}).CUENTAS;
+    var CAJAS_DE_CUENTA = ['nav-cuenta-caja', 'celular', 'cuenta-caminos', 'cuentamodal'];
+
+    if (!CUENTAS_ENCENDIDAS) {
+      CAJAS_DE_CUENTA.forEach(function (id) {
+        var caja = byId(id);
+        if (caja) caja.style.display = 'none';
+      });
+    }
+
     /* ================= marca ================= */
     byId('logo-nav').src = I.logo;
     byId('logo-foot').src = I.logo;
@@ -4565,11 +4610,17 @@ window.IMGS = {
       }
 
       /* Al cargar, se pregunta al servidor si hay sesión. Si algo falla, se
-         sigue como invitado y ya: nunca se bloquea el pago por esto. */
-      pideCuenta('yo').then(function (r) {
-        CUENTA = r.datos && r.datos.dentro ? r.datos : { dentro: false };
-        pintaDentro();
-      }).catch(function () { /* sin cuenta, a pagar como invitado */ });
+         sigue como invitado y ya: nunca se bloquea el pago por esto.
+
+         Con las cuentas guardadas para después ni se pregunta: no hay nada
+         que pintar con la respuesta, y es una ida al servidor menos en la
+         primera pantalla que ve el cliente. */
+      if (CUENTAS_ENCENDIDAS) {
+        pideCuenta('yo').then(function (r) {
+          CUENTA = r.datos && r.datos.dentro ? r.datos : { dentro: false };
+          pintaDentro();
+        }).catch(function () { /* sin cuenta, a pagar como invitado */ });
+      }
 
       /* ============================================================
          CONTINUAR CON GOOGLE
@@ -4663,7 +4714,9 @@ window.IMGS = {
           });
       }
 
-      arrancaGoogle();
+      /* Google entra por las cuentas y por ningún otro lado: apagadas ellas,
+         ni se carga su guion. */
+      if (CUENTAS_ENCENDIDAS) arrancaGoogle();
 
       byId('camino-invitado').addEventListener('click', function () {
         marcaCamino('invitado'); verCaja(null); byId('cta-error').textContent = '';
@@ -5012,6 +5065,11 @@ window.IMGS = {
         }
 
         byId('nav-cuenta').addEventListener('click', function () {
+          /* Con las cuentas guardadas para después, el botón está escondido y
+             nadie debería llegar aquí. El freno se pone igual: un modal de
+             cuentas abierto encima de una página que no tiene cuentas es peor
+             que el botón que lo abrió. */
+          if (!CUENTAS_ENCENDIDAS) return;
           if (CUENTA.dentro) {
             if (menuAbierto()) cierraMenuAqui(); else abreMenu();
             return;

@@ -29,6 +29,7 @@ function igual(nombre, dio, esperado) {
   if (a === b) { buenas++; console.log('ok   ' + nombre); }
   else { malas++; console.log('MAL  ' + nombre + '\n     dio      ' + a + '\n     esperaba ' + b); }
 }
+function cierto(nombre, v) { igual(nombre, !!v, true); }
 
 const PAGINAS = ['index.html', 'viaje.html', 'prueba-cotizador.html'];
 
@@ -156,6 +157,186 @@ PAGINAS.forEach(function (nombre) {
      invitado no se tocó y el cliente tiene que saberlo */
   igual('y sigue ofreciendo comprar como invitado',
     /invitado/i.test(visible), true);
+
+  /* ============================================================
+     NADA QUE PROMETA LO QUE NO EXISTE · 15-sep-2026
+     ------------------------------------------------------------
+     Repaso del lanzamiento. Cada una de éstas es una promesa que la
+     página hacía y que nadie del otro lado puede cumplir; y una
+     promesa rota se paga con la llamada del cliente enojado, no con
+     un error en la consola.
+     ============================================================ */
+
+  /* 1 · «Con ese folio entras … sin abrir cuenta». Con el folio no se entra
+     a ningún lado: se entra con la liga del correo más su código, o con el
+     número de contrato y el apellido en `viaje.html`. */
+  igual('la página ya no dice que con el folio se entra «sin abrir cuenta»',
+    /sin abrir cuenta/i.test(visible), false);
+  cierto('y sí nombra las dos puertas que existen de verdad',
+    /n[úu]mero de contrato/i.test(visible) && /apellido/i.test(visible));
+
+  /* 2 · «Dónde viene la unidad el día de la salida». No existe: no hay rastreo
+     del cliente en ninguna pantalla. */
+  igual('no promete enseñar dónde viene la unidad',
+    /d[óo]nde viene la unidad/i.test(visible), false);
+}
+
+/* ============================================================
+   UNA LIGA VENCIDA NO SE REPONE · 15-sep-2026
+   ------------------------------------------------------------
+   El servidor le decía al cliente «escríbenos y te mandamos una
+   nueva». Nadie puede: no hay ninguna puerta que vuelva a emitir
+   una liga, ni en la página ni en el sistema. El cliente escribía
+   por WhatsApp a pedir algo que no se le puede dar.
+
+   Lo que SÍ existe desde el 15-sep-2026 es la consulta con número
+   de contrato y apellido, que es a donde hay que mandarlo.
+   ============================================================ */
+{
+  ['api/viaje.js', 'api/pedir-codigo.js'].forEach(function (rel) {
+    const ruta = path.join(__dirname, '..', rel);
+    if (!fs.existsSync(ruta)) return;
+    const txt = fs.readFileSync(ruta, 'utf8');
+    igual(rel + ' ya no promete una liga nueva',
+      /te mandamos una nueva/i.test(txt), false);
+    cierto(rel + ' manda a la consulta con contrato y apellido',
+      /n[úu]mero de contrato/i.test(txt) && /apellido/i.test(txt));
+  });
+}
+
+/* ============================================================
+   LA CUENTA SE GUARDA PARA DESPUÉS · 15-sep-2026
+   ------------------------------------------------------------
+   Decisión del dueño para el lanzamiento: las cuentas NO se
+   enseñan hoy y se integran después. No se borra nada —el día que
+   se enciendan tiene que estar completo, y por eso las pruebas de
+   arriba siguen exigiendo que las piezas existan—: se apaga con
+   `CONFIG.CUENTAS`.
+
+   Lo que esta parte cuida es que apagar el interruptor apague DE
+   VERDAD todas las puertas, y que no se lleve entre las patas el
+   pago como invitado, que es con lo que se va a lanzar.
+
+   Se lee el HTML como texto, igual que el resto de esta batería:
+   se tapan los comentarios y los guiones —sin moverlos de lugar,
+   para que las posiciones sigan valiendo— y lo que queda es lo que
+   el cliente ve.
+   ============================================================ */
+{
+  const crudo = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+
+  /* Se tapa con espacios y no se borra: así cada posición del texto tapado
+     sigue siendo la misma que en el archivo, y se puede preguntar «¿esto
+     cae dentro de esa caja?». */
+  function tapa(texto, re) {
+    return texto.replace(re, function (t) { return ' '.repeat(t.length); });
+  }
+  const soloMarcado = tapa(tapa(tapa(crudo, /<!--[\s\S]*?-->/g),
+    /<script\b[\s\S]*?<\/script>/g), /<style\b[\s\S]*?<\/style>/g);
+
+  /* De `id="x"` hasta la etiqueta que lo cierra. Se cuentan aperturas y
+     cierres de `div` y `section`, que son las únicas que anidan en estos
+     bloques. */
+  function bloqueDe(id) {
+    const marca = soloMarcado.indexOf('id="' + id + '"');
+    if (marca < 0) return null;
+    const abre = soloMarcado.lastIndexOf('<', marca);
+    const re = /<(\/?)(div|section)\b/g;
+    re.lastIndex = abre;
+    let nivel = 0, m;
+    while ((m = re.exec(soloMarcado))) {
+      nivel += m[1] ? -1 : 1;
+      if (nivel === 0) return [abre, re.lastIndex];
+    }
+    return null;
+  }
+
+  /* Las cuatro puertas del cliente a las cuentas. El modal va en la lista
+     aunque hoy solo lo abra el botón de la barra: una puerta que se apaga
+     «porque nadie la toca» es la que se queda encendida. */
+  const CAJAS = ['nav-cuenta-caja', 'celular', 'cuenta-caminos', 'cuentamodal'];
+
+  const rangos = {};
+  CAJAS.forEach(function (id) {
+    const r = bloqueDe(id);
+    igual('la caja «' + id + '» existe y se puede delimitar', !!r, true);
+    if (r) rangos[id] = r;
+  });
+
+  function cajaQueLoContiene(pos) {
+    return CAJAS.filter(function (id) {
+      const r = rangos[id];
+      return r && pos >= r[0] && pos < r[1];
+    })[0] || '';
+  }
+
+  /* --- ninguna puerta se queda fuera de una caja --- */
+  const PUERTAS = [
+    ['nav-cuenta', 'el botón «Iniciar sesión» de la barra'],
+    ['menu-cuenta', 'su menú'],
+    ['menu-viajes', '«Mis viajes»'],
+    ['menu-config', '«Configuración»'],
+    ['menu-salir', '«Cerrar sesión»'],
+    ['camino-invitado', 'la disyuntiva del cuadro de pago'],
+    ['camino-cuenta', '«Crear cuenta» del cuadro de pago'],
+    ['caminos-pregunta', 'su pregunta']
+  ];
+  PUERTAS.forEach(function (p) {
+    const pos = soloMarcado.indexOf('id="' + p[0] + '"');
+    igual('con el interruptor apagado se esconde ' + p[1],
+      pos >= 0 && !!cajaQueLoContiene(pos), true);
+  });
+
+  /* --- y ningún texto de cuentas queda a la vista --- */
+  const TEXTOS = ['Iniciar sesión', 'Mis viajes', 'Cerrar sesión',
+    'Continuar como invitado', 'Crear cuenta', 'Tus viajes, en tu celular'];
+  TEXTOS.forEach(function (t) {
+    const sueltos = [];
+    let i = soloMarcado.indexOf(t);
+    while (i >= 0) {
+      if (!cajaQueLoContiene(i)) sueltos.push(i);
+      i = soloMarcado.indexOf(t, i + 1);
+    }
+    igual('«' + t + '» no se lee fuera de las cajas apagadas', sueltos, []);
+  });
+
+  /* --- Y EL PAGO COMO INVITADO SIGUE ENTERO ---
+     Es con lo que se lanza. Si el cuadro del pago cayera dentro de la caja
+     que se apaga, apagar las cuentas apagaría la venta. */
+  [['pago-ir', 'el botón de pagar'],
+    ['pago-titulo', 'el título del cuadro de pago'],
+    ['pago-total', 'el total'],
+    ['pago-anticipo', 'el anticipo'],
+    ['pago-saldo', 'el saldo'],
+    ['pago-canal-texto', 'el aviso de a dónde llega el folio']
+  ].forEach(function (p) {
+    const pos = soloMarcado.indexOf('id="' + p[0] + '"');
+    igual(p[1] + ' queda fuera de lo que se apaga',
+      pos >= 0 && cajaQueLoContiene(pos), '');
+  });
+
+  /* --- el interruptor existe y es el que manda --- */
+  const config = fs.readFileSync(path.join(__dirname, '..', 'config.js'), 'utf8');
+  cierto('config.js declara el interruptor de las cuentas', /CUENTAS\s*:/.test(config));
+  igual('y hoy está apagado', /CUENTAS\s*:\s*false/.test(config), true);
+
+  cierto('index.html lee el interruptor', /CONFIG\s*\|\|\s*\{\}\)\.CUENTAS|CONFIG\.CUENTAS/.test(crudo));
+
+  /* La lista de lo que se esconde vive en UN lugar del guion, y son
+     exactamente estas cuatro cajas: si alguien agrega una puerta nueva y no
+     la mete a la lista, esto no lo caza, pero si alguien quita una de la
+     lista, sí. */
+  const lista = /var CAJAS_DE_CUENTA = \[([^\]]*)\]/.exec(crudo);
+  cierto('el guion tiene su lista de cajas que apagar', !!lista);
+  igual('  y son las cuatro',
+    lista ? (lista[1].match(/'([^']+)'/g) || []).map(function (s) { return s.replace(/'/g, ''); }).sort() : [],
+    CAJAS.slice().sort());
+
+  /* Apagado, el modal de la cuenta no se abre: el botón que lo abría está
+     escondido, pero su atendedor también se frena. Un modal que se abre
+     encima de una página que no tiene cuentas es peor que el botón. */
+  cierto('con el interruptor apagado no se llama al modal de la cuenta',
+    /if \(!CUENTAS_ENCENDIDAS\) return;/.test(crudo));
 }
 
 console.log('\n' + buenas + ' buenas, ' + malas + ' malas');

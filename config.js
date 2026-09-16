@@ -49,6 +49,30 @@ window.CONFIG = {
   WHATSAPP: '523321832993',
 
   /* Lo que el cliente encuentra ya escrito al abrir WhatsApp, para que
-     solo le dé enviar. Del plan, palabra por palabra. */
-  WHATSAPP_TEXTO: 'Hola, estoy viendo su página y quiero cotizar un viaje.'
+     solo le dé enviar. Del plan, palabra por palabra.
+
+     OJO: este texto también está escrito en las direcciones `wa.me` del
+     HTML —los enlaces nacen con su dirección puesta para que sirvan aunque
+     el guion se caiga—. El guion la vuelve a armar desde aquí en cuanto
+     corre, así que éste es el que manda; el del HTML es la red. */
+  WHATSAPP_TEXTO: 'Hola, estoy viendo su página y quiero cotizar un viaje.',
+
+  /* ------------------------------------------------------------
+     LAS CUENTAS, GUARDADAS PARA DESPUÉS
+     ------------------------------------------------------------
+     Decisión del dueño para el lanzamiento del 15-sep-2026: la
+     página sale SIN cuentas de cliente y se integran más adelante.
+
+     NO SE BORRÓ NADA, y es a propósito. Crear cuenta, entrar,
+     «Mis viajes», la configuración, el código por correo y la
+     entrada con Google están completos y probados; lo único que
+     cambia es que hoy no se enseñan. El día que el dueño diga que
+     va, esto se pone en `true` y vuelven las cinco puertas —no hay
+     que volver a escribir nada—.
+
+     Lo que NO depende de este interruptor es pagar como invitado:
+     ése es el camino con el que se lanza y sigue igual que
+     siempre, sin un clic de más. Lo cuida `probar-pantallas.cjs`.
+     ------------------------------------------------------------ */
+  CUENTAS: false
 };

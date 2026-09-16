@@ -56,8 +56,13 @@ module.exports = defensas.aPruebaDeTronadas('pedir-codigo',
     res.status(puerta.vencida ? 410 : 404).json({
       error: puerta.vencida ? 'liga vencida' : 'no encontrado',
       vencida: !!puerta.vencida,
+      /* 15-sep-2026 · Aquí se ofrecía reponer la liga, y NADIE PUEDE: no hay
+         ninguna puerta que vuelva a emitir una liga, ni aquí ni en
+         EuroSystem. El cliente escribía a pedir algo que no se le puede dar,
+         y el que contestaba quedaba de mentiroso. Se le manda a la consulta,
+         que sí existe y no depende de la liga. */
       aviso: puerta.vencida
-        ? 'Esta liga ya venció. Escríbenos por WhatsApp con tu folio y te mandamos una nueva.'
+        ? 'Esta liga ya venció. Entra en «Abona a tu viaje» con tu número de contrato y tu apellido, o escríbenos por WhatsApp y te ayudamos.'
         : 'Esta liga no es válida.'
     });
     return;

@@ -241,7 +241,10 @@ module.exports = defensas.aPruebaDeTronadas('viaje',
       res.status(410).json({
         error: 'liga vencida',
         vencida: true,
-        aviso: 'Esta liga ya venció. Escríbenos por WhatsApp con tu folio y te mandamos una nueva.'
+        /* 15-sep-2026 · Aquí se ofrecía reponer la liga y no hay quien la
+           reponga: ninguna puerta vuelve a emitir una. La segunda puerta
+           que sí existe es la consulta con número de contrato y apellido. */
+        aviso: 'Esta liga ya venció. Entra en «Abona a tu viaje» con tu número de contrato y tu apellido, o escríbenos por WhatsApp y te ayudamos.'
       });
       return;
     }
