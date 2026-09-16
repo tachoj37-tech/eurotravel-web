@@ -436,6 +436,11 @@
     background: #fff;
     overflow-x: auto;
   }
+  /* Las cinco pestañas caben en el celular (16-sep-2026). A 14 px y con
+     14 px de aire sumaban 434 px: «Contacto» empezaba fuera de una pantalla
+     de 375. Se reparten el ancho, letra de 13 y menos aire; con eso suman
+     ~325 px. Lo cuida pruebas/probar-barra-movil.cjs. */
+  .tabs-mobile .tab { flex: 1 1 auto; font-size: 13px; padding: 10px 4px; text-align: center; }
   @media (min-width: 1000px) { .tabs-mobile { display: none; } }
 
   /* ================= views ================= */
@@ -2446,7 +2451,7 @@ window.IMGS = {
   <div class="tabs-mobile" role="tablist">
     <button class="tab on" data-go="inicio" role="tab">Inicio</button>
     <button class="tab" data-go="unidades" role="tab">Unidades</button>
-    <button class="tab" data-go="cotizar" role="tab">Cotizaciones</button>
+    <button class="tab" data-go="cotizar" role="tab">Cotizar</button>
     <button class="tab" data-go="nosotros" role="tab">Nosotros</button>
     <button class="tab" data-go="contacto" role="tab">Contacto</button>
   </div>
