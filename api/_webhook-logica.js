@@ -283,6 +283,11 @@ const ligas = require('./_ligas');         // y su liga propia, firmada
 const reversas = require('./_reversas');   // cuando el dinero se regresa
 const defensas = require('./_defensas');
 const saldos = require('./_saldo');        // quién es un abono, en un solo dueño
+/* El aviso al instante a los teléfonos del dueño (15-sep-2026). Cuelga de
+   esta misma cadena a propósito —«instantáneo» era el requisito— y por eso
+   está escrito para no poder romperla: atrapa todo, tiene tope de tiempo
+   propio y jamás lanza. Ver `api/_aviso.js`. */
+const avisos = require('./_aviso');
 
 /* `crudo` puede ser el cuerpo tal cual (Buffer/texto) o el objeto ya
    parseado, segun lo que deje pasar el entorno. */
@@ -687,6 +692,39 @@ async function atiendeAbono(sesion) {
   const aviso = avisoDeAbono(datos);
   await correo.mandaALaOficina(aviso.asunto, aviso.texto);
 
+  /* ------------------------------------------------------------
+     Y EL MISMO AVISO AL INSTANTE, PORQUE ESTO TAMBIEN ES DINERO
+
+     El correo de arriba ya existía y se queda tal cual: esto se
+     SUMA, no lo reemplaza. Un abono de un cliente entra sin
+     aprobar y alguien tiene que aprobarlo para que le baje el
+     saldo — enterarse al minuto y no cuando se abra el correo es
+     justo lo que se pidió.
+
+     Va después de registrarlo en EuroSystem por la misma razón
+     que en la venta: antes, todavía podía terminar en 500 y
+     reintento. Y dice CUAL DE LOS DOS es (`clase: 'abono'`), que
+     es lo único que distingue este mensaje del de una venta
+     nueva.
+     ------------------------------------------------------------ */
+  {
+    const resumen = await avisos.avisa({
+      clase: 'abono',
+      folio: [m.folio, contrato ? 'contrato ' + contrato : ''].filter(Boolean).join(' · '),
+      /* Un abono del portal no trae nombre: lo único que identifica a quien
+         pagó es su correo. Más vale eso que una raya. */
+      cliente: m.nombre || correoDelCliente,
+      destino: m.destino || m.ruta,
+      salida: m.salida,
+      unidad: m.unidad,
+      total: m.total,
+      anticipo: monto
+    });
+    console.log('[abono] aviso al instante del contrato ' + contrato + ': ' +
+      resumen.mandados + ' mandados, ' + resumen.fallidos + ' fallidos' +
+      (resumen.apagado ? ' (apagado)' : ''));
+  }
+
   if (!correoDelCliente) {
     console.error('[abono] el cobro ' + (sesion.id || '') + ' no trae correo del cliente: ' +
       'queda registrado pero sin comprobante.');
@@ -1053,6 +1091,47 @@ async function procesa(crudo, cabeceraFirma) {
           'saldo completo. Stripe reintentará tres días; si no se arregla, hay que capturar el ' +
           'abono A MANO.');
         return { status: 500, cuerpo: { error: 'EuroSystem no anotó el anticipo', folio: d.folio } };
+      }
+
+      /* ------------------------------------------------------------
+         EL AVISO AL INSTANTE — 15-sep-2026
+
+         «necesito una notificación a un número cuando se genere un
+         contrato… justamente cuando Stripe genera el pago, el
+         contrato, registrar el abono en el EuroSystem y manda
+         mensaje.» Eso es exactamente este renglón.
+
+         VA AQUI Y NO ANTES porque hasta la línea de arriba la venta
+         todavía podía terminar en 500 y reintento: avisar antes sería
+         gritar «vendido» de algo que puede no haber quedado. Y va
+         ANTES del correo porque el correo depende de Resend y de un
+         PDF, y el aviso no tiene por qué esperar a eso.
+
+         NO SE MIRA LO QUE DEVUELVE PARA DECIDIR NADA. El cobro ya
+         está hecho y el contrato registrado: un aviso que no sale es
+         un renglón del registro, nunca un 500 hacia Stripe. Por eso
+         tampoco hace falta un try aquí —`avisa` no lanza—, pero el
+         resumen sí se escribe, que es lo que deja ver desde Vercel si
+         los dos teléfonos están recibiendo.
+         ------------------------------------------------------------ */
+      {
+        const m = sesion.metadata || {};
+        const resumen = await avisos.avisa({
+          clase: 'venta',
+          /* Los dos números: el `ET-` que el cliente ya vio en la pantalla
+             de pago y el de EuroSystem, que es el del PDF. */
+          folio: [m.folio, d.folio ? 'contrato ' + d.folio : ''].filter(Boolean).join(' · '),
+          cliente: m.nombre,
+          destino: m.destino || m.ruta,
+          salida: m.salida,
+          unidad: m.unidad,
+          total: m.total,
+          /* Lo que Stripe cobró de verdad, la misma fuente que el abono. */
+          anticipo: pesosCobrados(sesion)
+        });
+        console.log('[webhook] aviso al instante del contrato ' + d.folio + ': ' +
+          resumen.mandados + ' mandados, ' + resumen.fallidos + ' fallidos' +
+          (resumen.apagado ? ' (apagado)' : ''));
       }
 
       /* ------------------------------------------------------------

@@ -22,6 +22,7 @@ function igual(nombre, dio, esperado) {
   else { malas++; console.log('MAL  ' + nombre + '\n     dio      ' + a + '\n     esperaba ' + b); }
 }
 function cierto(nombre, v) { igual(nombre, !!v, true); }
+function falso(nombre, v) { igual(nombre, !!v, false); }
 
 const SECRETO = 'whsec_DE_MENTIRAS_para_las_pruebas';
 const AHORA = 1789000000;
@@ -778,6 +779,145 @@ function euroDice(status, datos) {
     igual('pago de prueba: 200 y NI contrato NI abono', [r._status, PUERTAS.length], [200, 0]);
     sesionEnStripe = sesionPagada;
   }
+
+  /* ============================================================
+     EL AVISO AL INSTANTE, EN LA MISMA CADENA DEL COBRO
+     ------------------------------------------------------------
+     Pedido del dueño, 15-sep-2026: «necesito una notificación a un
+     número cuando se genere un contrato… justamente cuando Stripe
+     genera el pago, el contrato, registrar el abono en el
+     EuroSystem y manda mensaje».
+
+     Lo que se prueba aquí son dos cosas, y la segunda importa más:
+
+       1. QUE SALGA, y en el momento correcto: después de que
+          EuroSystem registró el contrato Y anotó el abono. Antes
+          del abono, el aviso diría «vendido» de algo que todavía
+          puede terminar en 500 y reintento.
+
+       2. QUE NUNCA ROMPA EL COBRO. Un aviso que falla, o que se
+          queda colgado, no puede cambiar ni un carácter de lo que
+          se le contesta a Stripe. El dinero ya entró.
+
+     Aquí se prende solo Telegram: el canal no cambia el lugar de
+     la llamada, y con uno se lee lo que importa sin dos veces el
+     mismo montaje. Los dos canales se prueban en
+     `pruebas/probar-aviso.cjs`.
+     ============================================================ */
+  process.env.AVISO_TELEGRAM_TOKEN = '999999:TG_de_mentiras';
+  process.env.AVISO_TELEGRAM_CHAT = '11111111,22222222';
+  RESEND_DICE = { ok: true, status: 200, cuerpo: { id: 'em_aviso' } };
+
+  let ORDEN = [];
+  let AVISOS = [];
+  /* Un solo fingido para las cuatro puertas, que APUNTA EL ORDEN: es la
+     única forma de probar «después del abono» y no solo «alguna vez». */
+  function conAviso(delContrato, delAbono, comoContestaElAviso) {
+    ORDEN = [];
+    AVISOS = [];
+    global.fetch = function (url, opc) {
+      const u = String(url);
+      if (u.indexOf('api.stripe.com') >= 0) {
+        return Promise.resolve({ ok: !!sesionEnStripe, status: sesionEnStripe ? 200 : 404,
+          json: function () { return Promise.resolve(sesionEnStripe || { error: { message: 'no' } }); } });
+      }
+      if (u.indexOf('api.resend.com') >= 0) {
+        ORDEN.push('correo');
+        return Promise.resolve({ ok: RESEND_DICE.ok, status: RESEND_DICE.status,
+          json: function () { return Promise.resolve(RESEND_DICE.cuerpo); } });
+      }
+      if (u.indexOf('api.telegram.org') >= 0) {
+        ORDEN.push('aviso');
+        AVISOS.push({ url: u, cuerpo: JSON.parse(opc.body) });
+        const d = comoContestaElAviso || { status: 200 };
+        if (d.cuelga) return new Promise(function () {});   // nunca contesta
+        return Promise.resolve({ ok: d.status >= 200 && d.status < 300, status: d.status,
+          text: function () { return Promise.resolve('{}'); },
+          json: function () { return Promise.resolve({}); } });
+      }
+      const esAbono = u.indexOf('/abono-externo') > 0;
+      ORDEN.push(esAbono ? 'abono' : 'contrato');
+      const cual = esAbono ? delAbono : delContrato;
+      return Promise.resolve({ ok: cual.status >= 200 && cual.status < 300, status: cual.status,
+        json: function () { return Promise.resolve(cual.datos); } });
+    };
+  }
+
+  /* -------- LA VENTA: contrato, abono, y ENTONCES el aviso -------- */
+  sesionEnStripe = sesionPagada;
+  conAviso({ status: 201, datos: { folio: 52001, pdfBase64: 'JVBERi0xLjMK' } },
+           { status: 201, datos: { registrado: true } });
+  r = res();
+  await handler(pide({ type: 'checkout.session.completed', data: { object: sesionPagada } }), r);
+
+  igual('venta: 200 y su folio, como siempre', [r._status, r._json.folio], [200, 52001]);
+  igual('venta: el aviso sale DESPUÉS del contrato y DESPUÉS del abono',
+    ORDEN, ['contrato', 'abono', 'aviso', 'aviso', 'correo']);
+  igual('venta: uno por cada teléfono configurado',
+    AVISOS.map(function (a) { return String(a.cuerpo.chat_id); }), ['11111111', '22222222']);
+  {
+    const t = String(AVISOS[0].cuerpo.text);
+    cierto('venta: el aviso dice que es una venta nueva', /VENTA NUEVA/i.test(t));
+    cierto('venta: trae el folio que ve el cliente', t.indexOf('ET-K3M9-4Q2') >= 0);
+    cierto('venta: y el número de contrato de EuroSystem', t.indexOf('52001') >= 0);
+    cierto('venta: el cliente', t.indexOf('Juana') >= 0);
+    cierto('venta: el destino', t.indexOf('Puerto Vallarta') >= 0);
+    cierto('venta: la fecha de salida', t.indexOf('03/09/2026') >= 0);
+    cierto('venta: el total', t.indexOf('$21,700') >= 0);
+    cierto('venta: y el anticipo que acaba de entrar', t.indexOf('$4,340') >= 0);
+  }
+
+  /* -------- EL ABONO DEL CLIENTE: también es dinero que entra -------- */
+  sesionEnStripe = sesionDeAbono;
+  conAviso({ status: 201, datos: {} }, { status: 201, datos: { registrado: true } });
+  r = res();
+  await handler(pide({ type: 'checkout.session.completed', data: { object: sesionDeAbono } }), r);
+
+  igual('abono: 200 y lo dice, como siempre', [r._status, r._json.abono], [200, true]);
+  igual('abono: el aviso sale DESPUÉS de registrarlo en EuroSystem',
+    ORDEN.indexOf('abono') < ORDEN.indexOf('aviso'), true);
+  igual('abono: dos avisos, uno por teléfono', AVISOS.length, 2);
+  {
+    const t = String(AVISOS[0].cuerpo.text);
+    cierto('abono: el aviso dice que es un ABONO, no una venta', /ABONO/i.test(t));
+    falso('abono: y no se confunde con una venta nueva', /VENTA NUEVA/i.test(t));
+    cierto('abono: trae el contrato al que entró', t.indexOf('43773') >= 0);
+    cierto('abono: y cuánto entró', t.indexOf('$5,000') >= 0);
+  }
+
+  /* ============================================================
+     UN AVISO ROTO NO ROMPE UN COBRO
+     ------------------------------------------------------------
+     Éste es el renglón que justifica todo el módulo. Si el aviso
+     pudiera cambiar la respuesta a Stripe, un token vencido
+     terminaría reintentando cobros buenos durante tres días.
+     ============================================================ */
+  sesionEnStripe = sesionPagada;
+  conAviso({ status: 201, datos: { folio: 52009, pdfBase64: 'JVBERi0xLjMK' } },
+           { status: 201, datos: { registrado: true } },
+           { status: 401 });
+  r = res();
+  await handler(pide({ type: 'checkout.session.completed', data: { object: sesionPagada } }), r);
+  igual('el aviso falla: la respuesta a Stripe NO cambia',
+    [r._status, r._json.folio, r._json.correo], [200, 52009, true]);
+  igual('el aviso falla: y el correo del cliente sale igual',
+    ORDEN[ORDEN.length - 1], 'correo');
+
+  /* -------- y si se queda colgado, tampoco --------
+     Tarda lo que tarde el tope de `_aviso.js` (4 s) y sigue. Sin tope,
+     esto no terminaría nunca y Stripe daría el cobro por fallido. */
+  conAviso({ status: 201, datos: { folio: 52010, pdfBase64: 'JVBERi0xLjMK' } },
+           { status: 201, datos: { registrado: true } },
+           { cuelga: true });
+  r = res();
+  await handler(pide({ type: 'checkout.session.completed', data: { object: sesionPagada } }), r);
+  igual('el aviso se cuelga: el tope salta y la respuesta a Stripe es la de siempre',
+    [r._status, r._json.folio], [200, 52010]);
+  igual('el aviso se cuelga: y el cliente recibe su correo igual',
+    ORDEN[ORDEN.length - 1], 'correo');
+
+  delete process.env.AVISO_TELEGRAM_TOKEN;
+  delete process.env.AVISO_TELEGRAM_CHAT;
 
   console.log('\n' + buenas + ' buenas, ' + malas + ' malas');
   process.exit(malas ? 1 : 0);
