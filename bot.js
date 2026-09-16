@@ -5357,6 +5357,10 @@ function respuestaBase(mensaje, estado, hoy) {
   /* ---- la flota ---- */
   if (tiene(t, ['unidad', 'unidades', 'camion', 'autobus', 'autobuses', 'bus',
     'flota', 'vehiculo', 'transporte', 'capacidad', 'caben'])) {
+    /* Para el registro: en la corrida del 16-sep-2026 esta lista salió
+       después de un «i6» y no se supo con qué texto ni en qué estado. */
+    console.error('[guion] FAQ de flota por «' + t.slice(0, 80) + '» · paso=' + ((estado || {}).paso || '-') +
+      ' unidad=' + ((estado || {}).unidad || '-'));
     return {
       texto: 'Estas son nuestras unidades:\n\n' + listaDeUnidades() +
         '\n\n¿Cuántas personas viajan? Con eso te digo cuál te conviene.',

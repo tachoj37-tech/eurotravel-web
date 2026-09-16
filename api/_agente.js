@@ -560,14 +560,22 @@ function esTextoInterno(texto) {
   return TEXTO_INTERNO.test(t) || pareceTextoDelPrompt(t);
 }
 
+/* Por qué se tira una respuesta (para el registro): sin esto, cuando el
+   guion contestaba de respaldo no había forma de saber qué había dicho la
+   IA ni qué candado la frenó (16-sep-2026). */
+function porQueSeTira(texto) {
+  const t = String(texto || '').replace(/\s+\n/g, '\n').trim();
+  if (!t) return 'vacía';
+  if (esTextoInterno(t)) return 'texto interno';
+  if (DINERO.test(t)) return 'cifra de dinero';
+  const m = t.match(PALABRAS_PROHIBIDAS);
+  if (m) return 'palabra prohibida «' + m[0] + '»';
+  if (t.length > 480) return 'más de 480 letras (' + t.length + ')';
+  return null;
+}
 function sanea(texto) {
   const t = String(texto || '').replace(/\s+\n/g, '\n').trim();
-  if (!t) return null;
-  if (esTextoInterno(t)) return null;
-  if (DINERO.test(t)) return null;
-  if (PALABRAS_PROHIBIDAS.test(t)) return null;
-  if (t.length > 480) return null;
-  return t;
+  return porQueSeTira(t) ? null : t;
 }
 
 const ACCIONES = ['seguir', 'cotizar', 'fotos', 'video', 'persona', 'apartar', 'dueno'];
@@ -681,7 +689,10 @@ async function conversa(mensaje, opciones) {
          respuesta y con ella se fue el viaje entero; tres mensajes después
          el bot preguntaba «¿a dónde van?». Los datos no son texto para el
          cliente: no hay nada que filtrar en ellos. */
-      if (json.respuesta) console.error('[agente] respuesta descartada por el saneado (los datos leídos sí se conservan)');
+      if (json.respuesta) {
+        console.error('[agente] respuesta descartada por el saneado (' + porQueSeTira(json.respuesta) + '): «' +
+          String(json.respuesta).replace(/\s+/g, ' ').slice(0, 140) + '» (los datos leídos sí se conservan)');
+      }
       return { respuesta: null, datos: limpiaDatos(json.datos, hoy), accion: 'seguir', unidadPedida: unidadPorTexto(texto), turno: turno };
     }
     /* La unidad pedida: lo que dijo la IA, o lo que se lee del texto del

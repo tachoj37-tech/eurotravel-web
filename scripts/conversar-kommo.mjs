@@ -137,6 +137,7 @@ async function corre(nombre, lead, guion) {
 const escenarios = {
   b: ['Nueva cotización', 'hola! es que mi hermano se casa y le queremos hacer su despedida', 'pues estamos pensando en tequila, dicen que está padre', 'el 18 de octubre', 'vamos como 14', 'sí, todos de aquí de guadalajara', 'sí, ese mismo día regresamos', 'ok'],
   f: ['Nueva cotización', 'quiero cotizar un viaje a Sayulita', 'salimos pasado y quiero un camión', 'que camiones tiene?', 'mándame fotos del i6s', 'ese', 'regresamos el domingo', 'sí, de guadalajara'],
+  f0: ['buenas tardes', 'quiero cotizar un viaje a Sayulita', 'salimos pasado y quiero un camión', 'que camiones tiene?', 'i6', 'quiero reservar', 'si', 'sí, de guadalajara'],
   p: ['hola', 'quiero hablar con una persona'],
   g: ['Nueva cotización', 'oigan qué camiones manejan?', 'el más nuevo cuál es?', 'y ese cuánto sale a puerto vallarta?', 'somos 40, del 5 al 7 de diciembre', 'sí de guadalajara', 'solo nos llevan y traen']
 };
