@@ -147,5 +147,96 @@ titulo('lo que manda el servidor no se pinta como HTML');
   });
 }
 
+/* ============================================================ */
+titulo('«abona a tu viaje» · la pantalla sin liga');
+{
+  /* Antes, `viaje.html` sin liga era un callejón: «Falta tu liga». El
+     cliente que apartó por teléfono y firmó en la oficina NUNCA tuvo liga,
+     así que para él esa pantalla no servía de nada.
+
+     Ahora es su entrada: número de contrato y apellido. */
+  cierto('sin liga se pinta la consulta, no un error',
+    /function pintaConsulta\(/.test(html));
+  cierto('el formulario pide el número de contrato',
+    /id="portal-folio"/.test(html));
+  cierto('  y un apellido', /id="portal-apellido"/.test(html));
+
+  /* DE DONDE SALE ESE NUMERO. Sin esta frase, el cliente teclea el folio
+     `ET-…` de la página —que EuroSystem no conoce— y no encuentra nada. */
+  cierto('se dice que el número viene impreso en su contrato en PDF',
+    /impreso[^<]*contrato|contrato[^<]*en PDF|viene en tu contrato/i.test(html));
+
+  const consulta = bloqueDe("accion: 'consulta'", 'function pintaPortal');
+  cierto('la consulta va por POST al servidor', !!consulta);
+  cierto('  y manda folio y apellido', /folio:/.test(consulta) && /apellido:/.test(consulta));
+
+  /* NO SE PROMETE LO QUE NO SE PUEDE CUMPLIR. La página no manda SMS ni
+     WhatsApp cuando entra un abono: decirlo sería mentira. */
+  const pantalla = bloqueDe('function pintaConsulta(', 'function pideCodigo');
+  igual('no se promete un SMS ni un WhatsApp de aviso',
+    /te avisamos por (sms|whats)|te mandamos un (sms|whats)/i.test(pantalla), false);
+}
+
+/* ============================================================ */
+titulo('lo que ve el cliente de su contrato');
+{
+  const pinta = bloqueDe('function pintaPortal(', 'function pintaPuerta');
+  cierto('se pinta el resultado del portal', !!pinta);
+
+  ['destino', 'salida', 'regreso', 'unidad', 'total', 'abonado', 'saldo', 'enRevision']
+    .forEach(function (campo) {
+      cierto('sale ' + campo, new RegExp('\\b' + campo + '\\b').test(pinta));
+    });
+  cierto('y la lista de abonos, con fecha, monto y forma',
+    /abonos/.test(pinta) && /\.forma/.test(pinta) && /\.monto/.test(pinta));
+
+  /* EL PDF ES UNA LIGA AL PORTADOR (§12): se abre, no se guarda, y solo
+     se sigue si de verdad es https. */
+  cierto('hay un botón para abrir su contrato en PDF', /\.pdf/.test(pinta));
+  cierto('  y esa liga pasa por el filtro antes de pintarse',
+    /ligaSegura\(d\.pdf\)/.test(pinta));
+  {
+    const filtro = bloqueDe('function ligaSegura(', 'function avisoDelAbonoSinLiga');
+    cierto('  el filtro exige https', /https:/.test(filtro) && /protocol/.test(filtro));
+    cierto('  y no deja pasar lo que ni siquiera es una dirección',
+      /catch/.test(filtro) && /return ''/.test(filtro));
+  }
+  /* Abrir un PDF ajeno en otra pestaña sin `noopener` le da a esa página el
+     control de la nuestra. */
+  cierto('  y se abre sin darle control a la otra pestaña',
+    /rel="noopener noreferrer"/.test(pinta));
+
+  /* Lo que llega del servidor no se pinta crudo. */
+  cierto('lo que llega del servidor se escapa', /esc\(/.test(pinta));
+}
+
+/* ============================================================ */
+titulo('abonar desde el portal va con el pase, no con la liga');
+{
+  const engancha = bloqueDe('function enganchaAbono(', 'function pinta(');
+  cierto('el mismo enganche sirve para las dos pantallas', !!engancha);
+  cierto('  y cuando hay pase, es el pase lo que viaja', /pase: /.test(engancha));
+
+  /* El tope de lo que se teclea sale del saldo y del mínimo que dijo el
+     servidor, igual que en la pantalla de la liga. Es cortesía: quien
+     decide sigue siendo `api/_saldo.js`. */
+  cierto('el monto se compara contra el saldo', /monto > d\.saldo/.test(engancha));
+  cierto('  y contra el mínimo', /monto < d\.abonoMinimo/.test(engancha));
+}
+
+/* ============================================================ */
+titulo('la vuelta de un abono del portal no promete nada');
+{
+  /* Sin liga no hay a quién preguntarle si el cobro entró —el pase no abre
+     pantallas—, así que la vuelta de Stripe NO puede decir «recibido». Lo
+     que sí puede es no mentir. */
+  const vuelta = bloqueDe('function avisoDelAbonoSinLiga(', 'function pintaConsulta');
+  cierto('hay un aviso propio para la vuelta sin liga', !!vuelta);
+  igual('y NO afirma que el pago se recibió',
+    /(recibido con éxito|tu pago fue recibido)/i.test(vuelta), false);
+  cierto('  sino que le dice cómo comprobarlo',
+    /consult|comprobante|correo/i.test(vuelta));
+}
+
 console.log('\n' + buenas + ' buenas, ' + malas + ' malas');
 process.exit(malas ? 1 : 0);

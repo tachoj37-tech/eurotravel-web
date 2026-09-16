@@ -1170,8 +1170,8 @@
   .foot { display: flex; flex-wrap: wrap; gap: 16px; justify-content: space-between; align-items: center; }
   .foot img { height: 24px; width: auto; }
   .foot-links { display: flex; flex-wrap: wrap; gap: 18px; }
-  .foot-links button { background: none; border: none; font: inherit; color: inherit; cursor: pointer; padding: 0; }
-  .foot-links button:hover { color: var(--red); }
+  .foot-links button, .foot-links a { background: none; border: none; font: inherit; color: inherit; cursor: pointer; padding: 0; text-decoration: none; }
+  .foot-links button:hover, .foot-links a:hover { color: var(--red); }
 
   /* ================= modales ================= */
   .modal { position: fixed; inset: 0; z-index: 200; display: none; align-items: center; justify-content: center; padding: 18px; }
@@ -3357,6 +3357,11 @@ window.IMGS = {
       <button type="button" data-go="cotizar">Cotizaciones</button>
       <button type="button" data-go="nosotros">Sobre nosotros</button>
       <button type="button" data-go="contacto">Contacto</button>
+      <!-- La entrada del cliente que apartó por teléfono y firmó en la
+           oficina: nunca tuvo liga ni cuenta, así que ninguna de las otras
+           puertas es suya. Es una liga de verdad —no un `data-go`— porque
+           `viaje.html` es otra página. -->
+      <a href="viaje.html">Abona a tu viaje</a>
     </div>
     <div>© <span id="year"></span> Eurotravel · Tlaquepaque, Jalisco</div>
   </div>

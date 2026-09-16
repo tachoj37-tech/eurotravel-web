@@ -108,6 +108,17 @@
   .abono-fila .btn { width: auto; flex: 0 0 auto; margin-top: 0; padding: 14px 18px; }
   .cargando { text-align: center; color: var(--muted); padding: 50px 0; }
 
+  /* ---- «Abona a tu viaje»: los dos campos de la consulta ----
+     `label.eyebrow` es la misma etiqueta chica de las demás cajas; aquí
+     hace falta que ocupe su renglón. */
+  label.eyebrow { display: block; margin-bottom: 6px; }
+  .campo {
+    width: 100%; box-sizing: border-box; padding: 13px 12px;
+    font: inherit; font-size: 16px;        /* 16px o el teléfono hace zoom al enfocar */
+    border: 1px solid var(--line); border-radius: 10px; background: #fff;
+  }
+  .campo:focus { outline: 2px solid var(--red); outline-offset: 1px; }
+
   /* ---- el paso del código ---- */
   .puerta { background: #fff; border: 1px solid var(--line); border-radius: 14px; padding: 26px 22px; text-align: center; }
   .puerta h1 { font-size: 21px; margin: 0 0 8px; }
@@ -247,7 +258,11 @@
     return Math.round(Number(String(v || '').replace(/[^\d.]/g, '')) || 0);
   }
 
-  function enganchaAbono(d) {
+  /* La misma caja sirve para las dos pantallas y solo cambia lo que viaja:
+     con liga va la liga, y desde «Abona a tu viaje» va el PASE, que dice de
+     qué contrato es y cuánto se debía, firmado por nosotros. En los dos
+     casos el servidor revisa el monto contra el saldo de verdad. */
+  function enganchaAbono(d, pase) {
     var campo = document.getElementById('abono-monto');
     var boton = document.getElementById('abono-ir');
     var error = document.getElementById('abono-error');
@@ -282,7 +297,9 @@
       fetch('/api/viaje', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ t: t, accion: 'abonar', monto: monto })
+        body: JSON.stringify(pase
+          ? { pase: pase, monto: monto }
+          : { t: t, accion: 'abonar', monto: monto })
       }).then(leeJSON).then(function (res) {
         boton.disabled = false;
         if (res.ok && res.d && res.d.url) {
@@ -463,6 +480,208 @@
   }
 
   /* ============================================================
+     «ABONA A TU VIAJE» · LA PANTALLA SIN LIGA
+     ------------------------------------------------------------
+     Esta pantalla sin `?t=` era un callejón: «Falta tu liga». Y el
+     cliente que apartó por teléfono y firmó en la oficina NUNCA
+     tuvo liga, así que para él no servía de nada.
+
+     Ahora es su entrada. Teclea el NÚMERO DE CONTRATO —el que
+     viene impreso en su PDF, no el folio `ET-…` de la página, que
+     EuroSystem no conoce— y un apellido, y ve su saldo.
+
+     LO QUE ESTA PANTALLA NO SABE
+
+     No sabe quién es. Folio y apellido no son una sesión: por eso
+     no enseña teléfono, correo ni dirección de nadie —el servidor
+     tampoco los recibe— y por eso el freno del servidor es corto.
+     ============================================================ */
+
+  /* Una liga que llega de la red y termina en un `href`. Solo https, y se
+     revisa aquí aunque el servidor ya la haya revisado: son dos candados
+     baratos sobre algo que abre un documento con los datos del cliente. */
+  function ligaSegura(url) {
+    var d;
+    try { d = new URL(String(url || '')); } catch (e) { return ''; }
+    return /^https:$/.test(d.protocol) ? d.href : '';
+  }
+
+  /* ------------------------------------------------------------
+     LA VUELTA DE STRIPE, CUANDO NO HAY LIGA
+     ------------------------------------------------------------
+     Aquí NO se puede decir «tu pago fue recibido». El pase no abre
+     pantallas —solo sirvió para abrir el cobro— así que no hay a quién
+     preguntarle si el dinero entró, y afirmarlo por la dirección de
+     regreso sería creerle al navegador: quien escriba `?abono=lo que sea`
+     vería lo mismo.
+
+     Lo que sí se puede es no mentir y decirle cómo comprobarlo él mismo.
+     ------------------------------------------------------------ */
+  function avisoDelAbonoSinLiga() {
+    return '<div class="aviso ojo">' +
+      '<b>Ya casi</b><br>' +
+      'Si completaste el pago, te llega un comprobante por correo. ' +
+      'Consulta tu viaje aquí abajo para verlo anotado: aparece como ' +
+      '<b>en revisión</b> hasta que la oficina lo apruebe.' +
+    '</div>';
+  }
+
+  function pintaConsulta(avisoArriba) {
+    cuerpo.innerHTML =
+      (avisoArriba || '') +
+      '<div class="tarjeta">' +
+        '<h2>Abona a tu viaje</h2>' +
+        '<p class="nota" style="margin:0 0 16px">Consulta cuánto llevas abonado y ' +
+          'cuánto te falta, y abona con tarjeta o en el OXXO.</p>' +
+        '<label class="eyebrow" for="portal-folio">Número de contrato</label>' +
+        '<input id="portal-folio" class="campo" type="text" inputmode="numeric" ' +
+          'autocomplete="off" placeholder="43773" aria-describedby="portal-donde" />' +
+        '<p class="nota" id="portal-donde" style="margin:6px 0 16px">Es el número ' +
+          'impreso en tu contrato en PDF, el que te dieron al firmar.</p>' +
+        '<label class="eyebrow" for="portal-apellido">Tu apellido</label>' +
+        '<input id="portal-apellido" class="campo" type="text" autocomplete="family-name" ' +
+          'placeholder="Pérez" />' +
+        '<p class="error-codigo" id="portal-error" role="alert"></p>' +
+        '<button class="btn" id="portal-ir">Ver mi viaje</button>' +
+      '</div>' +
+      '<p class="nota" style="text-align:center;margin:18px 0 0">' +
+        '¿No encuentras tu número de contrato? ' +
+        '<a href="' + wa('Hola, quiero abonar a mi viaje y no encuentro mi número de contrato.') +
+        '">Escríbenos por WhatsApp</a>.</p>';
+
+    var folio = document.getElementById('portal-folio');
+    var apellido = document.getElementById('portal-apellido');
+    var boton = document.getElementById('portal-ir');
+    var error = document.getElementById('portal-error');
+
+    function busca() {
+      if (boton.disabled) return;
+      if (!folio.value.trim() || !apellido.value.trim()) {
+        error.textContent = 'Escribe tu número de contrato y un apellido.';
+        (folio.value.trim() ? apellido : folio).focus();
+        return;
+      }
+
+      boton.disabled = true;
+      error.textContent = 'Buscando tu viaje…';
+
+      fetch('/api/viaje', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        /* Por el CUERPO, no por la dirección: un apellido y un número de
+           contrato en una dirección se quedan escritos en el historial y en
+           los registros de servidores ajenos. */
+        body: JSON.stringify({
+          accion: 'consulta',
+          folio: folio.value.trim(),
+          apellido: apellido.value.trim()
+        })
+      }).then(leeJSON).then(function (res) {
+        boton.disabled = false;
+        if (res.ok && res.d && res.d.viaje) { pintaPortal(res.d); return; }
+        /* El aviso lo redacta el servidor —el 404 es el mismo para folio que
+           no existe, apellido que no cuadra y contrato sin confirmar— y aquí
+           se repite tal cual, sin adornarlo. */
+        error.textContent = (res.d && res.d.aviso) ||
+          'No pudimos consultar tu viaje ahora mismo. Inténtalo en un momento.';
+      }).catch(function () {
+        boton.disabled = false;
+        error.textContent = 'No hubo conexión. Vuelve a intentar.';
+      });
+    }
+
+    boton.addEventListener('click', busca);
+    [folio, apellido].forEach(function (c) {
+      c.addEventListener('keydown', function (e) { if (e.key === 'Enter') busca(); });
+      c.addEventListener('input', function () { error.textContent = ''; });
+    });
+    folio.focus();
+  }
+
+  /* ------------------------------------------------------------
+     LO QUE VE DE SU CONTRATO
+     ------------------------------------------------------------
+     Solo lo que EuroSystem contesta en §12, que a propósito no trae
+     nombre, teléfono, correo, origen, dirección ni operador. Lo que se
+     pinta aquí es lo que el cliente necesita para decidir cuánto abonar.
+     ------------------------------------------------------------ */
+  function pintaPortal(res) {
+    var d = res.viaje || {};
+    var partes = [];
+
+    partes.push(
+      '<div class="folio-caja">' +
+        '<div class="eyebrow">Tu contrato</div>' +
+        '<div class="folio">' + esc(d.folio || '—') + '</div>' +
+      '</div>');
+
+    /* --- el dinero --- */
+    partes.push(tarjeta('Tu pago',
+      r('Total del viaje', pesos.format(d.total) + ' · IVA incluido') +
+      r('Descuento', d.descuento ? '− ' + pesos.format(d.descuento) : '') +
+      r('Ya abonaste', pesos.format(d.abonado)) +
+      /* Lo capturado y todavía sin aprobar. Sale porque quien depositó ayer
+         tiene que ver su depósito en algún lado: si no lo ve, vuelve a pagar. */
+      r('En revisión', d.enRevision ? pesos.format(d.enRevision) : '') +
+      r('Queda por abonar', pesos.format(d.saldo), 'suma saldo') +
+      (d.enRevision
+        ? '<p class="nota">Lo que está «en revisión» ya lo recibimos y todavía no ' +
+          'se aprueba en la oficina. Cuando se apruebe, baja de tu saldo.</p>'
+        : '')));
+
+    /* --- abonar --- */
+    if (d.saldo > 0 && typeof res.abonoMinimo === 'number' && res.pase) {
+      partes.push(cajaDeAbono({
+        saldo: d.saldo, abonoMinimo: res.abonoMinimo, sugerencias: res.sugerencias
+      }));
+    }
+
+    /* --- el viaje --- */
+    partes.push(tarjeta('Tu viaje',
+      r('Va a', d.destino) +
+      r('Salida', fecha(d.salida)) +
+      r('Regreso', fecha(d.regreso)) +
+      r('Unidad', d.unidad) +
+      r('Unidades', d.unidades > 1 ? d.unidades : '')));
+
+    /* --- sus abonos, uno por uno --- */
+    var abonos = (d.abonos || []).map(function (a) {
+      return r(fecha(a.fecha) || '—',
+        pesos.format(a.monto) + (a.forma ? ' · ' + a.forma.toLowerCase() : ''));
+    }).join('');
+    if (abonos) partes.push(tarjeta('Lo que has abonado', abonos));
+
+    /* --- su contrato --- */
+    var pdf = ligaSegura(d.pdf);
+    partes.push(
+      '<div class="tarjeta">' +
+        '<h2>¿Qué sigue?</h2>' +
+        (pdf
+          ? '<p class="nota" style="margin:0 0 14px">Aquí está tu contrato completo. ' +
+            'La liga caduca, así que si la vas a necesitar después, guárdate el PDF.</p>' +
+            '<a class="btn" href="' + esc(pdf) + '" target="_blank" rel="noopener noreferrer">' +
+            'Abrir mi contrato en PDF</a>'
+          : '<p class="nota" style="margin:0 0 14px">Para cualquier aclaración de tu ' +
+            'contrato, escríbenos y lo vemos contigo.</p>') +
+        '<a class="btn linea" href="' + wa('Hola, es sobre mi contrato ' +
+          (d.folio || '') + '.') + '">Escríbenos por WhatsApp</a>' +
+      '</div>');
+
+    partes.push(
+      '<p style="text-align:center;margin:20px 0 0">' +
+        '<button class="enlace" id="portal-otro">Consultar otro contrato</button></p>');
+
+    cuerpo.innerHTML = partes.join('');
+    window.scrollTo(0, 0);
+
+    enganchaAbono({ saldo: d.saldo, abonoMinimo: res.abonoMinimo }, res.pase);
+
+    document.getElementById('portal-otro').addEventListener('click', function () {
+      pintaConsulta('');
+    });
+  }
+
+  /* ============================================================
      LA PUERTA DEL CODIGO
      ------------------------------------------------------------
      La liga sola ya no abre nada. Antes de enseñar el viaje se
@@ -617,9 +836,23 @@
 
   /* ---- el token viaja en la dirección y de ahí no se mueve ---- */
   var t = new URLSearchParams(location.search).get('t') || '';
+
+  /* ------------------------------------------------------------
+     SIN LIGA, «ABONA A TU VIAJE»
+
+     Esto decía «Falta tu liga» y ahí se acababa. Pero la mitad de los
+     clientes de Eurotravel nunca compraron en línea: apartaron por
+     teléfono y firmaron en la oficina, y de liga no tienen ninguna.
+     Para ellos la entrada es el número de contrato y su apellido.
+
+     Y si vuelven de pagar un abono desde aquí —`?abono=` sin `t`— el
+     aviso va arriba del formulario, sin afirmar que el cobro entró: eso
+     no se sabe sin preguntarle al servidor, y el pase no sirve para
+     preguntar.
+     ------------------------------------------------------------ */
   if (!t) {
-    pintaError('malo', 'Falta tu liga',
-      'Abre el enlace tal como te llegó en el correo, completo.');
+    pintaConsulta(new URLSearchParams(location.search).get('abono')
+      ? avisoDelAbonoSinLiga() : '');
     return;
   }
 
