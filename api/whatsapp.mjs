@@ -5254,8 +5254,15 @@ async function trabajoDeKommo(crudo) {
     return e && e.para && tickets.mismoNumero(e.para, aviso.numero) && !e.esTicket;
   });
   const ficha = tickets.fichaDe(aviso.numero);
+  /* El ticket sale con `pasaAPersona`, pero NO termina al bot: el ticket
+     invita a corregir («si algo está mal, dímelo y lo corrijo») y el
+     cerebro atiende esa corrección con el ticket corregido. El bot se
+     para cuando el cerebro deja el chat en manos del dueño (un mensaje
+     que no cambia el viaje), cuando piden persona, o si el cerebro
+     tronó. Visto el 16-sep-2026: «14 al 17 de octubre» después del ticket
+     y el bot ya estaba parado. */
   const termino = !!(ficha && ficha.enManosDe === 'dueno') ||
-    alCliente.some(function (e) { return e.pasaAPersona || e.esPersona; }) ||
+    alCliente.some(function (e) { return e.esPersona; }) ||
     (!!mensaje && (!resultado || resultado.status !== 200));
   const status = termino ? 'fin' : 'sigue';
   /* Lo que dice el cerebro va en `data.texto` (el bloque «Mensaje» del
@@ -5275,7 +5282,12 @@ async function trabajoDeKommo(crudo) {
   console.log('[kommo-trabajo] lead ' + aviso.leadId + ' · ' + alCliente.length + ' envíos · ' + status +
     (resultado && resultado.status !== 200 ? ' · el cerebro contestó ' + resultado.status : ''));
 
-  const datos = { status: status, texto: texto, fotos: fotos ? fotos.carpeta : '', pie: fotos ? fotos.pie : '' };
+  /* `callado`: terminó sin nada que decir (el ticket ya avisó que en un
+     momento le pasan su precio; la persona lee el mensaje igual). El
+     widget lo saca por la salida «silencio» → parar, sin mandar un
+     mensaje vacío. */
+  const callado = status === 'fin' && !texto && !fotos;
+  const datos = { status: status, texto: texto, fotos: fotos ? fotos.carpeta : '', pie: fotos ? fotos.pie : '', callado: callado ? 'si' : 'no' };
   const seguido = await kommo.continuaSalesbot(aviso.returnUrl, { data: datos, execute_handlers: handlers });
   if (!seguido) console.error('[kommo-trabajo] Kommo no aceptó la continuación del lead ' + aviso.leadId + ': el cliente se quedó sin respuesta');
   return { ok: seguido, status: status, envios: alCliente.length, texto: texto, fotos: datos.fotos };

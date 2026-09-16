@@ -99,7 +99,8 @@ define(['jquery'], function ($) {
         return {
           exits: [
             { code: 'success', title: 'El cerebro sigue platicando' },
-            { code: 'fail', title: 'El cerebro terminó (ticket o persona)' }
+            { code: 'fail', title: 'El cerebro terminó (ticket o persona)' },
+            { code: 'silencio', title: 'Terminó sin decir nada (la persona sigue)' }
           ]
         };
       },
@@ -149,6 +150,16 @@ define(['jquery'], function ($) {
           { question: pasoDeFotos },
           {
             question: [
+              /* Terminó sin nada que decir (p. ej. «sí, todo bien» después
+                 del ticket): salida «silencio», sin mensaje vacío. */
+              {
+                handler: 'conditions',
+                params: {
+                  logic: 'and',
+                  conditions: [{ term1: '{{json.callado}}', term2: 'si', operation: '=' }],
+                  result: [{ handler: 'exits', params: { value: 'silencio' } }]
+                }
+              },
               {
                 handler: 'conditions',
                 params: {

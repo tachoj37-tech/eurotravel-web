@@ -113,6 +113,33 @@ function peticion(cuerpo, cabeceras, llave) {
   ok('el texto no lleva ligas de fotos pero sí el video de YouTube', !/img\/unidades/.test(tk) && /youtube\.com/.test(tk) && /Claro/.test(tk));
   ok('sin fotos del drive no hay carpeta', kommo.fotosParaKommo([{ para: '1', texto: 'hola' }, { para: '1', ligaDeFoto: 'https://x/no-existe.jpg' }]) === null);
 
+  titulo('el widget: fotos por carpeta y tres salidas (sigue / terminó / silencio)');
+  {
+    /* Se ejecuta el script del widget tal cual lo carga Kommo (AMD) y se
+       lee lo que registra al guardar el bot. */
+    const fuente = require('fs').readFileSync(path.join(RAIZ, 'pendiente', 'kommo-widget', 'script.js'), 'utf8');
+    let Widget = null;
+    const define = function (deps, f) { Widget = f({}); };
+    new Function('define', fuente)(define);
+    const w = new Widget();
+    const salidas = w.callbacks.salesbotDesignerSettings().exits.map(function (e) { return e.code; });
+    ok('declara las salidas success, fail y silencio', salidas.join(',') === 'success,fail,silencio');
+    const flujo = JSON.parse(w.callbacks.onSalesbotDesignerSave('eurobot', { url: 'https://x/api' }));
+    ok('tres pasos: pedir al cerebro, fotos, salidas', flujo.length === 3 && flujo[0].question[0].handler === 'widget_request');
+    const fotosPaso = flujo[1].question.filter(function (h) { return h.handler === 'conditions'; });
+    ok('una condición por carpeta del drive, cada una con sus 3 fotos y su goto',
+      fotosPaso.length === 8 && fotosPaso.every(function (c) {
+        const r = c.params.result;
+        return c.params.conditions[0].term1 === '{{json.fotos}}' && r.length === 4 &&
+          r.slice(0, 3).every(function (m) { return m.handler === 'send_message' && m.params.attachments[0].type === 'picture'; }) &&
+          r[0].params.text === '{{json.pie}}' && r[3].handler === 'goto' && r[3].params.step === 2;
+      }));
+    const salidasPaso = flujo[2].question;
+    ok('«callado = si» sale por silencio antes de mirar el status',
+      salidasPaso[0].params.conditions[0].term1 === '{{json.callado}}' && salidasPaso[0].params.result[0].params.value === 'silencio' &&
+      salidasPaso[1].params.conditions[0].term1 === '{{json.status}}' && salidasPaso[2].params.value === 'fail');
+  }
+
   titulo('el camino entero, con el guion');
   process.env.SITIO_URL = 'https://eurotravel-web.vercel.app';
   process.env.WHATSAPP_RUTA_SECRETA = 'a'.repeat(48);
