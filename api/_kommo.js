@@ -220,16 +220,49 @@ const crypto = require('crypto');
    15-sep-2026, uuids en docs/kommo-fotos.json). De la liga pública de la
    foto al uuid de Kommo, para mandarla como adjunto de verdad. */
 let FOTOS_KOMMO = null;
-function uuidDeFoto(liga) {
-  const nombre = String(liga || '').split('?')[0].split('/').pop();
-  if (!nombre) return null;
+function tablaDeFotos() {
   if (!FOTOS_KOMMO) {
     try { FOTOS_KOMMO = require('./_kommo-fotos.json'); } catch (e) { FOTOS_KOMMO = {}; }
   }
-  for (const carpeta of Object.keys(FOTOS_KOMMO)) {
-    if (FOTOS_KOMMO[carpeta] && FOTOS_KOMMO[carpeta][nombre]) return FOTOS_KOMMO[carpeta][nombre];
+  return FOTOS_KOMMO;
+}
+function carpetaDeFoto(liga) {
+  const nombre = String(liga || '').split('?')[0].split('/').pop();
+  if (!nombre) return null;
+  const tabla = tablaDeFotos();
+  for (const carpeta of Object.keys(tabla)) {
+    if (tabla[carpeta] && tabla[carpeta][nombre]) return { carpeta: carpeta, uuid: tabla[carpeta][nombre] };
   }
   return null;
+}
+function uuidDeFoto(liga) {
+  const f = carpetaDeFoto(liga);
+  return f ? f.uuid : null;
+}
+
+/* ------------------------------------------------------------
+   LAS FOTOS LAS ADJUNTA EL WIDGET (16-sep-2026, noche)
+   ------------------------------------------------------------
+   Dictado del dueño: «quiero que me des fotos reales, no links». El
+   `continue` de Kommo no deja adjuntar, así que el servidor solo dice DE
+   QUÉ UNIDAD son las fotos (`data.fotos` = la carpeta del drive, p. ej.
+   «irizar-i6») y el pie de la primera (`data.pie`); el widget trae, en su
+   `onSalesbotDesignerSave`, un `send_message` con el adjunto por cada
+   carpeta, detrás de una condición sobre {{json.fotos}}. La tabla de
+   uuids del widget se genera de `_kommo-fotos.json` con
+   `pendiente/kommo-widget/generar-fotos.mjs`.
+
+   Devuelve null si en los envíos no hay ninguna foto del drive.
+   ------------------------------------------------------------ */
+function fotosParaKommo(envios) {
+  let carpeta = null, pie = '';
+  for (const e of (Array.isArray(envios) ? envios : [])) {
+    if (!e || !e.ligaDeFoto) continue;
+    const f = carpetaDeFoto(e.ligaDeFoto);
+    if (!f) continue;
+    if (!carpeta) { carpeta = f.carpeta; pie = String(e.texto || '').trim(); }
+  }
+  return carpeta ? { carpeta: carpeta, pie: pie } : null;
 }
 
 function base64url(buf) {
@@ -399,6 +432,9 @@ function textoParaKommo(envios, opciones) {
   for (const e of (Array.isArray(envios) ? envios : [])) {
     if (!e) continue;
     const texto = String(e.texto || '').trim();
+    /* Con `fotosAparte`, las fotos ya las adjunta el widget desde el drive
+       de Kommo (ver fotosParaKommo): aquí no van ni como liga ni con pie. */
+    if (e.ligaDeFoto && o.fotosAparte) continue;
     if (e.ligaDeFoto) { partes.push((texto ? texto + '\n' : '') + liga(e.ligaDeFoto)); continue; }
     if (e.ligaDeDocumento) { partes.push((texto ? texto + '\n' : '') + liga(e.ligaDeDocumento)); continue; }
     if (!texto) continue;
@@ -437,7 +473,7 @@ async function continuaSalesbot(returnUrl, cuerpo, opciones) {
 module.exports = {
   hayKommo, pruebaDeVida, mueveDeEtapa, guardaPrecio, leadsConPrecio,
   /* El paso EuroBot. */
-  leeAvisoDeWidget, verificaTokenDeWidget, handlersDeEnvios, textoParaKommo, continuaSalesbot, uuidDeFoto,
+  leeAvisoDeWidget, verificaTokenDeWidget, handlersDeEnvios, textoParaKommo, fotosParaKommo, continuaSalesbot, uuidDeFoto, carpetaDeFoto,
   /* Para las pruebas y para el día del alta. */
   config, mapaDeEtapas, pide
 };

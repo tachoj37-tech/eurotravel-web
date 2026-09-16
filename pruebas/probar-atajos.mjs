@@ -119,23 +119,22 @@ titulo('«fotos <unidad>» manda la que él diga');
   ok('«sprinter» manda la Sprinter', /Sprinter/.test(textoDe(s.alCliente)));
 }
 
-titulo('lo que le queda a DOS no se adivina: se pregunta');
+titulo('«fotos i6»: en el chat el i6 es UNA unidad (16-sep-2026)');
 {
-  /* Hay dos Irizar i6 —el de 47 y el de 51— así que «fotos i6» no dice
-     cuál. Mandar la del camión equivocado es peor que no mandar nada. */
+  /* CAMBIÓ DE LADO EL 16-sep-2026. Antes había dos i6 en el chat (el de 47
+     y el de 51) y «fotos i6» no decía cuál: se preguntaba. El dueño los
+     juntó («refiérete a él como irizar i6 47 y 51 pasajeros; esto solo
+     aplica en el chat»), así que «fotos i6» manda las fotos, y son suyas:
+     ya no hay «prestadas». */
   const r = await escribe('3366677777 fotos i6');
-  ok('no le manda nada al cliente', r.alCliente.length === 0);
-  const p = r.aMi.join('\n');
-  ok('  me pregunta cuál de las dos', /Cu[áa]l de las dos/.test(p));
-  ok('  nombrando las dos con sus asientos',
-    /fotos Irizar i6\* — 47 pasajeros/.test(p) && /fotos Irizar i6 51\* — 51 pasajeros/.test(p));
+  ok('le manda las fotos del i6', r.alCliente.length > 0 && fotosDe(r.alCliente).some((f) => /\/irizar-i6\//.test(f)));
+  ok('  nombrándolo con sus dos capacidades', /Irizar i6\* — 47 y 51 pasajeros/.test(textoDe(r.alCliente)));
+  ok('  y ya no pregunta cuál de las dos', !/Cu[áa]l de las dos/.test(r.aMi.join('\n')));
 
-  /* Y con el nombre completo sí sale. */
+  /* «fotos i6 51» es el mismo camión. */
   const s = await escribe('3366677777 fotos i6 51');
-  ok('«fotos i6 51» sí manda', s.alCliente.length > 0);
-  ok('  y avisa que las fotos son prestadas', /no tengo fotos/i.test(textoDe(s.alCliente)));
-  ok('  nombrando de quién son', /otro \*Irizar i6\*/.test(textoDe(s.alCliente)));
-  ok('  y a mí me lo dice también', /prestadas/.test(s.aMi.join('\n')));
+  ok('«fotos i6 51» manda las mismas fotos', s.alCliente.length > 0 && fotosDe(s.alCliente).some((f) => /\/irizar-i6\//.test(f)));
+  ok('  sin decir que son prestadas', !/no tengo fotos/i.test(textoDe(s.alCliente)) && !/prestadas/.test(s.aMi.join('\n')));
 }
 
 titulo('los casos en que no se puede, se dicen');

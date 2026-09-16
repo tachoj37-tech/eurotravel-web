@@ -100,6 +100,19 @@ function peticion(cuerpo, cabeceras, llave) {
   ok('la foto desconocida va como liga en texto', h[3].handler === 'show' && /no-existe\.jpg/.test(h[3].params.value));
   ok('un envío vacío no manda nada', h.length === 4);
 
+  titulo('las fotos las adjunta el widget: carpeta y pie, sin ligas en el texto');
+  const conFotos = [
+    { para: '1', texto: 'Claro 📸' },
+    { para: '1', ligaDeFoto: 'https://eurotravel-web.vercel.app/img/unidades/irizar-i6/irizar-i6-01.jpg', texto: 'Ésta es la *Irizar i6* — 47 y 51 pasajeros 📸' },
+    { para: '1', ligaDeFoto: 'https://eurotravel-web.vercel.app/img/unidades/irizar-i6/irizar-i6-02.jpg', texto: '' },
+    { para: '1', texto: 'Y el video por dentro 👇\nhttps://www.youtube.com/watch?v=abc' }
+  ];
+  const fk = kommo.fotosParaKommo(conFotos);
+  ok('la carpeta es la de la unidad y el pie es el de la primera foto', fk && fk.carpeta === 'irizar-i6' && /Irizar i6/.test(fk.pie));
+  const tk = kommo.textoParaKommo(conFotos, { sitio: 'https://eurotravel-web.vercel.app', fotosAparte: true });
+  ok('el texto no lleva ligas de fotos pero sí el video de YouTube', !/img\/unidades/.test(tk) && /youtube\.com/.test(tk) && /Claro/.test(tk));
+  ok('sin fotos del drive no hay carpeta', kommo.fotosParaKommo([{ para: '1', texto: 'hola' }, { para: '1', ligaDeFoto: 'https://x/no-existe.jpg' }]) === null);
+
   titulo('el camino entero, con el guion');
   process.env.SITIO_URL = 'https://eurotravel-web.vercel.app';
   process.env.WHATSAPP_RUTA_SECRETA = 'a'.repeat(48);

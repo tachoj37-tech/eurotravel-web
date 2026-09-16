@@ -1,27 +1,30 @@
 /* ============================================================
-   EL SEGUNDO i6, EL DE 51 (10-sep-2026)
+   EL SEGUNDO i6, EL DE 51 (10-sep-2026) · Y CÓMO LO VE EL CHAT (16-sep)
    ============================================================
    El dueño tiene DOS Irizar i6 —uno de 47 y otro de 51, «de éste solo
    hay 1»— y el de 51 no estaba en el catálogo. Se descubrió leyendo su
    Excel: el rótulo «NEOBUS/i6 50/51 PAX» nombraba un i6 de 51 que en el
    sistema no existía.
 
-   Sus tres dictados de ese día, que es lo que esta batería vigila:
+   Dictados del 10-sep, que siguen valiendo PARA EL CATÁLOGO DEL SITIO:
 
      «en el bot sí va, solo en la página déjalo como pendiente»
      «ponle que no hay fotos del i6 de 51, pero ofrécelo»
-     «si alguien pide fotos enséñale el de 47 i6, pero dile que no hay
-      fotos pero que te puedo enseñar de este i6»
 
    Y lo que se rompe solo si nadie lo cuida:
 
    1 · Su PRECIO sale de la columna del Neobus, no de la del i6 de 47.
        A Chapala son $13,000 contra $12,000 — mil pesos por viaje.
-   2 · Dos camiones llamados «Irizar i6» harían que «el i6» dejara de
-       escoger a ninguno, y mezclarían los precios aprendidos, que se
-       guardan por NOMBRE de unidad.
-   3 · Las fotos prestadas NO pueden pasar por suyas. Enseñar un camión
-       y entregar otro es de las pocas cosas que no se arreglan después.
+   2 · Dos camiones llamados «Irizar i6» en el catálogo mezclarían los
+       precios aprendidos, que se guardan por NOMBRE de unidad.
+
+   CAMBIÓ DE LADO EL 16-sep-2026, EN EL CHAT. Dictado del dueño: «el
+   irizar i6 júntalo, o sea refiérete a él como irizar i6 47 y 51
+   pasajeros, lo mismo con el century. Esto solo aplica en el chat». Así
+   que el catálogo del sitio sigue con los dos (dos columnas del Excel),
+   pero el bot —página y WhatsApp— habla de UNA unidad «Irizar i6 — 47 y
+   51 pasajeros», con las fotos como suyas (ya no «prestadas»), y cabe un
+   grupo si cabe en la grande. Lo mismo el Century: «47 y 49».
    ============================================================ */
 'use strict';
 
@@ -39,9 +42,14 @@ function ok(que, condicion) {
 function titulo(t) { console.log('\n== ' + t.toUpperCase() + ' =='); }
 
 const HOY = '2026-09-10';
-const catalogo = bot.UNIDADES || [];
-const elDe51 = catalogo.filter(function (u) { return u.id === 'irizar-i6-51'; })[0];
-const elDe47 = catalogo.filter(function (u) { return u.id === 'irizar-i6'; })[0];
+/* El catálogo del SITIO, tal cual (bot.js ya lo cargó en window). */
+const sitio = (global.window && global.window.UNIDADES) || [];
+const elDe51 = sitio.filter(function (u) { return u.id === 'irizar-i6-51'; })[0];
+const elDe47 = sitio.filter(function (u) { return u.id === 'irizar-i6'; })[0];
+/* Y lo que ve el chat. */
+const chat = bot.UNIDADES || [];
+const i6Chat = chat.filter(function (u) { return u.id === 'irizar-i6'; })[0];
+const centuryChat = chat.filter(function (u) { return u.id === 'irizar'; })[0];
 
 /* Lleva la conversación hasta el paso de escoger camión y contesta `m`. */
 function escoge(m, gente) {
@@ -53,67 +61,31 @@ function escoge(m, gente) {
   return r;
 }
 
-titulo('está en el catálogo, y con sus dos banderas');
+titulo('en el catálogo del sitio sigue, con sus dos banderas');
 {
   ok('existe', !!elDe51);
   ok('es de 51 pasajeros', elDe51 && elDe51.max === 51);
   ok('es autobús', elDe51 && elDe51.cat === 'autobus');
-  /* ------------------------------------------------------------
-     CAMBIÓ DE LADO EL 12-sep-2026 · YA ENTRÓ A LA PÁGINA
-
-     Decía «lleva `soloBot`: fuera de la página», y así estaba: el
-     pendiente eran las fotos propias, que nunca llegaron.
-
-     El dueño resolvió el pendiente sin fotos: «no necesito que agregues
-     fotos… sigue enseñando las mismas», y «deben mostrarse en el
-     cotizador». Así que cambió a `soloCotizador`: entra al selector del
-     cotizador —donde lo que se elige es cuánta gente cabe— y sigue sin
-     tarjeta propia en la galería, porque es el mismo camión y las mismas
-     fotos que el i6 de 47. La ficha del de 47 anuncia que existe.
-
-     `sinFotos` NO se quitó, y no debe quitarse: sigue sin fotos suyas y
-     el bot tiene que seguir diciéndolo cuando presta las del otro.
-     ------------------------------------------------------------ */
   ok('ya no lleva `soloBot`', elDe51 && !elDe51.soloBot);
   ok('lleva `soloCotizador`: en el cotizador sí, en la galería no',
     elDe51 && elDe51.soloCotizador === true);
   ok('lleva `sinFotos`: sigue sin fotos suyas', elDe51 && elDe51.sinFotos === true);
   ok('NO se cotiza solo en línea', elDe51 && elDe51.cotizadorAutomatico === false);
-  /* El i6 de 47 no se tocó. */
   ok('el i6 de 47 sigue ahí, de 47', elDe47 && elDe47.max === 47);
   ok('  y sí sale en la página', elDe47 && !elDe47.soloBot);
-}
-
-titulo('los nombres no chocan');
-{
-  /* Dos «Irizar i6» romperían la elección de camión Y la llave de los
-     precios aprendidos, que se arma con el nombre de la unidad. */
-  const nombres = catalogo.map(function (u) { return u.name; });
+  const nombres = sitio.map(function (u) { return u.name; });
   ok('ningún nombre se repite en el catálogo', new Set(nombres).size === nombres.length);
   ok('el de 51 lleva el 51 en el nombre', elDe51 && /51/.test(elDe51.name));
 }
 
-titulo('la galería lo deja fuera, el cotizador y el bot no');
+titulo('la galería lo deja fuera, el cotizador no');
 {
-  /* Desde el 12-sep-2026 son DOS listas y no una: `UNITS` —todo lo que no
-     es `soloBot`— arma el selector del cotizador, y `EN_GALERIA` le quita
-     además lo `soloCotizador` para armar las tarjetas. Si alguien las
-     volviera a juntar, el i6 de 51 saldría como tarjeta repetida del de 47.
-     El reparto completo lo cuida `probar-capacidades.cjs`. */
   const html = fs.readFileSync(path.join(RAIZ, 'index.html'), 'utf8');
   ok('index.html sigue filtrando las unidades `soloBot`',
     /window\.UNIDADES \|\| \[\]\)\.filter\(function \(u\) \{ return !u\.soloBot; \}\)/.test(html));
   ok('y la galería le quita además las `soloCotizador`',
     /EN_GALERIA = UNITS\.filter\(function \(u\) \{ return !u\.soloCotizador; \}\)/.test(html));
   ok('la galería se arma de esa lista', /EN_GALERIA\.forEach/.test(html));
-
-  /* Y el bot sí lo ofrece: a un grupo de 50 tiene que aparecer. */
-  let e = null, r = null;
-  for (const m of ['quiero un camion a vallarta', 'somos 50', '20 de noviembre', '22 de noviembre']) {
-    r = bot.respuestaA(m, e, HOY); e = r.estado;
-  }
-  ok('el bot lo ofrece a un grupo de 50', /Irizar i6 51/.test(r.texto));
-  ok('  y no ofrece el de 47, que no les cabe', !/Irizar i6\* — 47/.test(r.texto));
 }
 
 titulo('su precio es el de la columna del Neobus, no el del i6 de 47');
@@ -128,10 +100,6 @@ titulo('su precio es el de la columna del Neobus, no el del i6 de 47');
   ok('  el mismo renglón que el Neobus', vall51.total === vallNeo.total);
   ok('  y el de 47 va por el suyo, «PB/i6 47 pax»',
     vall47 && vall47.comoSeLlama === 'PB/i6 47 pax');
-
-  /* En Vallarta las dos columnas dan $34,000 y el error no se notaría.
-     En Chapala sí: mil pesos de diferencia por viaje. Por eso se
-     comprueba en un destino donde SÍ se separan. */
   const cha51 = de('Chapala, Jal.', 'irizar-i6-51');
   const cha47 = de('Chapala, Jal.', 'irizar-i6');
   ok('a Chapala el de 51 son $13,000', cha51 && cha51.total === 13000);
@@ -139,83 +107,65 @@ titulo('su precio es el de la columna del Neobus, no el del i6 de 47');
   ok('  o sea que NO comparten precio', cha51.total !== cha47.total);
 }
 
-titulo('«el i6» ya no dice cuál: se pregunta, no se adivina');
+titulo('en el chat es UNA unidad: «Irizar i6 — 47 y 51 pasajeros» (16-sep-2026)');
 {
-  /* Con 45 caben los dos, así que «el i6» es ambiguo de verdad. */
-  const r = escoge('el i6', 45);
-  ok('no escoge por el cliente', !r.estado.unidadNombre);
-  ok('  le pregunta cuál', /Tengo dos/.test(r.texto));
-  ok('  nombrando los dos con sus asientos',
-    /Irizar i6 51\* — 51 pasajeros/.test(r.texto) && /Irizar i6\* — 47 pasajeros/.test(r.texto));
+  ok('el chat no tiene un «irizar-i6-51» aparte', !chat.some(function (u) { return u.id === 'irizar-i6-51'; }));
+  ok('  ni un «irizar-49»', !chat.some(function (u) { return u.id === 'irizar-49'; }));
+  ok('el i6 del chat se llama «Irizar i6»', i6Chat && i6Chat.name === 'Irizar i6');
+  ok('  con capacidad «47 y 51 pasajeros»', i6Chat && i6Chat.cap === '47 y 51 pasajeros');
+  ok('  y su tope es 51', i6Chat && i6Chat.max === 51 && String(i6Chat.asientos) === '47 y 51');
+  ok('el Century del chat es «47 y 49 pasajeros» con tope 49',
+    centuryChat && centuryChat.cap === '47 y 49 pasajeros' && centuryChat.max === 49);
+  ok('el catálogo del sitio NO cambió', elDe47.cap === '47 pasajeros' && elDe47.max === 47);
 
-  /* Y si dice la capacidad, ahí sí se resuelve solo. */
-  ok('«el i6 de 51» escoge el de 51', escoge('el i6 de 51', 45).estado.unidadNombre === 'Irizar i6 51');
-  /* CAMBIÓ DE LADO EL 13-sep-2026. Esto pedía que «el de 51» escogiera
-     el i6 51, y lo lograba por el «51» de su NOMBRE — el mismo defecto que
-     hacía que «somos 51» escogiera ese camión sin preguntar y el ticket
-     saliera con una unidad que nadie pidió. Pero de 51 asientos hay TRES:
-     G8, i6S e i6 51. «El de 51» no dice cuál; adivinar es cotizar otra
-     columna del Excel. Se pregunta, y solo entre esos tres. */
+  /* A un grupo de 50 se le ofrece el i6 (por el de 51), nombrado una vez. */
+  let e = null, r = null;
+  for (const m of ['quiero un camion a vallarta', 'somos 50', '20 de noviembre', '22 de noviembre']) {
+    r = bot.respuestaA(m, e, HOY); e = r.estado;
+  }
+  ok('el bot le ofrece el i6 a un grupo de 50', /Irizar i6\*/.test(r.texto));
+  ok('  nombrado con sus dos capacidades', /47 y 51/.test(r.texto));
+  ok('  y no aparece «Irizar i6 51»', !/i6 51/.test(r.texto));
+}
+
+titulo('«el i6» escoge el i6, sin preguntar cuál');
+{
+  ok('«el i6» con 45 escoge el i6', escoge('el i6', 45).estado.unidadNombre === 'Irizar i6');
+  ok('«el i6 de 51» es el mismo', escoge('el i6 de 51', 45).estado.unidadNombre === 'Irizar i6');
+  ok('«el i6 de 47» también', escoge('el i6 de 47', 45).estado.unidadNombre === 'Irizar i6');
+  ok('con 50 personas «el i6» sigue siendo el i6', escoge('el i6', 50).estado.unidadNombre === 'Irizar i6');
+  /* De 51 asientos hay TRES: G8, i6S e i6. «El de 51» no dice cuál. */
   const de51 = escoge('el de 51', 45);
   ok('«el de 51» no escoge por él: hay tres de 51', !de51.estado.unidadNombre);
   ok('  y pregunta solo entre los de 51',
     /De 51 tengo 3/.test(de51.texto) && (de51.opciones || []).length === 3);
   ok('«somos 51» no escoge ningún camión', !bot.unidadPorNombre('somos 51'));
-  ok('«el i6 de 47» escoge el de 47', escoge('el i6 de 47', 45).estado.unidadNombre === 'Irizar i6');
-
-  /* Con 50 personas el de 47 ni aparece, así que «el i6» no es ambiguo. */
-  ok('con 50 personas «el i6» es el de 51, sin preguntar',
-    escoge('el i6', 50).estado.unidadNombre === 'Irizar i6 51');
 }
 
 titulo('los demás camiones se siguen escogiendo igual');
 {
-  /* Ojo: «Irizar i6» es un pedazo de «Irizar i6S» y de «Irizar i6 51».
-     Si el nombre más largo no ganara, escribir el nombre completo del
-     i6S empataría con tres camiones y el bot preguntaría de más. */
   const casos = [
     ['Irizar i6S', 'Irizar i6S'], ['el i6s', 'Irizar i6S'],
-    ['Irizar i6 51', 'Irizar i6 51'], ['Irizar i6', 'Irizar i6'],
+    ['Irizar i6 51', 'Irizar i6'], ['Irizar i6', 'Irizar i6'],
     ['el pb', 'Irizar PB'], ['el neobus', 'Neobus'],
     ['el marcopolo', 'Marcopolo Paradiso G8'], ['el g8', 'Marcopolo Paradiso G8'],
-    /* CAMBIÓ DE LADO EL 12-sep-2026: «el century» escogía, porque había uno
-       solo. Ahora hay dos —el de 47 y el de 49, que el dueño separó porque
-       tienen precios distintos en el Excel— y «century» es palabra de los
-       dos, así que ya no escoge: pregunta. Es la misma regla que hace que
-       «el i6» tampoco escoja, y se comprueba abajo. */
-    ['el century de 47', 'Irizar Century'], ['el century de 49', 'Irizar Century 49']
+    ['el century de 47', 'Irizar Century'], ['el century de 49', 'Irizar Century'],
+    ['el century', 'Irizar Century']
   ];
   for (const [dice, espera] of casos) {
     ok('«' + dice + '» → ' + espera, escoge(dice, 45).estado.unidadNombre === espera);
   }
-  /* «el irizar» le queda a seis: se sigue preguntando. */
+  /* «el irizar» le queda a varios: se sigue preguntando. */
   ok('«el irizar» no escoge ninguno', !escoge('el irizar', 45).estado.unidadNombre);
-  /* Y «el century» a secas tampoco, por la misma razón que «el i6». */
-  {
-    const r = escoge('el century', 45);
-    ok('«el century» a secas no escoge ninguno', !r.estado.unidadNombre);
-    ok('  y pregunta nombrando los dos',
-      /Irizar Century\* — 47/.test(r.texto) && /Irizar Century 49\* — 49/.test(r.texto));
-  }
 }
 
-titulo('las fotos son prestadas, y se dice de quién');
+titulo('las fotos del i6 son suyas: ya no hay «prestadas» en el chat');
 {
-  const m = bot.mediosDe('irizar-i6-51');
-  ok('sí contesta algo (se ofrece igual)', !!m);
-  ok('las fotos son del i6 de 47', m && m.prestadas === 'irizar-i6');
-  ok('  y los archivos también', m && m.fotos.every(function (f) { return /irizar-i6\//.test(f); }));
-  ok('dice que de éste no hay', m && /no tengo fotos/i.test(m.texto));
-  ok('  y nombra de quién son las que enseña', m && m.texto.indexOf('Irizar i6') !== -1);
-  ok('  y dice los asientos de cada uno', m && /47/.test(m.texto) && /51/.test(m.texto));
-
-  /* Lo que NO puede pasar: que las enseñe calladas, como suyas. */
-  ok('NUNCA las hace pasar por suyas', m && !/Ésta es la \*Irizar i6 51\*/.test(m.texto));
-
-  /* Y el de 47 sigue enseñando las suyas, sin disculparse. */
   const n = bot.mediosDe('irizar-i6');
-  ok('el i6 de 47 enseña las suyas', n && !n.prestadas && /Ésta es la/.test(n.texto));
+  ok('el i6 enseña sus fotos', n && !n.prestadas && /Ésta es la/.test(n.texto));
   ok('  y sus archivos son los suyos', n && n.fotos.every(function (f) { return /irizar-i6\//.test(f); }));
+  ok('  nombrándose con sus dos capacidades', n && /47 y 51 pasajeros/.test(n.texto));
+  ok('  sin disculparse por fotos que no tiene', n && !/no tengo fotos/i.test(n.texto));
 }
 
 console.log('\n' + buenas + ' buenas, ' + malas + ' malas');

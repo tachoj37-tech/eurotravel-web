@@ -147,8 +147,9 @@ titulo('un autobús donde no caben no se acepta; pero cuántos son ya no es requ
   const a2 = bot.pegaDatos({ destino: 'Cancún', salida: '2026-11-10', regreso: '2026-11-15', unidad: 'autobus' }, { autobus: 'irizar-i6' });
   ok('  y con el i6 escogido y sin gente, sigue el origen', [a2.unidadNombre, a2.paso], ['Irizar i6', 'origen']);
   const b = bot.pegaDatos({ destino: 'Cancún', salida: '2026-11-10', regreso: '2026-11-15', gente: 40, unidad: 'autobus', unidadNombre: 'Irizar i6', unidadId: 'irizar-i6', paso: 'origen' }, { gente: 50 });
-  ok('50 en un i6 de 47: no cabe', b.noCabe && b.noCabe.nombre, 'Irizar i6');
-  okQue('  se quita el camión y toca escoger otra vez (hay de 50 y 51)', !b.unidadNombre && b.paso === 'elegirBus');
+  /* CAMBIÓ DE LADO EL 16-sep-2026: en el chat el i6 es «47 y 51» (una sola
+     unidad, dictado del dueño), así que 50 sí caben y el camión se queda. */
+  okQue('50 en el i6 (47 y 51): sí cabe y el camión se queda', !b.noCabe && b.unidadNombre === 'Irizar i6');
   const c = bot.pegaDatos({ destino: 'Cancún', salida: '2026-11-10', regreso: '2026-11-15', gente: 40, unidad: 'autobus', unidadNombre: 'Irizar i6', unidadId: 'irizar-i6', paso: 'origen' }, { gente: 60 });
   okQue('60 no caben en ninguno: se avisa y no se inventa unidad', c.noCabe && c.noCabe.gente === 60 && !c.unidadNombre);
 }

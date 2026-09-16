@@ -36,7 +36,38 @@
    ------------------------------------------------------------ */
 global.window = global.window || {};
 require('./unidades');
-const UNIDADES = global.window.UNIDADES || [];
+
+/* ------------------------------------------------------------
+   EN EL CHAT, EL i6 Y EL CENTURY SON UNA SOLA UNIDAD CADA UNO (16-sep-2026)
+   ------------------------------------------------------------
+   Dictado del dueño: «el irizar i6 júntalo, o sea refiérete a él como
+   irizar i6 47 y 51 pasajeros, lo mismo con el century. Esto solo
+   aplica en el chat». El catálogo del sitio (`unidades.js`) los sigue
+   teniendo separados —«Irizar i6 51» e «Irizar Century 49» tienen su
+   propia columna del Excel—, pero al cliente que platica se le nombra
+   UNA unidad con sus dos capacidades: «Irizar i6 — 47 y 51 pasajeros»
+   y «Irizar Century — 47 y 49 pasajeros». Las fotos son las mismas.
+   La persona que cotiza ve en el ticket cuántos van y sabe cuál toca.
+   ------------------------------------------------------------ */
+const JUNTAS_EN_EL_CHAT = { 'irizar-i6-51': 'irizar-i6', 'irizar-49': 'irizar' };
+function unidadesParaElChat(lista) {
+  const grandes = {};
+  for (const u of lista) if (JUNTAS_EN_EL_CHAT[u.id]) grandes[JUNTAS_EN_EL_CHAT[u.id]] = u;
+  return lista
+    .filter(function (u) { return !JUNTAS_EN_EL_CHAT[u.id]; })
+    .map(function (u) {
+      const g = grandes[u.id];
+      if (!g) return u;
+      const chica = Number(u.max), grande = Number(g.max);
+      return Object.assign({}, u, {
+        cap: chica + ' y ' + grande + ' pasajeros',
+        asientos: chica + ' y ' + grande,
+        max: grande,
+        capacidades: [chica, grande]
+      });
+    });
+}
+const UNIDADES = unidadesParaElChat(global.window.UNIDADES || []);
 
 /* Y las fotos, por la misma razón y con la misma maña. En el
    navegador `medios-unidades.js` ya se cargó antes que este

@@ -5262,7 +5262,11 @@ async function trabajoDeKommo(crudo) {
      bot lo pinta con {{json.texto}}) y el estado en `data.status`: el
      bloque de condición del bot decide si sigue (pausa) o para. Kommo no
      admite más que `show` (80 letras) y `goto` en execute_handlers. */
-  const texto = kommo.textoParaKommo(alCliente, { sitio: process.env.SITIO_URL });
+  /* Las fotos del drive las adjunta el widget: aquí solo va la carpeta
+     (`data.fotos`) y el pie de la primera (`data.pie`); el texto no lleva
+     ligas de fotos (ver fotosParaKommo en _kommo.js). */
+  const fotos = kommo.fotosParaKommo(alCliente);
+  const texto = kommo.textoParaKommo(alCliente, { sitio: process.env.SITIO_URL, fotosAparte: !!fotos });
   /* Kommo exige al menos un handler («This collection should contain 1
      element or more», 16-sep-2026 21:39 UTC). Se manda el mismo `goto` con
      el que el widget sigue a su paso de condiciones (paso 1 de
@@ -5271,9 +5275,10 @@ async function trabajoDeKommo(crudo) {
   console.log('[kommo-trabajo] lead ' + aviso.leadId + ' · ' + alCliente.length + ' envíos · ' + status +
     (resultado && resultado.status !== 200 ? ' · el cerebro contestó ' + resultado.status : ''));
 
-  const seguido = await kommo.continuaSalesbot(aviso.returnUrl, { data: { status: status, texto: texto }, execute_handlers: handlers });
+  const datos = { status: status, texto: texto, fotos: fotos ? fotos.carpeta : '', pie: fotos ? fotos.pie : '' };
+  const seguido = await kommo.continuaSalesbot(aviso.returnUrl, { data: datos, execute_handlers: handlers });
   if (!seguido) console.error('[kommo-trabajo] Kommo no aceptó la continuación del lead ' + aviso.leadId + ': el cliente se quedó sin respuesta');
-  return { ok: seguido, status: status, envios: alCliente.length, texto: texto };
+  return { ok: seguido, status: status, envios: alCliente.length, texto: texto, fotos: datos.fotos };
 }
 
 async function atiende(a) {

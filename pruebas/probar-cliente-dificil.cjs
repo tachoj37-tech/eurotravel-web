@@ -172,8 +172,11 @@ titulo('el catálogo se manda completo (escenario az)');
      Lo que se cuida ahora es que los DOS estén en la lista con su número:
      si uno se cayera, el cliente dejaría de ver una unidad que existe.
      ------------------------------------------------------------ */
-  ok('el Century de 47 dice sus 47', /Irizar Century — Clásico — 47 asientos/.test(lista));
-  ok('y el de 49 dice sus 49', /Irizar Century 49 — Clásico — 49 asientos/.test(lista));
+  /* Y CAMBIÓ OTRA VEZ EL 16-sep-2026: en el chat vuelven a ser UNA unidad,
+     pero nombrada con sus dos capacidades («júntalo… irizar century 47 y
+     49»; el catálogo del sitio sigue con las dos columnas). */
+  ok('el Century sale una vez, con sus 47 y 49', /Irizar Century — Clásico — 47 y 49 asientos/.test(lista));
+  ok('y no hay un «Century 49» aparte', !/Century 49/.test(lista));
 }
 
 titulo('se contradice con el número de personas (escenario az)');

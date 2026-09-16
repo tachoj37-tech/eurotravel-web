@@ -130,7 +130,9 @@ igual('el de 47 NO lleva el número en el nombre', (porId('irizar') || {}).name,
      Century. Eso es lo que rompía el «47» en el nombre. */
   igual('«el i6 de 47» no nombra a ningún Century',
     nombra('el i6 de 47').filter(function (n) { return /century/i.test(n); }), []);
-  igual('  y sí a los i6', nombra('el i6 de 47'), ['Irizar i6', 'Irizar i6 51']);
+  /* CAMBIÓ DE LADO EL 16-sep-2026: en el chat el i6 de 47 y el de 51 son UNA
+     unidad («júntalo», dictado del dueño), y el Century igual. */
+  igual('  y sí al i6 (uno solo en el chat)', nombra('el i6 de 47'), ['Irizar i6']);
   /* Y en la conversación, el «47» escoge el de 47. */
   {
     const HOY = '2026-09-10';
@@ -139,10 +141,8 @@ igual('el de 47 NO lleva el número en el nombre', (porId('irizar') || {}).name,
       '22 de noviembre', 'el i6 de 47']) { r = bot.respuestaA(p, e, HOY); e = r.estado; }
     igual('  y la conversación acaba en el i6 de 47', r.estado.unidadNombre, 'Irizar i6');
   }
-  igual('«el century de 49» nombra al de 49', nombra('el century de 49'), ['Irizar Century 49']);
-  /* «el century» a secas le queda a los dos: ahí el bot pregunta, no
-     adivina — y que le queden los dos es justo lo que debe pasar. */
-  igual('«el century» a secas le queda a los dos', nombra('el century').length, 2);
+  igual('«el century de 49» nombra al Century (uno solo en el chat desde el 16-sep)', nombra('el century de 49'), ['Irizar Century']);
+  igual('«el century» a secas le queda a uno', nombra('el century').length, 1);
 }
 
 /* Un grupo de 49 tiene que encontrar unidad. Antes no: el Century topaba en
@@ -198,7 +198,9 @@ igual('el de 47 NO lleva el número en el nombre', (porId('irizar') || {}).name,
   const agente = fs.readFileSync(path.join(RAIZ, 'api', '_agente.js'), 'utf8');
   igual('a la IA ya no se le dicta la regla vieja del Century',
     /se ofrece hasta con 48/.test(agente), false);
-  cierto('  y sí que son dos, de 47 y de 49', /uno de 47 y otro de 49/.test(agente));
+  /* Y desde el 16-sep-2026 se le dicta que en el chat es UNA unidad con dos
+     capacidades («Irizar Century — 47 y 49 pasajeros»). */
+  cierto('  y sí que es una unidad de 47 y 49 en el chat', /Century en 47 y 49/.test(agente) && /UNA sola/.test(agente));
 
   /* Pero el rótulo del Excel no se tocó: es el mapa del dueño. */
   const destinos = require(path.join(RAIZ, 'api', '_destinos.js'));
