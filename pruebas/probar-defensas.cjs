@@ -86,6 +86,51 @@ igual('sin vercel: se toma el ULTIMO x-forwarded-for, no el primero',
     codigos, ['ok', 'ok', 'ok', 429, 429]);
 })();
 
+/* ------------------------------------------------------------
+   UNA VENTANA MAS LARGA QUE EL MINUTO
+   ------------------------------------------------------------
+   La consulta del portal —folio y apellido— pide 5 intentos cada 15
+   minutos, no 5 por minuto. Con la ventana fija de un minuto, quien
+   adivina apellidos tenia 300 intentos por hora en vez de 20.
+
+   `porVentana` es el nombre honesto del tope cuando la ventana deja de
+   ser el minuto; `porMinuto` sigue valiendo y significa lo mismo.
+   ------------------------------------------------------------ */
+(function () {
+  const QUINCE = 15 * 60000;
+  let reloj = 1789000000000;
+  const freno = D.creaFreno({ porVentana: 5, ventanaMs: QUINCE, porDia: 10000,
+    ahora: function () { return reloj; } });
+  const cab = { 'x-vercel-forwarded-for': '7.7.7.7' };
+
+  const codigos = [];
+  for (let i = 0; i < 7; i++) { const r = freno(req(cab)); codigos.push(r ? r.status : 'ok'); }
+  igual('5 cada 15 min: la 6a y la 7a se frenan',
+    codigos, ['ok', 'ok', 'ok', 'ok', 'ok', 429, 429]);
+
+  /* Un minuto despues SIGUE frenado: la ventana no es el minuto. */
+  reloj += 61000;
+  const alMinuto = freno(req(cab));
+  cierto('al minuto siguiente sigue frenado', alMinuto && alMinuto.status === 429);
+
+  /* Pasados los quince, vuelve a abrir. */
+  reloj += QUINCE;
+  igual('pasados los 15 minutos vuelve a pasar', freno(req(cab)), null);
+})();
+
+/* Sin `ventanaMs` la ventana sigue siendo el minuto de siempre: lo que ya
+   usan viaje, pagar y places no cambia de comportamiento. */
+(function () {
+  let reloj = 1789000000000;
+  const freno = D.creaFreno({ porMinuto: 2, porDia: 10000,
+    ahora: function () { return reloj; } });
+  const cab = { 'x-vercel-forwarded-for': '6.6.6.6' };
+  freno(req(cab)); freno(req(cab));
+  cierto('sin ventanaMs: la 3a del minuto se frena', freno(req(cab)).status === 429);
+  reloj += 61000;
+  igual('y al minuto siguiente vuelve a abrir', freno(req(cab)), null);
+})();
+
 /* ---------------- la puerta -------------------------------------------- */
 (function () {
   const r = res();

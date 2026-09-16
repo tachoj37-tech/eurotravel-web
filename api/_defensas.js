@@ -193,24 +193,35 @@ function ipDeConfianza(req) {
    La clave del contador la elige el servidor (la IP de confianza), no el
    cliente: un Map con clave que elige quien ataca crece sin tope. Por eso el
    barrido por reloj y el desalojo duro al pasar de 5000. */
+/* La ventana normal es el minuto. Pero hay puertas que se defienden por
+   hora, no por minuto: la consulta del portal —folio y apellido— aguanta 5
+   intentos cada QUINCE minutos, porque lo que se adivina ahí es un apellido
+   y 5 por minuto son 300 por hora. Por eso `ventanaMs` es opcional: quien
+   no la pasa se queda con el minuto de siempre, sin cambiar nada.
+
+   `ahora` también es opcional y existe solo para las pruebas: sin él no hay
+   forma de comprobar que una ventana de quince minutos dura quince minutos
+   sin esperarlos de verdad. */
 function creaFreno(opciones) {
-  const porMinuto = opciones.porMinuto;
+  const ventanaMs = Number(opciones.ventanaMs) > 0 ? Number(opciones.ventanaMs) : 60000;
+  const porVentana = opciones.porVentana != null ? opciones.porVentana : opciones.porMinuto;
   const porDia = opciones.porDia;
+  const reloj = typeof opciones.ahora === 'function' ? opciones.ahora : Date.now;
   const visitantes = new Map();
   let dia = { fecha: '', total: 0 };
 
   function permiteVisitante(ip) {
-    const ahora = Date.now();
+    const ahora = reloj();
     const reg = visitantes.get(ip) || { desde: ahora, n: 0 };
-    if (ahora - reg.desde > 60000) { reg.desde = ahora; reg.n = 0; }
+    if (ahora - reg.desde > ventanaMs) { reg.desde = ahora; reg.n = 0; }
     reg.n += 1;
     visitantes.set(ip, reg);
     if (visitantes.size > 5000) visitantes.clear();
-    return reg.n <= porMinuto;
+    return reg.n <= porVentana;
   }
 
   function permiteDia() {
-    const hoy = new Date().toISOString().slice(0, 10);
+    const hoy = new Date(reloj()).toISOString().slice(0, 10);
     if (dia.fecha !== hoy) dia = { fecha: hoy, total: 0 };
     dia.total += 1;
     return dia.total <= porDia;

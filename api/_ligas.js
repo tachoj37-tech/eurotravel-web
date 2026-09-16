@@ -78,8 +78,14 @@ function deB64(t) {
   return Buffer.from(s, 'base64');
 }
 
-function sello(cargaB64) {
-  return aB64(crypto.createHmac('sha256', clave()).update(cargaB64, 'utf8').digest());
+/* El `proposito` separa dos llaves que salen del mismo secreto. Sin él, un
+   pase del portal y una liga del correo se firmarían igual, y bastaría con
+   que una carga se pareciera a la otra para que un pase corto abriera la
+   pantalla de alguien —o al revés—. Se mete ANTES de la carga para que no
+   haya forma de que un texto se lea como el otro. */
+function sello(cargaB64, proposito) {
+  return aB64(crypto.createHmac('sha256', clave())
+    .update((proposito ? proposito + '.' : '') + cargaB64, 'utf8').digest());
 }
 
 /* Comparar con `===` filtra información por cuánto tarda en fallar, y con
@@ -188,8 +194,89 @@ function abre(token, ahoraMs) {
   return { ok: true, sesion: d.s, vence: d.e };
 }
 
+/* ============================================================
+   EL PASE CORTO DEL PORTAL · «Abona a tu viaje»
+   ------------------------------------------------------------
+   Quien acierta número de contrato y apellido en la pantalla
+   pública se lleva un pase firmado. Es el mismo truco de arriba
+   —la carga la lleva encima y el sello la ata— pero para otra
+   cosa y con otra vida:
+
+       la liga del correo   dice QUÉ SESIÓN de Stripe, y dura meses
+       el pase del portal   dice QUÉ CONTRATO de EuroSystem y cuánto
+                            debía, y dura UNA HORA
+
+   POR QUE EL SALDO VA DENTRO
+
+   Porque el cobro que sigue tiene que topar el monto contra algo,
+   y ese algo no puede venir del navegador. Consultarlo otra vez
+   exigiría volver a pedir el apellido —guardarlo sería guardar un
+   dato del cliente donde no hace falta—, así que viaja firmado:
+   cambiarle un peso tumba el sello.
+
+   Una hora de vida es lo que tarda un cobro, no lo que tarda un
+   viaje. Si el cliente se tarda más, vuelve a consultar: le cuesta
+   teclear su folio otra vez, y a cambio el saldo nunca es de ayer.
+   ============================================================ */
+const MINUTOS_PORTAL = 60;
+const PROPOSITO_PORTAL = 'portal';
+
+/* Solo un entero positivo. El número de contrato de EuroSystem es eso
+   (§12) y aquí se fija: firmar '0' o 'cuarenta' sería firmar un pase que
+   no nombra ningún contrato. */
+function contratoValido(n) {
+  const v = Number(n);
+  return Number.isInteger(v) && v > 0 && v <= 99999999;
+}
+
+function firmaPortal(contrato, saldo, ahoraMs) {
+  if (!hayClave()) return '';
+  if (!contratoValido(contrato)) return '';
+  const ahora = typeof ahoraMs === 'number' ? ahoraMs : Date.now();
+  const m = Number(saldo);
+  const carga = aB64(JSON.stringify({
+    p: Number(contrato),
+    m: Number.isFinite(m) && m > 0 ? Math.round(m) : 0,
+    e: ahora + MINUTOS_PORTAL * 60000
+  }));
+  return carga + '.' + sello(carga, PROPOSITO_PORTAL);
+}
+
+/* Devuelve `{ ok:true, contrato, saldo, vence }` o `{ ok:false, motivo, vencida }`.
+   Igual que `abre`, el motivo es para el registro y nunca para la respuesta. */
+function abrePortal(token, ahoraMs) {
+  if (!hayClave()) return { ok: false, motivo: 'sin LIGAS_SECRETO configurado' };
+
+  const t = String(token || '');
+  const punto = t.indexOf('.');
+  if (punto < 1 || punto === t.length - 1) return { ok: false, motivo: 'pase mal formado' };
+
+  const carga = t.slice(0, punto);
+  const firmaQueTrae = t.slice(punto + 1);
+
+  if (!igualesEnTiempoConstante(firmaQueTrae, sello(carga, PROPOSITO_PORTAL))) {
+    return { ok: false, motivo: 'la firma no cuadra' };
+  }
+
+  let d;
+  try { d = JSON.parse(deB64(carga).toString('utf8')); }
+  catch (e) { return { ok: false, motivo: 'carga ilegible' }; }
+
+  if (!d || !contratoValido(d.p)) return { ok: false, motivo: 'carga sin contrato' };
+  if (typeof d.m !== 'number' || !isFinite(d.m) || d.m < 0) {
+    return { ok: false, motivo: 'carga sin saldo' };
+  }
+
+  const ahora = typeof ahoraMs === 'number' ? ahoraMs : Date.now();
+  if (typeof d.e !== 'number' || !isFinite(d.e)) return { ok: false, motivo: 'carga sin vencimiento' };
+  if (ahora > d.e) return { ok: false, motivo: 'pase vencido', vencida: true };
+
+  return { ok: true, contrato: Number(d.p), saldo: Math.round(d.m), vence: d.e };
+}
+
 module.exports = {
-  DIAS_TRAS_EL_REGRESO, DIAS_MINIMOS,
+  DIAS_TRAS_EL_REGRESO, DIAS_MINIMOS, MINUTOS_PORTAL,
   hayClave, porQueNoSePuede, venceEn,
-  firma, ligaDelViaje, abre
+  firma, ligaDelViaje, abre,
+  contratoValido, firmaPortal, abrePortal
 };

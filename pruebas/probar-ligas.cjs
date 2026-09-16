@@ -212,5 +212,83 @@ const REGRESO = '2026-09-06';
   igual('ni con nulo', ligas.firma(null, REGRESO, AHORA), '');
 })();
 
+/* ============================================================
+   EL PASE CORTO DEL PORTAL
+   ------------------------------------------------------------
+   Quien acierta folio y apellido en «Abona a tu viaje» se lleva un
+   pase firmado que dice DOS cosas: de qué contrato se trata y cuánto
+   debía cuando se consultó. Con eso el cobro siguiente no tiene que
+   creerle nada al navegador.
+
+   Lo que se juega:
+
+     1. un pase inventado NO nombra el contrato de nadie
+     2. el saldo tampoco se puede subir a mano — va firmado
+     3. dura poco: una hora, no noventa días como la del correo
+     4. un pase del portal NO abre la pantalla del viaje, y al revés
+        tampoco. Son dos llaves distintas aunque salgan del mismo
+        secreto.
+   ============================================================ */
+(function () {
+  const HORA = 3600000;
+
+  const pase = ligas.firmaPortal(43773, 12500, AHORA);
+  cierto('con llave, sale un pase', !!pase);
+
+  const abierto = ligas.abrePortal(pase, AHORA);
+  igual('el pase dice de qué contrato y cuánto debía',
+    [abierto.ok, abierto.contrato, abierto.saldo], [true, 43773, 12500]);
+
+  /* 1. UN PASE INVENTADO NO NOMBRA NADA. Es lo que de verdad importa. */
+  igual('un pase con la firma alterada no abre',
+    ligas.abrePortal(pase.slice(0, -1) + (pase.slice(-1) === 'a' ? 'b' : 'a'), AHORA).ok, false);
+  igual('ni un pase sin firma', ligas.abrePortal(pase.split('.')[0], AHORA).ok, false);
+  igual('ni texto suelto', ligas.abrePortal('folio-43773', AHORA).ok, false);
+  igual('ni vacío', ligas.abrePortal('', AHORA).ok, false);
+
+  /* 2. EL SALDO VA FIRMADO: cambiar la carga tumba el sello.
+     Se arma una carga nueva con otro contrato y se le pega el sello viejo,
+     que es exactamente lo que intentaría quien quiere abonar al viaje de
+     otro. */
+  (function () {
+    const sello = pase.split('.')[1];
+    const otra = Buffer.from(JSON.stringify({ p: 99999, m: 12500, e: AHORA + HORA }))
+      .toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+    igual('carga cambiada con sello prestado: NO abre',
+      ligas.abrePortal(otra + '.' + sello, AHORA).ok, false);
+  })();
+
+  /* 3. DURA POCO. Una hora: lo que tarda un cobro, no lo que tarda un viaje. */
+  cierto('sigue valiendo a los 59 minutos', ligas.abrePortal(pase, AHORA + 59 * 60000).ok);
+  const vencido = ligas.abrePortal(pase, AHORA + HORA + 1000);
+  igual('a la hora y un minuto ya no', [vencido.ok, !!vencido.vencida], [false, true]);
+
+  /* 4. DOS LLAVES DISTINTAS. Un pase del portal no puede abrir la pantalla
+     del viaje de nadie, ni la liga del correo puede fingir ser un pase. */
+  const delCorreo = ligas.firma('cs_test_U', REGRESO, AHORA);
+  igual('la liga del correo NO sirve de pase del portal',
+    ligas.abrePortal(delCorreo, AHORA).ok, false);
+  igual('y el pase del portal NO abre la pantalla del viaje',
+    ligas.abre(pase, AHORA).ok, false);
+
+  /* El saldo de cero se firma igual: un viaje pagado completo también se
+     consulta, y el pase tiene que poder decir «ya no debes nada». */
+  igual('el saldo en cero se firma y se lee',
+    ligas.abrePortal(ligas.firmaPortal(1, 0, AHORA), AHORA).saldo, 0);
+
+  /* Sin contrato no hay pase: firmar un cero sería firmar «el contrato 0». */
+  igual('sin contrato no hay pase', ligas.firmaPortal(0, 500, AHORA), '');
+  igual('ni con texto que no es número', ligas.firmaPortal('cuarenta', 500, AHORA), '');
+
+  /* 5. SIN LLAVE NO SE FABRICA NINGUNO. */
+  (function () {
+    const guardado = process.env.LIGAS_SECRETO;
+    process.env.LIGAS_SECRETO = '';
+    igual('sin LIGAS_SECRETO no sale pase', ligas.firmaPortal(43773, 100, AHORA), '');
+    igual('y ninguno abre', ligas.abrePortal(pase, AHORA).ok, false);
+    process.env.LIGAS_SECRETO = guardado;
+  })();
+})();
+
 console.log('\n' + buenas + ' buenas, ' + malas + ' malas');
 process.exit(malas ? 1 : 0);

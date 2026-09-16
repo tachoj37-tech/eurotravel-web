@@ -31,11 +31,173 @@ const acceso = require('./_acceso');
 const stripe = require('./_stripe');
 const publico = require('./_publico');
 const saldos = require('./_saldo');       // la cuenta de los abonos
+const portal = require('./_portal');      // «Abona a tu viaje», contra EuroSystem
 
 /* Es una pantalla que el cliente recarga y comparte consigo mismo entre el
    teléfono y la computadora. Generoso, pero no infinito: cada visita cuesta
    una consulta a Stripe. */
 const freno = defensas.creaFreno({ porMinuto: 20, porDia: 800 });
+
+/* ============================================================
+   «ABONA A TU VIAJE» · LA ÚNICA ENTRADA SIN LIGA Y SIN CÓDIGO
+   ------------------------------------------------------------
+   El cliente que nunca compró en línea —el que apartó por
+   teléfono y firmó en la oficina— no tiene liga ni sesión de
+   Stripe. Lo único que tiene es su contrato impreso. Así que
+   entra con el NÚMERO DE CONTRATO y un APELLIDO, y eso se le
+   pregunta a EuroSystem (CONTRATOS-API.md §12).
+
+   VIVE AQUÍ DENTRO, no en un `api/portal.js`. El plan publica
+   DOCE funciones y hay doce exactas: un archivo más en `api/`
+   tumba el despliegue entero —ya pasó el 26-ago-2026—. Es la
+   misma salida que tomaron abonar y la vuelta de Stripe.
+
+   EL FRENO ES LA PUERTA, NO UN ADORNO
+   -----------------------------------
+   Aquí se adivina un APELLIDO, y un apellido se adivina: con los
+   veinte por minuto de la pantalla del viaje, quien prueba
+   «García, Hernández, López…» sobre un folio cualquiera entra en
+   una tarde. Cinco cada quince minutos por dirección (§12 lo pide
+   con ese número) lo vuelve inútil, y EuroSystem tiene además su
+   propio freno por folio.
+   ============================================================ */
+const frenoPortal = defensas.creaFreno({
+  porVentana: 5, ventanaMs: 15 * 60000, porDia: 3000
+});
+
+const NO_AHORA_COBRO = 'No pudimos abrir el pago ahora mismo. Inténtalo en un momento.';
+
+/* Lo que se le dice a quien llega con un pase que ya no sirve. Nunca es un
+   callejón sin salida: consultar otra vez cuesta teclear folio y apellido. */
+const VUELVE_A_CONSULTAR =
+  'Vuelve a consultar tu viaje con tu número de contrato y tu apellido para abonar.';
+
+async function consultaDelPortal(req, res, cuerpo) {
+  const frenado = frenoPortal(req);
+  if (frenado) {
+    /* Se frena ANTES de preguntarle a EuroSystem: el freno existe para que
+       nadie pueda usar nuestra llave para adivinar apellidos a su ritmo. */
+    res.status(429).json({
+      error: 'demasiadas',
+      aviso: 'Demasiados intentos seguidos. Espera unos minutos y vuelve a intentar.'
+    });
+    return;
+  }
+
+  const r = await portal.consulta(cuerpo.folio, cuerpo.apellido);
+  if (!r.ok) {
+    /* `r.aviso` ya viene redactado para el cliente: el 404 con las palabras
+       exactas de §12 —las mismas para folio que no existe, apellido que no
+       cuadra y contrato sin confirmar— y lo demás sin nombrar a EuroSystem
+       ni ninguna variable. */
+    res.status(r.status).json({ error: 'no se pudo consultar', aviso: r.aviso });
+    return;
+  }
+
+  /* ------------------------------------------------------------
+     EL PASE
+     ------------------------------------------------------------
+     Quien acertó folio y apellido se lleva un pase firmado que dice de qué
+     contrato se trata y cuánto debía. Con eso el cobro que sigue no tiene
+     que creerle al navegador ni volver a pedir el apellido.
+
+     Sin `LIGAS_SECRETO` no hay pase: la consulta se contesta igual —ver el
+     saldo no depende de eso— pero el botón de abonar no va a poder abrir
+     nada, y eso se grita en el registro.
+     ------------------------------------------------------------ */
+  const pase = ligas.firmaPortal(r.viaje.folio, r.viaje.saldo);
+  if (!pase) {
+    console.error('[portal] sin LIGAS_SECRETO: se puede consultar pero NO abonar en línea. ' +
+      'Ponla en las variables de Vercel.');
+  }
+
+  res.status(200).json({
+    viaje: r.viaje,
+    pase: pase,
+    abonoMinimo: saldos.MINIMO_ABONO,
+    sugerencias: saldos.sugerencias(r.viaje.saldo)
+  });
+}
+
+/* ------------------------------------------------------------
+   EL COBRO QUE SALE DEL PASE
+   ------------------------------------------------------------
+   NADA DE ESTO SE LEE DEL NAVEGADOR: ni de qué contrato es ni
+   cuánto se debe. Las dos cosas vienen dentro del pase, firmadas,
+   y cambiarle un peso tumba el sello. Lo único que manda quien
+   pide es el monto, y ése se revisa contra el saldo firmado con
+   las mismas reglas de `_saldo.js` que usa el resto de la página.
+
+   El pase NO ES UNA SESIÓN: no abre pantallas ni enseña datos.
+   Solo sirve para esto.
+   ------------------------------------------------------------ */
+async function abonoDelPortal(req, res, cuerpo) {
+  const pase = ligas.abrePortal(cuerpo.pase);
+  if (!pase.ok) {
+    console.error('[portal] pase rechazado: ' + pase.motivo);
+    res.status(pase.vencida ? 410 : 401).json({
+      error: 'pase no válido', vencida: !!pase.vencida, aviso: VUELVE_A_CONSULTAR
+    });
+    return;
+  }
+
+  const revisado = saldos.revisaAbono(cuerpo.monto, pase.saldo);
+  if (!revisado.ok) {
+    res.status(422).json({ error: 'monto no válido', aviso: revisado.aviso });
+    return;
+  }
+
+  if (!stripe.hayClave()) {
+    console.error('[portal] sin clave de Stripe: no se puede cobrar el abono del contrato ' +
+      pase.contrato);
+    res.status(503).json({ error: 'sin configurar', aviso: NO_AHORA_COBRO });
+    return;
+  }
+
+  const sitio = defensas.sitioDe(req);
+  const creada = await stripe.creaSesionDeCobro({
+    mode: 'payment',
+    locale: 'es-419',
+    success_url: sitio + '/viaje.html?abono={CHECKOUT_SESSION_ID}',
+    cancel_url: sitio + '/viaje.html',
+    line_items: [{
+      quantity: 1,
+      price_data: {
+        currency: 'mxn',
+        unit_amount: revisado.monto * 100,          // Stripe cuenta en centavos
+        product_data: {
+          name: stripe.paraStripe('Abono · contrato ' + pase.contrato),
+          description: stripe.paraStripe('Saldo antes de este abono $' +
+            pase.saldo.toLocaleString('es-MX') + ' MXN')
+        }
+      }
+    }],
+    payment_method_types: revisado.monto <= 10000 ? ['card', 'oxxo'] : ['card'],
+    metadata: {
+      /* `tipo` es lo que hace que el webhook lo reconozca como abono y no
+         como una compra nueva, y lo que `_reversas.js` lee si algún día se
+         devuelve. `contrato` es el número de EuroSystem, que es lo único
+         que esa puerta necesita para anotarlo (§13).
+
+         NO lleva `folio`: este abono no es de una reserva de la página,
+         es de un contrato de la oficina. Ponerle uno inventado haría que
+         `_saldo.js` lo sumara al viaje equivocado. */
+      tipo: saldos.TIPO_ABONO,
+      contrato: String(pase.contrato),
+      monto: String(revisado.monto),
+      origen: 'WEB-PORTAL'
+    }
+  });
+
+  if (!creada.ok || !creada.datos || !creada.datos.url) {
+    console.error('[portal] Stripe no abrió el cobro del contrato ' + pase.contrato + ': ' +
+      JSON.stringify((creada.datos && creada.datos.error) || {}).slice(0, 200));
+    res.status(502).json({ error: 'no se pudo abrir el cobro', aviso: NO_AHORA_COBRO });
+    return;
+  }
+
+  res.status(200).json({ url: creada.datos.url, monto: revisado.monto });
+}
 
 module.exports = defensas.aPruebaDeTronadas('viaje',
   'No pudimos abrir tu viaje ahora mismo. Inténtalo en un momento; ' +
@@ -47,6 +209,22 @@ module.exports = defensas.aPruebaDeTronadas('viaje',
   if (frenado) { res.status(frenado.status).json({ error: frenado.error }); return; }
 
   const cuerpo = defensas.cuerpoJSON(req);
+
+  /* ------------------------------------------------------------
+     0. «ABONA A TU VIAJE» — LO QUE ENTRA SIN LIGA
+
+     Va ANTES de la firma porque no trae liga que firmar: el cliente de
+     la oficina no tiene ninguna. Su candado es otro —folio, apellido, el
+     freno de arriba y, para cobrar, el pase firmado— y está entero en
+     las dos funciones de arriba.
+
+     Todo lo demás de este archivo sigue exigiendo liga, Stripe y código,
+     en ese orden, como siempre.
+     ------------------------------------------------------------ */
+  if (cuerpo.accion === 'consulta') { await consultaDelPortal(req, res, cuerpo); return; }
+  /* El pase ES la acción: lo único que puede hacer quien lo trae es abrir
+     su cobro. Por eso no hace falta preguntar nada más. */
+  if (cuerpo.pase) { await abonoDelPortal(req, res, cuerpo); return; }
 
   /* ---- 1. LA FIRMA, ANTES DE TOCAR STRIPE ---- */
   const puerta = ligas.abre(cuerpo.t);
