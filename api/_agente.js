@@ -361,8 +361,8 @@ function instruccionesDelAgente(voz) {
     '"datos":{"destino":"Puerto Vallarta","salida":"AAAA-11-20","gente":12},"accion":"seguir"}\n' +
     'Cliente (son 47 y toca escoger autobús; el contexto trae la lista): somos 47\n' +
     '{"respuesta":"Para 47 les caben estos:\\nMarcopolo Paradiso G8 — Premium — 51 asientos\\n' +
-    'Irizar i6S — Premium — 51 asientos\\nNeobus — Gran Turismo — 50 asientos\\nIrizar i6 — Premium — 47 asientos\\n' +
-    'Irizar PB — Turismo — 47 asientos\\nIrizar Century — Clásico — 47 asientos\\n¿Cuál te late? Si quieres te recomiendo uno.",' +
+    'Irizar i6S — Premium — 51 asientos\\nNeobus — Gran Turismo — 50 asientos\\nIrizar i6 — Premium — 47 y 51 asientos\\n' +
+    'Irizar Century — Clásico — 47 y 49 asientos\\nIrizar PB — Turismo — 47 asientos\\n¿Cuál te late? Si quieres te recomiendo uno.",' +
     '"datos":{"gente":47},"accion":"seguir"}\n' +
     'Cliente: cual nos recomiendas\n' +
     '{"respuesta":"Para 47 yo iría con el Irizar i6S: premium y les sobran lugares para ir cómodos. ¿Va con ése?",' +

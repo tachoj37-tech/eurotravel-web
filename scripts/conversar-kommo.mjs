@@ -124,8 +124,12 @@ async function corre(nombre, lead, guion) {
     for (const c of nuevas) {
       /* Lo que Kommo pinta con {{json.texto}} en su bloque «Mensaje». */
       if (c.data.texto) console.log('BOT:     ' + String(c.data.texto).replace(/\n/g, '\n         '));
+      if (c.data.fotos) console.log('BOT:     [📸 el widget adjunta 3 fotos de «' + c.data.fotos + '» · pie: ' + c.data.pie + ']');
       for (const h of c.execute_handlers) console.log('BOT:     ' + pinta(h).replace(/\n/g, '\n         '));
-      console.log('         · status ' + c.data.status + (c.data.status === 'fin' ? ' ⏹ (el bot para)' : ''));
+      console.log('         · status ' + c.data.status + (c.data.status === 'fin' ? ' ⏹ (el bot para)' : '') +
+        (c.data.callado === 'si' ? ' · callado (salida «silencio», sin mensaje)' : ''));
+      if (c.data.status === 'fin' && !c.data.texto && !c.data.fotos && c.data.callado !== 'si') { console.log('✗ FALLA: terminó sin texto y sin marcar callado'); fallas++; }
+      if (c.data.status === 'sigue' && !c.data.texto && !c.data.fotos) { console.log('✗ FALLA: sigue pero no dijo nada'); fallas++; }
       const noAdmitidos = c.execute_handlers.filter(h => h.handler !== 'show' && h.handler !== 'goto');
       if (noAdmitidos.length) { console.log('✗ FALLA: handler que Kommo no admite: ' + noAdmitidos.map(h => h.handler).join(',')); fallas++; }
       const largos = c.execute_handlers.filter(h => h.handler === 'show' && String(h.params.value || '').length > 80);
@@ -141,7 +145,12 @@ const escenarios = {
   f: ['Nueva cotización', 'quiero cotizar un viaje a Sayulita', 'salimos pasado y quiero un camión', 'que camiones tiene?', 'mándame fotos del i6s', 'ese', 'regresamos el domingo', 'sí, de guadalajara'],
   f0: ['buenas tardes', 'quiero cotizar un viaje a Sayulita', 'salimos pasado y quiero un camión', 'que camiones tiene?', 'i6', 'quiero reservar', 'si', 'sí, de guadalajara'],
   p: ['hola', 'quiero hablar con una persona'],
-  g: ['Nueva cotización', 'oigan qué camiones manejan?', 'el más nuevo cuál es?', 'y ese cuánto sale a puerto vallarta?', 'somos 40, del 5 al 7 de diciembre', 'sí de guadalajara', 'solo nos llevan y traen']
+  g: ['Nueva cotización', 'oigan qué camiones manejan?', 'el más nuevo cuál es?', 'y ese cuánto sale a puerto vallarta?', 'somos 40, del 5 al 7 de diciembre', 'sí de guadalajara', 'solo nos llevan y traen'],
+  /* Los de la noche del 16-sep: fotos al elegir (una vez), corrección
+     después del ticket, «sí, todo bien» → callado, i6 «47 y 51». */
+  u: ['vamos a mazatlán, somos 45', 'del 10 al 12 de noviembre', 'el pb', 'fotos del pb', 'sí, de guadalajara', 'solo nos llevan y traen', 'perdón, es del 14 al 17 de noviembre', 'sí, todo bien'],
+  i: ['hola', 'qué camiones tienen?', 'el i6 cuántos lleva?', 'ese entonces, somos 50', 'fotos', 'a vallarta el 3 de octubre, regresamos el 5', 'sí, de gdl', 'sin movimientos'],
+  s: ['quiero cotizar', 'a chapala el domingo 4 de octubre, mismo día', 'somos 12', 'fotos de la sprinter', 'salimos de zapopan', 'solo ida y vuelta', 'ok gracias']
 };
 const pedidos = process.argv.slice(2).filter((x) => escenarios[x]);
 let lead = 26818280;

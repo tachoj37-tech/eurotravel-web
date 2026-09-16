@@ -3276,9 +3276,24 @@ async function loQueDiceElAgente(envio) {
       const cuantos = Number(nuevo.gente) || 0;
       const deberian = autobuses.filter(function (u) { return !cuantos || cuantos <= Number(u.max); });
       const faltan = deberian.filter(function (u) { return !presentes[u.id]; });
-      if (faltan.length) {
-        console.error('[agente] la lista de autobuses iba incompleta (faltó ' +
-          faltan.map(function (u) { return u.name; }).join(', ') + '): se manda la del motor');
+      /* Y que cada renglón diga los asientos del catálogo. Corrida del
+         16-sep-2026: el modelo copió un ejemplo viejo del prompt y puso
+         «Irizar i6 — 47 asientos» cuando en el chat es «47 y 51» (dictado
+         del dueño). Se busca, renglón por renglón, la unidad de nombre
+         más largo que contenga y se compara con `asientos`/`max`. */
+      const porLargo = autobuses.slice().sort(function (a, b) { return b.name.length - a.name.length; });
+      const malEscritos = [];
+      r.split('\n').forEach(function (l) {
+        if (!/—.*asientos/.test(l)) return;
+        const u = porLargo.find(function (x) { return l.indexOf(x.name) !== -1; });
+        if (!u) return;
+        const esperado = String(u.asientos || u.max) + ' asientos';
+        if (l.indexOf(esperado) === -1) malEscritos.push(u.name + ' (debe decir ' + esperado + ')');
+      });
+      if (faltan.length || malEscritos.length) {
+        console.error('[agente] la lista de autobuses iba ' + (faltan.length ? 'incompleta (faltó ' +
+          faltan.map(function (u) { return u.name; }).join(', ') + ')' : 'con asientos mal (' + malEscritos.join('; ') + ')') +
+          ': se manda la del motor');
         dicho.accion = 'seguir';
         dicho.respuesta = cuantos
           ? conversacion.mensajeDeAutobuses(cuantos)

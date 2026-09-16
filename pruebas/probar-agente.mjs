@@ -836,5 +836,26 @@ titulo('lo que el dueño teclea como comando no se anota en la plática del clie
   okQue('  pero lo que sí le dice a un cliente, no', !es('quedamos en 48,000') && !es('3312345678 quedamos en 48,000') && !es('va'));
 }
 
+/* ============================================================ */
+titulo('la lista de autobuses con los asientos mal (i6 «47» en vez de «47 y 51») se cambia por la del motor (16-sep-2026)');
+{
+  mandados = [];
+  const C = '5213366670499';
+  /* Corrida real con el modelo (16-sep-2026, escenario u): copió un ejemplo
+     viejo del prompt y escribió «Irizar i6 — Premium — 47 asientos» y
+     «Irizar Century — Clásico — 47 asientos». En el chat son «47 y 51» y
+     «47 y 49» (dictado del dueño). */
+  laIA = function (t) {
+    if (/somos 45/i.test(t)) return { respuesta: 'Para 45 les caben estos:\nMarcopolo Paradiso G8 — Premium — 51 asientos\nIrizar i6S — Premium — 51 asientos\nNeobus — Gran Turismo — 50 asientos\nIrizar i6 — Premium — 47 asientos\nIrizar PB — Turismo — 47 asientos\nIrizar Century — Clásico — 47 asientos\n¿Cuál te late?', datos: { gente: 45 }, accion: 'seguir' };
+    return { respuesta: 'Va, ¿a dónde van?', datos: {}, accion: 'seguir' };
+  };
+  await dice('vamos a mazatlán', C);
+  await dice('somos 45', C);
+  const lista = textos(C).slice(-1)[0];
+  okQue('la lista que llega dice «Irizar i6 — Premium — 47 y 51 asientos»', /Irizar i6 — Premium — 47 y 51 asientos/.test(lista));
+  okQue('  y «Irizar Century — Clásico — 47 y 49 asientos»', /Irizar Century — Clásico — 47 y 49 asientos/.test(lista));
+  okQue('  y no queda ningún «— 47 asientos» del i6 o del Century', !/Irizar i6 — Premium — 47 asientos/.test(lista) && !/Century — Clásico — 47 asientos/.test(lista));
+}
+
 console.log('\n' + buenas + ' buenas, ' + malas + ' malas');
 process.exit(malas ? 1 : 0);
