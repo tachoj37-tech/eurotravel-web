@@ -1437,7 +1437,11 @@
   --hueco: clamp(48px, 5vw, 72px);
 }
 #v-inicio * { box-sizing: border-box; }
-#v-inicio { overflow-x: hidden; }
+/* `hidden` en un eje vuelve `auto` el otro y la sección se convertía en
+   contenedor de scroll con barra propia (16-sep-2026, la vio el dueño).
+   `clip` recorta igual sin crear scroll; `hidden` queda de respaldo para
+   navegadores viejos. Lo cuida pruebas/probar-una-sola-barra.cjs. */
+#v-inicio { overflow-x: hidden; overflow-x: clip; }
 #v-inicio {
   margin: 0; background: var(--lienzo); color: var(--tinta);
   font-family: var(--inter); font-size: 16px; line-height: 1.6;
