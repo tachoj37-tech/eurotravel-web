@@ -3,18 +3,42 @@
     "name": "widget.name",
     "description": "widget.description",
     "short_description": "widget.short_description",
-    "code": "eurobot",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "interface_version": 2,
     "init_once": false,
-    "locale": ["es", "en"],
-    "installation": false,
+    "locale": [
+      "en",
+      "es"
+    ],
+    "installation": true,
     "support": {
       "link": "https://eurotravel-web.vercel.app",
       "email": "direccion@eurotravel.com.mx"
     }
   },
-  "locations": ["salesbot_designer"],
+  "locations": [
+    "salesbot_designer",
+    "settings"
+  ],
+  "tour": {
+    "is_tour": true,
+    "tour_images": {
+      "en": [
+        "/images/tour_1_en.png"
+      ],
+      "es": [
+        "/images/tour_1_es.png"
+      ]
+    },
+    "tour_description": "widget.tour_description"
+  },
+  "settings": {
+    "login": {
+      "name": "settings.login",
+      "type": "text",
+      "required": false
+    }
+  },
   "salesbot_designer": {
     "eurobot": {
       "name": "salesbot.eurobot",
@@ -25,7 +49,8 @@
           "type": "text",
           "manual": true
         }
-      }
+      },
+      "logo": "/images/logo_main.png"
     }
   }
 }

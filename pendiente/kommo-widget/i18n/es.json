@@ -2,10 +2,14 @@
   "widget": {
     "name": "EuroBot",
     "description": "Le pasa cada mensaje del cliente al cerebro de Eurotravel (Vercel) y manda lo que éste conteste. Salida «success»: el bot sigue; salida «fail»: el cerebro terminó y el chat queda con una persona.",
-    "short_description": "El cerebro del bot de Eurotravel"
+    "short_description": "El cerebro del bot de Eurotravel",
+    "tour_description": "EuroBot conecta el Salesbot con el cerebro de Eurotravel: cada mensaje del cliente va al servidor y el bot contesta lo que éste diga."
   },
   "salesbot": {
     "eurobot": "EuroBot (cerebro)",
     "url": "Dirección del cerebro"
+  },
+  "settings": {
+    "login": "Nota (opcional)"
   }
 }
