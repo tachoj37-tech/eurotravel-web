@@ -145,9 +145,12 @@ function peticion(cuerpo, cabeceras, llave) {
   /* Kommo solo admite `show` (80 letras) y `goto` en execute_handlers, así
      que lo que dice el cerebro va en data.texto y lo pinta el bloque
      «Mensaje» del bot con {{json.texto}} (16-sep-2026). */
-  ok('el cerebro sigue (status sigue) y el texto va en data.texto, sin handlers',
+  /* Kommo exige al menos un handler: va el goto al paso de condiciones
+     del widget (paso 1), que es lo que haría de todos modos. */
+  ok('el cerebro sigue (status sigue), el texto va en data.texto y el único handler es el goto al paso 1',
     c1 && c1.data.status === 'sigue' && typeof c1.data.texto === 'string' && c1.data.texto.length > 0 &&
-    Array.isArray(c1.execute_handlers) && c1.execute_handlers.length === 0);
+    Array.isArray(c1.execute_handlers) && c1.execute_handlers.length === 1 &&
+    c1.execute_handlers[0].handler === 'goto' && c1.execute_handlers[0].params.step === 1);
   if (c1) console.log('   → ' + String(c1.data.texto).replace(/\n/g, ' ').slice(0, 120));
 
   res = respuesta();

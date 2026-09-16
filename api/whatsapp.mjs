@@ -5263,7 +5263,11 @@ async function trabajoDeKommo(crudo) {
      bloque de condición del bot decide si sigue (pausa) o para. Kommo no
      admite más que `show` (80 letras) y `goto` en execute_handlers. */
   const texto = kommo.textoParaKommo(alCliente, { sitio: process.env.SITIO_URL });
-  const handlers = [];
+  /* Kommo exige al menos un handler («This collection should contain 1
+     element or more», 16-sep-2026 21:39 UTC). Se manda el mismo `goto` con
+     el que el widget sigue a su paso de condiciones (paso 1 de
+     `onSalesbotDesignerSave`), que es lo que Kommo haría de todos modos. */
+  const handlers = [{ handler: 'goto', params: { type: 'question', step: 1 } }];
   console.log('[kommo-trabajo] lead ' + aviso.leadId + ' · ' + alCliente.length + ' envíos · ' + status +
     (resultado && resultado.status !== 200 ? ' · el cerebro contestó ' + resultado.status : ''));
 
