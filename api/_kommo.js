@@ -193,8 +193,192 @@ async function leadsConPrecio(opciones) {
   return salida;
 }
 
+/* ============================================================
+   EL PASO «EUROBOT» DEL SALESBOT — el cerebro dentro de Kommo (16-sep-2026)
+   ============================================================
+   Dictado del dueño: «volver a los inicios pero hasta el ticket». El bot
+   de bloques era un menú; lo que le gustó fue el cerebro (la IA con el
+   guion). Kommo tiene un paso oficial para eso, `widget_request`: el
+   Salesbot le manda a nuestro servidor cada mensaje del cliente y sigue
+   por la salida que le digamos.
+
+   Lo que manda Kommo (developers.kommo.com/docs/private-chatbot-integration):
+     { token: <JWT firmado con la llave secreta de la integración>,
+       data: { message, lead_id, contact_name, contact_phone, from: 'kommo' },
+       return_url: 'https://<cuenta>.kommo.com/api/v4/salesbot/<bot>/continue/<id>' }
+
+   Lo que le contestamos DESPUÉS del 200 (a `return_url`):
+     { data: { status: 'sigue' | 'fin' },
+       execute_handlers: [ { handler: 'show', params: { type: 'text', value } }, … ] }
+
+   El widget (pendiente/kommo-widget) convierte `status` en la salida del
+   paso: «sigue» → esperar el siguiente mensaje y volver; «fin» → parar.
+   ============================================================ */
+const crypto = require('crypto');
+
+/* Las fotos de las unidades ya viven en el drive de Kommo (subidas el
+   15-sep-2026, uuids en docs/kommo-fotos.json). De la liga pública de la
+   foto al uuid de Kommo, para mandarla como adjunto de verdad. */
+let FOTOS_KOMMO = null;
+function uuidDeFoto(liga) {
+  const nombre = String(liga || '').split('?')[0].split('/').pop();
+  if (!nombre) return null;
+  if (!FOTOS_KOMMO) {
+    try { FOTOS_KOMMO = require('./_kommo-fotos.json'); } catch (e) { FOTOS_KOMMO = {}; }
+  }
+  for (const carpeta of Object.keys(FOTOS_KOMMO)) {
+    if (FOTOS_KOMMO[carpeta] && FOTOS_KOMMO[carpeta][nombre]) return FOTOS_KOMMO[carpeta][nombre];
+  }
+  return null;
+}
+
+function base64url(buf) {
+  return Buffer.from(buf).toString('base64').replace(/=+$/, '').replace(/\+/g, '-').replace(/\//g, '_');
+}
+
+/* El JWT que Kommo firma con la llave secreta de la integración (HS256).
+   Sin llave configurada no se puede comprobar: se contesta `null` para que
+   quien llame decida — y lo deje en el registro. */
+function verificaTokenDeWidget(token, secreto) {
+  if (!secreto) return null;
+  const partes = String(token || '').split('.');
+  if (partes.length !== 3) return false;
+  try {
+    const cabecera = JSON.parse(Buffer.from(partes[0].replace(/-/g, '+').replace(/_/g, '/'), 'base64').toString('utf8'));
+    if (!cabecera || String(cabecera.alg).toUpperCase() !== 'HS256') return false;
+    const firma = base64url(crypto.createHmac('sha256', String(secreto)).update(partes[0] + '.' + partes[1]).digest());
+    const A = crypto.createHash('sha256').update(firma).digest();
+    const B = crypto.createHash('sha256').update(String(partes[2])).digest();
+    if (!crypto.timingSafeEqual(A, B)) return false;
+    const cuerpo = JSON.parse(Buffer.from(partes[1].replace(/-/g, '+').replace(/_/g, '/'), 'base64').toString('utf8'));
+    if (cuerpo && cuerpo.exp && Number(cuerpo.exp) * 1000 < Date.now()) return false;
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+
+/* Lo que viene en el aviso, ya limpio, o `{ error }` si no es un aviso del
+   widget. El `return_url` TIENE que ser de la cuenta configurada: es a
+   donde se le va a contestar al cliente, y un aviso ajeno no puede
+   apuntarnos a otro lado. */
+function leeAvisoDeWidget(crudo, opciones) {
+  const o = opciones || {};
+  const c = config();
+  const sub = o.subdominio || (c ? c.base.replace(/^https:\/\//, '').split('.')[0] : '');
+  let aviso;
+  try {
+    aviso = JSON.parse(Buffer.isBuffer(crudo) ? crudo.toString('utf8') : String(crudo || ''));
+  } catch (e) {
+    return { error: 'cuerpo ilegible' };
+  }
+  if (!aviso || typeof aviso !== 'object') return { error: 'cuerpo vacío' };
+  const datos = (aviso.data && typeof aviso.data === 'object') ? aviso.data : {};
+  const retorno = String(aviso.return_url || '');
+  let host = '';
+  try { host = new URL(retorno).host; } catch (e) { host = ''; }
+  if (!sub || host !== sub + '.kommo.com') return { error: 'return_url no es de esta cuenta' };
+  /* Un marcador que Kommo no llenó llega tal cual («{{contact.phone}}»):
+     se trata como vacío. */
+  const limpio = function (v) {
+    const s = String(v == null ? '' : v).trim();
+    return /\{\{.*\}\}/.test(s) ? '' : s;
+  };
+  const leadId = limpio(datos.lead_id).replace(/\D/g, '');
+  if (!leadId) return { error: 'sin lead_id' };
+  const telefono = limpio(datos.contact_phone).replace(/\D/g, '');
+  return {
+    token: String(aviso.token || ''),
+    returnUrl: retorno,
+    leadId: leadId,
+    mensaje: limpio(datos.message),
+    nombre: limpio(datos.contact_name),
+    /* El «número» con el que el cerebro guarda la plática: el teléfono si
+       Kommo lo dio; si no, uno inventado a partir del lead, que no choca
+       con ningún número real (empieza en 5299). */
+    numero: (telefono.length >= 10 && telefono.length <= 15) ? telefono : ('5299' + leadId),
+    talkId: limpio(datos.talk_id)
+  };
+}
+
+/* ------------------------------------------------------------
+   DE LO QUE EL CEREBRO QUISO MANDAR A LO QUE KOMMO SABE MANDAR
+   ------------------------------------------------------------
+   `manda()` en whatsapp.mjs deja cada envío en el colector en vez de
+   llamar a Meta, y aquí se traducen. Kommo (paso de widget) sabe:
+     · texto             → show { type: 'text' }
+     · texto + botones   → show { type: 'buttons' } (3 botones, 20 letras)
+     · foto              → send_message con el adjunto del drive de Kommo
+                           (si la foto no está en el drive, la liga en texto)
+   El PDF del contrato no pasa por aquí: el bot llega hasta el ticket.
+   ------------------------------------------------------------ */
+function handlersDeEnvios(envios, opciones) {
+  const o = opciones || {};
+  const salida = [];
+  for (const e of (Array.isArray(envios) ? envios : [])) {
+    if (!e) continue;
+    const texto = String(e.texto || '').trim();
+    if (e.ligaDeFoto) {
+      const uuid = o.sinAdjuntos ? null : uuidDeFoto(e.ligaDeFoto);
+      if (uuid) {
+        salida.push({ handler: 'send_message', params: {
+          tag: '', text: texto, type: 'external', on_error: null,
+          recipient: { type: 'all_contacts', way_of_communication: 'over_all' },
+          attachments: [{ type: 'picture', value: uuid, is_external: true }],
+          send_to_all_chat_sources: false,
+          chat_sources: o.canal ? [{ id: Number(o.canal) }] : [],
+          is_in_starting_block: false
+        } });
+      } else {
+        salida.push({ handler: 'show', params: { type: 'text', value: (texto ? texto + '\n' : '') + String(e.ligaDeFoto) } });
+      }
+      continue;
+    }
+    if (e.ligaDeDocumento) {
+      salida.push({ handler: 'show', params: { type: 'text', value: (texto ? texto + '\n' : '') + String(e.ligaDeDocumento) } });
+      continue;
+    }
+    if (!texto) continue;
+    const ops = (Array.isArray(e.opciones) ? e.opciones : [])
+      .map(function (x) { return String(x || '').trim(); })
+      .filter(function (x) { return x && x.length <= 20; })
+      .slice(0, 3);
+    if (ops.length) salida.push({ handler: 'show', params: { type: 'buttons', value: texto, buttons: ops } });
+    else salida.push({ handler: 'show', params: { type: 'text', value: texto } });
+  }
+  return salida;
+}
+
+/* La segunda mitad del paso: Kommo ya recibió su 200 y ahora se le dice
+   qué mandar y por qué salida seguir. Va con el token de la cuenta. */
+async function continuaSalesbot(returnUrl, cuerpo, opciones) {
+  const c = config();
+  const o = opciones || {};
+  const traer = o.pide || (typeof fetch === 'function' ? fetch : null);
+  if (!c || !traer || !returnUrl) return false;
+  try {
+    const r = await traer(returnUrl, {
+      method: 'POST',
+      signal: AbortSignal.timeout(ESPERA_MS),
+      headers: { 'Authorization': 'Bearer ' + c.token, 'Content-Type': 'application/json' },
+      body: JSON.stringify(cuerpo)
+    });
+    if (!r || !r.ok) {
+      const detalle = r && r.text ? await r.text().catch(function () { return ''; }) : '';
+      console.error('[kommo] continue contestó ' + (r && r.status) + ': ' + String(detalle).replace(/\s+/g, ' ').slice(0, 300));
+      return false;
+    }
+    return true;
+  } catch (e) {
+    console.error('[kommo] no se pudo continuar el Salesbot: ' + (e && e.message));
+    return false;
+  }
+}
+
 module.exports = {
   hayKommo, pruebaDeVida, mueveDeEtapa, guardaPrecio, leadsConPrecio,
+  /* El paso EuroBot. */
+  leeAvisoDeWidget, verificaTokenDeWidget, handlersDeEnvios, continuaSalesbot, uuidDeFoto,
   /* Para las pruebas y para el día del alta. */
   config, mapaDeEtapas, pide
 };

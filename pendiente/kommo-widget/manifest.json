@@ -1,0 +1,31 @@
+{
+  "widget": {
+    "name": "widget.name",
+    "description": "widget.description",
+    "short_description": "widget.short_description",
+    "code": "eurobot",
+    "version": "1.0.0",
+    "interface_version": 2,
+    "init_once": false,
+    "locale": ["es", "en"],
+    "installation": false,
+    "support": {
+      "link": "https://eurotravel-web.vercel.app",
+      "email": "direccion@eurotravel.com.mx"
+    }
+  },
+  "locations": ["salesbot_designer"],
+  "salesbot_designer": {
+    "eurobot": {
+      "name": "salesbot.eurobot",
+      "settings": {
+        "url": {
+          "name": "salesbot.url",
+          "default_value": "https://eurotravel-web.vercel.app/api/whatsapp/kommo",
+          "type": "text",
+          "manual": true
+        }
+      }
+    }
+  }
+}

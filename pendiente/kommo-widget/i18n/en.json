@@ -1,0 +1,11 @@
+{
+  "widget": {
+    "name": "EuroBot",
+    "description": "Sends every client message to the Eurotravel brain (Vercel) and replies with what it answers. Exit success: the bot goes on; exit fail: the brain finished and a person takes the chat.",
+    "short_description": "The Eurotravel bot brain"
+  },
+  "salesbot": {
+    "eurobot": "EuroBot (brain)",
+    "url": "Brain URL"
+  }
+}

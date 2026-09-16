@@ -44,7 +44,14 @@ import destinos from './_destinos.js';
 import seguimiento from './_seguimiento.js';
 import recordatorios from './_recordatorios.js';
 import crypto from 'crypto';
+import { AsyncLocalStorage } from 'async_hooks';
 import conversacion from '../bot.js';
+
+/* El colector del modo Kommo: mientras se atiende un aviso del paso
+   EuroBot, todo lo que `manda()` quisiera enviar por Meta se junta aquí y
+   se le devuelve a Kommo. Es por petición (AsyncLocalStorage), así que dos
+   avisos a la vez no se mezclan. */
+const colectorKommo = new AsyncLocalStorage();
 
 /* ------------------------------------------------------------
    LAS NOTAS DE VOZ SE TRANSCRIBEN AQUI, NO ALLA
@@ -4284,7 +4291,8 @@ const ESPERA_ENVIO_MS = 8000;
 async function manda(envio) {
   const token = process.env.WHATSAPP_TOKEN;
   const numero = envio.numeroDeOrigen || process.env.WHATSAPP_PHONE_ID;
-  if (!token || !numero) {
+  /* En modo Kommo no hace falta el token de Meta: no se le va a llamar. */
+  if ((!token || !numero) && !colectorKommo.getStore()) {
     console.error('[whatsapp] falta WHATSAPP_TOKEN o el numero de origen');
     return false;
   }
@@ -4483,6 +4491,20 @@ async function manda(envio) {
           'se le contesta por aquí. Contéstame *este mensaje* y le llega tal cual.\n_cliente: ' + envio.para + '_'
       });
     }
+  }
+  /* ------------------------------------------------------------
+     EN MODO KOMMO NO SE LLAMA A META: SE JUNTA (16-sep-2026)
+     ------------------------------------------------------------
+     Cuando el mensaje entró por el paso EuroBot del Salesbot, lo que el
+     cerebro quiere mandar se queda en el colector y `atiendeKommoTrabajo`
+     se lo devuelve a Kommo, que es quien habla con el cliente. Va AQUÍ,
+     después de todos los candados de salida (texto interno, forma de
+     código, CLABE ajena): en Kommo se frena lo mismo que en WhatsApp.
+     ------------------------------------------------------------ */
+  const colector = colectorKommo.getStore();
+  if (colector) {
+    colector.envios.push(envio);
+    return true;
   }
   try {
     const r = await fetch(GRAFO + '/' + numero + '/messages', {
@@ -5131,14 +5153,96 @@ async function atiendeKommoTrabajo(a, b, esWeb) {
     crudo = esWeb ? await a.text() : await crudoDeNode(a);
   } catch (e) { crudo = ''; }
 
-  /* Aquí es donde va a vivir la conversación cuando haya cuenta: leer el
-     aviso de Kommo, pasarlo por el mismo motor que WhatsApp, y contestar
-     por su API. Hoy solo deja constancia — el bot sigue en Dualhook y
-     esta puerta no recibe nada real todavía. */
-  console.log('[kommo-trabajo] aviso recibido · ' + String(crudo || '').length + ' bytes');
+  const r = await trabajoDeKommo(crudo);
+  if (!esWeb) { b.status(200).json(r); return; }
+  return new Response(JSON.stringify(r), { status: 200, headers: TIPO_JSON });
+}
 
-  if (!esWeb) { b.status(200).json({ ok: true }); return; }
-  return new Response(JSON.stringify({ ok: true }), { status: 200, headers: TIPO_JSON });
+/* ============================================================
+   EL CEREBRO DENTRO DE KOMMO — el paso EuroBot (16-sep-2026)
+   ============================================================
+   Dictado del dueño: «volver a los inicios pero hasta el ticket». Kommo
+   recibe y manda los mensajes; aquí solo se piensa. El aviso del paso
+   EuroBot (`widget_request`) se convierte en un aviso con la forma de
+   Meta y se pasa por EXACTAMENTE el mismo camino que WhatsApp
+   (`atiendeElAviso`): mismo guion, misma IA, mismos candados, misma
+   memoria en el almacén. Lo único distinto es la salida: `manda()` no
+   llama a Meta, deja cada envío en el colector, y de ahí se traducen a
+   lo que Kommo sabe mandar y se le devuelven por `return_url`.
+
+   El chat se le suelta al vendedor («fin») cuando el cerebro marcó la
+   ficha como `enManosDe: 'dueno'` —el ticket ya salió— o cuando pidió
+   persona. Con `BOT_HASTA_COTIZACION=1` (lo de siempre) eso pasa justo
+   al entregar el ticket sin precio.
+
+   Siempre contesta 200 a Kommo: es nuestra segunda puerta, no la de
+   ellos; lo que salió mal queda en el registro.
+   ============================================================ */
+async function trabajoDeKommo(crudo) {
+  const aviso = kommo.leeAvisoDeWidget(crudo);
+  if (aviso.error) {
+    console.error('[kommo-trabajo] aviso rechazado: ' + aviso.error);
+    return { ok: false, motivo: aviso.error };
+  }
+  const secreto = String(process.env.KOMMO_SECRETO || '').trim();
+  const firma = kommo.verificaTokenDeWidget(aviso.token, secreto);
+  if (firma === false) {
+    console.error('[kommo-trabajo] aviso con token inválido para el lead ' + aviso.leadId + '; no se contesta');
+    return { ok: false, motivo: 'token inválido' };
+  }
+  if (firma === null) console.error('[kommo-trabajo] sin KOMMO_SECRETO en Vercel: el token del widget no se comprueba');
+
+  /* El mismo aviso que mandaría Meta, para que el cerebro no note la
+     diferencia. WABA y número salen de Vercel (los del modo Dualhook) o,
+     si no están, de un valor fijo que la puerta acepta porque va en el
+     mismo entorno. */
+  const waba = String(process.env.WHATSAPP_WABA_ID || 'kommo');
+  const telefono = String(process.env.WHATSAPP_PHONE_ID || 'kommo');
+  const ahora = Date.now();
+  const mensaje = aviso.mensaje
+    ? { from: aviso.numero, id: 'wamid.kommo.' + aviso.leadId + '.' + ahora, timestamp: String(Math.floor(ahora / 1000)),
+        type: 'text', text: { body: aviso.mensaje } }
+    : null;
+  const cuerpo = { object: 'whatsapp_business_account', entry: [{ id: waba, changes: [{ field: 'messages', value: {
+    messaging_product: 'whatsapp',
+    metadata: { display_phone_number: telefono, phone_number_id: telefono },
+    contacts: [{ profile: { name: aviso.nombre || '' }, wa_id: aviso.numero }],
+    messages: mensaje ? [mensaje] : []
+  } }] }] };
+  const marca = { RUTA_SECRETA_OK: '1', WHATSAPP_WABA_ID: waba, WHATSAPP_PHONE_ID: telefono, KOMMO_LEAD_ID: aviso.leadId };
+
+  const colector = { envios: [] };
+  let resultado = null;
+  if (mensaje) {
+    try {
+      await colectorKommo.run(colector, async function () {
+        resultado = await atiendeElAviso(Buffer.from(JSON.stringify(cuerpo), 'utf8'), null, marca);
+      });
+    } catch (e) {
+      console.error('[kommo-trabajo] el cerebro tronó con el lead ' + aviso.leadId + ': ' + (e && e.message));
+    }
+  } else {
+    /* Un audio, una foto o un sticker: por Kommo no llega el archivo, solo
+       el texto, y aquí no hay texto. Se le pide por escrito y se sigue. */
+    colector.envios.push({ para: aviso.numero, texto: 'Por aquí solo leo texto 🙏 ¿Me lo escribes?', pasaAPersona: false, escribio: '[kommo · sin texto]' });
+  }
+
+  /* Solo lo que iba al cliente; lo del dueño ya se frenó en `manda`. */
+  const alCliente = colector.envios.filter(function (e) {
+    return e && e.para && tickets.mismoNumero(e.para, aviso.numero) && !e.esTicket;
+  });
+  const ficha = tickets.fichaDe(aviso.numero);
+  const termino = !!(ficha && ficha.enManosDe === 'dueno') ||
+    alCliente.some(function (e) { return e.pasaAPersona; }) ||
+    (!!mensaje && (!resultado || resultado.status !== 200));
+  const status = termino ? 'fin' : 'sigue';
+  const handlers = kommo.handlersDeEnvios(alCliente, { canal: process.env.KOMMO_CANAL });
+  console.log('[kommo-trabajo] lead ' + aviso.leadId + ' · ' + alCliente.length + ' envíos · ' + status +
+    (resultado && resultado.status !== 200 ? ' · el cerebro contestó ' + resultado.status : ''));
+
+  const seguido = await kommo.continuaSalesbot(aviso.returnUrl, { data: { status: status }, execute_handlers: handlers });
+  if (!seguido) console.error('[kommo-trabajo] Kommo no aceptó la continuación del lead ' + aviso.leadId + ': el cliente se quedó sin respuesta');
+  return { ok: seguido, status: status, envios: alCliente.length };
 }
 
 async function atiende(a) {
