@@ -108,6 +108,47 @@
   .abono-fila .btn { width: auto; flex: 0 0 auto; margin-top: 0; padding: 14px 18px; }
   .cargando { text-align: center; color: var(--muted); padding: 50px 0; }
 
+  /* ================= LA ESPERA: EL CAMIONCITO =================
+     El mismo de `index.html`, con el mismo dibujo y las mismas clases.
+     Lo pidió el dueño el 15-sep-2026: el camioncito de la entrada en
+     TODOS los tiempos de espera de la página.
+
+     Se copia aquí porque las dos páginas son de una pieza —cada una
+     con su `<style>`, sin archivo de estilos compartido— y una espera
+     no puede depender de una petición más que también se puede tardar.
+     Si se retoca allá, se retoca aquí: lo vigila `probar-espera.cjs`.
+     ============================================================ */
+  .espera {
+    display: inline-flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    font-size: 14px; line-height: 1.4; color: inherit; text-align: left;
+  }
+  .espera-bus { display: block; flex: 0 0 auto; width: 38px; }
+  .espera-bus svg { display: block; width: 100%; height: auto; }
+
+  .espera-camino {
+    display: block; position: relative; height: 2px; margin-top: 2px;
+    border-radius: 2px; background: var(--line); overflow: hidden;
+  }
+  .espera-camino::after {
+    content: ''; position: absolute; inset: 0;
+    background: repeating-linear-gradient(90deg, var(--ink) 0 5px, transparent 5px 10px);
+    opacity: 0.22;
+    animation: caminoCorre 620ms linear infinite;
+  }
+  @keyframes caminoCorre { to { transform: translateX(-10px); } }
+
+  .espera-rueda { transform-box: fill-box; transform-origin: center; animation: spinW 620ms linear infinite; }
+  @keyframes spinW { to { transform: rotate(360deg); } }
+
+  .espera-tenue { color: var(--muted); }
+
+  .espera-bloque { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 10px; }
+  .espera-bloque .espera-bus { width: 64px; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .espera-rueda, .espera-camino::after { animation: none; }
+  }
+
   /* ---- «Abona a tu viaje»: los dos campos de la consulta ----
      `label.eyebrow` es la misma etiqueta chica de las demás cajas; aquí
      hace falta que ocupe su renglón. */
@@ -179,6 +220,46 @@
       return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
     });
   }
+
+  /* ============================================================
+     EL CAMIONCITO DE LA ESPERA
+     ------------------------------------------------------------
+     El mismo de la portada, letra por letra: el camión de la entrada
+     en chiquito, para TODOS los tiempos de espera de esta pantalla
+     —buscar el viaje, comprobar el código, reenviarlo, abrir el pago—.
+
+     El dibujo vive en un solo lugar de este archivo. Si se retoca el
+     camión en `index.html`, se retoca aquí también: lo vigila
+     `probar-espera.cjs`.
+     ============================================================ */
+  function htmlEspera(texto, extra) {
+    return '<span class="espera' + (extra ? ' ' + extra : '') + '">' +
+      '<span class="espera-bus">' +
+        '<svg viewBox="0 0 49 18" aria-hidden="true" focusable="false">' +
+          '<path d="M3 0.4 H38 C42.4 0.4 45.8 3.2 47 7.6 L48 11.8 C48.2 13 47.3 14 46.1 14 H3.2 C1.9 14 0.9 13 0.9 11.7 V2.6 C0.9 1.3 1.8 0.4 3 0.4 Z" fill="#1d1d1b"/>' +
+          '<path d="M0.9 11.8 H47.8 L48 13 C48.1 13.6 47.4 14 46.8 14 H3.2 C1.9 14 0.9 13.1 0.9 11.8 Z" fill="#db0d0d"/>' +
+          '<rect x="3.6" y="2.2" width="30" height="5.6" rx="1" fill="#8c8c88"/>' +
+          '<path d="M35 2.2 H38 C40.4 2.2 42.6 4.2 43.6 7.2 L43.8 7.8 H35 Z" fill="#8c8c88"/>' +
+          '<rect x="31" y="8.4" width="3" height="5.6" rx="0.5" fill="#3a3a37"/>' +
+          '<rect x="44.6" y="9.2" width="2.6" height="1.4" rx="0.4" fill="#f2e2bd"/>' +
+          '<circle cx="10.2" cy="14" r="3" fill="#111110"/>' +
+          '<circle class="espera-rueda" cx="10.2" cy="14" r="1.4" fill="none" stroke="#9a9a95" stroke-width="0.5" stroke-dasharray="0.7 0.8"/>' +
+          '<circle cx="38.2" cy="14" r="3" fill="#111110"/>' +
+          '<circle class="espera-rueda" cx="38.2" cy="14" r="1.4" fill="none" stroke="#9a9a95" stroke-width="0.5" stroke-dasharray="0.7 0.8"/>' +
+        '</svg>' +
+        '<span class="espera-camino"></span>' +
+      '</span>' +
+      '<span class="espera-texto">' + esc(texto || '') + '</span>' +
+    '</span>';
+  }
+
+  /* La primera espera de todas: el renglón que ya dice «Buscando tu
+     viaje…» en el HTML se cambia por el mismo renglón CON el camión.
+
+     El texto de abajo se queda escrito en el HTML a propósito: es lo
+     único que ve quien llega con el guion apagado, y no se le quita. */
+  cuerpo.innerHTML = '<div class="cargando">' +
+    htmlEspera('Buscando tu viaje…', 'espera-bloque') + '</div>';
 
   /* «2026-09-03T08:00» -> «3 de septiembre de 2026, 08:00».
      Se parte el texto, NO se construye un Date: `new Date('2026-09-03')` es
@@ -292,7 +373,7 @@
       }
 
       boton.disabled = true;
-      error.textContent = 'Abriendo el pago…';
+      error.innerHTML = htmlEspera('Abriendo el pago…');
 
       fetch('/api/viaje', {
         method: 'POST',
@@ -563,7 +644,7 @@
       }
 
       boton.disabled = true;
-      error.textContent = 'Buscando tu viaje…';
+      error.innerHTML = htmlEspera('Buscando tu viaje…');
 
       fetch('/api/viaje', {
         method: 'POST',
@@ -755,7 +836,7 @@
       var codigo = leido();
       if (codigo.replace(/\D/g, '').length < 6) { err.textContent = 'Faltan dígitos.'; return; }
       mandando = true;
-      err.textContent = 'Comprobando…';
+      err.innerHTML = htmlEspera('Comprobando…');
 
       fetch('/api/verificar-codigo', {
         method: 'POST',
@@ -797,7 +878,7 @@
     otro.addEventListener('click', function () {
       if (otro.disabled) return;
       otro.disabled = true;
-      err.textContent = 'Mandando…';
+      err.innerHTML = htmlEspera('Mandando…');
 
       pideCodigo(true).then(function (d) {
         otro.disabled = false;

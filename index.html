@@ -253,6 +253,57 @@
 
   .intro-skip:hover { border-color: var(--ink); color: var(--ink); }
 
+  /* ================= LA ESPERA: EL CAMIONCITO =================
+     Lo pidió el dueño el 15-sep-2026: «en todos los tiempos de espera,
+     pongas el camioncito que tenemos, el camioncito que se pone al
+     iniciar la página».
+
+     Antes había una ruedita gris genérica en la caja del precio y NADA
+     en los demás lados —el botón nada más cambiaba de letras—. Ahora es
+     el mismo camión de la entrada, chiquito: las mismas formas, los
+     mismos colores, las ruedas con el mismo `spinW` de arriba.
+
+     Va en el HTML, sin archivos ni imágenes: una espera no puede
+     depender de una petición más que también se puede tardar.
+
+     Los colores son fijos a propósito —cuerpo oscuro, franja roja—
+     para que se vea igual en fondo blanco y encima de un botón rojo.
+     ============================================================ */
+  .espera {
+    display: inline-flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    font-size: 14px; line-height: 1.4; color: inherit;
+  }
+  .espera-bus { display: block; flex: 0 0 auto; width: 38px; }
+  .espera-bus svg { display: block; width: 100%; height: auto; }
+
+  .espera-camino {
+    display: block; position: relative; height: 2px; margin-top: 2px;
+    border-radius: 2px; background: var(--line); overflow: hidden;
+  }
+  .espera-camino::after {
+    content: ''; position: absolute; inset: 0;
+    background: repeating-linear-gradient(90deg, var(--ink) 0 5px, transparent 5px 10px);
+    opacity: 0.22;
+    animation: caminoCorre 620ms linear infinite;
+  }
+  @keyframes caminoCorre { to { transform: translateX(-10px); } }
+
+  /* La misma rueda de la entrada, con el mismo giro: `spinW` ya existe
+     arriba y no se duplica. */
+  .espera-rueda { transform-box: fill-box; transform-origin: center; animation: spinW 620ms linear infinite; }
+
+  /* Tenue: el gris de siempre de la caja del precio. */
+  .espera-tenue { color: var(--muted); }
+
+  /* En bloque: el camión arriba y el texto abajo, centrados. Es la
+     espera que ocupa una caja entera, no un renglón de botón. */
+  .espera-bloque { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 10px; }
+  .espera-bloque .espera-bus { width: 64px; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .espera-rueda, .espera-camino::after { animation: none; }
+  }
+
   /* ================= buttons ================= */
   .btn {
     display: inline-flex;
@@ -927,11 +978,8 @@
     border-radius: var(--radius-sm); padding: 11px 13px; margin-top: 14px;
   }
   .precio-afinar b { font-weight: 600; }
-  .precio-cargando { display: flex; align-items: center; gap: 10px; font-size: 14px; color: var(--muted); }
-  .precio-cargando i {
-    display: block; width: 15px; height: 15px; border: 2px solid var(--line);
-    border-top-color: var(--red); border-radius: 50%; animation: spinW 0.8s linear infinite;
-  }
+  /* La ruedita gris de «Calculando kilómetros…» se fue: ahora esa espera
+     —y todas las demás— la pinta `.espera`, allá arriba, con el camión. */
 
   /* ================= flota ================= */
   .filters { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 26px; }
@@ -3753,9 +3801,66 @@ window.IMGS = {
     byId('intro-logo').src = I.logo;
     byId('img-interior').src = I.interior;
 
-    /* ================= intro ================= */
+    /* ============================================================
+       EL CAMIONCITO DE LA ESPERA
+       ------------------------------------------------------------
+       Un solo ayudante para TODOS los tiempos de espera de la página:
+       la caja del precio, el botón que manda la solicitud, el paso a
+       Stripe, la vuelta de Stripe, la cuenta, la ubicación.
+
+       Es el camión de la entrada, chiquito. El dibujo vive AQUÍ y en
+       un solo lugar: si mañana se retoca el camión, se retoca una vez.
+
+       `extra` son clases de más: `espera-tenue` para el gris de la caja
+       del precio, `espera-bloque` para la espera que ocupa una caja
+       entera en vez de un renglón.
+       ============================================================ */
+    function htmlEspera(texto, extra) {
+      return '<span class="espera' + (extra ? ' ' + extra : '') + '">' +
+        '<span class="espera-bus">' +
+          '<svg viewBox="0 0 49 18" aria-hidden="true" focusable="false">' +
+            '<path d="M3 0.4 H38 C42.4 0.4 45.8 3.2 47 7.6 L48 11.8 C48.2 13 47.3 14 46.1 14 H3.2 C1.9 14 0.9 13 0.9 11.7 V2.6 C0.9 1.3 1.8 0.4 3 0.4 Z" fill="#1d1d1b"/>' +
+            '<path d="M0.9 11.8 H47.8 L48 13 C48.1 13.6 47.4 14 46.8 14 H3.2 C1.9 14 0.9 13.1 0.9 11.8 Z" fill="#db0d0d"/>' +
+            '<rect x="3.6" y="2.2" width="30" height="5.6" rx="1" fill="#8c8c88"/>' +
+            '<path d="M35 2.2 H38 C40.4 2.2 42.6 4.2 43.6 7.2 L43.8 7.8 H35 Z" fill="#8c8c88"/>' +
+            '<rect x="31" y="8.4" width="3" height="5.6" rx="0.5" fill="#3a3a37"/>' +
+            '<rect x="44.6" y="9.2" width="2.6" height="1.4" rx="0.4" fill="#f2e2bd"/>' +
+            '<circle cx="10.2" cy="14" r="3" fill="#111110"/>' +
+            '<circle class="espera-rueda" cx="10.2" cy="14" r="1.4" fill="none" stroke="#9a9a95" stroke-width="0.5" stroke-dasharray="0.7 0.8"/>' +
+            '<circle cx="38.2" cy="14" r="3" fill="#111110"/>' +
+            '<circle class="espera-rueda" cx="38.2" cy="14" r="1.4" fill="none" stroke="#9a9a95" stroke-width="0.5" stroke-dasharray="0.7 0.8"/>' +
+          '</svg>' +
+          '<span class="espera-camino"></span>' +
+        '</span>' +
+        '<span class="espera-texto">' + esc(texto || '') + '</span>' +
+      '</span>';
+    }
+
+    /* ============================================================
+       LA ANIMACIÓN DE ENTRADA CORRE UNA VEZ POR VISITA
+       ------------------------------------------------------------
+       «Si la animación de ese botón es opcional, pues no, nomás úsala
+       cuando tengas que de verdad recargar», dijo el dueño. Es bonita
+       la primera vez y es un estorbo en la segunda: quien va y viene
+       del cotizador a las unidades no tiene por qué verla cada vez.
+
+       Se recuerda en `sessionStorage` —la visita, no el navegador: al
+       día siguiente la vuelve a ver, que es cuando sigue siendo bonita.
+       ============================================================ */
     var intro = byId('intro');
     var introDone = false;
+
+    /* Se marca AL EMPEZAR, no al acabar. Antes esto vivía dentro de
+       `endIntro()`: quien recargaba al segundo y medio nunca llegaba ahí
+       y volvía a ver la animación completa, que es justo lo que molesta.
+
+       Y va en try/catch porque `sessionStorage` TRUENA —no devuelve
+       nulo, truena— en navegación privada de algunos navegadores y con
+       las cookies del sitio bloqueadas. Si truena, la animación se ve:
+       ése es el lado seguro. */
+    function marcaIntroVista() {
+      try { sessionStorage.setItem('et_intro', '1'); } catch (e) {}
+    }
 
     function endIntro() {
       if (introDone) return;
@@ -3763,16 +3868,16 @@ window.IMGS = {
       document.body.style.overflow = '';
       intro.classList.add('out');
       setTimeout(function () { if (intro.parentNode) intro.parentNode.removeChild(intro); }, 760);
-      try { sessionStorage.setItem('et_intro', '1'); } catch (e) {}
     }
 
-    var seen = false;
-    try { seen = sessionStorage.getItem('et_intro') === '1'; } catch (e) {}
+    var vista = false;
+    try { vista = sessionStorage.getItem('et_intro') === '1'; } catch (e) {}
 
-    if (seen || reduce) {
+    if (vista || reduce) {
       if (intro.parentNode) intro.parentNode.removeChild(intro);
       introDone = true;
     } else {
+      marcaIntroVista();
       document.body.style.overflow = 'hidden';
       setTimeout(endIntro, 3200);
       byId('skip').addEventListener('click', endIntro);
@@ -4160,7 +4265,7 @@ window.IMGS = {
     byId('loc-gps').addEventListener('click', function () {
       var btn = this;
       if (!navigator.geolocation) { alert('Tu navegador no permite obtener la ubicación.'); return; }
-      btn.textContent = 'Obteniendo…';
+      btn.innerHTML = htmlEspera('Obteniendo…');
       navigator.geolocation.getCurrentPosition(function (pos) {
         locCoords = pos.coords.latitude.toFixed(6) + ', ' + pos.coords.longitude.toFixed(6);
         byId('loc-coords').textContent = locCoords;
@@ -4555,7 +4660,7 @@ window.IMGS = {
         if (boton.disabled) return;
         boton.disabled = true;
         renglon.classList.remove('caminos-bien');
-        renglon.textContent = 'Mandando…';
+        renglon.innerHTML = htmlEspera('Mandando…');
 
         function di(texto, bien) {
           boton.disabled = false;
@@ -4786,7 +4891,7 @@ window.IMGS = {
         if (!correo) { error.textContent = 'Escribe tu correo arriba, en tus datos.'; return; }
         if (!nombre) { error.textContent = 'Escribe tu nombre arriba, en tus datos.'; return; }
 
-        boton.disabled = true; boton.textContent = 'Creando…';
+        boton.disabled = true; boton.innerHTML = htmlEspera('Creando…');
         pideCuenta('crear', {
           correo: correo, nombre: nombre,
           telefono: (byId('f-tel').value || '').trim(),
@@ -4815,7 +4920,7 @@ window.IMGS = {
         if (!(byId('ent-correo').value || '').trim()) { error.textContent = 'Escribe tu correo.'; return; }
         if (!byId('ent-clave').value) { error.textContent = 'Escribe tu contraseña.'; return; }
 
-        boton.disabled = true; boton.textContent = 'Entrando…';
+        boton.disabled = true; boton.innerHTML = htmlEspera('Entrando…');
 
         pideCuenta('entrar', {
           correo: (byId('ent-correo').value || '').trim(),
@@ -4906,7 +5011,7 @@ window.IMGS = {
              equivocado de código. */
           if (leido().length !== 6) { error.textContent = 'Faltan dígitos del código.'; return; }
 
-          boton.disabled = true; boton.textContent = 'Confirmando…';
+          boton.disabled = true; boton.innerHTML = htmlEspera('Confirmando…');
 
           pideCuenta('confirmar', { correo: correo, codigo: leido() }).then(function (r) {
             boton.disabled = false; boton.textContent = 'Confirmar';
@@ -5154,7 +5259,7 @@ window.IMGS = {
           if (!correo) { error.textContent = 'Escribe tu correo.'; return; }
           if (!byId('cta-e-clave').value) { error.textContent = 'Escribe tu contraseña.'; return; }
 
-          boton.disabled = true; boton.textContent = 'Entrando…';
+          boton.disabled = true; boton.innerHTML = htmlEspera('Entrando…');
 
           pideCuenta('entrar', { correo: correo, contrasena: byId('cta-e-clave').value })
             .then(function (r) {
@@ -5203,7 +5308,7 @@ window.IMGS = {
             return;
           }
 
-          boton.disabled = true; boton.textContent = 'Creando…';
+          boton.disabled = true; boton.innerHTML = htmlEspera('Creando…');
           pideCuenta('crear', {
             correo: correo, nombre: nombre,
             telefono: (byId('cta-a-tel').value || '').trim(),
@@ -5231,7 +5336,7 @@ window.IMGS = {
              gasta uno de los cinco intentos del servidor. */
           if (CAS.leido().length !== 6) { error.textContent = 'Faltan dígitos del código.'; return; }
 
-          boton.disabled = true; boton.textContent = 'Confirmando…';
+          boton.disabled = true; boton.innerHTML = htmlEspera('Confirmando…');
 
           pideCuenta('confirmar', { correo: correoEnCurso, codigo: CAS.leido() }).then(function (r) {
             boton.disabled = false; boton.textContent = 'Confirmar';
@@ -5302,7 +5407,7 @@ window.IMGS = {
           var correo = (byId('cta-o-correo').value || '').trim();
           if (!correo) { error.textContent = 'Escribe tu correo.'; return; }
 
-          boton.disabled = true; boton.textContent = 'Mandando…';
+          boton.disabled = true; boton.innerHTML = htmlEspera('Mandando…');
           pideCodigoDeClave(correo, 'cta-o-error').then(function () {
             boton.disabled = false; boton.textContent = 'Mándame el código';
           }).catch(function () {
@@ -5330,7 +5435,7 @@ window.IMGS = {
              (`probar-olvide.cjs`): mandarlo a medias es regalar uno. */
           if (CASN.leido().length !== 6) { error.textContent = 'Faltan dígitos del código.'; return; }
 
-          boton.disabled = true; boton.textContent = 'Guardando…';
+          boton.disabled = true; boton.innerHTML = htmlEspera('Guardando…');
 
           pideCuenta('clave-nueva', {
             correo: correoAOlvidar, codigo: CASN.leido(), nueva: byId('cta-n-nueva').value
@@ -5398,7 +5503,7 @@ window.IMGS = {
 
         function traeViajes() {
           var estado = byId('cta-v-estado'), lista = byId('cta-v-lista'), error = byId('cta-v-error');
-          estado.textContent = 'Buscando tus viajes…';
+          estado.innerHTML = htmlEspera('Buscando tus viajes…');
           estado.style.display = '';
           lista.innerHTML = ''; error.textContent = '';
 
@@ -5482,7 +5587,7 @@ window.IMGS = {
         byId('cta-s-guardar').addEventListener('click', function () {
           var error = byId('cta-s-error'), boton = byId('cta-s-guardar');
           error.textContent = ''; byId('cta-s-listo').style.display = 'none';
-          boton.disabled = true; boton.textContent = 'Guardando…';
+          boton.disabled = true; boton.innerHTML = htmlEspera('Guardando…');
 
           pideCuenta('cambiar-clave', {
             actual: byId('cta-s-actual').value,
@@ -5518,7 +5623,7 @@ window.IMGS = {
         var boton = byId('pago-ir'), error = byId('pago-error');
         error.classList.remove('on');
         boton.disabled = true;
-        boton.textContent = 'Abriendo el pago…';
+        boton.innerHTML = htmlEspera('Abriendo el pago…');
 
         function falla(texto) {
           error.textContent = texto;
@@ -5606,6 +5711,11 @@ window.IMGS = {
           var titulo = byId('pago-hecho-titulo');
           var texto = byId('pago-hecho-texto');
           caja.classList.add('on');
+          /* Preguntarle a Stripe se tarda, y mientras el cliente ve un
+             cuadro que dice «Confirmando tu pago…» sin nada que se mueva:
+             justo el momento en que uno cree que se trabó. Va el camión,
+             con el mismo texto que ya estaba escrito abajo. */
+          texto.innerHTML = htmlEspera('Estamos verificando el cobro con el banco.', 'espera-tenue');
           go('cotizar');
           caja.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'center' });
 
@@ -6190,7 +6300,7 @@ window.IMGS = {
       }
 
       boton.disabled = true;
-      boton.textContent = 'Mandando…';
+      boton.innerHTML = htmlEspera('Mandando…');
 
       fetch('/api/cotizar', {
         method: 'POST',
@@ -6462,7 +6572,7 @@ window.IMGS = {
         return Promise.resolve({ tipo: 'manual' });
       }
 
-      pintaPrecio('<div class="precio-cargando"><i></i> Calculando kilómetros…</div>');
+      pintaPrecio(htmlEspera('Calculando kilómetros…', 'espera-tenue'));
 
       return maquina.cotiza().then(function (v) {
         if (v.tipo === 'tarde') return v;         // llegó después de otra búsqueda
@@ -7078,7 +7188,7 @@ window.IMGS = {
       var boton = this;
       var etiqueta = boton.innerHTML;
       boton.disabled = true;
-      boton.textContent = 'Calculando…';
+      boton.innerHTML = htmlEspera('Calculando…');
 
       maquina.ponMovimientos(movimientos.paraCobrar());
 
