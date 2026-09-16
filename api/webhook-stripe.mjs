@@ -101,5 +101,18 @@ async function crudoDeNode(req) {
   return Buffer.concat(trozos);
 }
 
-export default atiende;
+/* SOLO LA FIRMA WEB, A PROPÓSITO (16-sep-2026).
+
+   Aquí se exportaban las dos: `default` (Node, req/res) y `POST` (Web,
+   Request). Con las dos, Vercel escogía la de Node, y en la de Node el
+   entorno parsea todo `application/json` ANTES de entregarlo: los bytes
+   se pierden y la firma no se puede comprobar. Comprobado contra el sitio
+   publicado con la misma firma inventada: `text/plain` → 400,
+   `application/json` → 200 y entraba. Stripe manda `application/json`,
+   así que el candado no aplicaba justo al tráfico real.
+
+   Sin `default`, Vercel usa la firma Web y `arrayBuffer()` entrega los
+   bytes exactos: la firma se comprueba siempre. `atiende` sigue sabiendo
+   atender (req, res), que es lo que usa `servidor-local.cjs`.
+   `pruebas/probar-webhook-cascara.cjs` exige que no vuelva el default. */
 export const POST = atiende;

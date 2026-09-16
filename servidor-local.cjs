@@ -247,7 +247,10 @@ const servidor = http.createServer(async function (req, res) {
       const fn = require(archivo);
       req.query = pedido.query || {};
       req.body = await leeCuerpo(req);
-      await (fn.default || fn)(req, res);
+      /* Los .mjs que solo exportan `POST` (el webhook de Stripe, para que
+         Vercel le entregue los bytes crudos) también saben atender
+         (req, res). */
+      await (fn.default || fn.POST || fn)(req, res);
     } catch (e) {
       console.error('  ✗ /api/' + nombre + ' tronó:', e.message);
       if (!res.headersSent) res.status(500).json({ error: e.message });
