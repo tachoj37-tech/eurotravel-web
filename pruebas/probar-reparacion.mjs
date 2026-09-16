@@ -283,7 +283,12 @@ titulo('R9 · el precio lleva unidad + total + foto + apartado + CLABE; y la CLA
   const tras = mandados.slice(antes).filter((m) => mismo(m.to, C));
   const textoPrecio = tras.map((m) => (m.text && m.text.body) || (m.interactive && m.interactive.body && m.interactive.body.text) || (m.image && m.image.caption) || '').join('\n');
   okQue('con el «va» del vendedor el cliente recibe la unidad y el total', /Sprinter/.test(textoPrecio) && /\*Total: \$/.test(textoPrecio));
-  okQue('  la foto de la unidad', tras.some((m) => m.image && /sprinter/i.test(m.image.link || '')));
+  /* CAMBIÓ EL 16-sep-2026: las fotos salen al ELEGIR la unidad («somos 15»
+     → Sprinter), una sola vez por plática; con el precio ya no se repiten
+     (dictado del dueño: «si pidió fotos antes ya no le mandes otra vez»). */
+  okQue('  la foto de la unidad salió antes, al quedar la Sprinter, y no se repite con el precio',
+    mandados.slice(0, antes).some((m) => mismo(m.to, C) && m.image && /sprinter-01\.jpg$/i.test(m.image.link || '')) &&
+    !tras.some((m) => m.image && /unidades/.test(m.image.link || '')));
   okQue('  el monto de apartado', /son \*\$[\d,]+\* de apartado/.test(textoPrecio));
   okQue('  con banco y beneficiario en el texto', /BBVA · a nombre de Eurotravel/.test(textoPrecio));
   okQue('  la CLABE pelona en su propio mensaje, idéntica a la configurada', tras.some((m) => m.text && m.text.body === CLABE));
@@ -404,7 +409,10 @@ titulo('R5 · tres mensajes seguidos en un aviso: un solo turno (Falla 2)');
     ] } }] }] });
   await atiende(new Request('https://x/api/whatsapp', { method: 'POST', body: cuerpo, headers: { 'x-hub-signature-256': firma(cuerpo) } }));
   ok('una ráfaga de tres en un aviso → una sola llamada a la IA', llamadasALaIA, 1);
-  okQue('  y el cliente recibe una respuesta, no tres', textos(C).length >= 1 && textos(C).length <= 2);
+  /* Desde el 16-sep-2026 al quedar la Sprinter salen sus fotos (sin texto,
+     salvo el pie) y el video: se cuentan solo los textos de respuesta. */
+  const respuestas = textos(C).filter((t) => t && !/video por dentro/.test(t));
+  okQue('  y el cliente recibe una respuesta, no tres', respuestas.length >= 1 && respuestas.length <= 2);
 }
 
 /* ============================================================ */
