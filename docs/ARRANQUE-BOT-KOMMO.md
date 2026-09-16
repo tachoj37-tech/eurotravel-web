@@ -229,3 +229,38 @@ Flujo guardado (pasos del bot 84562):
 
 Pendiente de comprobar en vivo: que `{{json.texto}}` se pinte en el Mensaje
 después del widget (Kommo documenta `{{json.*}}` para los pasos siguientes).
+
+### §10 bis · lo que se aprendió después (16-sep, noche)
+
+8. **El botón del saludo NO arranca el bloque de widget.** Estadísticas del
+   diseñador: 4 saludos, «Nueva cotización» 100 %, widget 1 lanzamiento (el
+   de la sesión que venía de la Pausa). Lo que sí lo arranca es la Pausa
+   «hasta recibir mensaje». Por eso el flujo real es: botón/«otra respuesta»
+   → Mensaje puente 32 («Va 🚐 Cuéntame: ¿a dónde van, para cuándo y
+   cuántas personas?») → Pausa 12 → widget.
+9. **La primera puerta reenvía como `text/plain`** (commit f1836d2): con
+   `application/json` Vercel intentaba parsear el formulario y la segunda
+   puerta recibía vacío.
+10. **El `continue` exige ≥1 handler**: va `goto {question, step 1}`, el
+    paso siguiente del propio widget (commit 40213d2).
+11. **Fotos reales**: `data.fotos` (carpeta del drive) + `data.pie`; el
+    widget 1.0.5+ trae un `send_message` con adjunto por carpeta detrás de
+    `{{json.fotos}} = carpeta` (commit c51d3b1, tabla generada con
+    `pendiente/kommo-widget/generar-fotos.mjs`). Tras subir un widget nuevo
+    hay que VOLVER A GUARDAR el bot en el diseñador (con un cambio real; un
+    arrastre no cuenta) para que se registre el `widget_source`.
+12. **La Pausa traía un temporizador de 1 min sin salida**: al minuto sin
+    respuesta el bot moría en silencio (sesiones activas 0 después de cada
+    plática). Borrado (··· → Borrar en la fila del temporizador).
+13. **Después del ticket el bot sigue vivo** (commit 46e35b9): el ticket
+    lleva `pasaAPersona` pero eso ya no cuenta como «terminó»; así una
+    corrección («14 al 17 de octubre») produce el ticket corregido. Si el
+    cerebro no tiene nada que decir (`data.callado = si`) el widget 1.0.6
+    sale por «silencio» → Parar, sin mensaje vacío.
+14. **En el chat el i6 es «47 y 51» y el Century «47 y 49»** (bot.js,
+    `unidadesParaElChat`); el catálogo del sitio no cambia.
+15. Para relanzar en la conversación de prueba: detener la sesión desde la
+    ficha del lead (Bots: 1 → ⏹) y `POST /api/v2/salesbot/run`. Leads de
+    prueba: 26818280 (Ernesto) y 26838770 («Papá»).
+16. «Rastrear clics en links» (ajuste global de la cuenta) acorta las ligas
+    a kommo.cc, incluido el video de YouTube. No se tocó: decisión del dueño.
