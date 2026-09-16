@@ -2673,10 +2673,30 @@ window.IMGS = {
       <p>En EuroTravel nos encanta ayudarte a resolver tus traslados turísticos y empresariales. Ya sea que necesites cotizar un servicio, resolver dudas o agendar tu transporte, nuestro equipo está disponible para atenderte de forma rápida y personalizada.</p>
       <ul class="canales">
         <li><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><use href="#ei-tel"/></svg><a href="tel:+523324002285">33 2400 2285</a></li>
-        <!-- La dirección la pone el guion desde `config.js`, para que el
-             número viva en un solo lugar. Nace sin `href`: si el guion no
-             corriera, un enlace a ningún lado se ve peor que un texto. -->
-        <li><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><use href="#ei-wasap"/></svg><a data-wa>WhatsApp 33 2183 2993</a></li>
+        <!-- ============================================================
+             15-sep-2026 · NACE CON SU DIRECCIÓN PUESTA
+             ------------------------------------------------------------
+             Aquí decía que nacer sin `href` era mejor, «porque un enlace a
+             ningún lado se ve peor que un texto». Es al revés: el cliente
+             no sabe que es un enlace roto, pica y no pasa nada — y el
+             guion que lo llenaba vive mil líneas abajo, en el mismo
+             archivo donde un `null.href` ya tumbó la mitad de la página al
+             arrancar (ver la nota de `ligaWhatsApp`).
+
+             Así que la dirección va escrita, con el texto por omisión de
+             `config.js` ya puesto. El guion la vuelve a armar en cuanto
+             corre, y desde el cotizador le agrega la ficha del viaje: lo
+             que se pierde si el guion falla es la ficha, no la
+             conversación.
+
+             EL NÚMERO SIGUE SIENDO EL DE `config.js`, y que estos dos no
+             se despeguen lo cuida `probar-whatsapp-de-la-pagina.cjs`: el
+             día de la mudanza a Kommo la prueba se pone roja y nombra las
+             direcciones que faltaron.
+             ============================================================ -->
+        <li><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><use href="#ei-wasap"/></svg><a data-wa
+          href="https://wa.me/523321832993?text=Hola%2C%20estoy%20viendo%20su%20p%C3%A1gina%20y%20quiero%20cotizar%20un%20viaje."
+          target="_blank" rel="noopener">WhatsApp 33 2183 2993</a></li>
         <li><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><use href="#ei-sobre"/></svg><a href="mailto:ventas@eurotravel.com.mx">ventas@eurotravel.com.mx</a></li>
       </ul>
     </div>
@@ -2911,7 +2931,13 @@ window.IMGS = {
                  Y no se pierde nada si no lo pica: la solicitud YA se mandó
                  antes de llegar aquí. Esto es lo que la mejora, no lo que la
                  sostiene. -->
-            <a class="captura-whats" id="captura-whats" target="_blank" rel="noopener">
+            <!-- Nace con su dirección: si el guion se cayera antes de
+                 llenarla, este botón —que es el que abre la conversación con
+                 el vendedor— no haría nada. El guion le pega encima la ficha
+                 del viaje en cuanto la tiene. -->
+            <a class="captura-whats" id="captura-whats"
+               href="https://wa.me/523321832993?text=Hola%2C%20quiero%20cotizar%20este%20viaje%3A"
+               target="_blank" rel="noopener">
               <svg aria-hidden="true"><use href="#i-wa" /></svg>
               <span>Mándanos tu viaje por WhatsApp</span>
             </a>
@@ -3099,7 +3125,13 @@ window.IMGS = {
             <span id="aviso-mov-texto"></span>
           </p>
           <div class="send-row">
-            <a class="btn btn-red" id="send-wa" href="#" target="_blank" rel="noopener"><svg aria-hidden="true"><use href="#i-wa" /></svg> Enviar por WhatsApp</a>
+            <!-- Tenía `href="#"`, que no lleva a ningún lado: si el guion no
+                 alcanzaba a llenarlo, el botón del momento de mayor intención
+                 de compra de la página no hacía nada. Ahora abre WhatsApp
+                 igual, y el guion le pega encima el resumen del viaje. -->
+            <a class="btn btn-red" id="send-wa"
+               href="https://wa.me/523321832993?text=Hola%2C%20quiero%20cotizar%20un%20viaje."
+               target="_blank" rel="noopener"><svg aria-hidden="true"><use href="#i-wa" /></svg> Enviar por WhatsApp</a>
             <a class="btn btn-ink" id="send-mail" href="#"><svg aria-hidden="true"><use href="#i-mail" /></svg> Enviar por correo</a>
             <button class="btn btn-line" type="button" id="copy-sum">Copiar resumen</button>
             <button class="btn btn-line" type="button" id="volver-datos">Editar datos</button>
@@ -3337,7 +3369,8 @@ window.IMGS = {
       <div class="contact-grid">
         <div class="cinfo">
           <a href="tel:+523324002285"><svg aria-hidden="true"><use href="#i-phone" /></svg><span><b>Teléfono</b><span class="v">33 2400 2285</span></span></a>
-          <a data-wa target="_blank" rel="noopener"><svg aria-hidden="true"><use href="#i-wa" /></svg><span><b>WhatsApp</b><span class="v">33 2183 2993</span></span></a>
+          <a data-wa href="https://wa.me/523321832993?text=Hola%2C%20estoy%20viendo%20su%20p%C3%A1gina%20y%20quiero%20cotizar%20un%20viaje."
+             target="_blank" rel="noopener"><svg aria-hidden="true"><use href="#i-wa" /></svg><span><b>WhatsApp</b><span class="v">33 2183 2993</span></span></a>
           <a href="mailto:ventas@eurotravel.com.mx"><svg aria-hidden="true"><use href="#i-mail" /></svg><span><b>Correo</b><span class="v">ventas@eurotravel.com.mx</span></span></a>
           <a href="https://maps.google.com/?q=Alba+1666,+Lomas+de+San+Pedrito,+Tlaquepaque,+Jalisco+45625" target="_blank" rel="noopener"><svg aria-hidden="true"><use href="#i-pin" /></svg><span><b>Oficina</b><span class="v">Alba 1666, Col. Lomas de San Pedrito<br />Tlaquepaque, Jalisco, C.P. 45625</span></span></a>
           <div class="ci"><svg aria-hidden="true"><use href="#i-clock" /></svg><span><b>Atención</b><span class="v">Lunes a sábado · Servicios operando 24/7</span></span></div>
@@ -7248,7 +7281,13 @@ window.IMGS = {
      quitarlo tumbaría el chat entero con un error. Se queda en el DOM,
      escondido, hasta que la rama del bot decida qué hacer con el chat.
      ============================================================ -->
-<a class="wa-fab" id="wa-flotante" target="_blank" rel="noopener"
+<!-- Nace con su dirección puesta. Nacía sin ella y la llenaba el guion al
+     `DOMContentLoaded`: el botón más visible de la página —el que está fijo
+     en la esquina, en todas las pantallas— no hacía nada si el guion se caía
+     antes de llegar ahí. Con el viaje escogido, el guion le agrega la ficha. -->
+<a class="wa-fab" id="wa-flotante"
+   href="https://wa.me/523321832993?text=Hola%2C%20estoy%20viendo%20su%20p%C3%A1gina%20y%20quiero%20cotizar%20un%20viaje."
+   target="_blank" rel="noopener"
    aria-label="Escríbenos por WhatsApp">
   <span class="wa-fab-icono">
     <span class="wa-fab-onda" aria-hidden="true"></span>

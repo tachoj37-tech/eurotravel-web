@@ -78,11 +78,27 @@ titulo('el número vive en un solo lugar');
        falta es salir de `config.js` como todos los demás, y eso le toca a
        esa rama. Anotado en `docs/PREGUNTAS-ABIERTAS.md`. */
     if (archivo === 'bot-navegador.js') return;
+    /* `index.html` PERDONADO desde el 15-sep-2026, y con motivo: sus enlaces
+       de WhatsApp llevan la dirección escrita en el HTML como RED —ver más
+       abajo, «los enlaces sirven aunque el guion no corra»—. Es la única
+       forma de que sirvan cuando el guion se cae, porque quien los llenaba
+       era el guion. A cambio, la aserción de abajo exige que TODOS digan el
+       mismo número que `config.js`: el día de la mudanza a Kommo esta
+       prueba se pone roja y nombra los que faltaron. */
+    if (archivo === 'index.html') return;
     const texto = lee(archivo);
     const encontrados = texto.match(/wa\.me\/\d+/g) || [];
     encontrados.forEach(function (u) { aMano.push(archivo + ' → ' + u); });
   });
-  igual('ningún archivo del navegador escribe el número a mano', aMano, []);
+  igual('ningún otro archivo del navegador escribe el número a mano', aMano, []);
+
+  /* La red del párrafo anterior: si una de las direcciones escritas en el
+     HTML se queda con el número viejo, esto la caza. */
+  const enLaPagina = (lee('index.html').match(/wa\.me\/(\d+)/g) || [])
+    .map(function (u) { return u.replace('wa.me/', ''); });
+  cierto('la página trae direcciones de WhatsApp escritas', enLaPagina.length > 0);
+  igual('y todas dicen el número de config.js',
+    enLaPagina.filter(function (n) { return n !== elBueno; }), []);
 
   /* Y mientras el chat lo tenga escrito, que al menos sea el bueno: si la
      rama del bot lo cambia por otro, esto se pone rojo. */
@@ -147,6 +163,62 @@ titulo('el botón flotante abre WhatsApp, con el mensaje escrito');
   /* Y el armador de ligas existe una sola vez. */
   igual('hay una sola función que arma la liga de WhatsApp',
     (index.match(/function ligaWhatsApp\(/g) || []).length, 1);
+}
+
+/* ============================================================
+   LOS ENLACES SIRVEN AUNQUE EL GUION NO CORRA · 15-sep-2026
+   ------------------------------------------------------------
+   Los cinco enlaces de WhatsApp de la página NACÍAN SIN DIRECCIÓN y
+   se las ponía el guion. Con el guion caído —y este archivo ya
+   documenta un `null.href` que tumbaba la mitad de la página al
+   arrancar— quedaban cinco enlaces que no hacen nada: el cliente
+   pica, no pasa nada, y se va.
+
+   Ahora nacen con su `wa.me` escrito en el HTML y el guion lo que
+   hace es MEJORARLO con la ficha del viaje. Lo que se pierde si el
+   guion falla es la ficha, no la conversación.
+   ============================================================ */
+titulo('los enlaces de whatsapp sirven aunque el guion no corra');
+{
+  const index = lee('index.html');
+
+  /* La etiqueta `<a …>` completa de cada uno, tal como sale en el archivo. */
+  function etiquetaDe(busca) {
+    const i = index.indexOf(busca);
+    if (i < 0) return '';
+    const abre = index.lastIndexOf('<a', i);
+    const cierra = index.indexOf('>', i);
+    return abre >= 0 && cierra > abre ? index.slice(abre, cierra + 1) : '';
+  }
+
+  const ANCLAS = [
+    ['id="wa-flotante"', 'el botón flotante'],
+    ['id="send-wa"', 'el «Enviar por WhatsApp» del resumen'],
+    ['id="captura-whats"', 'el «Mándanos tu viaje» del acuse']
+  ];
+  ANCLAS.forEach(function (a) {
+    const et = etiquetaDe(a[0]);
+    cierto(a[1] + ' nace con su dirección', /href="https:\/\/wa\.me\/\d+/.test(et));
+    cierto('  ' + a[1] + ' abre en otra pestaña', /target="_blank"/.test(et));
+    cierto('  ' + a[1] + ' lleva rel="noopener"', /rel="noopener"/.test(et));
+  });
+
+  /* Los dos fijos —el pie y Contacto— se marcan con `data-wa` y son los que
+     el guion rellenaba en bloque. */
+  const fijos = index.match(/<a[^>]*\bdata-wa\b[^>]*>/g) || [];
+  igual('los dos enlaces fijos siguen ahí', fijos.length, 2);
+  igual('  y los dos nacen con su dirección',
+    fijos.filter(function (e) { return !/href="https:\/\/wa\.me\/\d+/.test(e); }), []);
+  /* El del pie no las tenía: un enlace a WhatsApp que se lleva la pestaña de
+     la página es un cliente que pierde su cotización a medio armar. */
+  igual('  y los dos abren en otra pestaña, sin prestarle la ventana a nadie',
+    fijos.filter(function (e) {
+      return !(/target="_blank"/.test(e) && /rel="noopener"/.test(e));
+    }), []);
+
+  /* Y el texto por omisión viaja con ellos: «el cliente solo le da enviar». */
+  igual('los cinco llevan un mensaje ya escrito',
+    (index.match(/href="https:\/\/wa\.me\/\d+\?text=[^"]+"/g) || []).length, 5);
 }
 
 /* ============================================================ */
