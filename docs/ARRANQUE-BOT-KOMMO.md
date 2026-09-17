@@ -397,6 +397,16 @@ almacén. Lo que salió y lo que se arregló:
     el bot cuando llega una foto el mismo día (disparador «con una pausa
     de un día»); si no, cambiar a «cuando se inicia un chat por mensaje
     entrante».
+34. **Prueba del dueño desde su teléfono (17-sep, 14:33).** Dos observaciones
+    corregidas: (1) el precio sugerido no llegaba como nota al lead
+    (commit 42d1a51); (2) la IA preguntó «¿Salen de Guadalajara?» y el
+    dictado es «siempre siempre de verdad siempre pregunta zona
+    metropolitana de Guadalajara, no nomás Guadalajara». La regla ya
+    estaba en el prompt y la IA la recortó, así que ahora `sanea()` en
+    `api/_agente.js` reescribe cualquier «¿Salen/Sales/Saldrían (también)
+    de/desde Guadalajara|GDL?» a «¿Salen de la zona metropolitana de
+    Guadalajara?» (prueba en probar-fase2, rojo y verde). Las afirmaciones
+    («salen de Guadalajara el 11») no se tocan.
 26. Aviso que sigue: `KOMMO_SECRETO` no está en Vercel, así que el token
     del widget no se comprueba (el candado es el tramo interno + el
     return_url de la cuenta). Si el dueño quiere, se pone la llave secreta

@@ -6153,7 +6153,7 @@ function loQueFalta(estado) {
       : 'qué día regresan (o si es el mismo día)',
     cuantos: 'cuántos son, aproximadamente (y dile en qué unidad van: hasta 20, Sprinter)',
     elegirBus: 'cuál autobús (ver lista)',
-    origen: 'si salen de la zona metropolitana de Guadalajara. Pregunta EXACTAMENTE eso, para que solo diga «sí» (lo más común): «¿Salen de la zona metropolitana de Guadalajara?». Con «sí», datos.origen = "Guadalajara". Solo si dice que no, pregunta de qué ciudad. NUNCA zona, norte/sur, colonia ni dirección',
+    origen: 'si salen de la zona metropolitana de Guadalajara. Pregunta EXACTAMENTE eso, con las palabras «zona metropolitana» SIEMPRE (nunca «¿Salen de Guadalajara?» a secas), para que solo diga «sí» (lo más común): «¿Salen de la zona metropolitana de Guadalajara?». Con «sí», datos.origen = "Guadalajara". Solo si dice que no, pregunta de qué ciudad. NUNCA zona, norte/sur, colonia ni dirección',
     recorridos: 'si allá se van a andar moviendo con el camión o solo los llevan y los traen',
     confirmar: null
   }[e.paso] || null;

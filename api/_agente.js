@@ -229,7 +229,8 @@ function instruccionesDelAgente(voz) {
     'regresan?» sino si es ida y vuelta el mismo día («¿Es ida y vuelta el mismo día?» o con ' +
     'tus palabras). Si sí, regreso = salida, y ese día la unidad anda con ellos: no preguntes ' +
     'recorridos.\n' +
-    '· El origen se pregunta como sí/no: «¿Salen de la zona metropolitana de Guadalajara?». ' +
+    '· El origen se pregunta como sí/no y SIEMPRE con esas palabras: «¿Salen de la zona ' +
+    'metropolitana de Guadalajara?». Nunca «¿Salen de Guadalajara?» a secas. ' +
     'Con «sí», datos.origen es "Guadalajara"; solo si dice que no, pregunta de qué ciudad. ' +
     'Nunca preguntes zona, norte/sur, colonia ni dirección: eso se pide hasta el contrato.\n' +
     '· La ocasión es SOLO lo que el cliente dice con sus palabras («es la despedida de mi ' +
@@ -588,8 +589,18 @@ function porQueSeTira(texto) {
   if (t.length > 480) return 'más de 480 letras (' + t.length + ')';
   return null;
 }
+/* El origen SIEMPRE se pregunta con «zona metropolitana» (dictado del
+   dueño, 17-sep-2026, tras ver «¿Salen de Guadalajara?» en su teléfono:
+   «siempre siempre de verdad siempre pregunta zona metropolitana de
+   Guadalajara, no nomás Guadalajara»). La regla ya estaba en el prompt y
+   la IA la recortó, así que aquí se corrige a la fuerza. */
+const ORIGEN_A_SECAS = /¿\s*sal(?:en|es|e|imos|dr[ií]an|dr[aá]n)\s+(?:ustedes\s+|tambi[eé]n\s+)?(?:de|desde)\s+(?:guadalajara|gdl)\s*\?/gi;
+const ORIGEN_BIEN = '¿Salen de la zona metropolitana de Guadalajara?';
+function conZonaMetropolitana(texto) {
+  return String(texto || '').replace(ORIGEN_A_SECAS, ORIGEN_BIEN);
+}
 function sanea(texto) {
-  const t = String(texto || '').replace(/\s+\n/g, '\n').trim();
+  const t = conZonaMetropolitana(String(texto || '')).replace(/\s+\n/g, '\n').trim();
   return porQueSeTira(t) ? null : t;
 }
 
@@ -822,7 +833,7 @@ async function redactaSeguimiento(opciones) {
 }
 
 module.exports = {
-  conversa, sanea, limpiaDatos, instruccionesDelAgente, textoDelContexto,
+  conversa, sanea, conZonaMetropolitana, limpiaDatos, instruccionesDelAgente, textoDelContexto,
   redactaSeguimiento,
   recuerda, historialDe, siembraHistorial, olvidaTodo, olvida, PALABRAS_PROHIBIDAS,
   unidadPorTexto, unidadesEnTexto, fichaDeUnidades,

@@ -201,6 +201,23 @@ titulo('el filtro de cifras');
 }
 
 /* ============================================================ */
+titulo('el origen SIEMPRE con «zona metropolitana» (dictado del 17-sep-2026)');
+{
+  const BIEN = '¿Salen de la zona metropolitana de Guadalajara?';
+  const seCorrigen = {
+    'Perfecto, del 20 al 25 de septiembre. ¿Salen de Guadalajara?': 'Perfecto, del 20 al 25 de septiembre. ' + BIEN,
+    'Va, San Juan de los Lagos el 24 con 40. ¿Salen también de Guadalajara?': 'Va, San Juan de los Lagos el 24 con 40. ' + BIEN,
+    '¿Sales de Guadalajara?': BIEN,
+    '¿salen desde GDL?': BIEN,
+    '¿Salen ustedes de Guadalajara?': BIEN,
+    '¿ Saldrían de Guadalajara ?': BIEN
+  };
+  Object.keys(seCorrigen).forEach((t) => ok('corrige «' + t + '»', agente.sanea(t), seCorrigen[t]));
+  const seQuedan = [BIEN, 'Perfecto, salen de Guadalajara el 11. ¿Regresan el mismo día?', '¿De qué ciudad salen?', 'Somos de Guadalajara, ¿y ustedes?'];
+  seQuedan.forEach((t) => ok('deja igual «' + t + '»', agente.sanea(t), t));
+}
+
+/* ============================================================ */
 titulo('«apartar» sin precio no suelta la CLABE; «persona» no manda a otro número');
 {
   limpia();
