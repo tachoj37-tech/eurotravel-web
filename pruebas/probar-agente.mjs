@@ -884,5 +884,29 @@ titulo('«4» contestando «¿cuántos van?» es gente, no fecha; y «14 al 17 d
   ok('  y regreso 17 de octubre', charla && charla.regreso, '2026-10-17');
 }
 
+/* ============================================================ */
+titulo('spec §5 (16-sep): molesto o pidiendo persona → a una persona a la primera, aunque la IA no lo escoja');
+{
+  limpia();
+  /* Números nuevos: las fichas de los de arriba siguen vivas entre bloques. */
+  const C = '5213366670231';
+  laIA = function (t) {
+    if (/vallarta/i.test(t)) return { respuesta: 'Vallarta, va. ¿Qué día salen?', datos: { destino: 'Puerto Vallarta' }, accion: 'seguir' };
+    /* La IA de mentiras NO escoge persona: sigue como si nada. */
+    return { respuesta: 'Perdón, ¿me repites la fecha?', datos: {}, accion: 'seguir' };
+  };
+  await dice('a vallarta', C);
+  await dice('NO ME ENTIENDES NADA!!! pásame con alguien', C);
+  ok('el cliente recibe el paso a persona, con el texto fijo', textos(C).slice(-1)[0], 'Va, en un momento te atiende alguien del equipo 🙌');
+  okQue('  y no la respuesta de la IA', !textos(C).some((t) => /me repites la fecha/.test(t)));
+  limpia();
+  const D = '5213366670232';
+  await dice('a vallarta', D);
+  await dice('no entiendo bien el precio, ¿me lo explicas?', D);
+  /* Lo que conteste lo deciden la IA y sus guardias; lo que importa es que
+     NO sea el paso a persona. */
+  okQue('una duda normal NO pasa a persona', textos(D).length > 0 && !textos(D).some((t) => /te atiende alguien del equipo/.test(t)));
+}
+
 console.log('\n' + buenas + ' buenas, ' + malas + ' malas');
 process.exit(malas ? 1 : 0);

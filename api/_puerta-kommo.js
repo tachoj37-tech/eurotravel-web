@@ -105,4 +105,27 @@ function decide(aviso) {
   return { modo: 'saludo', texto: '', nota: '' };
 }
 
-module.exports = { decide, soloAgradecimiento, anunciaPago, esPregunta, limpia };
+/* ------------------------------------------------------------
+   MOLESTO O PIDIENDO PERSONA (spec §5, 16-sep-2026)
+   ------------------------------------------------------------
+   Dictado: «la primera respuesta que no entiendas o notes que el cliente
+   está siendo grosero porque está enojado… ofrécele hablar con alguien de
+   verdad y apágate». La IA ya sabe pasar a persona cuando el cliente lo
+   pide o está molesto; esto es el candado determinista por si la IA no
+   lo hace. Sin segunda oportunidad.
+   ------------------------------------------------------------ */
+const MOLESTO = /\b(pendej|estupid|idiot|imbecil|tont[oa]s?\b|chinga|chingad|vete a la|verga|mierda|carajo|puta|puto|jodid|mamad|no mames|no manches|inutil|inutiles|basura|porqueria|ridicul)/;
+const NO_ENTIENDE = /\b(no (me )?entiendes?|no entiendes nada|no me estas entendiendo|no me (esta|estas) ayudando|no sirves?|no sirve(s)? (de|para) nada|otra vez lo mismo|ya te dije|te lo repito|es la (segunda|tercera|cuarta) vez|eres un bot|es un bot|esto es un bot|robot|maquina)\b/;
+const PIDE_PERSONA = /\b(hablar con (una |un |alguna |algun )?(persona|humano|alguien|gente|asesor|agente|vendedor|el dueno|el encargado)|pasame con|comunicame con|quiero (una|a una) persona|persona real|humano real|alguien real|atiendame alguien|que me atienda (alguien|una persona))\b/;
+
+function pareceMolesto(texto) {
+  const crudo = String(texto || '');
+  const t = limpia(crudo);
+  if (!t) return false;
+  if (MOLESTO.test(t) || NO_ENTIENDE.test(t) || PIDE_PERSONA.test(t)) return true;
+  /* Gritando: un mensaje de 8 letras o más, todo en mayúsculas, con signos. */
+  const letras = crudo.replace(/[^A-Za-zÁÉÍÓÚÑáéíóúñ]/g, '');
+  return letras.length >= 8 && letras === letras.toUpperCase() && /[!¡?¿]{2,}/.test(crudo);
+}
+
+module.exports = { decide, soloAgradecimiento, anunciaPago, esPregunta, limpia, pareceMolesto };

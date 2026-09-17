@@ -90,6 +90,19 @@ titulo('4 · NO anuncia un pago');
   'ya vi el precio', 'te mando los datos del contrato', 'ahí va mi nombre', 'ya salimos', '', '¿ya les llegó mi pago?'
 ].forEach(function (f) { ok('«' + f + '» NO anuncia pago', !puerta.anunciaPago(f)); });
 
+titulo('4b · molesto, grosero o pidiendo persona (spec §5)');
+[
+  'no me entiendes', 'NO ME ENTIENDES NADA', 'ya te dije que vamos a vallarta', 'eres un bot?', 'esto es un bot',
+  'quiero hablar con una persona', 'pásame con alguien', 'comunícame con el encargado', 'quiero hablar con un humano',
+  'no sirves para nada', 'es la tercera vez que te lo digo', 'no mames', 'que pendejo', 'esto es una basura',
+  'QUE NO ENTIENDES!!!', '¿¿¿ES EN SERIO???', 'otra vez lo mismo'
+].forEach(function (f) { ok('«' + f + '» pasa a persona', puerta.pareceMolesto(f)); });
+[
+  'hola', 'vamos a vallarta', 'somos 12', 'no', 'no vamos a mazatlán', 'gracias', 'me interesa',
+  'no entiendo bien el precio, ¿me lo explicas?', 'una persona más', 'somos 20 personas', 'ok', '14 al 17 de octubre',
+  'es para una boda', 'mándame fotos', 'no sé la fecha todavía'
+].forEach(function (f) { ok('«' + f + '» NO pasa a persona', !puerta.pareceMolesto(f)); });
+
 titulo('5 · la decisión');
 {
   const d1 = puerta.decide({ mensaje: '' });

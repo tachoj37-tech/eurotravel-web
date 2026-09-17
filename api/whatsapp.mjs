@@ -41,6 +41,7 @@ import agente from './_agente.js';
 import kommo from './_kommo.js';
 import kommoAprende from './_kommo-aprende.js';
 import puerta from './_puerta-kommo.js';
+import TEXTOS from './_textos-fijos.js';
 import origenes from './_origenes.js';
 import destinos from './_destinos.js';
 import seguimiento from './_seguimiento.js';
@@ -3084,6 +3085,21 @@ async function loQueDiceElAgente(envio) {
       const con = conversacion.pegaDatos(nuevo, { autobus: unidadNombrada });
       Object.keys(con).forEach(function (k) { nuevo[k] = con[k]; });
     }
+  }
+
+  /* ------------------------------------------------------------
+     MOLESTO, GROSERO O PIDIENDO PERSONA: A UNA PERSONA, A LA PRIMERA
+     ------------------------------------------------------------
+     Spec §5 (16-sep-2026): «la primera respuesta que no entiendas o notes
+     que el cliente está siendo grosero… ofrécele hablar con alguien de
+     verdad y apágate». La IA ya trae la acción "persona" para eso; este
+     es el candado determinista por si no la escoge. Texto fijo de
+     `_textos-fijos.js`; por Kommo `esPersona` apaga el bot.
+     ------------------------------------------------------------ */
+  if (dicho.accion !== 'persona' && puerta.pareceMolesto(texto)) {
+    console.error('[agente] el cliente está molesto o pide persona: se pasa a una persona');
+    dicho.accion = 'persona';
+    dicho.respuesta = TEXTOS.pasoAPersona;
   }
 
   /* ------------------------------------------------------------
