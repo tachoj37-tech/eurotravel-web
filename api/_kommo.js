@@ -161,6 +161,41 @@ async function guardaPrecio(idDelLead, total, opciones) {
 }
 
 /* ------------------------------------------------------------
+   EL TICKET DEL PRECIO, COMO NOTA EN EL LEAD (16-sep-2026)
+   ------------------------------------------------------------
+   Por Kommo no hay «va»: el bot manda el resumen y se para, y el
+   vendedor escribe el precio ahí mismo en el chat. El ticket con el
+   número calculado («Calculado: $9,000», la columna del Excel, el
+   calendario) iba al WhatsApp del dueño y por Kommo no llegaba a nadie.
+   Ahora se pega como nota interna del lead: el vendedor la ve en la
+   tarjeta, el cliente no la ve nunca.
+
+   `notaDeTicket` quita lo que solo tenía sentido por WhatsApp (el
+   «contéstame este mensaje con va» y el «_cliente: número_») y dice qué
+   hacer aquí. `anotaEnLead` es POST /leads/{id}/notes, nota común.
+   ------------------------------------------------------------ */
+function notaDeTicket(texto) {
+  const lineas = String(texto || '').split('\n').filter(function (l) {
+    return !/^Contéstame \*este mensaje\*/.test(l) && !/^_cliente: /.test(l);
+  });
+  while (lineas.length && !lineas[lineas.length - 1].trim()) lineas.pop();
+  return '🤖 EuroBot, para el vendedor\n\n' + lineas.join('\n') +
+    '\n\nEscríbele el precio aquí mismo en el chat.';
+}
+
+async function anotaEnLead(idDelLead, texto, opciones) {
+  const id = String(idDelLead || '').trim();
+  const t = String(texto || '').trim();
+  if (!/^\d+$/.test(id) || !t) return false;
+  const r = await pide('/leads/' + id + '/notes', Object.assign({
+    metodo: 'POST',
+    cuerpo: [{ note_type: 'common', params: { text: t.slice(0, 4000) } }]
+  }, opciones || {}));
+  if (!r) console.error('[kommo] la nota del ticket no se pegó en el lead ' + id);
+  return !!r;
+}
+
+/* ------------------------------------------------------------
    LOS PRECIOS QUE YA SE COTIZARON, PARA EL CEREBRO
    ------------------------------------------------------------
    Lo que hace que Kommo resuelva el agujero de la memoria: los leads con
@@ -471,7 +506,7 @@ async function continuaSalesbot(returnUrl, cuerpo, opciones) {
 }
 
 module.exports = {
-  hayKommo, pruebaDeVida, mueveDeEtapa, guardaPrecio, leadsConPrecio,
+  hayKommo, pruebaDeVida, mueveDeEtapa, guardaPrecio, leadsConPrecio, anotaEnLead, notaDeTicket,
   /* El paso EuroBot. */
   leeAvisoDeWidget, verificaTokenDeWidget, handlersDeEnvios, textoParaKommo, fotosParaKommo, continuaSalesbot, uuidDeFoto, carpetaDeFoto,
   /* Para las pruebas y para el día del alta. */

@@ -53,6 +53,15 @@ import conversacion from '../bot.js';
    avisos a la vez no se mezclan. */
 const colectorKommo = new AsyncLocalStorage();
 
+/* Por Kommo el ticket del precio no va a un número: se pega como nota en
+   el lead (ver `trabajoDeKommo`). Este destino de mentiras hace que el
+   ticket se ARME aunque DUENO_WHATSAPP esté vacía; sin dígitos, así que
+   nunca se confunde con el dueño ni con un cliente (16-sep-2026). */
+const DESTINO_NOTA_KOMMO = 'kommo-nota';
+function destinoDelTicketEnKommo() {
+  return colectorKommo.getStore() ? DESTINO_NOTA_KOMMO : '';
+}
+
 /* ------------------------------------------------------------
    LAS NOTAS DE VOZ SE TRANSCRIBEN AQUI, NO ALLA
    ------------------------------------------------------------
@@ -606,7 +615,8 @@ async function precioDe(envio, opciones) {
        con el precio no se manda la misma otra vez (auditoría general del
        8-sep, hallazgo 18). */
     if (fotoDeLaUnidad || envio.sinFoto) res.fotoMandada = true;
-    const dueno = tickets.numeroDelDueno(process.env);
+    /* Por Kommo el ticket se arma igual y acaba como nota en el lead. */
+    const dueno = tickets.numeroDelDueno(process.env) || destinoDelTicketEnKommo();
     if (!dueno) {
       /* Compuerta cerrada y nadie a quién preguntarle: el cliente se
          quedaría esperando para siempre (A11). Ruidoso en el registro. */
@@ -718,7 +728,7 @@ async function precioDe(envio, opciones) {
   /* Autobús o Suburban con «va» a secas: no hay número que mandar. Se le
      pide al dueño, y al cliente no le llega nada a medias. */
   if (confirmado && !precio) {
-    const dueno = tickets.numeroDelDueno(process.env);
+    const dueno = tickets.numeroDelDueno(process.env) || destinoDelTicketEnKommo();
     return [{
       numeroDeOrigen: envio.numeroDeOrigen,
       para: dueno || envio.numeroDeOrigen,
@@ -5384,6 +5394,27 @@ async function trabajoDeKommo(crudo) {
   const alCliente = colector.envios.filter(function (e) {
     return e && e.para && tickets.mismoNumero(e.para, aviso.numero) && !e.esTicket;
   });
+  /* ------------------------------------------------------------
+     EL TICKET DEL PRECIO, COMO NOTA EN EL LEAD (16-sep-2026)
+     ------------------------------------------------------------
+     Por Kommo no hay «va»: el vendedor escribe el precio en el chat. El
+     ticket con el calculado se pega en la tarjeta del lead como nota
+     interna (el cliente no la ve). Solo los tickets de precio; los demás
+     avisos al dueño siguen como estaban. Si Kommo no acepta la nota, se
+     registra y el bot sigue: una nota perdida no puede dejar al cliente
+     sin respuesta.
+     ------------------------------------------------------------ */
+  const notas = colector.envios.filter(function (e) {
+    return e && e.esTicket && e.texto && /^\[(?:ticket precio\]|precio · )/.test(String(e.escribio || ''));
+  });
+  for (const e of notas) {
+    try {
+      const pegada = await kommo.anotaEnLead(aviso.leadId, kommo.notaDeTicket(e.texto));
+      console.log('[kommo-trabajo] nota del ticket en el lead ' + aviso.leadId + ': ' + (pegada ? 'pegada' : 'NO se pegó'));
+    } catch (err) {
+      console.error('[kommo-trabajo] la nota del ticket tronó en el lead ' + aviso.leadId + ': ' + (err && err.message));
+    }
+  }
   const ficha = tickets.fichaDe(aviso.numero);
   /* El ticket sale con `pasaAPersona`, pero NO termina al bot: el ticket
      invita a corregir («si algo está mal, dímelo y lo corrijo») y el

@@ -163,9 +163,15 @@ function peticion(cuerpo, cabeceras, llave) {
       reenvios.push({ url: u, tipo: init.headers['Content-Type'], body: init.body });
       return { ok: true, status: 200, text: async function () { return ''; }, json: async function () { return {}; } };
     }
+    /* El ticket del precio, como nota interna del lead (16-sep-2026). */
+    if (/\/api\/v4\/leads\/\d+\/notes$/.test(u)) {
+      notas.push({ url: u, metodo: init.method, auth: init.headers.Authorization, body: JSON.parse(init.body) });
+      return { ok: true, status: 200, text: async function () { return ''; }, json: async function () { return { _embedded: { notes: [{ id: 1 }] } }; } };
+    }
     throw new Error('la prueba no debía llamar a ' + u);
   };
   const reenvios = [];
+  const notas = [];
   /* Lo que el bot dice por Kommo también queda en la conversación del
      almacén (16-sep-2026): se espía `anotaMensaje` en el mismo módulo
      que usa whatsapp.mjs (es el mismo objeto de `module.exports`). */
@@ -223,6 +229,54 @@ function peticion(cuerpo, cabeceras, llave) {
   const ajeno = aviso('hola'); ajeno.return_url = 'https://otra.kommo.com/api/v4/salesbot/1/continue/z';
   await atiende(peticion(ajeno, { 'x-interno': process.env.WHATSAPP_RUTA_SECRETA }), res);
   ok('return_url ajeno: no se contesta', res.cuerpo && res.cuerpo.ok === false && continuaciones.length === 3);
+
+  titulo('el ticket del precio se pega como nota en el lead (16-sep-2026)');
+  /* Por Kommo no hay «va»: el vendedor escribe el precio en el chat. El
+     ticket con el calculado —que iba al WhatsApp del dueño y por Kommo no
+     llegaba a nadie— se pega como nota interna del lead, aunque
+     DUENO_WHATSAPP esté vacía. */
+  delete process.env.DUENO_WHATSAPP;
+  ok('la nota limpia lo que solo servía por WhatsApp',
+    (function () {
+      const n = kommo.notaDeTicket('💰 *Precio por confirmar*\n\nCalculado: *$9,000*\n\nContéstame *este mensaje*: *va* y se lo mando tal cual.\n_cliente: 5213319153931_');
+      return /^🤖 EuroBot, para el vendedor\n\n💰/.test(n) && /Calculado: \*\$9,000\*/.test(n) &&
+        !/Contéstame/.test(n) && !/_cliente:/.test(n) && /Escríbele el precio aquí mismo en el chat\.$/.test(n);
+    })());
+  ok('sin id numérico de lead no se pega nada', (await kommo.anotaEnLead('{{lead.id}}', 'x')) === false && notas.length === 0);
+  const antesDeLaNota = continuaciones.length;
+  /* Se contesta lo que el guion vaya preguntando, hasta que salga el ticket. */
+  const contesta = function (pregunta) {
+    const p = String(pregunta || '');
+    if (/a dónde/i.test(p)) return 'a puerto vallarta';
+    if (/regresan/i.test(p)) return 'el 22 de octubre';
+    if (/qué día|cuándo salen|fecha/i.test(p)) return 'el 20 de octubre';
+    if (/cuántos días/i.test(p)) return 'ninguno';
+    if (/mover|mueven|movimientos|quieta|recorr/i.test(p)) return 'solo nos llevan y traen';
+    if (/cuántos|cuántas personas/i.test(p)) return 'somos 12';
+    if (/de qué ciudad|de dónde salen/i.test(p)) return 'Guadalajara';
+    if (/zona metropolitana/i.test(p)) return 'sí';
+    return 'sí';
+  };
+  let pregunta = continuaciones[continuaciones.length - 1].body.data.texto;
+  for (let paso = 0; paso < 10 && !notas.length; paso++) {
+    const t = contesta(pregunta);
+    res = respuesta();
+    await atiende(peticion(aviso(t), { 'x-interno': process.env.WHATSAPP_RUTA_SECRETA }), res);
+    const c = continuaciones[continuaciones.length - 1] && continuaciones[continuaciones.length - 1].body;
+    pregunta = String(c && c.data.texto);
+    console.log('   «' + t + '» → ' + pregunta.replace(/\n/g, ' ').slice(0, 110));
+  }
+  ok('el cerebro siguió contestando por Kommo mientras tanto', continuaciones.length > antesDeLaNota);
+  ok('se pegó UNA nota en el lead 26818280 con el token de la cuenta',
+    notas.length === 1 && /\/leads\/26818280\/notes$/.test(notas[0].url) && notas[0].metodo === 'POST' && notas[0].auth === 'Bearer token-de-mentiras');
+  const nota = notas[0] && notas[0].body[0];
+  ok('es una nota común con el ticket del precio, sin el «va» ni el número del cliente',
+    nota && nota.note_type === 'common' && /Precio por confirmar/.test(nota.params.text) &&
+    /EuroBot, para el vendedor/.test(nota.params.text) && !/Contéstame/.test(nota.params.text) && !/_cliente:/.test(nota.params.text));
+  if (nota) console.log('   nota → ' + nota.params.text.replace(/\n/g, ' | ').slice(0, 220));
+  const ultima = continuaciones[continuaciones.length - 1].body;
+  ok('al cliente le llegó el resumen con lo que incluye, y NADA del ticket',
+    /Incluye:/.test(ultima.data.texto) && !/Precio por confirmar|Calculado/.test(ultima.data.texto));
 
   titulo('la primera puerta reenvía el aviso tal cual');
   /* Kommo manda un formulario; la segunda puerta lo recibe byte por byte

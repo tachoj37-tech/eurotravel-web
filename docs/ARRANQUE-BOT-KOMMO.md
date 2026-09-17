@@ -317,6 +317,20 @@ almacén. Lo que salió y lo que se arregló:
     dentro de Kommo y no se puede observar; el puente «Mensaje → Pausa →
     widget» es el rodeo. Si Kommo lo corrige algún día, se puede quitar el
     puente.
+29. **Por Kommo no hay «va»: el ticket del precio va como nota del lead**
+    (dictado del dueño, 16-sep-2026, «va, con cuidado»). El bot manda el
+    resumen (con «Incluye:») y se para; el vendedor escribe el precio en
+    el chat. El ticket con el calculado / la columna del Excel / el
+    calendario, que iba al WhatsApp del dueño y por Kommo no llegaba a
+    nadie, ahora se pega como nota interna en la tarjeta del lead
+    (`POST /leads/{id}/notes`, `kommo.anotaEnLead`), sin el «contéstame
+    con va» ni el número del cliente (`kommo.notaDeTicket`). Se arma
+    aunque `DUENO_WHATSAPP` esté vacía (`destinoDelTicketEnKommo`). Solo
+    los tickets de precio; el cliente no ve la nota. Si Kommo rechaza la
+    nota, queda en el registro `[kommo-trabajo] nota del ticket … NO se
+    pegó` y el bot sigue. **Pendiente de ver en vivo** con el teléfono de
+    prueba: que el token de la integración tenga permiso de escribir
+    notas (en pruebas se simuló Kommo).
 26. Aviso que sigue: `KOMMO_SECRETO` no está en Vercel, así que el token
     del widget no se comprueba (el candado es el tramo interno + el
     return_url de la cuenta). Si el dueño quiere, se pone la llave secreta
