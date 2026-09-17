@@ -1328,7 +1328,12 @@ titulo('R38 · a quien dijo «solo de ida» no se le pregunta el regreso');
   /* La plática se vacía al cotizar, así que la prueba mira el ticket que le
      llegó al dueño: ahí está el viaje que se armó. */
   const ticket = textos(DUENO).filter((t) => /Precio por confirmar/.test(t)).pop() || '';
-  okQue('el viaje sale con salida y regreso el mismo día', /12 de noviembre al 12 de noviembre/.test(ticket));
+  /* 17-sep-2026: cambió de lado. Con salida y regreso el mismo día el
+     ticket dice «12 de noviembre» a secas (antes «12 de noviembre al 12
+     de noviembre», visto feo en la nota del lead). Lo que se vigila es
+     que el viaje SÍ se armó como de un día: la fecha aparece y no hay
+     «al» con otra fecha. */
+  okQue('el viaje sale con salida y regreso el mismo día', /12 de noviembre/.test(ticket) && !/12 de noviembre al /.test(ticket));
   okQue('  y no se le pregunta qué día regresan', !/qu[eé] d[ií]a regresan|y qu[eé] d[ií]a regresan/i.test(textos(C).slice(antes).join('\n')));
 }
 
