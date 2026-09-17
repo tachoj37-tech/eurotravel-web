@@ -5429,6 +5429,18 @@ function respuestaBase(mensaje, estado, hoy) {
   }
 
   /* ---- la flota ---- */
+  /* ---- ¿tienen baño / aire / pantalla? ---- */
+  /* Simulación x6 (17-sep-2026): «los autobuses tienen baño?» caía en la
+     FAQ de flota (por «autobuses») y contestaba la lista entera sin
+     responder. Va antes de la flota y de «qué incluye». */
+  if (tiene(t, ['baño', 'bano', 'aire', 'clima', 'wifi', 'pantalla', 'pantallas', 'reclinable', 'reclinables'])) {
+    return {
+      texto: 'Sí 🙌 Todos los autobuses (de 47 a 51) traen baño y aire; la Sprinter trae aire, ' +
+        'pantalla y asientos reclinables.\n\n¿Cuántas personas viajan? Con eso te digo cuál te conviene.',
+      pasa: false
+    };
+  }
+
   if (tiene(t, ['unidad', 'unidades', 'camion', 'autobus', 'autobuses', 'bus',
     'flota', 'vehiculo', 'transporte', 'capacidad', 'caben'])) {
     /* Para el registro: en la corrida del 16-sep-2026 esta lista salió

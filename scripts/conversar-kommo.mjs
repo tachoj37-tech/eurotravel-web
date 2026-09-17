@@ -174,7 +174,49 @@ const escenarios = {
      comprobante», gracias, pregunta con gracias. */
   q: ['puerta:hola', 'puerta:', 'puerta:te mando el comprobante del contrato 123', 'puerta:', 'puerta:muchas gracias 🙏', 'puerta:gracias, ¿y mi contrato?', 'puerta:buenas tardes, quiero cotizar un viaje'],
   /* Molesto a media cotización → a una persona, aunque la IA no lo escoja. */
-  m: ['Nueva cotización', 'vamos a vallarta el 20 de octubre', 'NO ME ENTIENDES NADA!!! pásame con alguien']
+  m: ['Nueva cotización', 'vamos a vallarta el 20 de octubre', 'NO ME ENTIENDES NADA!!! pásame con alguien'],
+
+  /* ---- 17-sep, «simula, simula, simula»: clientes como escriben de verdad ---- */
+  /* Todo en un mensaje, con faltas. */
+  x1: ['Nueva cotización', 'ola buenas noxes, kiero cotizar una sprinter a chapala el sabado 3 de octubre somos 15 salimos de tlaquepaque y regresamos el mismo dia', 'no, nomas ida y vuelta', 'ok'],
+  /* De a poquito, con abreviaturas, y pregunta el precio antes de tiempo. */
+  x2: ['Nueva cotización', 'cuanto a vta?', 'sprinter', 'el 24 de oct', 'el 26', '12', 'zapopan', 'si nos movemos allá 1 día', 'y cuanto seria?'],
+  /* Autobús: pregunta cuáles hay, pide fotos dos veces, escoge, corrige fecha. */
+  x3: ['Nueva cotización', 'necesito un camion para 44 personas a mazatlan', 'q camiones tienen', 'fotos del pb', 'me late el pb', 'otra vez las fotos del pb', 'del 6 al 9 de noviembre', 'de guadalajara', 'solo nos llevan y traen', 'perdon es del 7 al 10', 'si todo bien'],
+  /* Cambia de destino a media cotización. */
+  x4: ['Nueva cotización', 'a tequila el 10 de octubre', 'somos 18', 'mejor a chapala, mismo dia', 'de gdl', 'solo ida y vuelta', 'ok gracias'],
+  /* Agencia: habla en pax y pide dos cosas. */
+  x5: ['Nueva cotización', 'buen día, soy de agencia, tengo un grupo de 40 pax a puerto vallarta 12-15 de diciembre, salida cdmx? no, salida gdl. me pasas tarifa y fotos del i6', 'el i6', 'sin movimientos', 'perfecto quedo pendiente'],
+  /* Pregunta qué incluye y si hay baño, luego cotiza. */
+  x6: ['Nueva cotización', 'que incluye el servicio?', 'los autobuses tienen baño?', 'ok, a san juan de los lagos el 15 de octubre, 47 personas, mismo dia, salimos de tonala', 'el century', 'no nos movemos', 'listo'],
+  /* Sprinter lejos (fuera de la lista): el motor no da precio. */
+  x7: ['Nueva cotización', 'sprinter a puerto escondido oaxaca, 14 personas, del 20 al 27 de noviembre, salimos de guadalajara, sin movimientos', 'ok'],
+  /* Solo ida. */
+  x8: ['Nueva cotización', 'necesito que nos lleven a vallarta el 5 de octubre, solo ida, somos 10, de guadalajara', 'si solo ida', 'va'],
+  /* Dice que ya depositó a media plática (texto, no foto). */
+  x9: ['Nueva cotización', 'a chapala el 4 de octubre somos 12 de guadalajara mismo dia sin movimientos', 'ya deposité, ahí les mando el comprobante'],
+  /* Manda un audio a media plática (mensaje vacío por Kommo). */
+  x10: ['Nueva cotización', 'a tequila el 11 de octubre', ''],
+  /* Pregunta disponibilidad antes de dar datos. */
+  x11: ['Nueva cotización', 'tienen disponible el 20 de diciembre?', 'sprinter, 16 personas, a vallarta, regresamos el 22', 'de guadalajara', 'nos movemos 1 dia'],
+  /* Dos viajes en la misma plática. */
+  x12: ['Nueva cotización', 'a mazatlán el 1 de noviembre regresando el 3, 12 personas de guadalajara, sin movimientos', 'ok', 'y también quiero otro a chapala el 15 de noviembre mismo dia, los mismos 12', 'sin movimientos'],
+  /* Cliente que no entiende y se enoja. */
+  x13: ['Nueva cotización', 'a vallarta', 'ya te dije que a vallarta!!', 'no sirves para nada, quiero una persona'],
+  /* Mensaje larguísimo con varias preguntas. */
+  x14: ['Nueva cotización', 'hola, mira, somos una familia de 19, queremos ir a puerto vallarta del 18 al 21 de octubre saliendo de guadalajara, allá queremos movernos un día a sayulita, y quiero saber si el chofer se queda con nosotros, si se puede pagar en dos partes, si hay factura y cuánto sale todo, gracias', 'sí, un día allá', 'ok'],
+  /* Solo botón y silencio raro: contesta con signos. */
+  x15: ['Nueva cotización', '???', 'a chapala', 'el 10 de octubre mismo dia', '20', 'guadalajara', 'no'],
+  /* Pide hablar con persona desde el inicio (por el cerebro). */
+  x16: ['Nueva cotización', 'quiero hablar con un asesor humano por favor'],
+  /* Después del resumen corrige la cantidad de gente. */
+  x17: ['Nueva cotización', 'a chapala el 4 de octubre somos 12 de guadalajara mismo dia sin movimientos', 'perdón, somos 15', 'sí, todo bien'],
+  /* Pregunta precio de autobús sin dar fechas, insiste. */
+  x18: ['Nueva cotización', 'cuanto cuesta un autobus a vallarta', 'aprox nomas', 'somos 45, 3 de diciembre regresando el 5, de guadalajara, sin movimientos', 'el i6s', 'va'],
+  /* La puerta con más frases reales. */
+  x19: ['puerta:buenas', 'puerta:ok gracias buen dia', 'puerta:ahi les mando la ficha', 'puerta:', 'puerta:cuanto sale a vallarta?', 'puerta:ya pague, gracias', 'puerta:👍', 'puerta:Hablar con un agente'],
+  /* Cotiza y luego pide fotos de otra unidad y el video. */
+  x20: ['Nueva cotización', 'a vallarta del 10 al 12 de octubre, 20 personas de guadalajara, sin movimientos', 'y fotos de la suburban?', 'y el video del i6?', 'ok gracias']
 };
 const pedidos = process.argv.slice(2).filter((x) => escenarios[x]);
 let lead = 26818280;

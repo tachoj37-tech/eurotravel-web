@@ -259,6 +259,10 @@ function resumenAntesDelPrecio(res, nombreUnidad) {
   lineas.push('🚐 ' + (res.recorridos
     ? res.recorridos + (res.recorridos === 1 ? ' día' : ' días') + ' con movimientos allá'
     : 'Sin movimientos: los llevamos y los traemos'));
+  /* Solo ida: se dice con todas sus letras (simulación x8, 17-sep-2026:
+     el resumen decía «1 día · sin movimientos» y nadie veía que no hay
+     regreso). */
+  if (res.soloIda) lineas.push('➡️ Solo ida: los llevamos y la unidad se regresa sola');
   /* Lo que incluye va en el resumen de la cotización (dictado del dueño,
      16-sep-2026): la misma lista que usa el precio y «¿qué incluye?»,
      renglón por renglón (`bot.js`, LO_QUE_INCLUYE). */
@@ -400,6 +404,7 @@ function ticketDePrecio(res, precio, cal, cliente, unidad, historial, yaDado, ap
   if (comoSeLlama) {
     lineas.push('🚌 ' + ((delCatalogo && delCatalogo.name) || comoSeLlama) + (pax ? ' · ' + pax + ' pax' : ''));
   }
+  if (res.soloIda) lineas.push('➡️ Solo ida');
   /* ------------------------------------------------------------
      DE QUÉ ZONA SALEN, DICHO CON TODAS SUS LETRAS
      ------------------------------------------------------------
@@ -1868,6 +1873,9 @@ function cambiaElTicket(nuevo, base) {
       nuevo.recorridos !== base.recorridos) return true;
   if (nuevo.unidadNombre && n(nuevo.unidadNombre) !== n(base.unidadNombre)) return true;
   if (nuevo.gente && !base.gente) return true;
+  /* «perdón, somos 15» con 12 en el ticket TAMBIÉN es una corrección
+     (simulación x17, 17-sep-2026): cambia la unidad que cabe y el precio. */
+  if (nuevo.gente && base.gente && Number(nuevo.gente) !== Number(base.gente)) return true;
   return false;
 }
 
@@ -1983,6 +1991,9 @@ function pideAutobuses(textoDelCliente) {
 }
 function conLosAutobusesQuePidio(respuesta, textoDelCliente, estado) {
   if (!pideAutobuses(textoDelCliente)) return respuesta;
+  /* «¿los autobuses tienen baño?» pregunta por el baño, no pide ver la
+     flota (simulación x6, 17-sep-2026): la respuesta se queda. */
+  if (/\b(ba[ñn]os?|aire|clima|wifi|pantallas?|tele|tv|reclinables?)\b/i.test(String(textoDelCliente || ''))) return respuesta;
   if (estado && estado.unidadNombre) return respuesta;
   const texto = String(respuesta || '').toLowerCase();
   const nombraUnAutobus = (conversacion.UNIDADES || []).some(function (u) {
@@ -2974,6 +2985,17 @@ async function loQueDiceElAgente(envio) {
     nuevo.soloIda = true;
     if (nuevo.salida && !nuevo.regreso) nuevo.regreso = nuevo.salida;
   }
+  /* Un número solo, con la fecha ya sabida y sin gente, es la gente
+     (simulación x2, 17-sep-2026: «12» después de «¿salen de Guadalajara?»
+     se perdió y el resumen salió sin personas). */
+  {
+    const soloNumero = /^\s*(\d{1,2})\s*(?:personas?|pax|gentes?|pasajeros)?\s*$/i.exec(String(texto || ''));
+    const n = soloNumero ? Number(soloNumero[1]) : 0;
+    if (n >= 1 && n <= 60 && !nuevo.gente && nuevo.salida) {
+      nuevo.gente = n;
+      console.error('[agente] «' + n + '» con la fecha ya sabida y sin gente: se toma como gente');
+    }
+  }
   /* «Otro viaje» explícito queda marcado en la plática: los mensajes que
      sigan son de ese viaje nuevo, no basura que haya que reemplazar. */
   if (esOtroViaje && viajeDeLaFicha) nuevo.otroViaje = true;
@@ -3009,6 +3031,33 @@ async function loQueDiceElAgente(envio) {
       agente.recuerda(cliente, 'cliente', texto);
       webhook.guardaCharla(cliente, null);
       return true;
+    }
+    /* Sí cambia el viaje (otra gente, otra fecha…): el ticket corregido
+       sale SIEMPRE, sin depender de lo que la IA haya querido decir.
+       Simulación x17 (17-sep-2026): «perdón, somos 15» después del
+       resumen y la IA volvió a preguntar el regreso; el guion contestó con
+       la lista de autobuses. Ahora se vuelve a cotizar con lo corregido. */
+    if (base && dicho.accion === 'seguir') {
+      /* Si solo cambió la gente y sigue cabiendo en la unidad del ticket,
+         la unidad se queda (simulación x17 real: «somos 15» sobre una
+         Sprinter de 12 dejó el estado pidiendo «cuál autobús» y salió la
+         lista de camiones). */
+      const uBase = unidadDelCatalogo(base.unidadNombre || base.unidad);
+      if (uBase && nuevo.gente && Number(nuevo.gente) <= Number(uBase.max)) {
+        nuevo.unidad = uBase.cat; nuevo.unidadNombre = uBase.name;
+        if (uBase.cat === 'autobus') nuevo.unidadId = uBase.id;
+      }
+      const faltaAun = String(conversacion.loQueFalta(nuevo) || '');
+      if (!faltaAun) {
+        console.log('[agente] cambio después del ticket: se vuelve a cotizar con lo corregido');
+        dicho.accion = 'cotizar';
+        dicho.respuesta = null;
+      } else {
+        /* El cambio dejó un hueco (p. ej. cambió de destino sin fecha):
+           se pregunta eso, no se contesta neutro. */
+        console.log('[agente] cambio después del ticket, pero falta «' + faltaAun.slice(0, 40) + '»: se pregunta');
+        dicho.respuesta = preguntaParaElCliente(nuevo);
+      }
     }
   }
   webhook.guardaCharla(cliente, nuevo);
@@ -3107,7 +3156,11 @@ async function loQueDiceElAgente(envio) {
   if (dicho.accion !== 'persona' && puerta.pareceMolesto(texto)) {
     console.error('[agente] el cliente está molesto o pide persona: se pasa a una persona');
     dicho.accion = 'persona';
-    dicho.respuesta = TEXTOS.pasoAPersona;
+    /* Sin texto propio: el camino de «persona» de abajo pone su frase (una
+       de sus variantes) y marca `esPersona`, que es lo que por Kommo apaga
+       el bot. Con texto aquí, el bot contestaba y SEGUÍA (simulación x13,
+       17-sep-2026). */
+    dicho.respuesta = '';
   }
 
   /* ------------------------------------------------------------
@@ -3178,6 +3231,40 @@ async function loQueDiceElAgente(envio) {
      viajero, depósito a una cuenta de empresa— se dice completo, y la
      pregunta le llega al dueño por si quiere contestar él.
      ------------------------------------------------------------ */
+  /* ------------------------------------------------------------
+     LA DISPONIBILIDAD NO SE AFIRMA: SE CONFIRMA (17-sep-2026)
+     ------------------------------------------------------------
+     Simulación x11: «¿tienen disponible el 20 de diciembre?» → «El 20 de
+     diciembre sí tenemos disponible». La IA no tiene el calendario; la
+     disponibilidad la revisa EuroSystem o una persona. Si afirma que una
+     fecha está libre, se cambia por «te la confirmo» y se conserva la
+     pregunta con la que iba a seguir.
+     ------------------------------------------------------------ */
+  /* ¿Tienen baño / aire / pantalla? se contesta, no se lista la flota
+     (simulación x6, 17-sep-2026: la IA respondió con los seis autobuses). */
+  if (dicho.accion === 'seguir' && dicho.respuesta &&
+      /\b(ba[ñn]os?|aire|clima|wifi|pantallas?|tele|tv|reclinables?)\b/i.test(String(texto || '')) &&
+      (String(dicho.respuesta).match(/—[^\n]*asientos/g) || []).length >= 3) {
+    console.error('[agente] preguntó por baño/aire y la IA listó la flota: se contesta la pregunta');
+    const preguntas = String(dicho.respuesta).match(/[^.!?\n]*\?/g);
+    const sigue = preguntas ? preguntas[preguntas.length - 1].trim() : '';
+    dicho.respuesta = 'Sí 🙌 Todos los autobuses (de 47 a 51) traen baño y aire; la Sprinter trae aire, pantalla y asientos reclinables.' +
+      (sigue && !/fotos de alguno/i.test(sigue) ? ' ' + sigue : (nuevo.destino ? '' : ' ¿A dónde van?'));
+  }
+
+  if (dicho.accion === 'seguir' && dicho.respuesta) {
+    const r0 = String(dicho.respuesta);
+    const PREGUNTA_DISPONIBILIDAD = /dispon|hay lugar|tienen lugar|\blibre\b|queda lugar/i.test(String(texto || ''));
+    const AFIRMA_DISPONIBLE =/\bs[ií]\b[^.!?\n]{0,40}\bdispon(?:ible|ibles|ibilidad)\b|\bdispon(?:ible|ibles)\b[^.!?\n]{0,12}\bs[ií]\b|\bs[ií]\b[^.!?\n]{0,25}\b(?:libre|libres)\b|\btenemos\s+(?:la\s+)?(?:fecha|unidad)\s+(?:libre|disponible)/i;
+    const YA_LO_CONFIRMA = /confirm|checo|reviso|te digo|en un momento/i;
+    if ((AFIRMA_DISPONIBLE.test(r0) || PREGUNTA_DISPONIBILIDAD) && !YA_LO_CONFIRMA.test(r0)) {
+      console.error('[agente] afirmó disponibilidad sin calendario: se corrige');
+      const preguntas = r0.match(/[^.!?\n]*\?/g);
+      const pregunta = preguntas ? preguntas[preguntas.length - 1].trim() : '';
+      dicho.respuesta = 'Esa fecha te la confirmo en un momento con el equipo 🙌' + (pregunta ? ' ' + pregunta : ' ¿A dónde van?');
+    }
+  }
+
   {
     const r = String(dicho.respuesta || '');
     const INVENTA = /\bllevamos\s+\d+\s+a[ñn]os|\b\d+\s+a[ñn]os\s+(?:operando|de\s+experiencia|en\s+el\s+mercado|en\s+el\s+giro)|\bdesde\s+(?:19|20)\d{2}\b|\bm[aá]s\s+de\s+\d+\s+(?:unidades|camiones|clientes|viajes|grupos)\b|\bvalida\s+cada\s+anticipo\s+en\s+persona/i;
@@ -3539,8 +3626,11 @@ async function loQueDiceElAgente(envio) {
      ficha, un simple «ok» dejaba todo completo y pedía otro precio del mismo
      viaje (9-sep-2026). Si el cliente cambia algo, `mismoViaje` da false y
      sí se cotiza de nuevo. */
-  const yaTienePrecioEseViaje = !!(viajeDeLaFicha && viajeDeLaFicha.estado &&
-    mismoViaje(nuevo, viajeBaseDeLaFicha(tickets.fichaDe(cliente))));
+  /* Con una corrección (gente, origen, movimientos, unidad) NO es «el
+     mismo viaje con precio»: se vuelve a pedir (simulación x17, 17-sep). */
+  const baseAhora = viajeBaseDeLaFicha(tickets.fichaDe(cliente));
+  const yaTienePrecioEseViaje = !!(viajeDeLaFicha && viajeDeLaFicha.estado && baseAhora &&
+    mismoViaje(nuevo, baseAhora) && !cambiaElTicket(nuevo, baseAhora));
   /* Si la IA leyó un cambio que deja el viaje distinto del que tiene precio,
      ese precio se marca vencido en la ficha: ni se aparta con él ni se
      ofrece (9-sep-2026, escenario k). */
@@ -3637,6 +3727,15 @@ async function loQueDiceElAgente(envio) {
     }
   }
   if (accion === 'cotizar' && !yaEstaTodo) accion = 'seguir';   // le falta algo: que lo pida
+  /* Y al revés: ya está TODO, no hay ticket todavía y la IA se quedó
+     charlando («Ida y vuelta desde Guadalajara, ¿correcto?», simulación
+     x20 del 17-sep-2026): el precio se pide ya. Solo si el cliente no
+     acaba de hacer una pregunta, para no dejarla sin respuesta. */
+  if (accion === 'seguir' && yaEstaTodo && !(viajeDeLaFicha && viajeDeLaFicha.estado) && !puerta.esPregunta(texto)) {
+    console.error('[agente] ya está todo el viaje y la IA no pidió el precio: se cotiza');
+    accion = 'cotizar';
+    dicho.respuesta = null;
+  }
   if (accion === 'seguir' && !yaEstaTodo && dicho.respuesta && PROMETE_PRECIO.test(dicho.respuesta) &&
       !(viajeDeLaFicha && viajeDeLaFicha.estado)) {
     console.error('[agente] prometió el precio con datos que faltan (' + String(conversacion.loQueFalta(nuevo)).slice(0, 40) + '); pregunta el guion');
@@ -5502,7 +5601,16 @@ async function trabajoDeKommo(crudo, modo) {
 
   const colector = { envios: [] };
   let resultado = null;
-  if (mensaje) {
+  if (mensaje && puerta.anunciaPago(aviso.mensaje)) {
+    /* «Ya deposité, ahí les mando el comprobante» a media plática
+       (simulación x9, 17-sep-2026): antes el bot se callaba y se paraba, y
+       la foto que venía después ya no tenía quién le contestara. Ahora
+       contesta «mándamelo» y sigue vivo: la foto llega al cerebro y sale
+       el acuse de comprobante. */
+    console.log('[kommo-trabajo] anuncia un pago a media plática: se espera el comprobante');
+    colector.envios.push({ para: aviso.numero, texto: TEXTOS.mandamelo, pasaAPersona: false, escribio: '[kommo · anuncia pago]' });
+    resultado = { status: 200 };
+  } else if (mensaje) {
     try {
       await colectorKommo.run(colector, async function () {
         resultado = await atiendeElAviso(Buffer.from(JSON.stringify(cuerpo), 'utf8'), null, marca);

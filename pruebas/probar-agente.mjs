@@ -897,7 +897,10 @@ titulo('spec §5 (16-sep): molesto o pidiendo persona → a una persona a la pri
   };
   await dice('a vallarta', C);
   await dice('NO ME ENTIENDES NADA!!! pásame con alguien', C);
-  ok('el cliente recibe el paso a persona, con el texto fijo', textos(C).slice(-1)[0], 'Va, en un momento te atiende alguien del equipo 🙌');
+  /* 17-sep (simulación x13): el candado ya no pone texto propio; deja que
+     el camino de «persona» conteste con su variante y marque esPersona,
+     que es lo que apaga el bot por Kommo. */
+  okQue('el cliente recibe el paso a persona', /te contestan por aquí|te atienden por aquí|te atiende|te contesta/.test(textos(C).slice(-1)[0] || ''));
   okQue('  y no la respuesta de la IA', !textos(C).some((t) => /me repites la fecha/.test(t)));
   limpia();
   const D = '5213366670252';
@@ -906,6 +909,76 @@ titulo('spec §5 (16-sep): molesto o pidiendo persona → a una persona a la pri
   /* Lo que conteste lo deciden la IA y sus guardias; lo que importa es que
      NO sea el paso a persona. */
   okQue('una duda normal NO pasa a persona', textos(D).length > 0 && !textos(D).some((t) => /te atiende alguien del equipo/.test(t)));
+}
+
+/* ============================================================ */
+titulo('simulación del 17-sep (x2, x11, x17, x20): lo que la IA dejó pasar lo tapa el código');
+{
+  /* x11 · La IA afirma disponibilidad: se cambia por «te la confirmo». */
+  limpia();
+  const A = '5213366670261';
+  laIA = function (t) {
+    if (/disponible/i.test(t)) return { respuesta: 'El 20 de diciembre sí tenemos disponible. ¿A dónde van?', datos: {}, accion: 'seguir' };
+    return { respuesta: 'Va. ¿A dónde van?', datos: {}, accion: 'seguir' };
+  };
+  await dice('tienen disponible el 20 de diciembre?', A);
+  const rA = textos(A).slice(-1)[0] || '';
+  okQue('x11 · no afirma disponibilidad: dice que la confirma y conserva la pregunta', /te la confirmo en un momento con el equipo/.test(rA) && /¿A dónde van\?/.test(rA) && !/sí tenemos disponible/.test(rA));
+  laIA = function () { return { respuesta: 'El 20 de diciembre está bien. ¿A dónde van?', datos: {}, accion: 'seguir' }; };
+  await dice('hay lugar el 20 de diciembre?', A);
+  okQue('x11 · «está bien» a una pregunta de disponibilidad también se cambia', /te la confirmo/.test(textos(A).slice(-1)[0] || ''));
+
+  /* x2 · «12» con la fecha sabida y sin gente = gente. */
+  limpia();
+  const B = '5213366670262';
+  laIA = function (t) {
+    if (/vallarta/i.test(t)) return { respuesta: 'Vallarta, va. ¿Qué día salen?', datos: { destino: 'Puerto Vallarta' }, accion: 'seguir' };
+    if (/24/.test(t)) return { respuesta: 'Del 24 al 26, va. ¿Salen de Guadalajara?', datos: { salida: '2026-10-24', regreso: '2026-10-26' }, accion: 'seguir' };
+    /* La IA ignora el «12». */
+    return { respuesta: '¿Salen de la zona metropolitana de Guadalajara?', datos: {}, accion: 'seguir' };
+  };
+  await dice('a vallarta', B);
+  await dice('del 24 al 26 de octubre', B);
+  await dice('12', B);
+  ok('x2 · el «12» queda como gente en la plática', (webhook.charlaDe(B) || {}).gente, 12);
+
+  /* x20 · Todo conocido y la IA se queda charlando: se cotiza. */
+  limpia();
+  const C = '5213366670263';
+  laIA = function () { return { respuesta: 'Vallarta del 10 al 12, 20 personas: va perfecto. Ida y vuelta desde Guadalajara, ¿correcto?',
+    datos: { destino: 'Puerto Vallarta', salida: '2026-10-10', regreso: '2026-10-12', gente: 20, origen: 'Guadalajara', recorridos: 0 }, accion: 'seguir' }; };
+  await dice('a vallarta del 10 al 12 de octubre, 20 personas de guadalajara, sin movimientos', C);
+  okQue('x20 · con los seis datos sale el resumen aunque la IA no pidiera el precio', textos(C).some((t) => /ya tengo todo tu viaje/i.test(t)));
+  okQue('  y el ticket al dueño', textos(DUENO).some((t) => /Precio por confirmar/.test(t) && /Puerto Vallarta/.test(t)));
+
+  /* x17 · «perdón, somos 15» después del ticket: ticket corregido. Este
+     camino es el de producción y el de Kommo: hasta la cotización. */
+  limpia();
+  process.env.BOT_HASTA_COTIZACION = '1';
+  const D = '5213366670264';
+  laIA = function (t) {
+    /* Como Haiku de verdad (corrida x17 real): manda la gente nueva Y una
+       unidad equivocada («autobus» para 15). La Sprinter del ticket se
+       queda, porque 15 le caben. */
+    if (/somos 15/i.test(t)) return { respuesta: 'Perfecto, 15. ¿Y qué día regresan?', datos: { gente: 15, unidad: 'autobus' }, accion: 'seguir' };
+    return { respuesta: null, datos: { destino: 'Chapala', salida: '2026-10-04', regreso: '2026-10-04', gente: 12, origen: 'Guadalajara', recorridos: 0 }, accion: 'cotizar' };
+  };
+  await dice('a chapala el 4 de octubre somos 12 de guadalajara mismo dia sin movimientos', D);
+  const ticketsAntes = textos(DUENO).filter((t) => /Precio por confirmar/.test(t)).length;
+  await dice('perdón, somos 15', D);
+  const ticketsDespues = textos(DUENO).filter((t) => /Precio por confirmar/.test(t));
+  ok('x17 · sale un segundo ticket, corregido', ticketsDespues.length, ticketsAntes + 1);
+  okQue('  con 15 pax', /15 pax/.test(ticketsDespues[ticketsDespues.length - 1] || ''));
+  okQue('  y al cliente le llega el resumen con 15 personas, no la lista de autobuses', /15 personas/.test(textos(D).slice(-1)[0] || '') && !/Marcopolo/.test(textos(D).slice(-1)[0] || ''));
+  process.env.BOT_HASTA_COTIZACION = '0';
+
+  /* x6 · «¿tienen baño?» y la IA lista la flota: se contesta la pregunta. */
+  limpia();
+  const E = '5213366670265';
+  laIA = function () { return { respuesta: 'Estos son los autobuses que tenemos:\nMarcopolo Paradiso G8 — Premium — 51 asientos\nIrizar i6S — Premium — 51 asientos\nIrizar i6 — Premium — 47 y 51 asientos\nNeobus — Gran Turismo — 50 asientos\nIrizar Century — Clásico — 47 y 49 asientos\nIrizar PB — Turismo — 47 asientos\n\n¿Te mando fotos de alguno?', datos: {}, accion: 'seguir' }; };
+  await dice('los autobuses tienen baño?', E);
+  const rE = textos(E).slice(-1)[0] || '';
+  okQue('x6 · contesta que sí traen baño y aire, sin listar la flota', /traen baño y aire/.test(rE) && !/Marcopolo/.test(rE));
 }
 
 console.log('\n' + buenas + ' buenas, ' + malas + ' malas');
