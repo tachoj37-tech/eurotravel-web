@@ -32,6 +32,8 @@ const TEXTOS = {
   fechaNuevaPregunta: '¿Para qué fecha sería?',
   fechaNuevaAnotado: 'Anotado 🙌 Un agente se comunica contigo por aquí para revisar tu cotización con la fecha nueva y seguir con el pago.',
   agente: 'Va 🙌 Ahorita te contesta una persona por aquí mismo.',
+  /* Botón «Abonar contrato» del saludo en lista (17-sep-2026): 100 % persona. */
+  abonar: 'Va 🙌 Manda tu comprobante por aquí; el equipo lo revisa y te confirma el abono.',
 
   /* Salida fácil a una persona, en la cotización nueva (spec §5). */
   ofrecerPersona: 'Perdón, no te estoy entendiendo bien 🙏 ¿Quieres que te atienda una persona? Contéstame *sí* y en un momento te atiende alguien del equipo; o sigue por aquí y lo intento de nuevo.',

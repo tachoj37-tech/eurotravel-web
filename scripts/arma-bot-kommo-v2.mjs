@@ -36,6 +36,8 @@ import { randomUUID } from 'node:crypto';
 import TEXTOS from '../api/_textos-fijos.js';
 
 const SITIO = 'https://eurotravel-web.vercel.app';
+/* LISTA=1 → «EuroBot v3» con cuatro opciones; sin ella, el v2 de siempre. */
+const LISTA = process.env.LISTA === '1';
 const CANAL_PRUEBAS = Number(process.env.CANAL_PRUEBAS || 60452);
 const WIDGET_ID = '1282319';
 const WIDGET_CODE = 'eurobot';
@@ -58,7 +60,12 @@ widget(1, 0, 1, 'Puerta (decide antes del saludo)', SITIO + '/api/whatsapp/kommo
 /* Columna 1: las cuatro salidas de la puerta. */
 msg(10, 1, 0, TEXTOS.saludo, {
   /* «Mi cotización anterior» pasa del tope de 20 letras de WhatsApp. */
-  botones: [['Nueva cotización', 50], ['Cotización anterior', 60], ['Hablar con un agente', 70]],
+  /* v3 (17-sep-2026): cuatro opciones. WhatsApp permite 3 botones rápidos;
+     con 4, Kommo tendría que mandarlas como LISTA («Ver opciones»). Se
+     prueba en el embudo de pruebas; el v2 de 3 botones sigue guardado. */
+  botones: LISTA
+    ? [['Nueva cotización', 50], ['Cotización anterior', 60], ['Abonar contrato', 80], ['Hablar con un agente', 70]]
+    : [['Nueva cotización', 50], ['Cotización anterior', 60], ['Hablar con un agente', 70]],
   sino: 50 /* escribió otra cosa: se toma como cotización nueva */
 });
 msg(20, 1, 2, '{{json.texto}}', { sig: 21 }); parar(21, 2, 2);
@@ -81,6 +88,8 @@ msg(65, 5, 6, TEXTOS.fechaNuevaAnotado, { sig: 66 }); parar(66, 6, 6);
 
 /* Hablar con un agente. */
 msg(70, 2, 7, TEXTOS.agente, { sig: 71 }); parar(71, 3, 7);
+/* Abonar contrato (v3): 100 % persona. */
+if (LISTA) { msg(80, 2, 8, TEXTOS.abonar, { sig: 81 }); parar(81, 3, 8); }
 
 /* ---- comprobaciones ---- */
 const porId = new Map(B.map(b => [b.id, b]));
@@ -89,7 +98,7 @@ for (const b of B) {
   for (const ref of refs) if (ref != null && !porId.has(ref)) throw new Error(`bloque ${b.id} apunta a ${ref} que no existe`);
 }
 for (const b of B) if (b.tipo === 'msg' && b.botones) {
-  if (b.botones.length > 3) throw new Error(`bloque ${b.id}: más de 3 botones`);
+  if (b.botones.length > (LISTA ? 10 : 3)) throw new Error(`bloque ${b.id}: demasiados botones`);
   for (const [t] of b.botones) if (t.length > 20) throw new Error(`bloque ${b.id}: botón «${t}» pasa de 20`);
 }
 
@@ -161,7 +170,7 @@ for (const b of B) {
 }
 text.conversation = false;
 
-const salida = { type_functionality: 0, model: { text: JSON.stringify(text), name: 'EuroBot v2', positions: JSON.stringify(positions), type: 2 } };
+const salida = { type_functionality: 0, model: { text: JSON.stringify(text), name: LISTA ? 'EuroBot v3' : 'EuroBot v2', positions: JSON.stringify(positions), type: 2 } };
 const destino = process.argv[2] || 'pendiente/kommo-bot/EuroBot-v2.json';
 fs.mkdirSync(path.dirname(destino), { recursive: true });
 fs.writeFileSync(destino, JSON.stringify(salida));

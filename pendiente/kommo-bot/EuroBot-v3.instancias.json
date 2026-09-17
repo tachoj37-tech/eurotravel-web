@@ -1,0 +1,14 @@
+[
+  {
+    "bloque": 1,
+    "paso": 0,
+    "url": "https://eurotravel-web.vercel.app/api/whatsapp/kommo-puerta",
+    "widget_instance_id": "8401b477-32c0-42ad-a749-55f9f91a0860"
+  },
+  {
+    "bloque": 52,
+    "paso": 10,
+    "url": "https://eurotravel-web.vercel.app/api/whatsapp/kommo",
+    "widget_instance_id": "7009dbf3-5c00-405e-850c-1938dc170c75"
+  }
+]
