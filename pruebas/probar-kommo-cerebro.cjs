@@ -123,7 +123,10 @@ function peticion(cuerpo, cabeceras, llave) {
     new Function('define', fuente)(define);
     const w = new Widget();
     const salidas = w.callbacks.salesbotDesignerSettings().exits.map(function (e) { return e.code; });
-    ok('declara las salidas success, fail y silencio', salidas.join(',') === 'success,fail,silencio');
+    /* 1.0.8 (spec §2): el mismo widget, apuntado a …/kommo-puerta, decide
+       antes del saludo por cuatro salidas más. */
+    ok('declara las salidas success, fail, silencio y las cuatro de la puerta',
+      salidas.join(',') === 'success,fail,silencio,saludo,comprobante,espera,denada');
     const flujo = JSON.parse(w.callbacks.onSalesbotDesignerSave('eurobot', { url: 'https://x/api' }));
     ok('tres pasos: pedir al cerebro, fotos, salidas', flujo.length === 3 && flujo[0].question[0].handler === 'widget_request');
     const fotosPaso = flujo[1].question.filter(function (h) { return h.handler === 'conditions'; });
@@ -135,9 +138,15 @@ function peticion(cuerpo, cabeceras, llave) {
           r[0].params.text === '{{json.pie}}' && r[3].handler === 'goto' && r[3].params.step === 2;
       }));
     const salidasPaso = flujo[2].question;
+    ok('primero las cuatro salidas de la puerta, por {{json.modo}}, en orden saludo/comprobante/espera/denada',
+      ['saludo', 'comprobante', 'espera', 'denada'].every(function (m, i) {
+        const c = salidasPaso[i];
+        return c.handler === 'conditions' && c.params.conditions[0].term1 === '{{json.modo}}' &&
+          c.params.conditions[0].term2 === m && c.params.result[0].params.value === m;
+      }));
     ok('«callado = si» sale por silencio antes de mirar el status',
-      salidasPaso[0].params.conditions[0].term1 === '{{json.callado}}' && salidasPaso[0].params.result[0].params.value === 'silencio' &&
-      salidasPaso[1].params.conditions[0].term1 === '{{json.status}}' && salidasPaso[2].params.value === 'fail');
+      salidasPaso[4].params.conditions[0].term1 === '{{json.callado}}' && salidasPaso[4].params.result[0].params.value === 'silencio' &&
+      salidasPaso[5].params.conditions[0].term1 === '{{json.status}}' && salidasPaso[6].params.value === 'fail');
   }
 
   titulo('el camino entero, con el guion');

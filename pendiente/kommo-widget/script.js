@@ -100,7 +100,14 @@ define(['jquery'], function ($) {
           exits: [
             { code: 'success', title: 'El cerebro sigue platicando' },
             { code: 'fail', title: 'El cerebro terminó (ticket o persona)' },
-            { code: 'silencio', title: 'Terminó sin decir nada (la persona sigue)' }
+            { code: 'silencio', title: 'Terminó sin decir nada (la persona sigue)' },
+            /* Las salidas de la PUERTA (spec §2, 16-sep-2026): el mismo
+               widget, apuntado a …/kommo-puerta, decide antes del saludo.
+               En el bloque del cerebro quedan sin enlazar y nunca se toman. */
+            { code: 'saludo', title: 'Puerta: saludo con botones' },
+            { code: 'comprobante', title: 'Puerta: llegó un comprobante (foto/PDF)' },
+            { code: 'espera', title: 'Puerta: va a mandar el comprobante' },
+            { code: 'denada', title: 'Puerta: solo dio las gracias' }
           ]
         };
       },
@@ -150,6 +157,41 @@ define(['jquery'], function ($) {
           { question: pasoDeFotos },
           {
             question: [
+              /* La PUERTA (…/kommo-puerta) contesta `modo` y por ahí sale;
+                 el cerebro no manda `modo`, así que estas cuatro nunca
+                 casan en su bloque (spec §2, 16-sep-2026). */
+              {
+                handler: 'conditions',
+                params: {
+                  logic: 'and',
+                  conditions: [{ term1: '{{json.modo}}', term2: 'saludo', operation: '=' }],
+                  result: [{ handler: 'exits', params: { value: 'saludo' } }]
+                }
+              },
+              {
+                handler: 'conditions',
+                params: {
+                  logic: 'and',
+                  conditions: [{ term1: '{{json.modo}}', term2: 'comprobante', operation: '=' }],
+                  result: [{ handler: 'exits', params: { value: 'comprobante' } }]
+                }
+              },
+              {
+                handler: 'conditions',
+                params: {
+                  logic: 'and',
+                  conditions: [{ term1: '{{json.modo}}', term2: 'espera', operation: '=' }],
+                  result: [{ handler: 'exits', params: { value: 'espera' } }]
+                }
+              },
+              {
+                handler: 'conditions',
+                params: {
+                  logic: 'and',
+                  conditions: [{ term1: '{{json.modo}}', term2: 'denada', operation: '=' }],
+                  result: [{ handler: 'exits', params: { value: 'denada' } }]
+                }
+              },
               /* Terminó sin nada que decir (p. ej. «sí, todo bien» después
                  del ticket): salida «silencio», sin mensaje vacío. */
               {

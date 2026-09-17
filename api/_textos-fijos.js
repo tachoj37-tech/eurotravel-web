@@ -23,7 +23,9 @@ const TEXTOS = {
 
   /* Los que viven en bloques del Salesbot de Kommo (referencia). */
   saludo: '¡Qué tal! Estás con *Eurotravel* 🚐\nRenta de autobuses y Sprinter para tu grupo.\n¿Qué necesitas?',
-  botones: ['Nueva cotización', 'Mi cotización anterior', 'Hablar con un agente'],
+  /* «Mi cotización anterior» pasa del tope de 20 letras por botón de
+     WhatsApp; queda «Cotización anterior». */
+  botones: ['Nueva cotización', 'Cotización anterior', 'Hablar con un agente'],
   cotizacionAnterior: 'Va 🙌 ¿La quieres con la misma fecha o con una fecha nueva?',
   botonesFecha: ['Misma fecha', 'Fecha nueva'],
   mismaFecha: 'Perfecto. Un agente se comunica contigo por aquí para revisar tu cotización anterior y seguir con el pago 🙌',
