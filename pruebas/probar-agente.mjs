@@ -28,6 +28,9 @@ process.env.DUENO_WHATSAPP = '5213311112222';
    apagado se comprueba aparte, en probar-nada-al-dueno.mjs. */
 process.env.AVISOS_AL_DUENO = '1';
 process.env.HOY_DE_PRUEBA = '2026-09-05';
+/* Las fotos al elegir unidad quedaron APAGADAS en producción (17-sep-2026);
+   aquí se encienden solo para que ese código siga probado. */
+process.env.FOTOS_AL_ELEGIR = '1';
 process.env.DISPONIBILIDAD_API_KEY = 'llave-de-lectura-de-mentiras';
 process.env.ANTHROPIC_API_KEY = 'clave-de-mentiras';
 process.env.SITIO_URL = 'https://eurotravel-web.vercel.app';

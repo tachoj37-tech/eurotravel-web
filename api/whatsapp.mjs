@@ -4177,6 +4177,11 @@ async function loQueDiceElAgente(envio) {
    mismo que usa la acción «fotos». Si ya las vio, no pasa nada.
    ------------------------------------------------------------ */
 async function fotosDeLaUnidadRecienElegida(envio, cliente, antes, nuevo) {
+  /* APAGADO por dictado del dueño (17-sep-2026, su prueba con la Sprinter a
+     Vallarta): «las fotos solo se dan si el cliente pide fotos o al final
+     de la cotización». Esto mandaba las fotos al elegir la unidad (dictado
+     del 16-sep) y ya no. Queda detrás de FOTOS_AL_ELEGIR=1 por si vuelve. */
+  if (process.env.FOTOS_AL_ELEGIR !== '1') return false;
   try {
     const sitio = String(process.env.SITIO_URL || '').replace(/\/+$/, '');
     if (!sitio || !nuevo || !nuevo.unidadNombre) return false;
