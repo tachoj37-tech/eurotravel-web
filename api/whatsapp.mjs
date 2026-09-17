@@ -388,8 +388,10 @@ function ticketDePrecio(res, precio, cal, cliente, unidad, historial, yaDado, ap
   const pax = res.gente || res.pasajeros;
   if (res.destino) lineas.push('📍 ' + (res.origen ? res.origen + ' → ' : '') + res.destino);
   if (res.salida) {
+    /* Mismo día: «18 de octubre», no «18 de octubre al 18 de octubre»
+       (visto en la nota del lead, 17-sep-2026). */
     lineas.push('📅 ' + tickets.comoSeDice(res.salida) +
-      (res.regreso ? ' al ' + tickets.comoSeDice(res.regreso) : ''));
+      (res.regreso && res.regreso !== res.salida ? ' al ' + tickets.comoSeDice(res.regreso) : ''));
   }
   /* El NOMBRE del catálogo, no la categoría: el ticket decía «🚌 sprinter»
      en minúscula mientras el de autobús decía «Irizar i6S» (9-sep-2026). */

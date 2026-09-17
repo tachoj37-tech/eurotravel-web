@@ -63,6 +63,12 @@ global.fetch = async function (url, init) {
     continuaciones.push(JSON.parse(init.body));
     return { ok: true, status: 200, text: async () => '', json: async () => ({}) };
   }
+  /* Las notas en el lead (precio sugerido, comprobante) se ven aquí, no en Kommo. */
+  if (/\/leads\/\d+\/notes$/.test(u)) {
+    const nota = JSON.parse(init.body)[0];
+    console.log('NOTA EN EL LEAD: ' + String(nota.params.text).replace(/\n/g, '\n                 '));
+    return { ok: true, status: 200, text: async () => '', json: async () => ({ _embedded: { notes: [{ id: 1 }] } }) };
+  }
   return fetchReal(url, init);
 };
 
@@ -87,15 +93,20 @@ function respuesta() {
 let n = 0;
 async function manda(texto, lead) {
   n++;
+  /* «puerta:…» entra por el tramo de la puerta (spec §2), que decide antes
+     del saludo sin IA; «puerta:» a secas es una foto/PDF/audio (Kommo
+     manda el mensaje vacío). Lo demás va al cerebro, como siempre. */
+  const porLaPuerta = /^puerta:/.test(texto);
+  const mensaje = porLaPuerta ? texto.replace(/^puerta:\s*/, '') : texto;
   /* Lo que manda el paso de código: sin token; el número sale del contacto. */
   const cuerpo = JSON.stringify({
-    data: { from: 'kommo', message: texto, lead_id: String(lead), contact_name: 'Cliente de prueba',
+    data: { from: 'kommo', message: mensaje, lead_id: String(lead), contact_name: 'Cliente de prueba',
       contact_phone: '+52 1 33 4400 ' + String(lead).slice(-4), talk_id: 't' + lead },
-    return_url: 'https://direccioneurotravelcommx.kommo.com/api/v4/salesbot/84562/continue/abc' + n
+    return_url: 'https://direccioneurotravelcommx.kommo.com/api/v4/salesbot/84646/continue/abc' + n
   });
   const res = respuesta();
   await atiende({ method: 'POST', headers: { 'content-type': 'application/json', 'x-interno': process.env.WHATSAPP_RUTA_SECRETA },
-    url: '/api/whatsapp', query: { llave: 'kommo-trabajo' }, rawBody: cuerpo }, res);
+    url: '/api/whatsapp', query: { llave: porLaPuerta ? 'kommo-trabajo-puerta' : 'kommo-trabajo' }, rawBody: cuerpo }, res);
   return res;
 }
 function pinta(h) {
@@ -122,6 +133,14 @@ async function corre(nombre, lead, guion) {
       fallas++; continue;
     }
     for (const c of nuevas) {
+      /* La puerta contesta `modo`; Kommo sigue por esa salida del widget. */
+      if (c.data.modo) {
+        console.log('PUERTA:  salida «' + c.data.modo + '»' + (c.data.modo === 'saludo' ? ' → Kommo manda el saludo con los tres botones' : ''));
+        if (c.data.texto) console.log('BOT:     ' + String(c.data.texto).replace(/\n/g, '\n         '));
+        if (!['saludo', 'comprobante', 'espera', 'denada'].includes(c.data.modo)) { console.log('✗ FALLA: modo desconocido'); fallas++; }
+        if (c.data.modo !== 'saludo' && !c.data.texto) { console.log('✗ FALLA: la puerta salió sin texto'); fallas++; }
+        continue;
+      }
       /* Lo que Kommo pinta con {{json.texto}} en su bloque «Mensaje». */
       if (c.data.texto) console.log('BOT:     ' + String(c.data.texto).replace(/\n/g, '\n         '));
       if (c.data.fotos) console.log('BOT:     [📸 el widget adjunta 3 fotos de «' + c.data.fotos + '» · pie: ' + c.data.pie + ']');
@@ -150,7 +169,12 @@ const escenarios = {
      después del ticket, «sí, todo bien» → callado, i6 «47 y 51». */
   u: ['vamos a mazatlán, somos 45', 'del 10 al 12 de noviembre', 'el pb', 'fotos del pb', 'sí, de guadalajara', 'solo nos llevan y traen', 'perdón, es del 14 al 17 de noviembre', 'sí, todo bien'],
   i: ['hola', 'qué camiones tienen?', 'el i6 cuántos lleva?', 'ese entonces, somos 50', 'fotos', 'a vallarta el 3 de octubre, regresamos el 5', 'sí, de gdl', 'sin movimientos'],
-  s: ['quiero cotizar', 'a chapala el domingo 4 de octubre, mismo día', 'somos 12', 'fotos de la sprinter', 'salimos de zapopan', 'solo ida y vuelta', 'ok gracias']
+  s: ['quiero cotizar', 'a chapala el domingo 4 de octubre, mismo día', 'somos 12', 'fotos de la sprinter', 'salimos de zapopan', 'solo ida y vuelta', 'ok gracias'],
+  /* 17-sep: la puerta (sin IA, sin costo): saludo, foto, «te mando el
+     comprobante», gracias, pregunta con gracias. */
+  q: ['puerta:hola', 'puerta:', 'puerta:te mando el comprobante del contrato 123', 'puerta:', 'puerta:muchas gracias 🙏', 'puerta:gracias, ¿y mi contrato?', 'puerta:buenas tardes, quiero cotizar un viaje'],
+  /* Molesto a media cotización → a una persona, aunque la IA no lo escoja. */
+  m: ['Nueva cotización', 'vamos a vallarta el 20 de octubre', 'NO ME ENTIENDES NADA!!! pásame con alguien']
 };
 const pedidos = process.argv.slice(2).filter((x) => escenarios[x]);
 let lead = 26818280;
