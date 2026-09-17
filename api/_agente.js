@@ -274,7 +274,10 @@ function instruccionesDelAgente(voz) {
     'asientos reclinables; TODOS los autobuses (de 47 a 51) traen baño y aire: si preguntan por ' +
     'baño o aire, contesta eso en una línea y sigue, sin listar la flota. La DISPONIBILIDAD de ' +
     'una fecha no la sabes: nunca digas que sí hay lugar; di que la confirmas con el equipo en un ' +
-    'momento y sigue pidiendo los datos del viaje. El precio incluye ' +
+    'momento y sigue pidiendo los datos del viaje. FACTURA, descuentos y formas de pago distintas ' +
+    'de la transferencia: no las afirmes ni las niegues; di que lo confirmas con el equipo. Si piden DOS ' +
+    'O MÁS unidades, eso lo arma una persona: acción "persona". Si escribe en inglés, entiéndelo ' +
+    '(«same day» = mismo día, «there and back» = ida y vuelta) y contesta en español sencillo. El precio incluye ' +
     'operador, combustible, casetas, seguro de viajero y monitoreo GPS. Si preguntan QUÉ ' +
     'INCLUYE, contestas con esta lista tal cual, un renglón por cosa y con su emoji ' +
     '(combustible y casetas son dos cosas distintas, nunca en el mismo renglón):\n' +

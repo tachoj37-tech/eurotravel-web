@@ -128,4 +128,26 @@ function pareceMolesto(texto) {
   return letras.length >= 8 && letras === letras.toUpperCase() && /[!¡?¿]{2,}/.test(crudo);
 }
 
-module.exports = { decide, soloAgradecimiento, anunciaPago, esPregunta, limpia, pareceMolesto };
+/* ------------------------------------------------------------
+   TRES COSAS QUE NO SON DEL BOT (simulación del 17-sep, tanda y)
+   ------------------------------------------------------------
+   · Dos o más unidades («dos sprinters para 34»): el motor cotiza UNA;
+     lo arma una persona.
+   · «Quiero retomar mi cotización de la semana pasada» escrito a mano:
+     es «Cotización anterior», sin IA → una persona.
+   · «Saben qué, ya no, gracias»: se despide; el bot se apaga.
+   ------------------------------------------------------------ */
+const VARIAS_UNIDADES = /\b(dos|tres|cuatro|2|3|4)\s+(sprinters?|camionetas|vans?|autobuses|camiones|unidades|suburbans?)\b|\b(otra|una segunda)\s+(sprinter|camioneta|unidad)\s+(m[aá]s|aparte|adem[aá]s)/;
+const COTIZACION_ANTERIOR = /\b(?:mi cotizaci[oó]n(?: anterior| pasada| de antes)?|cotizaci[oó]n (?:anterior|pasada|de la semana|del mes)|retomar|retomemos|ya me (?:hab[ií]an )?cotiz|me cotizaron|la cotizaci[oó]n que me (?:mandaron|pasaron|dieron))/;
+/* «ya no» y «no gracias» solo si cierran el mensaje: «ya no el 14, el 15»
+   y «no gracias, pero quiero el precio» no son cancelaciones. */
+const CANCELA = /\bya no(?: quiero| queremos| gracias| va| me interesa| nos interesa| lo (?:quiero|queremos|necesito|necesitamos))?\s*$|\bcancel\w*|\bolv[ií]da(?:lo|nlo)\b|\bmejor no\s*$|\bno gracias\s*$|\bd[eé]jalo as[ií]\b|\bno (?:me|nos) interesa\b/;
+
+function pideVariasUnidades(texto) { return VARIAS_UNIDADES.test(limpia(texto)); }
+function pideCotizacionAnterior(texto) { return COTIZACION_ANTERIOR.test(limpia(texto)); }
+function cancela(texto) {
+  const t = limpia(texto);
+  return !!t && t.split(' ').length <= 10 && CANCELA.test(t) && !/[?¿]/.test(String(texto || ''));
+}
+
+module.exports = { decide, soloAgradecimiento, anunciaPago, esPregunta, limpia, pareceMolesto, pideVariasUnidades, pideCotizacionAnterior, cancela };

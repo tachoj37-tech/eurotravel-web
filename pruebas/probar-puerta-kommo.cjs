@@ -103,6 +103,20 @@ titulo('4b · molesto, grosero o pidiendo persona (spec §5)');
   'es para una boda', 'mándame fotos', 'no sé la fecha todavía'
 ].forEach(function (f) { ok('«' + f + '» NO pasa a persona', !puerta.pareceMolesto(f)); });
 
+titulo('4c · varias unidades, cotización anterior a mano y cancelación (tanda y, 17-sep)');
+['necesito dos sprinters para 34 personas', 'serían 2 autobuses', 'tres camionetas para el 20', 'y otra sprinter aparte para los niños']
+  .forEach(function (f) { ok('«' + f + '» pide varias unidades', puerta.pideVariasUnidades(f)); });
+['una sprinter para 12', 'somos 2 personas', 'a las 2 de la tarde', 'dos días allá', 'el 3 de octubre']
+  .forEach(function (f) { ok('«' + f + '» NO pide varias unidades', !puerta.pideVariasUnidades(f)); });
+['quiero retomar mi cotización de la semana pasada', 'mi cotización anterior', 'ya me habían cotizado a vallarta', 'me cotizaron hace un mes y quiero apartar']
+  .forEach(function (f) { ok('«' + f + '» quiere retomar una cotización', puerta.pideCotizacionAnterior(f)); });
+['quiero una cotización', 'cotízame a vallarta', 'nueva cotización', 'cuánto sale']
+  .forEach(function (f) { ok('«' + f + '» NO es retomar', !puerta.pideCotizacionAnterior(f)); });
+['saben qué, ya no, gracias', 'ya no', 'cancelamos', 'mejor no', 'olvídalo', 'no gracias', 'ya no queremos']
+  .forEach(function (f) { ok('«' + f + '» cancela', puerta.cancela(f)); });
+['ya no sé si el 4 o el 5', 'no, somos 30', 'ya no el 14, el 15', 'no gracias, sin baño está bien pero quiero el precio', '¿ya no hay lugar?', 'no']
+  .forEach(function (f) { ok('«' + f + '» NO cancela', !puerta.cancela(f)); });
+
 titulo('5 · la decisión');
 {
   const d1 = puerta.decide({ mensaje: '' });

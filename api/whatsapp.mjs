@@ -3162,6 +3162,13 @@ async function loQueDiceElAgente(envio) {
        17-sep-2026). */
     dicho.respuesta = '';
   }
+  /* Dos o más unidades, o «retomar mi cotización» escrito a mano: lo hace
+     una persona (simulación y4 / y8, 17-sep-2026). */
+  if (dicho.accion !== 'persona' && (puerta.pideVariasUnidades(texto) || puerta.pideCotizacionAnterior(texto))) {
+    console.error('[agente] ' + (puerta.pideVariasUnidades(texto) ? 'pide varias unidades' : 'quiere retomar una cotización anterior') + ': lo atiende una persona');
+    dicho.accion = 'persona';
+    dicho.respuesta = '';
+  }
 
   /* ------------------------------------------------------------
      UN DESTINO DEL EXTRANJERO NO SE COTIZA
@@ -3262,6 +3269,16 @@ async function loQueDiceElAgente(envio) {
       const preguntas = r0.match(/[^.!?\n]*\?/g);
       const pregunta = preguntas ? preguntas[preguntas.length - 1].trim() : '';
       dicho.respuesta = 'Esa fecha te la confirmo en un momento con el equipo 🙌' + (pregunta ? ' ' + pregunta : ' ¿A dónde van?');
+    }
+    /* Factura y descuentos los decide una persona: un «sí» de la IA se
+       cambia por «lo confirmo con el equipo» (simulación y3, 17-sep). */
+    const PREGUNTA_FACTURA = /\b(factur|descuento|rebaja|promoci)/i.test(String(texto || ''));
+    const AFIRMA = /^\s*(s[ií]|claro|por supuesto|sí,? con gusto)\b/i;
+    if (PREGUNTA_FACTURA && AFIRMA.test(String(dicho.respuesta || '')) && !/confirm/i.test(String(dicho.respuesta || '').slice(0, 40))) {
+      console.error('[agente] afirmó factura/descuento: se corrige, lo decide el equipo');
+      const preguntas = String(dicho.respuesta).match(/[^.!?\n]*\?/g);
+      const pregunta = preguntas ? preguntas[preguntas.length - 1].trim() : '';
+      dicho.respuesta = 'Eso te lo confirmo en un momento con el equipo 🙌' + (pregunta ? ' ' + pregunta : '');
     }
   }
 
@@ -5672,8 +5689,13 @@ async function trabajoDeKommo(crudo, modo) {
      que no cambia el viaje), cuando piden persona, o si el cerebro
      tronó. Visto el 16-sep-2026: «14 al 17 de octubre» después del ticket
      y el bot ya estaba parado. */
+  /* «Saben qué, ya no, gracias»: la IA se despide y el bot se apaga
+     (simulación y5, 17-sep-2026: seguía preguntando el regreso). */
+  const seDespidio = !!mensaje && puerta.cancela(aviso.mensaje);
+  if (seDespidio) console.log('[kommo-trabajo] el cliente canceló: el bot se apaga');
   const termino = !!(ficha && ficha.enManosDe === 'dueno') ||
     alCliente.some(function (e) { return e.esPersona; }) ||
+    seDespidio ||
     (!!mensaje && (!resultado || resultado.status !== 200));
   const status = termino ? 'fin' : 'sigue';
   /* Lo que dice el cerebro va en `data.texto` (el bloque «Mensaje» del

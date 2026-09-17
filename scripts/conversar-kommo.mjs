@@ -216,7 +216,29 @@ const escenarios = {
   /* La puerta con más frases reales. */
   x19: ['puerta:buenas', 'puerta:ok gracias buen dia', 'puerta:ahi les mando la ficha', 'puerta:', 'puerta:cuanto sale a vallarta?', 'puerta:ya pague, gracias', 'puerta:👍', 'puerta:Hablar con un agente'],
   /* Cotiza y luego pide fotos de otra unidad y el video. */
-  x20: ['Nueva cotización', 'a vallarta del 10 al 12 de octubre, 20 personas de guadalajara, sin movimientos', 'y fotos de la suburban?', 'y el video del i6?', 'ok gracias']
+  x20: ['Nueva cotización', 'a vallarta del 10 al 12 de octubre, 20 personas de guadalajara, sin movimientos', 'y fotos de la suburban?', 'y el video del i6?', 'ok gracias'],
+
+  /* ---- segunda tanda, 17-sep: otros estilos ---- */
+  /* Mayúsculas y sin acentos, como dictado por voz. */
+  y1: ['Nueva cotización', 'BUENAS TARDES NECESITO UN CAMION PARA IR A SAN JUAN DE LOS LAGOS EL DOMINGO 4 DE OCTUBRE SOMOS 50 PERSONAS', 'EL I6S', 'SALIMOS DE GUADALAJARA', 'NO', 'OK'],
+  /* 28 personas: no hay unidad de 21 a 35. */
+  y2: ['Nueva cotización', 'somos 28 y queremos ir a chapala el 11 de octubre', 'pues qué nos conviene?', 'ok el i6', 'de guadalajara', 'solo ida y vuelta', 'va'],
+  /* Precio por persona y forma de pago antes de cotizar. */
+  y3: ['Nueva cotización', 'cuánto sale por persona a vallarta?', 'se puede pagar con tarjeta?', 'y dan factura?', 'ok, somos 14, el 25 de octubre regresando el 27, de zapopan, sin movimientos', 'sí'],
+  /* Dos Sprinters. */
+  y4: ['Nueva cotización', 'necesito dos sprinters para 34 personas a tequila el 18 de octubre, mismo día, de guadalajara', 'sin movimientos', 'ok'],
+  /* Cancela a media plática. */
+  y5: ['Nueva cotización', 'a mazatlán el 5 de noviembre', 'somos 12', 'saben qué, ya no, gracias', 'ok'],
+  /* Fecha en números y ambigua. */
+  y6: ['Nueva cotización', 'a vallarta el 10/11', 'regresamos el 12/11', '16 personas', 'guadalajara', 'no nos movemos'],
+  /* Inglés. */
+  y7: ['Nueva cotización', 'hi, do you have a van for 12 people to Chapala on October 3rd?', 'same day, from Guadalajara', 'no, just there and back'],
+  /* Escribe «cotización anterior» a mano en vez del botón. */
+  y8: ['puerta:cotización anterior', 'puerta:quiero ver mi cotización anterior', 'Nueva cotización', 'quiero retomar mi cotización de la semana pasada a vallarta'],
+  /* Pregunta por wifi, tele y niños. */
+  y9: ['Nueva cotización', 'tienen wifi y tele las unidades?', 'van niños, cobran igual?', 'a chapala el 4 de octubre somos 12 de guadalajara mismo dia', 'no'],
+  /* Pide precio de todas las unidades. */
+  y10: ['Nueva cotización', 'me pasas precios de todas sus unidades a puerto vallarta?', 'somos 45 el 20 de noviembre al 22, de guadalajara, sin movimientos', 'el más barato', 'ok']
 };
 const pedidos = process.argv.slice(2).filter((x) => escenarios[x]);
 let lead = 26818280;
