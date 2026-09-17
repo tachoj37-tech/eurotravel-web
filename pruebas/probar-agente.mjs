@@ -979,6 +979,26 @@ titulo('simulación del 17-sep (x2, x11, x17, x20): lo que la IA dejó pasar lo 
   await dice('los autobuses tienen baño?', E);
   const rE = textos(E).slice(-1)[0] || '';
   okQue('x6 · contesta que sí traen baño y aire, sin listar la flota', /traen baño y aire/.test(rE) && !/Marcopolo/.test(rE));
+
+  /* Observación 3 del dueño (17-sep-2026, su teléfono): «quiero una sprinter
+     para ir a mazatlán» y NO llegaron las fotos. El guion fija la Sprinter
+     por el nombre ANTES de que conteste la IA, y la comparación «¿ya la
+     tenía?» la veía como vieja. Las fotos salen la primera vez que la
+     unidad queda escogida, la diga la IA o la diga el cliente. */
+  limpia();
+  const F = '5213366670266';
+  laIA = function (t) {
+    if (/sprinter/i.test(t)) return { respuesta: 'Listo, Sprinter a Mazatlán. ¿Cuándo salen y cuándo regresan?', datos: { destino: 'Mazatlán', unidad: 'sprinter' }, accion: 'seguir' };
+    return { respuesta: 'Va. ¿Cuándo salen?', datos: {}, accion: 'seguir' };
+  };
+  const antesDeNombrarla = mandados.length;
+  await dice('quiero una sprinter para ir a mazatlán', F);
+  const fotosAlNombrarla = mandados.slice(antesDeNombrarla).filter((m) => mismo(m.to, F) && m.image && m.image.link);
+  ok('obs. 3 · «quiero una sprinter para ir a mazatlán»: salen sus 3 fotos', fotosAlNombrarla.length, 3);
+  okQue('  la primera es la de afuera (sprinter-01) con pie', /sprinter-01\.jpg$/.test(fotosAlNombrarla[0] ? fotosAlNombrarla[0].image.link : '') && /Sprinter/.test((fotosAlNombrarla[0] && fotosAlNombrarla[0].image.caption) || ''));
+  const antesDeLaFecha = mandados.length;
+  await dice('salimos del 20 al 25', F);
+  ok('  y en el siguiente turno no se repiten', mandados.slice(antesDeLaFecha).filter((m) => mismo(m.to, F) && m.image).length, 0);
 }
 
 console.log('\n' + buenas + ' buenas, ' + malas + ' malas');

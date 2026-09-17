@@ -407,6 +407,16 @@ almacén. Lo que salió y lo que se arregló:
     de/desde Guadalajara|GDL?» a «¿Salen de la zona metropolitana de
     Guadalajara?» (prueba en probar-fase2, rojo y verde). Las afirmaciones
     («salen de Guadalajara el 11») no se tocan.
+35. **Observación 3 del dueño (17-sep):** «quiero una sprinter para ir a
+    mazatlán» y no llegaron las fotos. El guion fija la Sprinter por el
+    nombre ANTES de que conteste la IA (`nombró la Sprinter: queda
+    escogida`), y `fotosDeLaUnidadRecienElegida` comparaba contra ese
+    estado ya enriquecido: la veía como vieja. Ahora compara contra lo que
+    la plática tenía al entrar al turno (`estadoAlEntrar`); un viaje
+    sembrado de la ficha (con precio) no cuenta como recién elegido, y una
+    plática sembrada con solo `unidad: 'sprinter'` también se reconoce.
+    Prueba en probar-agente (rojo y verde). Por Kommo las fotos siguen
+    saliendo como adjuntos del drive por `data.fotos` (carpeta).
 26. Aviso que sigue: `KOMMO_SECRETO` no está en Vercel, así que el token
     del widget no se comprueba (el candado es el tramo interno + el
     return_url de la cuenta). Si el dueño quiere, se pone la llave secreta

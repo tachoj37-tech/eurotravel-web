@@ -2585,6 +2585,14 @@ async function loQueDiceElAgente(envio) {
   }
 
   let antes = envio.estadoAntes && typeof envio.estadoAntes === 'object' ? envio.estadoAntes : {};
+  /* Lo que la plática tenía ANTES de este turno, intacto. `antes` se va
+     enriqueciendo más abajo con lo que el guion lee del mensaje (la
+     Sprinter nombrada, la fecha, «solo traslado»), y las fotos de la unidad
+     recién elegida se deciden contra este estado, no contra ése: si no,
+     «quiero una sprinter para ir a mazatlán» fija la Sprinter antes de la
+     IA y las fotos nunca salen (observación 3 del dueño, 17-sep-2026). */
+  const estadoAlEntrar = Object.assign({}, antes);
+  let referenciaParaFotos = estadoAlEntrar;
   /* El viaje que ya tiene precio pedido o dado vive en la ficha, no en la
      plática (que se cierra al pedirlo). Se le cuenta a la IA para que no
      vuelva a preguntar «¿a dónde van?» después de «ok», y para que si el
@@ -2843,6 +2851,8 @@ async function loQueDiceElAgente(envio) {
     const base = viajeBaseDeLaFicha(tickets.fichaDe(cliente));
     if (base) {
       antes = Object.assign({}, base, antes.nombre ? { nombre: antes.nombre } : {});
+      /* Un viaje sembrado de la ficha no es una unidad «recién elegida». */
+      referenciaParaFotos = Object.assign({}, estadoAlEntrar, base);
       console.log('[agente] ' + (platicaDebil ? 'plática débil con viaje en precio: manda el viaje de la ficha' :
         'cambio sobre un viaje con precio: se siembra el viaje conocido y se cambia solo lo nuevo'));
     }
@@ -4094,7 +4104,7 @@ async function loQueDiceElAgente(envio) {
   await manda({ numeroDeOrigen: envio.numeroDeOrigen, para: cliente, texto: respuestaFinal,
     pasaAPersona: false, escribio: respuestaFinal === dicho.respuesta ? '[agente]' : '[agente · lista corregida]' });
   agente.recuerda(cliente, 'bot', respuestaFinal);
-  await fotosDeLaUnidadRecienElegida(envio, cliente, antes, nuevo);
+  await fotosDeLaUnidadRecienElegida(envio, cliente, referenciaParaFotos, nuevo);
   return true;
 }
 
@@ -4115,10 +4125,11 @@ async function fotosDeLaUnidadRecienElegida(envio, cliente, antes, nuevo) {
     if (!sitio || !nuevo || !nuevo.unidadNombre) return false;
     const u = unidadDelCatalogo(nuevo.unidadId || nuevo.unidadNombre || nuevo.unidad);
     if (!u) return false;
-    const yaTenia = antes && (antes.unidadId || antes.unidadNombre);
-    const mismaDeAntes = yaTenia && conversacion.normaliza(String(antes.unidadNombre || antes.unidadId)) ===
-      conversacion.normaliza(String(nuevo.unidadNombre || nuevo.unidadId));
-    if (mismaDeAntes) return false;
+    /* La unidad que ya tenía la plática, con cualquiera de sus nombres:
+       una plática sembrada trae solo `unidad: 'sprinter'` (sin nombre). */
+    const uDeAntes = antes ? unidadDelCatalogo(antes.unidadId || antes.unidadNombre || antes.autobus ||
+      (antes.unidad === 'sprinter' || antes.unidad === 'suburban' ? antes.unidad : '')) : null;
+    if (uDeAntes && uDeAntes.id === u.id) return false;
     const ficha = tickets.fichaDe(cliente);
     const vistas = (Array.isArray(nuevo.fotosVistas) ? nuevo.fotosVistas : [])
       .concat((ficha && Array.isArray(ficha.fotos)) ? ficha.fotos : []);
