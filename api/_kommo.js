@@ -190,7 +190,7 @@ function notaDeTicket(texto) {
     if (/^🚏 /.test(l)) { if (/recargo/i.test(l) && !/sin recargo/i.test(l)) resto.push(l); continue; }
     /* El aviso del almacén apagado es para el dueño, no para el vendedor. */
     if (/almacén/i.test(l)) continue;
-    if (/^(?:Calculado:|Aprox\.|Del Excel:|No pude calcularlo|⚠️|↩️|Antes lo diste a:|Sugerido:)/.test(l)) resto.push(l);
+    if (/^(?:Calculado:|Criterio:|Aprox\.|Del Excel:|No pude calcularlo|⚠️|↩️|Antes lo diste a:|Sugerido:)/.test(l)) resto.push(l);
   }
   return ['🤖 EuroBot · precio sugerido'].concat(viaje.length ? [viaje.join(' · ')] : [], resto).join('\n');
 }

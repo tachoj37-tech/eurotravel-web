@@ -165,10 +165,24 @@ async function cotiza(cuerpo, claveGoogle, opciones) {
 
   /* Qué del precio puede salir lo decide `_publico.js`, el único dueño
      de la regla del kilómetro. Aquí solo se agrega lo que no es dinero. */
-  return {
-    ok: true,
-    precio: Object.assign({ dias: dias, redondo: redondo }, publico.precio(p))
-  };
+  const precio = Object.assign({ dias: dias, redondo: redondo }, publico.precio(p));
+  /* El renglón del criterio para el TICKET DEL VENDEDOR (17-sep-2026):
+     de qué renglón del Excel salió el traslado, las noches incluidas y
+     las extra, y el recargo de salida. Solo con `opciones.conCriterio`,
+     que —como `estimaLargo`— las puertas públicas nunca mandan. Sin
+     kilómetros ni tarifa por km: eso sigue sin salir de `interno`. */
+  if (opciones && opciones.conCriterio && p && p.interno) {
+    precio.criterio = {
+      traslado: p.interno.traslado,
+      destinoDeLista: p.interno.destinoDeLista || null,
+      porFormula: !!p.interno.porFormula,
+      nochesIncluidas: p.interno.nochesIncluidas,
+      nochesExtra: p.interno.nochesExtra,
+      importeNoches: p.interno.importeNoches,
+      recargoSalida: p.interno.recargoSalida
+    };
+  }
+  return { ok: true, precio: precio };
 }
 
 module.exports = { cotiza };

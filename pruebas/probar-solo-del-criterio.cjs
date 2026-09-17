@@ -282,6 +282,18 @@ FUERA.forEach(function (texto) {
   }, null, { soloDelCriterio: true });
   igual('Vallarta sigue dando sus $19,000 por la puerta pública',
     [deLista.ok, deLista.precio && deLista.precio.total], [true, 19000]);
+  /* 17-sep-2026: el renglón del criterio (Excel, noches) es para el ticket
+     del vendedor y solo sale con `conCriterio`, que la página nunca manda. */
+  igual('  y por la puerta pública NO viene el desglose del criterio ni nada interno',
+    [('criterio' in deLista.precio), ('interno' in deLista.precio)], [false, false]);
+  const conCriterio = await nucleo.cotiza({
+    origen: { direccion: 'Guadalajara, Jalisco' }, destino: { direccion: 'Puerto Vallarta, Jalisco' },
+    salida: '2026-09-21T08:00', regreso: '2026-09-22T18:00', unidad: 'sprinter'
+  }, null, { soloDelCriterio: true, conCriterio: true });
+  igual('  con conCriterio (solo el ticket) viene el Excel y las noches, sin kilómetros ni tarifa',
+    [conCriterio.precio.criterio && conCriterio.precio.criterio.destinoDeLista, conCriterio.precio.criterio && conCriterio.precio.criterio.traslado,
+      conCriterio.precio.criterio && conCriterio.precio.criterio.nochesIncluidas, 'km' in (conCriterio.precio.criterio || {}), 'tarifaKm' in (conCriterio.precio.criterio || {}), 'interno' in conCriterio.precio],
+    ['Puerto Vallarta y alrededores', 19000, 3, false, false, false]);
 
   /* ------------------------------------------------------------
      6 · LO QUE NO SE PUEDE ROMPER DE PASO

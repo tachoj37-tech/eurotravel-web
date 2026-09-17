@@ -56,6 +56,17 @@ titulo('comoDestino · lo que NO es un lugar');
     ['ida y vuelta', 'no es lugar'],
     ['de regreso', 'no es lugar'],
     ['si', 'un asentimiento'],
+    /* 17-sep-2026: sin la IA (Anthropic caído), el guion guardó «hola,
+       quiero cotizar» como el destino *Hola, Quiero Cotizar* y de ahí
+       salió un ticket sin precio. Un saludo o una intención sin lugar no
+       es un destino: se vuelve a preguntar. */
+    ['hola, quiero cotizar', 'un saludo con intención'],
+    ['hola', 'un saludo'],
+    ['buenas tardes', 'un saludo'],
+    ['buen día, necesito una cotización', 'una intención sin lugar'],
+    ['quiero cotizar un viaje', 'una intención sin lugar'],
+    ['me interesa rentar una sprinter', 'una unidad, no un lugar'],
+    ['informacion de precios porfa', 'una intención sin lugar'],
     ['', 'nada']
   ];
   for (const [t, porque] of colados) {

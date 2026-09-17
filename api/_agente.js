@@ -462,7 +462,8 @@ function textoDelContexto(c) {
         : (se.length ? '- nada: el viaje está completo, pide accion "cotizar"' : '- todo'))) + '\n' +
     '════════════════════════════════════════\n';
   return aviso + estadoBloque +
-    'Hoy es ' + (c && c.hoy) + '. Si dice un día sin año, es el más cercano que no haya pasado.\n' +
+    'Hoy es ' + (c && c.hoy) + '. Si dice un día sin mes ni año («el 20», «del 20 al 25»), es el más cercano ' +
+    'que no haya pasado: de ESTE mes si ese día aún no pasa, si no del que sigue. Nunca brinques un mes de más.\n' +
     (sabido.length ? 'YA SE SABE DEL VIAJE: ' + sabido.join(', ') + '. No lo vuelvas a preguntar.\n'
       : (viaje ? '' : 'Todavía no se sabe nada del viaje.\n')) +
     viaje +

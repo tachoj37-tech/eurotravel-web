@@ -306,9 +306,14 @@ function peticion(cuerpo, cabeceras, llave) {
   const nota = notas[notasBase] && notas[notasBase].body[0];
   ok('es una nota común con el ticket del precio, sin el «va» ni el número del cliente',
     nota && nota.note_type === 'common' && /^🤖 EuroBot · precio sugerido\n📍 /.test(nota.params.text) &&
-    /Calculado:|Del Excel:|No pude calcularlo/.test(nota.params.text) && nota.params.text.split('\n').length <= 5 &&
+    /Calculado:|Del Excel:|No pude calcularlo/.test(nota.params.text) && nota.params.text.split('\n').length <= 6 &&
     !/Contéstame/.test(nota.params.text) && !/_cliente:/.test(nota.params.text));
-  if (nota) console.log('   nota → ' + nota.params.text.replace(/\n/g, ' | ').slice(0, 220));
+  if (nota) console.log('   nota → ' + nota.params.text.replace(/\n/g, ' | ').slice(0, 300));
+  /* 17-sep-2026: la nota dice de dónde salió el número, en palabras del
+     criterio (Excel del destino, noches incluidas, extras, movimientos). */
+  ok('  y trae el renglón «Criterio:» con el Excel de Vallarta y sus 3 noches incluidas',
+    !!nota && /\nCriterio: Excel Puerto Vallarta[^\n]* \$[\d,]+ \(3 noches incl\.\)/.test(nota.params.text) &&
+    !/noches? extra|con movimiento/.test(nota.params.text));
   const ultima = continuaciones[continuaciones.length - 1].body;
   ok('al cliente le llegó el resumen con lo que incluye, y NADA del ticket',
     /Incluye:/.test(ultima.data.texto) && !/Precio por confirmar|Calculado/.test(ultima.data.texto));

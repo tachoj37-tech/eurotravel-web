@@ -238,7 +238,12 @@ const escenarios = {
   /* Pregunta por wifi, tele y niños. */
   y9: ['Nueva cotización', 'tienen wifi y tele las unidades?', 'van niños, cobran igual?', 'a chapala el 4 de octubre somos 12 de guadalajara mismo dia', 'no'],
   /* Pide precio de todas las unidades. */
-  y10: ['Nueva cotización', 'me pasas precios de todas sus unidades a puerto vallarta?', 'somos 45 el 20 de noviembre al 22, de guadalajara, sin movimientos', 'el más barato', 'ok']
+  y10: ['Nueva cotización', 'me pasas precios de todas sus unidades a puerto vallarta?', 'somos 45 el 20 de noviembre al 22, de guadalajara, sin movimientos', 'el más barato', 'ok'],
+  /* Tanda z (17-sep-2026, antes de la prueba del dueño con la Sprinter):
+     su plática exacta de las 14:33 y dos variantes. */
+  z1: ['puerta:hola', 'Nueva cotización', 'quiero una sprinter para ir a mazatlán', 'salimos del 20 al 25', 'si', 'solo el traslado', 'todo bien'],
+  z2: ['Nueva cotización', 'sprinter a mazatlán del 20 al 25 de septiembre, 10 personas, salimos de zapopan', 'solo el traslado', 'gracias'],
+  z3: ['Nueva cotización', 'quiero una sprinter', 'a mazatlan', '20 de septiembre', 'el 25', 'sí', 'nos movemos 1 día allá', 'fotos de la sprinter', 'ok']
 };
 const pedidos = process.argv.slice(2).filter((x) => escenarios[x]);
 let lead = 26818280;

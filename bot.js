@@ -1282,6 +1282,14 @@ function comoDestino(crudo) {
      cuántos van?» cambió el destino a *Una Sprinter* (prueba del dueño
      desde su número, 13-sep-2026). */
   if (/\b(sprinter|suburban|camion\w*|autobus\w*|camioneta)\b/.test(normaliza(crudo)) || unidadPorNombre(crudo)) return null;
+  /* ------------------------------------------------------------
+     UN SALUDO O UNA INTENCIÓN NO ES UN LUGAR — 17-sep-2026
+     ------------------------------------------------------------
+     Sin la IA (Anthropic caído), «hola, quiero cotizar» contestando
+     «¿a dónde van?» se guardó como el destino *Hola, Quiero Cotizar* y
+     salió un ticket sin precio. Si al quitar saludos, cortesías y
+     palabras de intención no queda ni una letra, no nombró un lugar. */
+  if (!normaliza(crudo).replace(SALUDO_O_INTENCION, ' ').replace(/[^a-z]/g, '')) return null;
   const d = limpiaDestino(crudo);
   const n = normaliza(d);
   if (!n || n.length < 3) return null;
@@ -1350,6 +1358,9 @@ function esAliasDeDestino(texto) {
 /* Lo que la gente contesta cuando asiente, no cuando nombra un lugar.
    Anclado: «Sí, de Guadalajara» sí trae ciudad y tiene que pasar. */
 const NO_ES_CIUDAD = /^(?:si|s[ií]|sip|sale|va|vale|ok|okey|oki|dale|claro|correcto|exacto|asi es|as[ií] es|perfecto|aja|ajá|bien|esta bien|est[aá] bien|si esta bien|s[ií] est[aá] bien|no|nop|gracias|listo|de acuerdo)$/;
+/* Las palabras de un saludo, una cortesía o una intención de cotizar.
+   Solas —sin un lugar al lado— no son un destino (ver comoDestino). */
+const SALUDO_O_INTENCION = /\b(?:hola|holi|holaa+|hello|hi|hey|oye|oigan|buenas|buenos|buen|dia|dias|tarde|tardes|noche|noches|que tal|disculpa|disculpe|disculpen|quiero|quisiera|quisieramos|queremos|necesito|necesitamos|me|nos|les|gustaria|interesa|interesaria|cotizar|cotizarme|cotizacion|cotizaciones|presupuesto|informacion|info|informes|precio|precios|tarifa|tarifas|costo|costos|saber|cuanto|cuanto|sale|cuesta|cobran|un|una|unos|unas|el|la|los|las|de|del|para|por|con|y|o|a|viaje|viajes|renta|rentar|servicio|servicios|unidad|unidades|transporte|favor|porfa|porfavor|porfis|gracias|ustedes|pueden|puede|puedes|ayudar|ayuda|apoyar|apoyo|tienen|hay|disponible|disponibilidad|si|ok|va|sale)\b/g;
 
 /* ------------------------------------------------------------
    UNA DIRECCIÓN NO ES UNA CIUDAD — 11-sep-2026

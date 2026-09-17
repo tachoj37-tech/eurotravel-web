@@ -999,6 +999,24 @@ titulo('simulación del 17-sep (x2, x11, x17, x20): lo que la IA dejó pasar lo 
   const antesDeLaFecha = mandados.length;
   await dice('salimos del 20 al 25', F);
   ok('  y en el siguiente turno no se repiten', mandados.slice(antesDeLaFecha).filter((m) => mismo(m.to, F) && m.image).length, 0);
+
+  /* Simulación z1 (17-sep-2026, modelo real): «salimos del 20 al 25» sin mes
+     y sin fecha previa; hoy es 5 de septiembre. Una corrida lo dejó en
+     septiembre y otra en OCTUBRE. Sin mes en el mensaje ni en la plática,
+     el rango es el más cercano que no ha pasado: 20–25 de septiembre. */
+  limpia();
+  const G = '5213366670267';
+  laIA = function (t) {
+    if (/mazatl/i.test(t)) return { respuesta: 'Listo, Sprinter a Mazatlán. ¿Cuándo salen y cuándo regresan?', datos: { destino: 'Mazatlán', unidad: 'sprinter' }, accion: 'seguir' };
+    if (/20 al 25/i.test(t)) return { respuesta: 'Perfecto, del 20 al 25 de octubre. ¿Salen de la zona metropolitana de Guadalajara?', datos: { salida: '2026-10-20', regreso: '2026-10-25' }, accion: 'seguir' };
+    return { respuesta: 'Va.', datos: {}, accion: 'seguir' };
+  };
+  await dice('quiero una sprinter para ir a mazatlán', G);
+  await dice('salimos del 20 al 25', G);
+  const charlaG = webhook.charlaDe(G);
+  ok('z1 · «del 20 al 25» sin mes, hoy 5-sep: la salida queda en septiembre aunque la IA diga octubre', charlaG && charlaG.salida, '2026-09-20');
+  ok('  y el regreso también', charlaG && charlaG.regreso, '2026-09-25');
+  okQue('  y al cliente no se le repite «octubre»', !/octubre/i.test(textos(G).slice(-1)[0] || ''));
 }
 
 console.log('\n' + buenas + ' buenas, ' + malas + ' malas');

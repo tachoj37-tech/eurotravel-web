@@ -417,6 +417,25 @@ almacén. Lo que salió y lo que se arregló:
     plática sembrada con solo `unidad: 'sprinter'` también se reconoce.
     Prueba en probar-agente (rojo y verde). Por Kommo las fotos siguen
     saliendo como adjuntos del drive por `data.fotos` (carpeta).
+36. **Cacería antes de la prueba del dueño con la Sprinter (17-sep, tanda z
+    de conversar-kommo.mjs, $0.09 USD, su plática exacta y dos variantes).**
+    Tres cosas más, cada una con prueba roja/verde:
+    · La nota del lead trae ahora el renglón «Criterio:» con el Excel del
+      destino, las noches incluidas, las extra ($1,000), los días con
+      movimiento ($3,000) y el recargo de salida: «Criterio: Excel Mazatlán
+      $28,000 (3 noches incl.) + 2 noches extra $2,000». Sale de
+      `precio.criterio`, que el núcleo solo arma con `conCriterio` (el
+      ticket); la página nunca lo recibe (probar-solo-del-criterio).
+    · «hola, quiero cotizar» contestando «¿a dónde van?» sin la IA (si
+      Anthropic falla) se guardaba como destino *Hola, Quiero Cotizar*:
+      `comoDestino` tira saludos e intenciones sin lugar (probar-es-un-lugar).
+    · «salimos del 20 al 25» sin mes, sin fecha previa: la IA unas veces
+      decía septiembre y otras octubre. El rango sin mes se lee al más
+      cercano que no ha pasado (`fechaDe`), se corrige la ficha y el mes
+      equivocado en la respuesta, y el prompt lo dice con todas sus letras
+      (probar-agente z1). Los precios de la nota cuadran con el criterio:
+      Mazatlán Sprinter 20–25 sep = $28,000 + 2 noches × $1,000 = $30,000;
+      con 1 día de movimiento $33,000.
 26. Aviso que sigue: `KOMMO_SECRETO` no está en Vercel, así que el token
     del widget no se comprueba (el candado es el tramo interno + el
     return_url de la cuenta). Si el dueño quiere, se pone la llave secreta

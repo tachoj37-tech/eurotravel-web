@@ -387,6 +387,34 @@ function viajeArchivadoQueNombra(ficha, texto) {
   })[0] || null;
 }
 
+/* ------------------------------------------------------------
+   EL RENGLÓN DEL CRITERIO (17-sep-2026)
+   ------------------------------------------------------------
+   Con qué se armó el calculado, en las palabras del criterio de precios:
+   el renglón del Excel (o la fórmula por km) con las noches que incluye,
+   las noches extra ($1,000 cada una, R13), los días con movimiento
+   ($3,000 cada uno, R13) y el recargo de salida si lo hubo. Sale de
+   `precio.criterio`, que el núcleo solo arma cuando el ticket lo pide
+   (`conCriterio`) y nunca llega al cliente. Sin él (un precio fijado por
+   el dueño, por ejemplo) no hay renglón.
+   ------------------------------------------------------------ */
+function renglonDelCriterio(precio) {
+  const i = precio && (precio.criterio || precio.interno);
+  const d = precio && precio.desglose;
+  if (!i || typeof i.traslado !== 'number') return null;
+  const dinero = function (n) { return '$' + Number(n).toLocaleString('es-MX'); };
+  const partes = [];
+  const base = i.destinoDeLista ? 'Excel ' + i.destinoDeLista : (i.porFormula ? 'fórmula por km' : 'traslado');
+  const incluidas = Number(i.nochesIncluidas) || 0;
+  partes.push(base + ' ' + dinero(i.traslado) + (incluidas > 0 ? ' (' + incluidas + ' noche' + (incluidas === 1 ? '' : 's') + ' incl.)' : ''));
+  const extra = Number(i.nochesExtra) || 0;
+  if (extra > 0) partes.push(extra + ' noche' + (extra === 1 ? '' : 's') + ' extra ' + dinero(i.importeNoches || 0));
+  const mov = d ? (Number(d.diasMovimiento) || 0) : 0;
+  if (mov > 0) partes.push(mov + ' día' + (mov === 1 ? '' : 's') + ' con movimiento ' + dinero(d.importeMovimientos || 0));
+  if (Number(i.recargoSalida) > 0) partes.push('recargo de salida ' + dinero(i.recargoSalida));
+  return 'Criterio: ' + partes.join(' + ');
+}
+
 function ticketDePrecio(res, precio, cal, cliente, unidad, historial, yaDado, aproximado) {
   const lineas = ['💰 *Precio por confirmar*', ''];
   const pax = res.gente || res.pasajeros;
@@ -433,6 +461,13 @@ function ticketDePrecio(res, precio, cal, cliente, unidad, historial, yaDado, ap
   } else if (precio && typeof precio.total === 'number') {
     lineas.push('Calculado: *$' + precio.total.toLocaleString('es-MX') + '*' +
       (typeof precio.anticipo === 'number' ? ' (anticipo $' + precio.anticipo.toLocaleString('es-MX') + ')' : ''));
+    /* De dónde salió ese número, en un renglón, para que el vendedor lo
+       cuadre con el criterio de precios sin abrir el Excel (dictado del
+       dueño, 17-sep-2026: «quiero ver … la nota de Kommo en precio
+       sugerido de criterio de precios»). Solo lo ve él: va en el ticket
+       y en la nota del lead, nunca al cliente. */
+    const criterio = renglonDelCriterio(precio);
+    if (criterio) lineas.push(criterio);
     /* ------------------------------------------------------------
        CUANDO EL CALCULADO NO TRAE EL RECARGO, SE DICE
        ------------------------------------------------------------
@@ -569,7 +604,7 @@ async function precioDe(envio, opciones) {
     let aproximado = null;
     if (envio.cotiza) {
       try {
-        const r = await nucleo.cotiza(envio.cotiza, process.env.GOOGLE_ROUTES_KEY);
+        const r = await nucleo.cotiza(envio.cotiza, process.env.GOOGLE_ROUTES_KEY, { conCriterio: true });
         if (r.ok) precio = r.precio;
         else console.error('[whatsapp] no se pudo cotizar: ' + r.error);
         if (r.ok && r.precio && r.precio.requiereAsesor) {
@@ -2971,9 +3006,31 @@ async function loQueDiceElAgente(envio) {
         const n = Number(String(iso || '').slice(5, 7));
         return n ? ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'][n - 1] : '';
       };
-      const mesIda = rango.mesIda || rango.mesVuelta || mesDe(nuevo.salida) || mesDe(nuevo.regreso);
-      const mesVuelta = rango.mesVuelta || rango.mesIda || mesDe(nuevo.regreso) || mesDe(nuevo.salida);
-      if (mesIda && mesVuelta) {
+      /* El mes, en este orden: el del mensaje; el de la fecha que YA tenía
+         la plática (bk: «diciembre» y luego «20»); y si no hay ninguno,
+         el más cercano que no ha pasado. Antes se tomaba el mes de lo que
+         la IA acababa de leer, y la IA con «salimos del 20 al 25» un 17 de
+         septiembre unas veces decía septiembre y otras OCTUBRE (simulación
+         z1, 17-sep-2026). Sin mes en ningún lado, el que no ha pasado. */
+      const mesIda = rango.mesIda || rango.mesVuelta || mesDe(antes.salida) || mesDe(antes.regreso);
+      const mesVuelta = rango.mesVuelta || rango.mesIda || mesDe(antes.regreso) || mesDe(antes.salida);
+      if (!mesIda && !mesVuelta) {
+        const salida = conversacion.fechaDe(String(rango.ida), hoy);
+        const regreso = salida ? conversacion.fechaDe(String(rango.vuelta), salida) : null;
+        if (salida && regreso && regreso >= salida && (salida !== nuevo.salida || regreso !== nuevo.regreso)) {
+          console.error('[agente] rango sin mes («' + String(texto).slice(0, 40) + '»): el más cercano que no ha pasado, salida ' + salida + ' y regreso ' + regreso +
+            ' (la IA dijo ' + (nuevo.salida || '—') + ' / ' + (nuevo.regreso || '—') + ')');
+          /* Y lo que le dice al cliente no puede llevar el mes equivocado:
+             si la respuesta nombra el mes que leyó la IA, se cambia por el
+             bueno («del 20 al 25 de octubre» → «de septiembre»). */
+          const mesMalo = mesDe(nuevo.salida);
+          const mesBueno = mesDe(salida);
+          if (mesMalo && mesBueno && mesMalo !== mesBueno && typeof dicho.respuesta === 'string') {
+            dicho.respuesta = dicho.respuesta.replace(new RegExp('\\b' + mesMalo + '\\b', 'gi'), mesBueno);
+          }
+          nuevo.salida = salida; nuevo.regreso = regreso;
+        }
+      } else if (mesIda && mesVuelta) {
         const salida = conversacion.fechaDe(rango.ida + ' de ' + mesIda, hoy);
         const regreso = conversacion.fechaDe(rango.vuelta + ' de ' + mesVuelta, hoy);
         if (salida && regreso && regreso >= salida && (salida !== nuevo.salida || regreso !== nuevo.regreso)) {
