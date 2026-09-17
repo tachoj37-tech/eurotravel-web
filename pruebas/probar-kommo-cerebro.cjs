@@ -236,12 +236,24 @@ function peticion(cuerpo, cabeceras, llave) {
      llegaba a nadie— se pega como nota interna del lead, aunque
      DUENO_WHATSAPP esté vacía. */
   delete process.env.DUENO_WHATSAPP;
-  ok('la nota limpia lo que solo servía por WhatsApp',
-    (function () {
-      const n = kommo.notaDeTicket('💰 *Precio por confirmar*\n\nCalculado: *$9,000*\n\nContéstame *este mensaje*: *va* y se lo mando tal cual.\n_cliente: 5213319153931_');
-      return /^🤖 EuroBot, para el vendedor\n\n💰/.test(n) && /Calculado: \*\$9,000\*/.test(n) &&
-        !/Contéstame/.test(n) && !/_cliente:/.test(n) && /Escríbele el precio aquí mismo en el chat\.$/.test(n);
-    })());
+  /* Corta (dictado del dueño): el viaje en un renglón, el precio y las
+     advertencias; fuera encabezado, calendario, almacén y el «va». */
+  {
+    const n = kommo.notaDeTicket('💰 *Precio por confirmar*\n\n📍 Guadalajara → Puerto Vallarta\n📅 20 de octubre al 22 de octubre\n🚌 Sprinter · 12 pax\n🚏 Salen de la *ZMG* (sin recargo)\n\nCalculado: *$9,000* (anticipo $3,000)\nAntes lo diste a: $8,500 (20 oct · 12 pax) ✍️\nSugerido: *$8,500*\nCalendario: 4 de 5 libres\n\n⚠️ *Este precio no se va a guardar*: el almacén está apagado y no estoy aprendiendo nada.\n\nContéstame *este mensaje*: *va* y se lo mando tal cual.\n_cliente: 5213319153931_');
+    const r = n.split('\n');
+    ok('la nota es corta: encabezado, viaje en un renglón, precio y lo que él dio antes',
+      r.length === 5 && r[0] === '🤖 EuroBot · precio sugerido' &&
+      r[1] === '📍 Guadalajara → Puerto Vallarta · 📅 20 de octubre al 22 de octubre · 🚌 Sprinter · 12 pax' &&
+      r[2] === 'Calculado: *$9,000* (anticipo $3,000)' && /^Antes lo diste a/.test(r[3]) && r[4] === 'Sugerido: *$8,500*');
+    ok('  sin «va», sin número del cliente, sin calendario, sin zona «sin recargo», sin aviso del almacén',
+      !/Contéstame|_cliente:|Calendario|ZMG|almacén|Precio por confirmar/.test(n));
+    const conRecargo = kommo.notaDeTicket('💰 *Precio por confirmar*\n📍 Ocotlán → Chapala\n🚏 Salen de *Ocotlán* (recargo $4,500)\nCalculado: *$6,500*\n⚠️ *Ese calculado NO trae el recargo de Ocotlán*: súmaselo tú.\nContéstame *este mensaje*: *va*');
+    ok('  la zona sí se queda cuando trae recargo, con su advertencia',
+      /🚏 Salen de \*Ocotlán\* \(recargo \$4,500\)/.test(conRecargo) && /⚠️ \*Ese calculado NO trae el recargo/.test(conRecargo) && !/Contéstame/.test(conRecargo));
+    const camion = kommo.notaDeTicket('💰 *Precio por confirmar*\n🚌 Irizar i6 · 47 pax\nDel Excel: *$32,000*  (columna «NC47», cubre 4 días)\n⚠️ Tu viaje es de *6 días* y ese precio cubre *4*: ajústalo tú.\n_Ese número sale de tu lista, no del cotizador. Contéstame con el bueno._');
+    ok('  para autobús queda el renglón del Excel con su columna y la advertencia de días',
+      /Del Excel: \*\$32,000\*  \(columna «NC47», cubre 4 días\)/.test(camion) && /ajústalo tú/.test(camion) && !/Contéstame con el bueno/.test(camion));
+  }
   ok('sin id numérico de lead no se pega nada', (await kommo.anotaEnLead('{{lead.id}}', 'x')) === false && notas.length === 0);
   const antesDeLaNota = continuaciones.length;
   /* Se contesta lo que el guion vaya preguntando, hasta que salga el ticket. */
@@ -271,8 +283,9 @@ function peticion(cuerpo, cabeceras, llave) {
     notas.length === 1 && /\/leads\/26818280\/notes$/.test(notas[0].url) && notas[0].metodo === 'POST' && notas[0].auth === 'Bearer token-de-mentiras');
   const nota = notas[0] && notas[0].body[0];
   ok('es una nota común con el ticket del precio, sin el «va» ni el número del cliente',
-    nota && nota.note_type === 'common' && /Precio por confirmar/.test(nota.params.text) &&
-    /EuroBot, para el vendedor/.test(nota.params.text) && !/Contéstame/.test(nota.params.text) && !/_cliente:/.test(nota.params.text));
+    nota && nota.note_type === 'common' && /^🤖 EuroBot · precio sugerido\n📍 /.test(nota.params.text) &&
+    /Calculado:|Del Excel:|No pude calcularlo/.test(nota.params.text) && nota.params.text.split('\n').length <= 5 &&
+    !/Contéstame/.test(nota.params.text) && !/_cliente:/.test(nota.params.text));
   if (nota) console.log('   nota → ' + nota.params.text.replace(/\n/g, ' | ').slice(0, 220));
   const ultima = continuaciones[continuaciones.length - 1].body;
   ok('al cliente le llegó el resumen con lo que incluye, y NADA del ticket',

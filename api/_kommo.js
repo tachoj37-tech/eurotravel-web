@@ -175,12 +175,24 @@ async function guardaPrecio(idDelLead, total, opciones) {
    hacer aquí. `anotaEnLead` es POST /leads/{id}/notes, nota común.
    ------------------------------------------------------------ */
 function notaDeTicket(texto) {
-  const lineas = String(texto || '').split('\n').filter(function (l) {
-    return !/^Contéstame \*este mensaje\*/.test(l) && !/^_cliente: /.test(l);
-  });
-  while (lineas.length && !lineas[lineas.length - 1].trim()) lineas.pop();
-  return '🤖 EuroBot, para el vendedor\n\n' + lineas.join('\n') +
-    '\n\nEscríbele el precio aquí mismo en el chat.';
+  /* Corta, dictado del dueño (16-sep-2026): «la nota más corta, no
+     necesita ser tan larga». Se queda el viaje en un renglón, el precio
+     (calculado / del Excel / lo que él dio antes) y las advertencias que
+     cambian el número. Fuera el encabezado, el calendario, el aviso del
+     almacén y todo lo que solo tenía sentido por WhatsApp. */
+  const lineas = String(texto || '').split('\n').map(function (l) { return l.trim(); }).filter(Boolean);
+  const viaje = [];
+  const resto = [];
+  for (const l of lineas) {
+    /* Los emojis son pares de UTF-16: van en alternancia, no en [clase]. */
+    if (/^(?:📍|📅|🚌) /.test(l)) { viaje.push(l); continue; }
+    /* La zona solo cuando trae recargo: «sin recargo» no le dice nada. */
+    if (/^🚏 /.test(l)) { if (/recargo/i.test(l) && !/sin recargo/i.test(l)) resto.push(l); continue; }
+    /* El aviso del almacén apagado es para el dueño, no para el vendedor. */
+    if (/almacén/i.test(l)) continue;
+    if (/^(?:Calculado:|Del Excel:|No pude calcularlo|⚠️|↩️|Antes lo diste a:|Sugerido:)/.test(l)) resto.push(l);
+  }
+  return ['🤖 EuroBot · precio sugerido'].concat(viaje.length ? [viaje.join(' · ')] : [], resto).join('\n');
 }
 
 async function anotaEnLead(idDelLead, texto, opciones) {
