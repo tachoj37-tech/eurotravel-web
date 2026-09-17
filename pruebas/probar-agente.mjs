@@ -889,7 +889,7 @@ titulo('spec §5 (16-sep): molesto o pidiendo persona → a una persona a la pri
 {
   limpia();
   /* Números nuevos: las fichas de los de arriba siguen vivas entre bloques. */
-  const C = '5213366670231';
+  const C = '5213366670251';
   laIA = function (t) {
     if (/vallarta/i.test(t)) return { respuesta: 'Vallarta, va. ¿Qué día salen?', datos: { destino: 'Puerto Vallarta' }, accion: 'seguir' };
     /* La IA de mentiras NO escoge persona: sigue como si nada. */
@@ -900,7 +900,7 @@ titulo('spec §5 (16-sep): molesto o pidiendo persona → a una persona a la pri
   ok('el cliente recibe el paso a persona, con el texto fijo', textos(C).slice(-1)[0], 'Va, en un momento te atiende alguien del equipo 🙌');
   okQue('  y no la respuesta de la IA', !textos(C).some((t) => /me repites la fecha/.test(t)));
   limpia();
-  const D = '5213366670232';
+  const D = '5213366670252';
   await dice('a vallarta', D);
   await dice('no entiendo bien el precio, ¿me lo explicas?', D);
   /* Lo que conteste lo deciden la IA y sus guardias; lo que importa es que
