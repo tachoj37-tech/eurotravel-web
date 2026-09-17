@@ -190,7 +190,7 @@ function notaDeTicket(texto) {
     if (/^🚏 /.test(l)) { if (/recargo/i.test(l) && !/sin recargo/i.test(l)) resto.push(l); continue; }
     /* El aviso del almacén apagado es para el dueño, no para el vendedor. */
     if (/almacén/i.test(l)) continue;
-    if (/^(?:Calculado:|Del Excel:|No pude calcularlo|⚠️|↩️|Antes lo diste a:|Sugerido:)/.test(l)) resto.push(l);
+    if (/^(?:Calculado:|Aprox\.|Del Excel:|No pude calcularlo|⚠️|↩️|Antes lo diste a:|Sugerido:)/.test(l)) resto.push(l);
   }
   return ['🤖 EuroBot · precio sugerido'].concat(viaje.length ? [viaje.join(' · ')] : [], resto).join('\n');
 }
@@ -238,6 +238,58 @@ async function leadsConPrecio(opciones) {
     if (lista.length < porPagina) break;
   }
   return salida;
+}
+
+/* ------------------------------------------------------------
+   LOS PRECIOS QUE EL VENDEDOR PONE EN KOMMO (16-sep-2026)
+   ------------------------------------------------------------
+   Dictado del dueño: «los precios futuros anótalos». Por Kommo el precio
+   lo escribe el vendedor en el chat y el bot no lo ve. Lo que sí se
+   puede leer es la tarjeta del lead: la «Venta» (`price`) o, si está
+   configurado, el campo «Precio cotizado» (KOMMO_CAMPO_PRECIO). El cron
+   del seguimiento pregunta por los leads tocados en las últimas horas y
+   `_kommo-aprende.js` cruza cada uno con la ficha del bot.
+
+   Solo lectura: aquí no se escribe nada en Kommo.
+   ------------------------------------------------------------ */
+async function leadsConVentaReciente(desdeUnix, opciones) {
+  const desde = Math.floor(Number(desdeUnix) || 0);
+  if (!desde) return [];
+  const campo = Number(String(process.env.KOMMO_CAMPO_PRECIO || '').trim());
+  const r = await pide('/leads?limit=50&with=contacts&order[updated_at]=desc' +
+    '&filter[updated_at][from]=' + desde, opciones);
+  const lista = r && r._embedded && Array.isArray(r._embedded.leads) ? r._embedded.leads : [];
+  const salida = [];
+  for (const l of lista) {
+    let total = Number(l.price) || 0;
+    if (!total && campo) {
+      const campos = Array.isArray(l.custom_fields_values) ? l.custom_fields_values : [];
+      const suyo = campos.find(function (c) { return Number(c.field_id) === campo; });
+      total = Number(suyo && Array.isArray(suyo.values) && suyo.values[0] ? suyo.values[0].value : 0) || 0;
+    }
+    if (!(total > 0)) continue;
+    const contactos = l._embedded && Array.isArray(l._embedded.contacts) ? l._embedded.contacts : [];
+    const principal = contactos.find(function (c) { return c && c.is_main; }) || contactos[0] || null;
+    salida.push({
+      id: l.id, nombre: l.name || null, total: Math.round(total),
+      embudo: l.pipeline_id || null,
+      contactoId: principal ? principal.id : null,
+      cuando: l.updated_at ? new Date(l.updated_at * 1000).toISOString() : null
+    });
+  }
+  return salida;
+}
+
+/* El teléfono del contacto, con solo dígitos. Kommo lo guarda en el campo
+   estándar PHONE; si el contacto tiene varios, el primero. */
+async function telefonoDelContacto(idContacto, opciones) {
+  const id = String(idContacto || '').trim();
+  if (!/^\d+$/.test(id)) return '';
+  const r = await pide('/contacts/' + id, opciones);
+  const campos = r && Array.isArray(r.custom_fields_values) ? r.custom_fields_values : [];
+  const tel = campos.find(function (c) { return String(c.field_code || '').toUpperCase() === 'PHONE'; });
+  const valor = tel && Array.isArray(tel.values) && tel.values[0] ? tel.values[0].value : '';
+  return String(valor || '').replace(/\D/g, '');
 }
 
 /* ============================================================
@@ -519,6 +571,7 @@ async function continuaSalesbot(returnUrl, cuerpo, opciones) {
 
 module.exports = {
   hayKommo, pruebaDeVida, mueveDeEtapa, guardaPrecio, leadsConPrecio, anotaEnLead, notaDeTicket,
+  leadsConVentaReciente, telefonoDelContacto,
   /* El paso EuroBot. */
   leeAvisoDeWidget, verificaTokenDeWidget, handlersDeEnvios, textoParaKommo, fotosParaKommo, continuaSalesbot, uuidDeFoto, carpetaDeFoto,
   /* Para las pruebas y para el día del alta. */

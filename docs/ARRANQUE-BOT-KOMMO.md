@@ -331,6 +331,30 @@ almacén. Lo que salió y lo que se arregló:
     pegó` y el bot sigue. **Pendiente de ver en vivo** con el teléfono de
     prueba: que el token de la integración tenga permiso de escribir
     notas (en pruebas se simuló Kommo).
+30. **La nota es corta y trae TODOS los precios de Sprinter** («recuerda
+    recomendar todos los precios de sprinter, esos ya los sabes»; «quiero
+    que salgan en la recomendación de la nota»). Formato: encabezado «🤖
+    EuroBot · precio sugerido», el viaje en un renglón, el precio y solo
+    las advertencias que cambian el número (`kommo.notaDeTicket`). Para
+    Sprinter a más de 1,400 km el motor sigue sin dar precio al cliente
+    (R45), pero el ticket y la nota traen «Aprox. por la fórmula larga
+    (±$9,800): $X» calculado con la bandera `estimaLargo` (R16, $36/km),
+    que solo pone el ticket: las puertas públicas no la conocen y el
+    candado del criterio manda sobre ella (`probar-precio-al-vendedor`).
+31. **Los precios que el vendedor pone en Kommo se aprenden** («los
+    precios futuros anótalos»). El bot no ve lo que el vendedor escribe
+    en el chat; lo que sí lee es la tarjeta del lead. El cron del
+    seguimiento (cada 15 min) pide los leads tocados en las últimas 24 h
+    (`kommo.leadsConVentaReciente`, solo lectura); si un lead trae
+    **«Venta»** (`price`) —o el campo «Precio cotizado» si
+    `KOMMO_CAMPO_PRECIO` está puesto— y el teléfono de su contacto tiene
+    ficha del bot con viaje, el precio se guarda en el almacén como
+    fijado por una persona, con el calculado del motor al lado
+    (`api/_kommo-aprende.js`). Sin repetir (mismo total ya fijado para
+    ese viaje no se vuelve a guardar; un total distinto sí, es
+    corrección), y nunca frena al seguimiento. **Para que aprenda, el
+    vendedor pone la Venta en el lead al cotizar.** Se ve en el registro
+    como `[kommo-aprende] lead … · $…`.
 26. Aviso que sigue: `KOMMO_SECRETO` no está en Vercel, así que el token
     del widget no se comprueba (el candado es el tramo interno + el
     return_url de la cuenta). Si el dueño quiere, se pone la llave secreta

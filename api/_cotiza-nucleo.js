@@ -156,7 +156,11 @@ async function cotiza(cuerpo, claveGoogle, opciones) {
     soloDelCriterio: soloDelCriterio,
     /* R47 · Y ésta TAMBIÉN va en las dos. Si faltara aquí, la página
        enseñaría «te contactamos» y `/api/pagar` cobraría $19,000. */
-    sinPrecio: sinPrecio
+    sinPrecio: sinPrecio,
+    /* El aproximado del tramo largo (R16) SOLO para el ticket del
+       vendedor (16-sep-2026). Va en `opciones`, como los dos de arriba:
+       la página nunca lo pide, así que nunca lo enseña. */
+    estimaLargo: !!(opciones && opciones.estimaLargo)
   });
 
   /* Qué del precio puede salir lo decide `_publico.js`, el único dueño

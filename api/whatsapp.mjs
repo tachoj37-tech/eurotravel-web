@@ -39,6 +39,7 @@ import agente from './_agente.js';
 /* La puerta al CRM. Apagada mientras no haya KOMMO_SUBDOMINIO ni
    KOMMO_TOKEN, así que importarla no cambia nada hasta que las haya. */
 import kommo from './_kommo.js';
+import kommoAprende from './_kommo-aprende.js';
 import origenes from './_origenes.js';
 import destinos from './_destinos.js';
 import seguimiento from './_seguimiento.js';
@@ -380,7 +381,7 @@ function viajeArchivadoQueNombra(ficha, texto) {
   })[0] || null;
 }
 
-function ticketDePrecio(res, precio, cal, cliente, unidad, historial, yaDado) {
+function ticketDePrecio(res, precio, cal, cliente, unidad, historial, yaDado, aproximado) {
   const lineas = ['💰 *Precio por confirmar*', ''];
   const pax = res.gente || res.pasajeros;
   if (res.destino) lineas.push('📍 ' + (res.origen ? res.origen + ' → ' : '') + res.destino);
@@ -412,7 +413,15 @@ function ticketDePrecio(res, precio, cal, cliente, unidad, historial, yaDado) {
     if (zona) lineas.push(zona);
   }
   lineas.push('');
-  if (precio && typeof precio.total === 'number') {
+  if (precio && precio.requiereAsesor) {
+    /* Sprinter a más de 1,400 km: el motor no da precio (R45) y el ticket
+       decía «Calculado: $0». Ahora lo dice con letras y, si se pudo, trae
+       el aproximado del tramo largo para el vendedor (16-sep-2026). */
+    lineas.push('Calculado: sin precio cerrado (más de 1,400 km, lo pone una persona).');
+    if (typeof aproximado === 'number' && aproximado > 0) {
+      lineas.push('Aprox. por la fórmula larga (±$9,800): *$' + aproximado.toLocaleString('es-MX') + '*');
+    }
+  } else if (precio && typeof precio.total === 'number') {
     lineas.push('Calculado: *$' + precio.total.toLocaleString('es-MX') + '*' +
       (typeof precio.anticipo === 'number' ? ' (anticipo $' + precio.anticipo.toLocaleString('es-MX') + ')' : ''));
     /* ------------------------------------------------------------
@@ -537,11 +546,27 @@ async function precioDe(envio, opciones) {
        le pide el precio. Dictado del dueño (6-sep-2026): por WhatsApp NADIE
        se manda a otro número; todo pasa por su ticket. */
     let precio = null;
+    /* ------------------------------------------------------------
+       TODOS LOS PRECIOS DE SPRINTER, AL VENDEDOR (16-sep-2026)
+       ------------------------------------------------------------
+       Dictado del dueño: «recuerda recomendar todos los precios de
+       Sprinter, esos ya los sabes». Cuando el motor dice «lo cotiza una
+       persona» (R45: más de 1,400 km), el ticket trae de todos modos un
+       APROXIMADO por la fórmula del tramo largo (R16, ±$9,800), marcado
+       como tal. Es para el vendedor; al cliente no le llega ningún
+       número por aquí. Cuesta dos mediciones más en Google, solo en ese
+       caso.
+       ------------------------------------------------------------ */
+    let aproximado = null;
     if (envio.cotiza) {
       try {
         const r = await nucleo.cotiza(envio.cotiza, process.env.GOOGLE_ROUTES_KEY);
         if (r.ok) precio = r.precio;
         else console.error('[whatsapp] no se pudo cotizar: ' + r.error);
+        if (r.ok && r.precio && r.precio.requiereAsesor) {
+          const r2 = await nucleo.cotiza(envio.cotiza, process.env.GOOGLE_ROUTES_KEY, { estimaLargo: true });
+          if (r2.ok && r2.precio && !r2.precio.requiereAsesor && r2.precio.total > 0) aproximado = r2.precio.total;
+        }
       } catch (e) {
         console.error('[whatsapp] cotizador tronado: ' + e.message);
       }
@@ -641,7 +666,7 @@ async function precioDe(envio, opciones) {
           desde: Date.now()
         },
         texto: ticketDePrecio(res, precio, cal, envio.para, unidad, historial,
-          yaLoCotizaste(tickets.fichaDe(envio.para), res)),
+          yaLoCotizaste(tickets.fichaDe(envio.para), res), aproximado),
         pasaAPersona: false,
         escribio: '[ticket precio]'
       });
@@ -5013,6 +5038,14 @@ async function mandaSeguimientos(ahora) {
         'dime y te digo cómo apartar» (día 7).',
       escribio: '[seguimiento · al dueño]'
     });
+  }
+  /* Los precios que el vendedor puso en los leads de Kommo, al almacén
+     (dictado del dueño, 16-sep-2026: «los precios futuros anótalos»).
+     Nunca frena al seguimiento. */
+  try {
+    cuenta.kommo = await kommoAprende.aprendeDeKommo({ kommo: kommo, almacen: almacen, aprendidos: aprendidos }, { ahora: t });
+  } catch (e) {
+    console.error('[kommo-aprende] tronó: ' + (e && e.message));
   }
   console.log('[seguimiento] ' + JSON.stringify(cuenta));
   return cuenta;

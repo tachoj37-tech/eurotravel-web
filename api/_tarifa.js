@@ -429,6 +429,23 @@ function trasladoDe(kmTotal, destino, unidad, dias, dominical, opciones) {
      Cancún y Barrancas, que están en su lista.
      ------------------------------------------------------------ */
   if (km > TOPE_FORMULA_KM) {
+    /* ------------------------------------------------------------
+       EL TRAMO LARGO, SOLO COMO SUGERENCIA AL VENDEDOR (16-sep-2026)
+       ------------------------------------------------------------
+       Dictado del dueño: «recuerda recomendar todos los precios de
+       Sprinter, esos ya los sabes». R45 sigue en pie para el CLIENTE:
+       sin `estimaLargo` esto contesta «lo cotiza una persona». La
+       bandera la pone solo el ticket de WhatsApp/Kommo para enseñarle
+       al vendedor un aproximado por la fórmula de R16 (±$9,800), y las
+       puertas públicas no la conocen: viaja por `extras`, nunca por el
+       cuerpo de la petición.
+       ------------------------------------------------------------ */
+    if (opciones && opciones.estimaLargo) {
+      return {
+        total: BASE_TRASLADO + POR_KM * TOPE_FORMULA_KM + POR_KM_LARGO * (km - TOPE_FORMULA_KM),
+        porFormula: true, porKm: POR_KM_LARGO, km: km, aproximado: true
+      };
+    }
     return { requiereAsesor: true, porQue: 'lejos', km: km, total: 0, porKm: null };
   }
 
@@ -1115,7 +1132,7 @@ function calcula(kmTotal, dias, extras) {
   /* R46 · `soloDelCriterio` viaja en los extras porque quien lo pone es la
      puerta —`/api/cotizar` y `/api/pagar`—, no el cálculo. Ver `trasladoDe`. */
   const km = trasladoDe(kmTotal, extras.destino, extras.unidad, dias, origenDominical,
-    { soloDelCriterio: !!extras.soloDelCriterio });
+    { soloDelCriterio: !!extras.soloDelCriterio, estimaLargo: !!extras.estimaLargo });
 
   /* ----------------------------------------------------------
      ARRIBA DEL TOPE NO HAY PRECIO — Y NO ES LO MISMO QUE UNO BAJO
