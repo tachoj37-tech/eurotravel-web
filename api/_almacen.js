@@ -106,9 +106,12 @@ async function pide(camino, opciones, reintento) {
   if (!c) return null;
   const o = opciones || {};
   ultimoError = null;
-  /* Un tope vencido se reintenta UNA vez (16-sep-2026: cinco «aborted
-     due to timeout» en un día; cada uno era un estado de plática o una
-     ficha que no se guardó y la siguiente instancia no supo nada). */
+  /* Un tope vencido se reintenta UNA vez. Evidencia (16-sep-2026): cinco
+     «aborted due to timeout» entre el 8 y el 16 de septiembre, y el que se
+     pudo ver de cerca fue el PRIMER acceso de una instancia recién
+     levantada (justo después de «[almacen] conectado», en el cron del
+     seguimiento): es el arranque en frío de la conexión, no la consulta.
+     Por eso el reintento y no un tope más largo. */
   const conReintento = async function (e) {
     if (reintento || !e || (e.name !== 'TimeoutError' && e.name !== 'AbortError')) return null;
     console.error('[almacen] tope vencido en ' + camino + ': se reintenta una vez');

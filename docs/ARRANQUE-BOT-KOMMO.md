@@ -307,8 +307,16 @@ almacén. Lo que salió y lo que se arregló:
     cliente manda sobre el estado.
 24. **Lo que dice el bot por Kommo no se anotaba en `mensajes`** (solo lo
     del cliente). Ya se anota igual que por Meta.
-25. **El almacén vence el tope (4 s) unas cinco veces al día**: ahora se
-    reintenta una vez antes de darlo por perdido.
+25. **El almacén vence el tope (4 s) de vez en cuando**: cinco veces entre
+    el 8 y el 16 de septiembre, y el caso visto de cerca fue el primer
+    acceso de una instancia recién levantada (arranque en frío de la
+    conexión, no la consulta). Ahora se reintenta una vez.
+28. **Sin causa raíz, con paliativo documentado:** por qué Kommo no arranca
+    el bloque de widget cuando se llega desde el botón del saludo (4
+    saludos, botón 100 %, widget 1 lanzamiento) y sí desde la Pausa. Está
+    dentro de Kommo y no se puede observar; el puente «Mensaje → Pausa →
+    widget» es el rodeo. Si Kommo lo corrige algún día, se puede quitar el
+    puente.
 26. Aviso que sigue: `KOMMO_SECRETO` no está en Vercel, así que el token
     del widget no se comprueba (el candado es el tramo interno + el
     return_url de la cuenta). Si el dueño quiere, se pone la llave secreta
