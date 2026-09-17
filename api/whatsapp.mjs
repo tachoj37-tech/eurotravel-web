@@ -4646,13 +4646,19 @@ async function manda(envio) {
      `AVISOS_AL_DUENO=1`, por si algún día los quiere de vuelta.
      ------------------------------------------------------------ */
   const RESPUESTA_A_SU_ORDEN = /^\[(?:tablero|ver\]|ver · |atajos\]|boton · |del dueño · |total actualizado|total · no aplicado|pago · autorizado|autorización · falta la otra|precio · (?:ticket equivocado|sin nada que confirmar))/;
-  if (esParaElDueno && String(process.env.AVISOS_AL_DUENO || '').trim() !== '1' &&
+  /* Por Kommo los tickets no van al WhatsApp del dueño: se vuelven nota
+     en el lead (trabajoDeKommo), así que estas dos compuertas no aplican.
+     Visto en la prueba del dueño (17-sep 20:34 UTC): con DUENO_WHATSAPP
+     puesta y AVISOS_AL_DUENO apagado, el ticket se apagaba aquí y la nota
+     «precio sugerido» nunca llegó al lead. */
+  const porKommo = !!colectorKommo.getStore();
+  if (esParaElDueno && !porKommo && String(process.env.AVISOS_AL_DUENO || '').trim() !== '1' &&
       !RESPUESTA_A_SU_ORDEN.test(String(envio.escribio || ''))) {
     console.log('[al-dueño] apagado ' + (envio.escribio || 'sin marca') +
       ' (AVISOS_AL_DUENO no está en 1)');
     return true;
   }
-  if (esParaElDueno && !MARCAS_PARA_EL_DUENO.test(String(envio.escribio || ''))) {
+  if (esParaElDueno && !porKommo && !MARCAS_PARA_EL_DUENO.test(String(envio.escribio || ''))) {
     console.log('[al-dueño] callado ' + (envio.escribio || 'sin marca') + ': ' +
       String(envio.texto || '[medio]').slice(0, 120).replace(/\n/g, ' '));
     return true;

@@ -251,7 +251,12 @@ function peticion(cuerpo, cabeceras, llave) {
      ticket con el calculado —que iba al WhatsApp del dueño y por Kommo no
      llegaba a nadie— se pega como nota interna del lead, aunque
      DUENO_WHATSAPP esté vacía. */
-  delete process.env.DUENO_WHATSAPP;
+  /* Como en producción (17-sep-2026, prueba del dueño a las 20:34 UTC): con
+     DUENO_WHATSAPP puesta y AVISOS_AL_DUENO apagado, el ticket se apagaba en
+     `manda` y la nota nunca llegó al lead. Por Kommo esas compuertas no
+     aplican: el ticket ES la nota. */
+  process.env.DUENO_WHATSAPP = '5213312345678';
+  delete process.env.AVISOS_AL_DUENO;
   /* Corta (dictado del dueño): el viaje en un renglón, el precio y las
      advertencias; fuera encabezado, calendario, almacén y el «va». */
   {
