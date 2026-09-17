@@ -619,14 +619,14 @@ function idDelUltimoTicket() {
        afuera primero con pie; con el precio ya no se repiten. */
     const paraC2 = mandados.filter((m) => mismo(m.to, C2));
     const fotosC2 = paraC2.filter((m) => m.image && m.image.link);
-    ok('justo antes del resumen van las 3 fotos de la unidad (17-sep-2026)', fotosC2.length, 3);
+    ok('justo antes del resumen va UNA foto de la unidad, la de afuera (17-sep-2026)', fotosC2.length, 1);
     const idxResumen = paraC2.findIndex((m) => m.text && /ya tengo todo tu viaje/.test(m.text.body || ''));
     okQue('  las fotos salen ANTES del resumen y la primera es la de afuera con pie',
-      idxResumen > paraC2.indexOf(fotosC2[2]) && /-01\.jpg$/.test(fotosC2[0].image.link) && !!fotosC2[0].image.caption);
+      idxResumen > paraC2.indexOf(fotosC2[0]) && /-01\.jpg$/.test(fotosC2[0].image.link) && !!fotosC2[0].image.caption);
     const ticket = idDelUltimoTicket();
     await contesta('va', ticket);
     const total = mandados.filter((m) => mismo(m.to, C2) && m.image && m.image.link).length;
-    ok('  con el precio NO se repiten', total, 3);
+    ok('  con el precio NO se repite', total, 1);
     okQue('  y el precio sí llegó', /\*Total: \$/.test(textos(C2).join('\n')));
   }
   delete process.env.SITIO_URL;

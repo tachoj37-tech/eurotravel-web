@@ -293,17 +293,18 @@ function fotosAntesDelTicket(envio, res, unidad) {
       (/^sprinter$/i.test(String(unidad || '')) ? unidadDelCatalogo('sprinter') : null) ||
       (/^suburban$/i.test(String(unidad || '')) ? unidadDelCatalogo('suburban') : null);
     if (!u) return [];
+    /* El candado es de ESTA plática (`sinFoto`: ya pidió fotos), no de la
+       ficha: en una cotización nueva la foto va otra vez con su ticket. */
     const ficha = tickets.fichaDe(envio.para);
     const vistas = (ficha && Array.isArray(ficha.fotos)) ? ficha.fotos : [];
-    if (vistas.indexOf(u.id) >= 0) return [];
     const medios = conversacion.mediosDe(u.id);
     if (!medios || !medios.fotos || !medios.fotos.length) return [];
+    /* UNA sola foto, la de afuera (la más relevante), sin video (dictado del
+       dueño, 17-sep-2026: «solo la foto más relevante y luego el ticket»). */
     const pie = 'Ésta es la *' + u.name + '*' + (u.cap ? ' — ' + u.cap : '') + ' 📸';
-    const salen = medios.fotos.slice(0, 3).map(function (foto, i) {
-      return { numeroDeOrigen: envio.numeroDeOrigen, para: envio.para, ligaDeFoto: sitio + '/' + foto,
-        texto: i === 0 ? pie : '', pasaAPersona: false, escribio: '[fotos antes del ticket]' };
-    });
-    tickets.anotaEtapa(envio.para, ficha ? ficha.etapa : 'escribio', { fotos: vistas.concat([u.id]) }, Date.now());
+    const salen = [{ numeroDeOrigen: envio.numeroDeOrigen, para: envio.para, ligaDeFoto: sitio + '/' + medios.fotos[0],
+      texto: pie, pasaAPersona: false, escribio: '[foto antes del ticket]' }];
+    if (vistas.indexOf(u.id) < 0) tickets.anotaEtapa(envio.para, ficha ? ficha.etapa : 'escribio', { fotos: vistas.concat([u.id]) }, Date.now());
     return salen;
   } catch (e) {
     console.error('[precio] no se pudieron armar las fotos antes del ticket: ' + (e && e.message));

@@ -288,8 +288,8 @@ titulo('R9 · el precio lleva unidad + total + foto + apartado + CLABE; y la CLA
      (dictado del dueño: «si pidió fotos antes ya no le mandes otra vez»). */
   /* Y CAMBIÓ OTRA VEZ el 17-sep-2026: «las fotos solo se dan si el cliente
      pide fotos o al final de la cotización». Al elegir ya no salen. */
-  okQue('  las 3 fotos salieron justo antes del resumen y no se repiten con el precio (17-sep-2026)',
-    mandados.slice(0, antes).filter((m) => mismo(m.to, C) && m.image && /unidades/.test(m.image.link || '')).length === 3 &&
+  okQue('  UNA foto (la de afuera) salió justo antes del resumen y no se repite con el precio (17-sep-2026)',
+    mandados.slice(0, antes).filter((m) => mismo(m.to, C) && m.image && /unidades/.test(m.image.link || '')).length === 1 &&
     !tras.some((m) => m.image && /unidades/.test(m.image.link || '')));
   okQue('  el monto de apartado', /son \*\$[\d,]+\* de apartado/.test(textoPrecio));
   okQue('  con banco y beneficiario en el texto', /BBVA · a nombre de Eurotravel/.test(textoPrecio));
