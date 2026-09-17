@@ -34,6 +34,29 @@
 const STRIPE = 'https://api.stripe.com/v1';
 
 /* ------------------------------------------------------------
+   LA VERSIÓN DE LA API VA FIJA EN CADA LLAMADA (16-sep-2026)
+   ------------------------------------------------------------
+   La cuenta de Stripe es la que ya cobra la página vieja y está en
+   la versión 2019-05-16. NO se le cambia: la página vieja depende de
+   ella. Pero este código conoce campos posteriores —`latest_charge`
+   nació en 2022-11-15— y sin fijar versión cada llamada salía con la
+   de la cuenta, o sea con esos campos vacíos.
+
+   `Stripe-Version` es por petición: fija cómo nos contesta Stripe a
+   NOSOTROS y no toca la cuenta ni a nadie más. Una sola constante,
+   todas las llamadas por `cabeceras()`. Lo cuida
+   pruebas/probar-version-de-stripe.cjs.
+   ------------------------------------------------------------ */
+const VERSION_API = '2024-06-20';
+
+function cabeceras(extra) {
+  return Object.assign({
+    'Authorization': 'Bearer ' + clave(),
+    'Stripe-Version': VERSION_API
+  }, extra || {});
+}
+
+/* ------------------------------------------------------------
    EL SEGURO CONTRA COBRAR DE VERDAD ANTES DE TIEMPO
    ------------------------------------------------------------
    Mientras esto sea false, una clave sk_live_ no cobra nada: la
@@ -114,7 +137,7 @@ async function traeSesion(id) {
 
   try {
     const r = await fetch(STRIPE + '/checkout/sessions/' + encodeURIComponent(id), {
-      headers: { 'Authorization': 'Bearer ' + k }
+      headers: cabeceras()
     });
     const d = await r.json();
     if (!r.ok || d.error) return { error: 'Stripe no reconoce la sesión' };
@@ -189,7 +212,7 @@ async function sesionPorPago(idPago) {
   try {
     const r = await fetch(STRIPE + '/checkout/sessions?payment_intent=' +
       encodeURIComponent(pi) + '&limit=1', {
-      headers: { 'Authorization': 'Bearer ' + k }
+      headers: cabeceras()
     });
     const d = await r.json();
     if (!r.ok || d.error) return { error: 'Stripe rechazó la consulta', reintentar: true };
@@ -228,7 +251,7 @@ async function cargoDelPago(idPago) {
 
   try {
     const r = await fetch(STRIPE + '/payment_intents/' + encodeURIComponent(pi) +
-      '?expand[]=latest_charge', { headers: { 'Authorization': 'Bearer ' + k } });
+      '?expand[]=latest_charge', { headers: cabeceras() });
     const d = await r.json();
     if (r.status === 404) return { error: 'ese pago no existe en Stripe' };
     if (!r.ok || (d && d.error)) return { error: 'Stripe rechazó la consulta', reintentar: true };
@@ -261,7 +284,7 @@ async function traeCliente(id) {
   if (!idDeClienteValido(id)) return { error: 'id de cliente con mala forma' };
   try {
     const r = await fetch(STRIPE + '/customers/' + encodeURIComponent(id), {
-      headers: { 'Authorization': 'Bearer ' + k }
+      headers: cabeceras()
     });
     const d = await r.json();
     if (!r.ok || d.error) return { error: 'Stripe no reconoce al cliente' };
@@ -301,7 +324,7 @@ async function clientesPorCorreo(correo) {
   if (!c) return { error: 'sin correo que buscar' };
   try {
     const r = await fetch(STRIPE + '/customers?email=' + encodeURIComponent(c) + '&limit=2', {
-      headers: { 'Authorization': 'Bearer ' + k }
+      headers: cabeceras()
     });
     const d = await r.json();
     if (!r.ok || (d && d.error)) return { error: 'Stripe rechazó la consulta', reintentar: true };
@@ -334,7 +357,7 @@ async function sesionesDelCliente(idCliente, cuantas) {
   try {
     const r = await fetch(STRIPE + '/checkout/sessions?customer=' +
       encodeURIComponent(idCliente) + '&limit=' + limite, {
-      headers: { 'Authorization': 'Bearer ' + k }
+      headers: cabeceras()
     });
     const d = await r.json();
     if (!r.ok || (d && d.error)) return { error: 'Stripe rechazó la consulta', reintentar: true };
@@ -368,10 +391,7 @@ async function creaCliente(datos) {
   try {
     const r = await fetch(STRIPE + '/customers', {
       method: 'POST',
-      headers: {
-        'Authorization': 'Bearer ' + k,
-        'Content-Type': 'application/x-www-form-urlencoded'
-      },
+      headers: cabeceras({ 'Content-Type': 'application/x-www-form-urlencoded' }),
       body: aFormulario(cuerpo).join('&')
     });
     const j = await r.json();
@@ -397,10 +417,7 @@ async function guardaEnCliente(id, metadata) {
     });
     const r = await fetch(STRIPE + '/customers/' + encodeURIComponent(id), {
       method: 'POST',
-      headers: {
-        'Authorization': 'Bearer ' + k,
-        'Content-Type': 'application/x-www-form-urlencoded'
-      },
+      headers: cabeceras({ 'Content-Type': 'application/x-www-form-urlencoded' }),
       body: campos.join('&')
     });
     const d = await r.json();
@@ -416,10 +433,7 @@ async function guardaEnCliente(id, metadata) {
 async function creaSesionDeCobro(cuerpo) {
   const r = await fetch(STRIPE + '/checkout/sessions', {
     method: 'POST',
-    headers: {
-      'Authorization': 'Bearer ' + clave(),
-      'Content-Type': 'application/x-www-form-urlencoded'
-    },
+    headers: cabeceras({ 'Content-Type': 'application/x-www-form-urlencoded' }),
     body: aFormulario(cuerpo).join('&')
   });
   return { ok: r.ok, datos: await r.json() };
@@ -427,6 +441,7 @@ async function creaSesionDeCobro(cuerpo) {
 
 module.exports = {
   PERMITIR_COBRO_REAL,
+  VERSION_API,
   hayClave,
   porQueNoSePuedeCobrar,
   estadoDePago,
