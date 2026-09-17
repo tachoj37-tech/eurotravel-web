@@ -281,6 +281,36 @@ function resumenAntesDelPrecio(res, nombreUnidad) {
 /* La primera foto de la unidad que le tocaría, por su dirección pública.
    «sprinter»/«suburban» directo; un camión por su nombre («Neobus»); si no
    se sabe cuál (autobús sin escoger) no hay foto. */
+/* Las tres fotos de la unidad para mandarlas justo antes del ticket
+   (dictado del dueño, 17-sep-2026). Vacío si ya las vio en esta plática
+   (`sinFoto`), si la ficha las tiene anotadas, si no se sabe la unidad
+   o si no hay sitio. Deja la unidad anotada en la ficha. */
+function fotosAntesDelTicket(envio, res, unidad) {
+  try {
+    const sitio = String(process.env.SITIO_URL || '').replace(/\/+$/, '');
+    if (!sitio || envio.sinFoto || res.fotoMandada) return [];
+    const u = unidadDelCatalogo(unidad) ||
+      (/^sprinter$/i.test(String(unidad || '')) ? unidadDelCatalogo('sprinter') : null) ||
+      (/^suburban$/i.test(String(unidad || '')) ? unidadDelCatalogo('suburban') : null);
+    if (!u) return [];
+    const ficha = tickets.fichaDe(envio.para);
+    const vistas = (ficha && Array.isArray(ficha.fotos)) ? ficha.fotos : [];
+    if (vistas.indexOf(u.id) >= 0) return [];
+    const medios = conversacion.mediosDe(u.id);
+    if (!medios || !medios.fotos || !medios.fotos.length) return [];
+    const pie = 'Ésta es la *' + u.name + '*' + (u.cap ? ' — ' + u.cap : '') + ' 📸';
+    const salen = medios.fotos.slice(0, 3).map(function (foto, i) {
+      return { numeroDeOrigen: envio.numeroDeOrigen, para: envio.para, ligaDeFoto: sitio + '/' + foto,
+        texto: i === 0 ? pie : '', pasaAPersona: false, escribio: '[fotos antes del ticket]' };
+    });
+    tickets.anotaEtapa(envio.para, ficha ? ficha.etapa : 'escribio', { fotos: vistas.concat([u.id]) }, Date.now());
+    return salen;
+  } catch (e) {
+    console.error('[precio] no se pudieron armar las fotos antes del ticket: ' + (e && e.message));
+    return [];
+  }
+}
+
 function fotoParaLaEspera(u) {
   const sitio = String(process.env.SITIO_URL || '').replace(/\/+$/, '');
   if (!sitio) return null;
@@ -649,13 +679,24 @@ async function precioDe(envio, opciones) {
     const cerca = conversacion.hayQueRevisarDisponibilidad(res.salida, hoy);
     const nombreUnidad = nombreBonitoDeUnidad(res.unidadNombre || res.unidad || unidad);
     const conUnidad = resumenAntesDelPrecio(res, nombreUnidad);
-    const mios = [{
+    /* ------------------------------------------------------------
+       LAS FOTOS VAN JUSTO ANTES DEL TICKET (dictado del dueño, 17-sep-2026)
+       ------------------------------------------------------------
+       «Si el cliente no pidió fotos de la unidad, antes de darle el ticket
+       mándale las fotos y seguido le mandas el ticket, no te esperes a otro
+       mensaje». Tres fotos (la de afuera primero, la primera con pie), en
+       el mismo turno y antes del resumen; y solo si no las vio ya en esta
+       plática (`sinFoto`, «mándame fotos») ni en la ficha (`fotos`).
+       ------------------------------------------------------------ */
+    const previas = fotosAntesDelTicket(envio, res, res.unidadNombre || res.unidad || unidad);
+    const mios = previas.concat([{
       numeroDeOrigen: envio.numeroDeOrigen,
       para: envio.para,
       texto: conUnidad || (cerca ? TEXTO_ESPERA_CON_CALENDARIO : TEXTO_ESPERA_PRECIO),
       pasaAPersona: true,
       escribio: '[precio por confirmar]'
-    }];
+    }]);
+    if (previas.length) res.fotoMandada = true;
     /* Y la foto de la unidad que le tocaría, mientras espera el precio:
        efecto dotación («ésta es la que les tocaría») y reciprocidad —se le
        da algo antes de pedirle nada—. Auditoría de psicología del

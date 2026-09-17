@@ -614,12 +614,19 @@ function idDelUltimoTicket() {
     await cotizaChapala(C2, '12 de septiembre', '14');
     /* Reparación Falla 6 (8-sep-2026): la foto va con el PRECIO, no con la
        espera (la de la espera queda apagada por bandera). */
-    const conLaEspera = mandados.filter((m) => mismo(m.to, C2) && m.image && m.image.link).length;
-    ok('con la espera NO va foto (va con el precio)', conLaEspera, 0);
+    /* Y cambió el 17-sep-2026: «antes de darle el ticket mándale las fotos
+       y seguido el ticket». Tres fotos justo antes del resumen, la de
+       afuera primero con pie; con el precio ya no se repiten. */
+    const paraC2 = mandados.filter((m) => mismo(m.to, C2));
+    const fotosC2 = paraC2.filter((m) => m.image && m.image.link);
+    ok('justo antes del resumen van las 3 fotos de la unidad (17-sep-2026)', fotosC2.length, 3);
+    const idxResumen = paraC2.findIndex((m) => m.text && /ya tengo todo tu viaje/.test(m.text.body || ''));
+    okQue('  las fotos salen ANTES del resumen y la primera es la de afuera con pie',
+      idxResumen > paraC2.indexOf(fotosC2[2]) && /-01\.jpg$/.test(fotosC2[0].image.link) && !!fotosC2[0].image.caption);
     const ticket = idDelUltimoTicket();
     await contesta('va', ticket);
     const total = mandados.filter((m) => mismo(m.to, C2) && m.image && m.image.link).length;
-    ok('  con el precio va UNA foto, y solo una', total, 1);
+    ok('  con el precio NO se repiten', total, 3);
     okQue('  y el precio sí llegó', /\*Total: \$/.test(textos(C2).join('\n')));
   }
   delete process.env.SITIO_URL;
