@@ -100,7 +100,11 @@ function anunciaPago(texto) {
 function decide(aviso) {
   const texto = String((aviso && aviso.mensaje) || '');
   if (!texto.trim()) return { modo: 'comprobante', texto: TEXTOS.archivoRecibido, nota: TEXTOS.notaComprobante };
-  if (anunciaPago(texto)) return { modo: 'espera', texto: TEXTOS.mandamelo, nota: '' };
+  /* Anuncia un pago («adjunto transferencia contrato tal»): el bot NO
+     contesta y se apaga; queda nota para el vendedor (dictado del dueño,
+     17-sep-2026: la gente saluda, manda la foto y escribe el aviso; el
+     Salesbot ni ve la foto, así que «mándamelo» era un callejón). */
+  if (anunciaPago(texto)) return { modo: 'pago', texto: '', nota: TEXTOS.notaPago };
   if (soloAgradecimiento(texto)) return { modo: 'denada', texto: TEXTOS.deNada, nota: '' };
   return { modo: 'saludo', texto: '', nota: '' };
 }

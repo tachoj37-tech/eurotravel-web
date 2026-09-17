@@ -19,6 +19,9 @@ const TEXTOS = {
      dice): el acuse es neutro. */
   archivoRecibido: 'Recibido 🙌 Si es tu comprobante, en un momento lo revisamos y te confirmamos tu pago por aquí. Si es otra cosa, escríbemela por texto.',
   mandamelo: 'Va, mándamelo por aquí 🙌',
+  /* Anuncio de pago (17-sep-2026, dictado: «yo recomendaría que no uses
+     bot»): el bot se calla y se apaga; esta nota es para el vendedor. */
+  notaPago: '💳 El cliente anuncia un pago o comprobante por WhatsApp. Lo atiende una persona: regístralo en EuroSystem y confírmale.',
   deNada: 'De nada 🙌 Quedo a tus órdenes para cualquier duda.',
 
   /* Los que viven en bloques del Salesbot de Kommo (referencia). */

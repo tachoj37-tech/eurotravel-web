@@ -122,7 +122,7 @@ titulo('5 · la decisión');
   const d1 = puerta.decide({ mensaje: '' });
   ok('sin texto (foto/PDF/audio) → comprobante, acuse neutro y nota', d1.modo === 'comprobante' && d1.texto === TEXTOS.archivoRecibido && d1.nota === TEXTOS.notaComprobante);
   const d2 = puerta.decide({ mensaje: 'te mando el comprobante' });
-  ok('anuncia pago → espera, «mándamelo», sin nota', d2.modo === 'espera' && d2.texto === TEXTOS.mandamelo && !d2.nota);
+  ok('anuncia pago → «pago»: sin texto, con nota al vendedor (17-sep: el bot no atiende pagos)', d2.modo === 'pago' && d2.texto === '' && d2.nota === TEXTOS.notaPago);
   const d3 = puerta.decide({ mensaje: 'muchas gracias!' });
   ok('gracias → denada', d3.modo === 'denada' && d3.texto === TEXTOS.deNada);
   const d4 = puerta.decide({ mensaje: 'hola, quiero cotizar' });
@@ -130,7 +130,7 @@ titulo('5 · la decisión');
   const d5 = puerta.decide({ mensaje: 'gracias, ¿y mi contrato?' });
   ok('una pregunta con gracias → saludo', d5.modo === 'saludo');
   const d6 = puerta.decide({ mensaje: 'gracias te mando el comprobante' });
-  ok('gracias + anuncia pago → espera (manda primero)', d6.modo === 'espera');
+  ok('gracias + anuncia pago → pago (manda primero)', d6.modo === 'pago');
 }
 
 (async function () {
@@ -197,7 +197,9 @@ titulo('5 · la decisión');
     notas.length === 1 && /\/leads\/26818280\/notes$/.test(notas[0].url) && notas[0].body[0].params.text === TEXTOS.notaComprobante);
 
   r = await porLaPuerta('te mando el comprobante del contrato 123');
-  ok('«te mando el comprobante» → modo espera con «mándamelo»', r.c && r.c.data.modo === 'espera' && r.c.data.texto === TEXTOS.mandamelo);
+  ok('«te mando el comprobante» → el bot se calla y se apaga (callado, fin), y deja nota al vendedor',
+    r.c && r.c.data.modo === '' && r.c.data.texto === '' && r.c.data.callado === 'si' && r.c.data.status === 'fin' &&
+    notas.length === 2 && notas[1].body[0].params.text === TEXTOS.notaPago);
 
   r = await porLaPuerta('muchas gracias 🙏');
   ok('«muchas gracias» → modo denada con «De nada…»', r.c && r.c.data.modo === 'denada' && r.c.data.texto === TEXTOS.deNada);

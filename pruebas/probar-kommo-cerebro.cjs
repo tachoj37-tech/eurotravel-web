@@ -323,7 +323,7 @@ function peticion(cuerpo, cabeceras, llave) {
   await atiende(peticion(aviso('ya deposité, ahí les mando el comprobante'), { 'x-interno': process.env.WHATSAPP_RUTA_SECRETA }), res);
   const cx9 = continuaciones[continuaciones.length - 1].body;
   ok('contesta «mándamelo por aquí» y el bot SIGUE vivo para recibir la foto',
-    cx9 && cx9.data.status === 'sigue' && cx9.data.texto === TEXTOS_FIJOS.mandamelo);
+    cx9 && cx9.data.status === 'fin' && cx9.data.callado === 'si' && !cx9.data.texto);
 
   titulo('la primera puerta reenvía el aviso tal cual');
   /* Kommo manda un formulario; la segunda puerta lo recibe byte por byte

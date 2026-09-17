@@ -5710,7 +5710,9 @@ async function trabajoDeKommo(crudo, modo) {
         console.error('[kommo-puerta] la nota tronó en el lead ' + aviso.leadId + ': ' + (err && err.message));
       }
     }
-    const datosPuerta = { modo: decision.modo, texto: decision.texto, status: 'sigue', fotos: '', pie: '', callado: 'no' };
+    /* «pago»: sin modo para el widget, callado y fin → salida «silencio» → parar. */
+    const esPago = decision.modo === 'pago';
+    const datosPuerta = { modo: esPago ? '' : decision.modo, texto: decision.texto, status: esPago ? 'fin' : 'sigue', fotos: '', pie: '', callado: esPago ? 'si' : 'no' };
     const handlersPuerta = [{ handler: 'goto', params: { type: 'question', step: 1 } }];
     console.log('[kommo-puerta] lead ' + aviso.leadId + ' · ' + decision.modo);
     const seguidoPuerta = await kommo.continuaSalesbot(aviso.returnUrl, { data: datosPuerta, execute_handlers: handlersPuerta });
@@ -5745,8 +5747,11 @@ async function trabajoDeKommo(crudo, modo) {
        la foto que venía después ya no tenía quién le contestara. Ahora
        contesta «mándamelo» y sigue vivo: la foto llega al cerebro y sale
        el acuse de comprobante. */
-    console.log('[kommo-trabajo] anuncia un pago a media plática: se espera el comprobante');
-    colector.envios.push({ para: aviso.numero, texto: TEXTOS.mandamelo, pasaAPersona: false, escribio: '[kommo · anuncia pago]' });
+    /* 17-sep-2026, dictado del dueño: el bot no atiende pagos. Se calla,
+       se apaga y deja nota al vendedor. */
+    console.log('[kommo-trabajo] anuncia un pago a media plática: el bot se apaga y lo atiende una persona');
+    try { await kommo.anotaEnLead(aviso.leadId, TEXTOS.notaPago); } catch (e) { console.error('[kommo-trabajo] la nota del pago tronó: ' + (e && e.message)); }
+    colector.envios.push({ para: aviso.numero, texto: '', esPersona: true, pasaAPersona: false, escribio: '[kommo · anuncia pago]' });
     resultado = { status: 200 };
   } else if (mensaje) {
     try {
