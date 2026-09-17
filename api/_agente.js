@@ -485,6 +485,9 @@ function siembraHistorial(cliente, turnos) {
   }));
 }
 function olvidaTodo() { historiales.clear(); }
+/* Un solo cliente empieza de nuevo (spec §3, 17-sep-2026): su memoria
+   corta se vacía para que la IA no arrastre el viaje anterior. */
+function olvida(cliente) { historiales.delete(llave(cliente)); }
 
 /* ---- lo que dice el agente, saneado ---- */
 /* Si la IA repite sus instrucciones o nombres de campos, eso no sale. */
@@ -815,7 +818,7 @@ async function redactaSeguimiento(opciones) {
 module.exports = {
   conversa, sanea, limpiaDatos, instruccionesDelAgente, textoDelContexto,
   redactaSeguimiento,
-  recuerda, historialDe, siembraHistorial, olvidaTodo, PALABRAS_PROHIBIDAS,
+  recuerda, historialDe, siembraHistorial, olvidaTodo, olvida, PALABRAS_PROHIBIDAS,
   unidadPorTexto, unidadesEnTexto, fichaDeUnidades,
   /* El candado, para que `manda` frene lo mismo que `sanea`. */
   esTextoInterno, pareceTextoDelPrompt, TEXTO_INTERNO, FRAGMENTOS_DEL_PROMPT, soloInstrucciones

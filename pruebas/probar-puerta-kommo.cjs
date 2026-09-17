@@ -191,6 +191,32 @@ titulo('5 · la decisión');
   r = await porLaPuerta('gracias, ¿y mi contrato?');
   ok('una pregunta → saludo (la resuelve el botón de agente)', r.c && r.c.data.modo === 'saludo');
 
+  /* ------------------------------------------------------------
+     EMPEZAR DE NUEVO (spec §3): visto en el teléfono del dueño el 17-sep
+     00:39. La ficha traía un viaje esperando precio (Vallarta 19–22 sep,
+     PB, 46) y «Nueva cotización» + «vamos a vta» contestó con ese resumen.
+     Ahora el saludo de la puerta archiva el viaje y vacía la plática.
+     ------------------------------------------------------------ */
+  const tickets = require(path.join(RAIZ, 'api/_tickets.js'));
+  const webhook = require(path.join(RAIZ, 'api/_whatsapp-webhook.js'));
+  const numeroDelLead = '529926818280';
+  tickets.anotaEtapa(numeroDelLead, 'pidio_precio', { porConfirmar: { total: 40000, anticipo: 5000, cotiza: null,
+    resumen: { origen: 'Guadalajara', destino: 'Puerto Vallarta', salida: '2026-09-19', regreso: '2026-09-22', gente: 46, unidadNombre: 'Irizar PB' } } });
+  webhook.guardaCharla(numeroDelLead, { destino: 'Puerto Vallarta', salida: '2026-09-19' });
+  r = await porLaPuerta('hola');
+  const fichaNueva = tickets.fichaDe(numeroDelLead);
+  ok('con un viaje esperando precio, el saludo de la puerta lo archiva y deja la ficha limpia',
+    r.c && r.c.data.modo === 'saludo' && fichaNueva && !fichaNueva.porConfirmar && !fichaNueva.viajeDatos && fichaNueva.etapa === 'escribio' &&
+    Array.isArray(fichaNueva.viajes) && fichaNueva.viajes.length === 1 && fichaNueva.viajes[0].destino === 'Puerto Vallarta');
+  ok('  y la plática queda vacía', !webhook.charlaDe(numeroDelLead));
+  /* Y el cerebro, a «vamos a vta», ya no contesta con el viaje viejo. */
+  res = respuesta();
+  await atiende(peticion(aviso('vamos a vta'), { 'x-interno': process.env.WHATSAPP_RUTA_SECRETA }, 'kommo-trabajo'), res);
+  const despues = continuaciones[continuaciones.length - 1].body;
+  ok('  y «vamos a vta» después del saludo NO trae el resumen del viaje anterior',
+    despues && despues.data.status === 'sigue' && !/ya tengo todo tu viaje|19 de septiembre|Irizar PB|46/.test(despues.data.texto));
+  console.log('   → ' + String(despues && despues.data.texto).replace(/\n/g, ' ').slice(0, 120));
+
   /* Los candados de siempre siguen en la puerta. */
   const antes = continuaciones.length;
   res = respuesta();

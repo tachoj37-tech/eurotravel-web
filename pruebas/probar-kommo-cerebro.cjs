@@ -52,6 +52,7 @@ function peticion(cuerpo, cabeceras, llave) {
 
 (async function () {
   const kommo = require(path.join(RAIZ, 'api/_kommo.js'));
+  const TEXTOS_FIJOS = require(path.join(RAIZ, 'api/_textos-fijos.js'));
   process.env.KOMMO_SUBDOMINIO = 'eurotravel';
   process.env.KOMMO_TOKEN = 'token-de-mentiras';
 
@@ -217,9 +218,15 @@ function peticion(cuerpo, cabeceras, llave) {
     anotados.some(function (a) { return a.de === 'bot' && a.tipo === 'texto' && a.texto.length > 0; }));
 
   res = respuesta();
+  const notasAntes = notas.length;
   await atiende(peticion(aviso(''), { 'x-interno': process.env.WHATSAPP_RUTA_SECRETA }), res);
   const c2 = continuaciones[1] && continuaciones[1].body;
-  ok('sin texto (audio/foto) pide que lo escriba y sigue', c2 && c2.data.status === 'sigue' && /escribes/.test(c2.data.texto));
+  /* 17-sep-2026 (spec §4.4): un archivo a media plática es un comprobante:
+     acuse neutro, nota en el lead y el bot se apaga. Antes pedía «¿me lo
+     escribes?» y seguía. */
+  ok('sin texto (foto/PDF/audio) a media plática: acuse de comprobante y el bot para',
+    c2 && c2.data.status === 'fin' && c2.data.texto === TEXTOS_FIJOS.archivoRecibido);
+  ok('  y una nota de comprobante en el lead', notas.length === notasAntes + 1 && notas[notas.length - 1].body[0].params.text === TEXTOS_FIJOS.notaComprobante);
 
   res = respuesta();
   const malo = aviso('hola'); malo.token = jwt({ iss: 'x' }, 'otro-secreto');
@@ -263,7 +270,8 @@ function peticion(cuerpo, cabeceras, llave) {
     ok('  para autobús queda el renglón del Excel con su columna y la advertencia de días',
       /Del Excel: \*\$32,000\*  \(columna «NC47», cubre 4 días\)/.test(camion) && /ajústalo tú/.test(camion) && !/Contéstame con el bueno/.test(camion));
   }
-  ok('sin id numérico de lead no se pega nada', (await kommo.anotaEnLead('{{lead.id}}', 'x')) === false && notas.length === 0);
+  ok('sin id numérico de lead no se pega nada', (await kommo.anotaEnLead('{{lead.id}}', 'x')) === false && notas.length === notasAntes + 1);
+  const notasBase = notas.length;
   const antesDeLaNota = continuaciones.length;
   /* Se contesta lo que el guion vaya preguntando, hasta que salga el ticket. */
   const contesta = function (pregunta) {
@@ -279,7 +287,7 @@ function peticion(cuerpo, cabeceras, llave) {
     return 'sí';
   };
   let pregunta = continuaciones[continuaciones.length - 1].body.data.texto;
-  for (let paso = 0; paso < 10 && !notas.length; paso++) {
+  for (let paso = 0; paso < 10 && notas.length === notasBase; paso++) {
     const t = contesta(pregunta);
     res = respuesta();
     await atiende(peticion(aviso(t), { 'x-interno': process.env.WHATSAPP_RUTA_SECRETA }), res);
@@ -289,8 +297,8 @@ function peticion(cuerpo, cabeceras, llave) {
   }
   ok('el cerebro siguió contestando por Kommo mientras tanto', continuaciones.length > antesDeLaNota);
   ok('se pegó UNA nota en el lead 26818280 con el token de la cuenta',
-    notas.length === 1 && /\/leads\/26818280\/notes$/.test(notas[0].url) && notas[0].metodo === 'POST' && notas[0].auth === 'Bearer token-de-mentiras');
-  const nota = notas[0] && notas[0].body[0];
+    notas.length === notasBase + 1 && /\/leads\/26818280\/notes$/.test(notas[notasBase].url) && notas[notasBase].metodo === 'POST' && notas[notasBase].auth === 'Bearer token-de-mentiras');
+  const nota = notas[notasBase] && notas[notasBase].body[0];
   ok('es una nota común con el ticket del precio, sin el «va» ni el número del cliente',
     nota && nota.note_type === 'common' && /^🤖 EuroBot · precio sugerido\n📍 /.test(nota.params.text) &&
     /Calculado:|Del Excel:|No pude calcularlo/.test(nota.params.text) && nota.params.text.split('\n').length <= 5 &&

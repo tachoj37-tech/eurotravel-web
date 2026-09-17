@@ -473,7 +473,30 @@ function mismoViaje(a, b) {
 function anotaEtapa(cliente, etapa, extra, ahora) {
   if (!cliente) return null;
   const k = llave(cliente);
-  const antes = cartera.get(k);
+  let antes = cartera.get(k);
+  /* ------------------------------------------------------------
+     EMPEZAR DE NUEVO (17-sep-2026, spec §3)
+     ------------------------------------------------------------
+     Cada conversación nueva en Kommo (saludo con botones) arranca de
+     cero: el viaje que estaba esperando precio o el que ya tenía precio
+     se ARCHIVA en `viajes` (no se pierde: el vendedor y el reporte
+     semanal lo ven) y la ficha queda como la de un cliente que acaba de
+     escribir. Sin esto, «Nueva cotización» + «vamos a vta» contestaba
+     con el resumen del viaje anterior (visto en el teléfono del dueño,
+     17-sep 00:39).
+     ------------------------------------------------------------ */
+  if (extra && extra.empiezaDeNuevo && antes) {
+    let archivados = antes.viajes || [];
+    const pendiente = antes.porConfirmar && antes.porConfirmar.resumen;
+    if (pendiente) archivados = archivaViaje(archivados, pendiente, antes.porConfirmar.total, 'nueva cotización', antes.porConfirmar.anticipo);
+    if (antes.viajeDatos && (!pendiente || !mismoViaje(antes.viajeDatos, pendiente))) {
+      archivados = archivaViaje(archivados, antes.viajeDatos, antes.total, 'nueva cotización', antes.anticipo);
+    }
+    antes = Object.assign({}, antes, {
+      viajes: archivados, porConfirmar: null, viajeDatos: null, total: null, anticipo: null,
+      enManosDe: null, etapa: 'escribio', precioEn: null, toques: 0
+    });
+  }
   /* El número completo (52 1 33…) se conserva aunque la orden del dueño
      venga con solo los 10 dígitos («3312345678 yo»): es el que WhatsApp
      necesita para mandar. */

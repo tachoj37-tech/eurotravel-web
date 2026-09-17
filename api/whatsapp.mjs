@@ -2561,7 +2561,13 @@ async function loQueDiceElAgente(envio) {
   if (!agente.historialDe(cliente).length && almacen.hayAlmacen()) {
     const filas = await almacen.mensajesDe(cliente, 10).catch(function () { return null; });
     if (Array.isArray(filas)) {
-      agente.siembraHistorial(cliente, filas.slice().reverse().map(function (f) {
+      /* Vienen de la más nueva a la más vieja. Si hay una marca de «nueva
+         conversación» (spec §3), solo se siembra lo que vino DESPUÉS de
+         ella: una instancia recién levantada no debe volver a leerle a la
+         IA el viaje anterior (17-sep-2026). */
+      const corte = filas.findIndex(function (f) { return String(f.texto || '') === MARCA_NUEVA_CONVERSACION; });
+      const utiles = corte >= 0 ? filas.slice(0, corte) : filas;
+      agente.siembraHistorial(cliente, utiles.slice().reverse().map(function (f) {
         return { de: f.de === 'cliente' ? 'cliente' : 'bot', texto: f.texto };
       }));
     }
@@ -5387,6 +5393,42 @@ async function atiendeKommoTrabajo(a, b, esWeb, modo) {
    Siempre contesta 200 a Kommo: es nuestra segunda puerta, no la de
    ellos; lo que salió mal queda en el registro.
    ============================================================ */
+/* ------------------------------------------------------------
+   EMPEZAR DE NUEVO EN CADA CONVERSACIÓN NUEVA (spec §3, 17-sep-2026)
+   ------------------------------------------------------------
+   Visto en el teléfono del dueño (17-sep 00:39): «Nueva cotización» +
+   «vamos a vta» y el bot contestó con el resumen del viaje ANTERIOR
+   (19–22 sep, Irizar PB, 46), porque la ficha seguía con ese viaje
+   esperando precio y la IA lo tomó como el mismo.
+
+   Cuando la puerta manda al saludo (conversación nueva en Kommo), se
+   archiva el viaje de la ficha, se vacía la plática y la memoria corta
+   de la IA, y se deja una marca en los mensajes del almacén para que
+   otra instancia tampoco le lea a la IA lo de antes. Nada se pierde: el
+   viaje queda en `viajes` de la ficha y en el chat de Kommo.
+   ------------------------------------------------------------ */
+const MARCA_NUEVA_CONVERSACION = '[── nueva conversación ──]';
+async function empiezaDeNuevo(numero) {
+  if (!numero) return;
+  if (almacen.hayAlmacen()) {
+    const deLaBase = await almacen.leeFicha(numero).catch(function () { return null; });
+    if (deLaBase) tickets.siembraFicha(deLaBase);
+  }
+  const ficha = tickets.fichaDe(numero);
+  if (ficha) tickets.anotaEtapa(numero, 'escribio', { empiezaDeNuevo: true, porConfirmar: null });
+  webhook.guardaCharla(numero, null);
+  agente.olvida(numero);
+  if (almacen.hayAlmacen()) {
+    const viva = tickets.fichaViva(numero);
+    await Promise.all([
+      viva ? almacen.guardaFicha(viva).catch(function () {}) : Promise.resolve(),
+      almacen.guardaCharla(numero, null).catch(function () {}),
+      almacen.anotaMensaje(numero, 'bot', MARCA_NUEVA_CONVERSACION, 'sistema').catch(function () {})
+    ]);
+  }
+  console.log('[kommo-puerta] ' + numero + ' empieza de nuevo' + (ficha && (ficha.porConfirmar || ficha.viajeDatos) ? ' (viaje anterior archivado)' : ''));
+}
+
 async function trabajoDeKommo(crudo, modo) {
   const aviso = kommo.leeAvisoDeWidget(crudo);
   if (aviso.error) {
@@ -5418,6 +5460,11 @@ async function trabajoDeKommo(crudo, modo) {
      ------------------------------------------------------------ */
   if (modo === 'puerta') {
     const decision = puerta.decide(aviso);
+    /* Conversación nueva → el cliente empieza de cero (spec §3). */
+    if (decision.modo === 'saludo') {
+      try { await empiezaDeNuevo(aviso.numero); }
+      catch (err) { console.error('[kommo-puerta] empezar de nuevo tronó con ' + aviso.numero + ': ' + (err && err.message)); }
+    }
     if (decision.nota) {
       try {
         const pegada = await kommo.anotaEnLead(aviso.leadId, decision.nota);
@@ -5464,9 +5511,24 @@ async function trabajoDeKommo(crudo, modo) {
       console.error('[kommo-trabajo] el cerebro tronó con el lead ' + aviso.leadId + ': ' + (e && e.message));
     }
   } else {
-    /* Un audio, una foto o un sticker: por Kommo no llega el archivo, solo
-       el texto, y aquí no hay texto. Se le pide por escrito y se sigue. */
-    colector.envios.push({ para: aviso.numero, texto: 'Por aquí solo leo texto 🙏 ¿Me lo escribes?', pasaAPersona: false, escribio: '[kommo · sin texto]' });
+    /* ------------------------------------------------------------
+       UN ARCHIVO A MEDIA PLÁTICA ES UN COMPROBANTE (spec §4.4, 17-sep-2026)
+       ------------------------------------------------------------
+       Por Kommo no llega el archivo, solo el texto, y aquí no hay texto:
+       es una foto, un PDF o un audio. Antes se contestaba «Por aquí solo
+       leo texto», y a una agencia que manda su ficha de depósito mientras
+       el bot sigue vivo (después del resumen) eso la dejaba sin acuse. Se
+       contesta lo mismo que la puerta —acuse neutro y nota en el lead— y
+       el bot se apaga: lo que sigue es de una persona.
+       ------------------------------------------------------------ */
+    const d = puerta.decide(aviso);
+    try {
+      const pegada = await kommo.anotaEnLead(aviso.leadId, d.nota);
+      console.log('[kommo-trabajo] archivo a media plática: nota de comprobante en el lead ' + aviso.leadId + ': ' + (pegada ? 'pegada' : 'NO se pegó'));
+    } catch (err) {
+      console.error('[kommo-trabajo] la nota del comprobante tronó en el lead ' + aviso.leadId + ': ' + (err && err.message));
+    }
+    colector.envios.push({ para: aviso.numero, texto: d.texto, pasaAPersona: true, esPersona: true, escribio: '[kommo · archivo → comprobante]' });
   }
 
   /* Solo lo que iba al cliente; lo del dueño ya se frenó en `manda`. */
