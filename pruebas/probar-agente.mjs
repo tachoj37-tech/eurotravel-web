@@ -283,6 +283,11 @@ titulo('después de la espera no se vuelve a pedir el precio (7-sep-2026)');
   await dice('solo nos llevan y traen', C);
   const esperas = () => textos(C).filter((t) => /en un momento te paso tu precio/i.test(t)).length;
   ok('la espera salió una vez', esperas(), 1);
+  /* 16-sep-2026, dictado del dueño: el resumen de la cotización dice qué
+     incluye, con combustible y casetas en renglones aparte y con emoji. */
+  const laEspera = textos(C).filter((t) => /en un momento te paso tu precio/i.test(t))[0] || '';
+  okQue('  y el resumen dice qué incluye, renglón por renglón',
+    /Incluye:\n👨‍✈️ Operador profesional\n⛽ Combustible\n🛣️ Casetas\n🛡️ Seguro de viajero\n📡 Monitoreo GPS 24\/7\n/.test(laEspera));
   const tickets = () => textos(DUENO).filter((t) => /Precio por confirmar/.test(t)).length;
   ok('  y un ticket al dueño', tickets(), 1);
 

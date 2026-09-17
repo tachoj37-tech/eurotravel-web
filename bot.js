@@ -695,6 +695,36 @@ function listaDeUnidades() {
   }).join('\n');
 }
 
+/* ------------------------------------------------------------
+   LO QUE INCLUYE EL SERVICIO · una sola lista para todo el bot
+   ------------------------------------------------------------
+   Dictado del dueño (16-sep-2026): «cuando te pregunten qué incluye
+   vas a decir que incluye, separa gasolina y casetas, son dos cosas
+   diferentes, les pones emojis; de igual forma cuando generes el
+   ticket de cotización agrega que incluye».
+
+   Antes había tres redacciones sueltas —la respuesta a «¿qué
+   incluye?», el renglón del precio y el resumen previo al precio—
+   y en dos de ellas combustible y casetas iban juntos en un mismo
+   renglón. Aquí vive la lista y de aquí la toman las tres, así que
+   un cambio del dueño se hace UNA vez.
+
+   Y NO va en el saludo: ahí solo se dice «renta de autobuses y
+   Sprinter» (mismo dictado). El chofer se menciona cuando preguntan
+   qué incluye, no al abrir.
+   ------------------------------------------------------------ */
+const LO_QUE_INCLUYE = [
+  '👨‍✈️ Operador profesional',
+  '⛽ Combustible',
+  '🛣️ Casetas',
+  '🛡️ Seguro de viajero',
+  '📡 Monitoreo GPS 24/7'
+];
+
+function loQueIncluye() {
+  return LO_QUE_INCLUYE.join('\n');
+}
+
 /* Lo que trae una unidad, con sus palabras del catálogo. */
 function fichaDe(u) {
   const cosas = (u.spec || []).map(function (s) {
@@ -4341,7 +4371,10 @@ function textoDeCotizacion(precio, resumen) {
          bloqueo»— y repetir una cifra la hace sonar a trámite. */
       '\n*Total: ' + pesos(precio.total) + '*\n' +
       porPersona + '\n' +
-      'Incluye operador, combustible, casetas y seguro de viajero.\n' +
+      /* Lo que incluye, renglón por renglón y con emoji (LO_QUE_INCLUYE,
+         dictado del dueño del 16-sep-2026). La palabra «Incluye» abre el
+         bloque: una prueba vigila que vaya ANTES del cierre. */
+      'Incluye:\n' + loQueIncluye() + '\n' +
       comparacion +
       '\n' + (paraAgencia
         /* De colega a colega: el dato y la pregunta. Sin nombrarle su
@@ -4567,15 +4600,18 @@ function saludo(vendedor, mensaje) {
   const n = String(mensaje || '').length % 3;
   if (vendedor) {
     return [
-      '¡Hola! Soy *' + vendedor + '*, de *Eurotravel* 🚐\n\nRentamos camionetas y autobuses con chofer, para grupos.',
-      '¡Qué tal! Te atiende *' + vendedor + '*, de *Eurotravel* 🚐\n\nCamionetas y autobuses con chofer para tu grupo.',
-      'Hola, soy *' + vendedor + '* 🚐 Aquí en *Eurotravel* rentamos Sprinters y autobuses con chofer.'
+      /* Sin «con chofer»: en el saludo solo «renta de autobuses y
+         Sprinter» (dictado del dueño, 16-sep-2026). Lo que incluye se
+         dice cuando lo preguntan; ver LO_QUE_INCLUYE. */
+      '¡Hola! Soy *' + vendedor + '*, de *Eurotravel* 🚐\n\nRentamos autobuses y Sprinter para grupos.',
+      '¡Qué tal! Te atiende *' + vendedor + '*, de *Eurotravel* 🚐\n\nRenta de autobuses y Sprinter para tu grupo.',
+      'Hola, soy *' + vendedor + '* 🚐 Aquí en *Eurotravel* rentamos autobuses y Sprinter.'
     ][n];
   }
   return [
-    '¡Hola! Gracias por escribir a *Eurotravel* 🚐\n\nRentamos camionetas y autobuses con chofer, para grupos.',
-    '¡Qué tal! Estás con *Eurotravel* 🚐\n\nCamionetas y autobuses con chofer para tu grupo.',
-    'Hola 🚐 Aquí en *Eurotravel* rentamos Sprinters y autobuses con chofer, para grupos.'
+    '¡Hola! Gracias por escribir a *Eurotravel* 🚐\n\nRentamos autobuses y Sprinter para grupos.',
+    '¡Qué tal! Estás con *Eurotravel* 🚐\n\nRenta de autobuses y Sprinter para tu grupo.',
+    'Hola 🚐 Aquí en *Eurotravel* rentamos autobuses y Sprinter, para grupos.'
   ][n];
 }
 
@@ -5410,11 +5446,10 @@ function respuestaBase(mensaje, estado, hoy) {
   if (tiene(t, ['incluye', 'incluyen', 'servicio', 'baño', 'bano', 'aire',
     'seguro', 'gasolina', 'combustible', 'caseta', 'chofer', 'gps'])) {
     return {
+      /* La lista vive en LO_QUE_INCLUYE: combustible y casetas van en
+         renglones aparte, con emoji (dictado del dueño, 16-sep-2026). */
       texto: 'Todos nuestros servicios incluyen:\n\n' +
-        '✓ Operador profesional\n' +
-        '✓ Seguro de viajero\n' +
-        '✓ Monitoreo GPS 24/7\n' +
-        '✓ Combustible y casetas\n\n' +
+        loQueIncluye() + '\n\n' +
         'Cada unidad además trae lo suyo. ¿Cuál te interesa?\n\n' + listaDeUnidades(),
       pasa: false
     };
@@ -6111,7 +6146,7 @@ function loQueFalta(estado) {
 }
 
 module.exports = {
-  respuestaA, textoDeCotizacion, textoDeSolicitud, aplicaEntendido, continuaCon, mediosDe,
+  respuestaA, textoDeCotizacion, textoDeSolicitud, aplicaEntendido, continuaCon, mediosDe, loQueIncluye,
   unidadPorNombre, unidadesQueNombra,
   pegaDatos, loQueFalta, listaCortaDeAutobuses, autobusesPara, mensajeDeAutobuses,
   hayQueRevisarDisponibilidad,

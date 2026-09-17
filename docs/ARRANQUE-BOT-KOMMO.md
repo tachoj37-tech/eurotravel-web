@@ -17,7 +17,7 @@ Todo en español. Él ve el Chrome ("de aquí te veo"): trabajar con clics reale
 7. **El vendedor debe tener a la mano** (plantillas de Kommo): las fotos de cada unidad, los datos de depósito, y el mensaje que pide los datos del contrato. Aún no hechas.
 
 ### El flujo que dictó
-- Saludo con dos botones: **«Nueva cotización»** y **«Hablar con un agente»**. Texto: «¡Qué tal! Estás con *Eurotravel* 🚐 / Camionetas y autobuses con chofer para tu grupo. / ¿Qué necesitas? / Si ya cotizaste, quieres abonar o tienes otra duda, pícale al segundo botón.»
+- Saludo con dos botones: **«Nueva cotización»** y **«Hablar con un agente»**. Texto: «¡Qué tal! Estás con *Eurotravel* 🚐 / Renta de autobuses y Sprinter para tu grupo. / ¿Qué necesitas? / Si ya cotizaste, quieres abonar o tienes otra duda, pícale al segundo botón.»
 - **Destino**: texto libre, se guarda tal cual (nunca recortar «Bocas de Iguanas»).
 - **Fechas**: texto libre, como las diga.
 - **Unidad**: botones **[Autobús] [Sprinter] [Somos varios]**. Si escoge Sprinter (o cualquier unidad) NO se pregunta cuántos son. Si dice un número, se recomienda unidad (hasta 20 → Sprinter; 36+ → autobús; no hay nada de 21 a 35).

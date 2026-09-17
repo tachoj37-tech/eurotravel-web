@@ -247,6 +247,12 @@ function resumenAntesDelPrecio(res, nombreUnidad) {
   lineas.push('🚐 ' + (res.recorridos
     ? res.recorridos + (res.recorridos === 1 ? ' día' : ' días') + ' con movimientos allá'
     : 'Sin movimientos: los llevamos y los traemos'));
+  /* Lo que incluye va en el resumen de la cotización (dictado del dueño,
+     16-sep-2026): la misma lista que usa el precio y «¿qué incluye?»,
+     renglón por renglón (`bot.js`, LO_QUE_INCLUYE). */
+  lineas.push('');
+  lineas.push('Incluye:');
+  lineas.push(conversacion.loQueIncluye());
   lineas.push('');
   lineas.push('En un momento te paso tu precio y la disponibilidad 🙌');
   lineas.push('');
