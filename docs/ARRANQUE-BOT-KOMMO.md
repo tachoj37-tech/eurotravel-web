@@ -375,6 +375,28 @@ almacén. Lo que salió y lo que se arregló:
     saludo «Entregado» en el chat del lead. Con el modelo real
     (`scripts/conversar-kommo.mjs q m b`): puerta, enojo y cotización sin
     fallas ($0.033 USD).
+33. **Simulación de 30 clientes con el modelo real (17-sep, «simula,
+    simula, simula», presupuesto $1 USD, gastado ≈ $0.90).** Escenarios
+    x1–x20 y y1–y10 de `scripts/conversar-kommo.mjs`: faltas de
+    ortografía, abreviaturas, agencias, cambios a media plática, enojo,
+    comprobantes, dos Sprinters, cancelación, inglés, «cotización
+    anterior» a mano. Lo que se corrigió, cada uno con prueba automática
+    (probar-agente / probar-puerta-kommo / probar-kommo-cerebro):
+    disponibilidad afirmada por la IA → «te la confirmo con el equipo»;
+    número suelto con la fecha sabida = gente; «somos 15» tras el
+    resumen = ticket corregido (la unidad se queda si caben); con los
+    seis datos se cotiza aunque la IA charle; «¿tienen baño?» se contesta
+    sin listar la flota; «ya deposité, ahí les mando el comprobante» →
+    «mándamelo» y el bot sigue vivo; enojo → persona y el bot se apaga;
+    «solo ida» en resumen y ticket; dos o más unidades y «retomar mi
+    cotización» → persona; cancelación → el bot se apaga; factura y
+    descuentos no se afirman. Cada conversación nueva (saludo de la
+    puerta) empieza de cero: el viaje anterior se archiva en `viajes` y
+    queda una marca en `mensajes` para la memoria de la IA.
+    **Lo que sigue sin poder probarse sin el teléfono:** que Kommo lance
+    el bot cuando llega una foto el mismo día (disparador «con una pausa
+    de un día»); si no, cambiar a «cuando se inicia un chat por mensaje
+    entrante».
 26. Aviso que sigue: `KOMMO_SECRETO` no está en Vercel, así que el token
     del widget no se comprueba (el candado es el tramo interno + el
     return_url de la cuenta). Si el dueño quiere, se pone la llave secreta
