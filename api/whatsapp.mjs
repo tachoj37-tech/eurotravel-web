@@ -40,6 +40,7 @@ import agente from './_agente.js';
    KOMMO_TOKEN, así que importarla no cambia nada hasta que las haya. */
 import kommo from './_kommo.js';
 import kommoAprende from './_kommo-aprende.js';
+import puerta from './_puerta-kommo.js';
 import origenes from './_origenes.js';
 import destinos from './_destinos.js';
 import seguimiento from './_seguimiento.js';
@@ -5272,7 +5273,7 @@ function secretoInterno() {
   return String(process.env.WHATSAPP_RUTA_SECRETA || '').trim();
 }
 
-async function atiendeKommo(a, b, esWeb) {
+async function atiendeKommo(a, b, esWeb, modo) {
   /* Sin Kommo configurado, esta puerta no existe: 404 como cualquier
      dirección que no lleva a ningún lado. */
   if (!kommo.hayKommo()) {
@@ -5301,7 +5302,7 @@ async function atiendeKommo(a, b, esWeb) {
      minuto— pero sí se le da un momento para que salga. El aborto es lo
      esperado, no un error. */
   const destino = String(process.env.SITIO_URL || '').replace(/\/+$/, '') +
-    '/api/whatsapp/kommo-trabajo';
+    (modo === 'puerta' ? '/api/whatsapp/kommo-trabajo-puerta' : '/api/whatsapp/kommo-trabajo');
   if (process.env.SITIO_URL) {
     try {
       await fetch(destino, {
@@ -5331,7 +5332,7 @@ async function atiendeKommo(a, b, esWeb) {
   return new Response(JSON.stringify({ ok: true }), { status: 200, headers: TIPO_JSON });
 }
 
-async function atiendeKommoTrabajo(a, b, esWeb) {
+async function atiendeKommoTrabajo(a, b, esWeb, modo) {
   const dado = esWeb ? a.headers.get('x-interno') : (a.headers && a.headers['x-interno']);
   if (!webhook.rutaSecretaValida(String(dado || ''), secretoInterno())) {
     if (!esWeb) { b.status(404).send(NO_HAY); return; }
@@ -5343,7 +5344,7 @@ async function atiendeKommoTrabajo(a, b, esWeb) {
     crudo = esWeb ? await a.text() : await crudoDeNode(a);
   } catch (e) { crudo = ''; }
 
-  const r = await trabajoDeKommo(crudo);
+  const r = await trabajoDeKommo(crudo, modo);
   if (!esWeb) { b.status(200).json(r); return; }
   return new Response(JSON.stringify(r), { status: 200, headers: TIPO_JSON });
 }
@@ -5368,7 +5369,7 @@ async function atiendeKommoTrabajo(a, b, esWeb) {
    Siempre contesta 200 a Kommo: es nuestra segunda puerta, no la de
    ellos; lo que salió mal queda en el registro.
    ============================================================ */
-async function trabajoDeKommo(crudo) {
+async function trabajoDeKommo(crudo, modo) {
   const aviso = kommo.leeAvisoDeWidget(crudo);
   if (aviso.error) {
     console.error('[kommo-trabajo] aviso rechazado: ' + aviso.error);
@@ -5387,6 +5388,33 @@ async function trabajoDeKommo(crudo) {
     return { ok: false, motivo: 'token inválido' };
   }
   if (firma === null && !sinToken) console.error('[kommo-trabajo] sin KOMMO_SECRETO en Vercel: el token del widget no se comprueba');
+
+  /* ------------------------------------------------------------
+     LA PUERTA: EL CEREBRO DECIDE ANTES DEL SALUDO (spec §2, 16-sep-2026)
+     ------------------------------------------------------------
+     Por el tramo `kommo-puerta` no se piensa ni se cotiza: se mira el
+     primer mensaje y se le dice a Kommo por cuál bloque seguir
+     (`data.modo`): comprobante · espera · denada · saludo. Sin IA, sin
+     almacén; solo la nota en el lead cuando llega un comprobante. Las
+     reglas y los textos viven en `_puerta-kommo.js` y `_textos-fijos.js`.
+     ------------------------------------------------------------ */
+  if (modo === 'puerta') {
+    const decision = puerta.decide(aviso);
+    if (decision.nota) {
+      try {
+        const pegada = await kommo.anotaEnLead(aviso.leadId, decision.nota);
+        console.log('[kommo-puerta] nota de comprobante en el lead ' + aviso.leadId + ': ' + (pegada ? 'pegada' : 'NO se pegó'));
+      } catch (err) {
+        console.error('[kommo-puerta] la nota tronó en el lead ' + aviso.leadId + ': ' + (err && err.message));
+      }
+    }
+    const datosPuerta = { modo: decision.modo, texto: decision.texto, status: 'sigue', fotos: '', pie: '', callado: 'no' };
+    const handlersPuerta = [{ handler: 'goto', params: { type: 'question', step: 1 } }];
+    console.log('[kommo-puerta] lead ' + aviso.leadId + ' · ' + decision.modo);
+    const seguidoPuerta = await kommo.continuaSalesbot(aviso.returnUrl, { data: datosPuerta, execute_handlers: handlersPuerta });
+    if (!seguidoPuerta) console.error('[kommo-puerta] Kommo no aceptó la continuación del lead ' + aviso.leadId);
+    return { ok: seguidoPuerta, modo: decision.modo, texto: decision.texto };
+  }
 
   /* El mismo aviso que mandaría Meta, para que el cerebro no note la
      diferencia. WABA y número salen de Vercel (los del modo Dualhook) o,
@@ -5498,8 +5526,13 @@ async function atiende(a) {
      un tramo, es un nombre fijo, y su llave es otra (CRON_SECRET). */
   if (llave === 'seguimiento') return atiendeSeguimiento(a, b, esWeb);
   /* Las dos mitades de Kommo. Ver la nota larga en `atiendeKommo`. */
-  if (llave === 'kommo') return atiendeKommo(a, b, esWeb);
-  if (llave === 'kommo-trabajo') return atiendeKommoTrabajo(a, b, esWeb);
+  if (llave === 'kommo') return atiendeKommo(a, b, esWeb, '');
+  if (llave === 'kommo-trabajo') return atiendeKommoTrabajo(a, b, esWeb, '');
+  /* La puerta: el cerebro decide antes del saludo (spec §2). Mismo par de
+     tramos, otro nombre, para que el bloque de Kommo diga cuál es cuál con
+     su URL y nada dependa de la consulta de la reescritura. */
+  if (llave === 'kommo-puerta') return atiendeKommo(a, b, esWeb, 'puerta');
+  if (llave === 'kommo-trabajo-puerta') return atiendeKommoTrabajo(a, b, esWeb, 'puerta');
   if (!webhook.rutaSecretaValida(llave, process.env.WHATSAPP_RUTA_SECRETA)) {
     if (!esWeb) { b.status(404).send(NO_HAY); return; }
     return new Response(NO_HAY, { status: 404, headers: TIPO_TEXTO });
