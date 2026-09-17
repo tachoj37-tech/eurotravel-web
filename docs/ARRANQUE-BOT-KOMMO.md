@@ -355,6 +355,26 @@ almacén. Lo que salió y lo que se arregló:
     corrección), y nunca frena al seguimiento. **Para que aprenda, el
     vendedor pone la Venta en el lead al cotizar.** Se ve en el registro
     como `[kommo-aprende] lead … · $…`.
+32. **EuroBot v2 (id 84646) es el bot vivo en PRUEBAS desde el 17-sep-2026**
+    (spec `docs/ESPEC-UN-NUMERO-CUATRO-FUNCIONES.md`). El viejo 84562
+    quedó sin disparador. Widget 1.0.8 con siete salidas: las tres de
+    siempre más saludo / comprobante / espera / denada, que el widget
+    toma por `{{json.modo}}` (solo las contesta la puerta,
+    `…/kommo-puerta`). El bot se genera con
+    `scripts/arma-bot-kommo-v2.mjs` (24 bloques: puerta → saludo de tres
+    botones / comprobante / espera / de nada; cotización nueva con el
+    cerebro; «Cotización anterior» con misma fecha / fecha nueva sin IA)
+    y se importa por `.js-import-bot-input`; al guardar, Kommo cambia los
+    `widget_instance_id`, así que hay que exportar el bot guardado
+    (botón export, capturando el blob) y registrar los `widget_source`
+    con esos ids (POST `/private/ajax/v2/json/salesbot/widgets/`; con
+    otros ids contesta «Widget not found»). Disparador: «En un mensaje
+    recibido desde Eurotravel PRUEBAS (con una pausa de un día)», que es
+    el saludo cada 24 h. Verificado: `POST /api/v2/salesbot/run` con
+    bot 84646 → `[kommo-puerta] lead 26818280 · saludo` en Vercel y el
+    saludo «Entregado» en el chat del lead. Con el modelo real
+    (`scripts/conversar-kommo.mjs q m b`): puerta, enojo y cotización sin
+    fallas ($0.033 USD).
 26. Aviso que sigue: `KOMMO_SECRETO` no está en Vercel, así que el token
     del widget no se comprueba (el candado es el tramo interno + el
     return_url de la cuenta). Si el dueño quiere, se pone la llave secreta
