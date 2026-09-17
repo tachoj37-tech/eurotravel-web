@@ -5450,7 +5450,9 @@ function respuestaBase(mensaje, estado, hoy) {
          renglones aparte, con emoji (dictado del dueño, 16-sep-2026). */
       texto: 'Todos nuestros servicios incluyen:\n\n' +
         loQueIncluye() + '\n\n' +
-        'Cada unidad además trae lo suyo. ¿Cuál te interesa?\n\n' + listaDeUnidades(),
+        /* «¿Cuál unidad te interesa?», con sus palabras (16-sep-2026). Solo
+           lo ve el chat de la página: por WhatsApp/Kommo contesta la IA. */
+        'Cada una trae además lo suyo. ¿Cuál unidad te interesa?\n\n' + listaDeUnidades(),
       pasa: false
     };
   }
