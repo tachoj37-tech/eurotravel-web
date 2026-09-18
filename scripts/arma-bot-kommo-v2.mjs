@@ -54,8 +54,12 @@ const widget = (id, col, fila, nombre, url, salidas) => B.push({ id, tipo: 'widg
 widget(1, 0, 1, 'Puerta (decide antes del saludo)', SITIO + '/api/whatsapp/kommo-puerta', {
   saludo: 10, comprobante: 20, espera: 30, denada: 40,
   /* Si el servidor no contestó (fail/silencio) o algo raro: al saludo. */
-  success: 10, fail: 10, silencio: 10
+  success: 10, fail: 10,
+  /* silencio = la puerta dijo «callado» (anuncio de pago, 18-sep-2026):
+     el bot se apaga sin decir nada. Antes iba al saludo y lo repetía. */
+  silencio: LISTA ? 90 : 10
 });
+if (LISTA) parar(90, 1, 9);
 
 /* Columna 1: las cuatro salidas de la puerta. */
 msg(10, 1, 0, LISTA ? TEXTOS.saludoConAgente : TEXTOS.saludo, {
@@ -69,7 +73,11 @@ msg(10, 1, 0, LISTA ? TEXTOS.saludoConAgente : TEXTOS.saludo, {
     : [['Nueva cotización', 50], ['Cotización anterior', 60], ['Hablar con un agente', 70]],
   /* Respuestas por texto que no se pintan como botón: [valor, bloque, sinónimos]. */
   ocultos: LISTA ? [['agente', 70, ['persona', 'humano', 'asesor', 'alguien', 'hablar con un agente']]] : [],
-  sino: 50 /* escribió otra cosa: se toma como cotización nueva */
+  /* Escribió otra cosa. En v3 va DIRECTO al cerebro con ese texto: el
+     servidor decide («agente» → persona y se apaga; lo demás, cotización).
+     Kommo no casaba «agente» con la respuesta oculta (18-sep-2026: fue a
+     cotizar). En v2 se tomaba como cotización nueva. */
+  sino: LISTA ? 52 : 50
 });
 msg(20, 1, 2, '{{json.texto}}', { sig: 21 }); parar(21, 2, 2);
 msg(30, 1, 3, '{{json.texto}}', { sig: 31 }); pausa(31, 2, 3, 1);

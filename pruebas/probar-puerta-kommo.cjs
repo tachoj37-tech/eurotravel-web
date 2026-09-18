@@ -95,7 +95,9 @@ titulo('4b · molesto, grosero o pidiendo persona (spec §5)');
   'no me entiendes', 'NO ME ENTIENDES NADA', 'ya te dije que vamos a vallarta', 'eres un bot?', 'esto es un bot',
   'quiero hablar con una persona', 'pásame con alguien', 'comunícame con el encargado', 'quiero hablar con un humano',
   'no sirves para nada', 'es la tercera vez que te lo digo', 'no mames', 'que pendejo', 'esto es una basura',
-  'QUE NO ENTIENDES!!!', '¿¿¿ES EN SERIO???', 'otra vez lo mismo'
+  'QUE NO ENTIENDES!!!', '¿¿¿ES EN SERIO???', 'otra vez lo mismo',
+  /* 18-sep-2026: el saludo dice «escribe agente»; a secas también vale. */
+  'agente', 'Agente', 'un agente', 'asesor', 'una persona', 'humano por favor', 'con un asesor porfa'
 ].forEach(function (f) { ok('«' + f + '» pasa a persona', puerta.pareceMolesto(f)); });
 [
   'hola', 'vamos a vallarta', 'somos 12', 'no', 'no vamos a mazatlán', 'gracias', 'me interesa',
