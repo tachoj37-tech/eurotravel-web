@@ -212,7 +212,11 @@ const DESTINOS = [
     busca: /le[oó]n, *(?:guanajuato|gto)\b|^le[oó]n\b/i,
     precio: { sprinter: 17600 } },
   { nombre: "Rincón de Guayabitos", km: 474,
-    busca: /guayabitos/i,
+    /* «Los Ayala» es el pueblo pegado a Guayabitos y se cotiza igual
+       (dictado del dueño, 18-sep-2026, tras una clienta real que escribió
+       «Ayala»: sin el alias el motor lo tomó como destino desconocido y
+       lo calculó con la fórmula por km). */
+    busca: /guayabitos|\blos\s+ayala\b|^ayala$/i,
     /* GUAYABITOS NO LLEVA `movimientosIncluidos`, y por poco lo lleva.
 
        Su columna dice «GUAYABITOS hasta 4 días», así que al escribir R24 entró

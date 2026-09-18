@@ -297,14 +297,31 @@ function fotosAntesDelTicket(envio, res, unidad) {
        ficha: en una cotización nueva la foto va otra vez con su ticket. */
     const ficha = tickets.fichaDe(envio.para);
     const vistas = (ficha && Array.isArray(ficha.fotos)) ? ficha.fotos : [];
+    if (vistas.indexOf(u.id) >= 0) return [];
     const medios = conversacion.mediosDe(u.id);
     if (!medios || !medios.fotos || !medios.fotos.length) return [];
-    /* UNA sola foto, la de afuera (la más relevante), sin video (dictado del
-       dueño, 17-sep-2026: «solo la foto más relevante y luego el ticket»). */
+    /* TRES fotos (exterior primero) y SIN video, arriba del ticket, solo si
+       no las pidió (dictado del dueño, 18-sep-2026: «esas tres me gustan;
+       cuando no te pida fotos, no le mandes video en el ticket»). */
     const pie = 'Ésta es la *' + u.name + '*' + (u.cap ? ' — ' + u.cap : '') + ' 📸';
-    const salen = [{ numeroDeOrigen: envio.numeroDeOrigen, para: envio.para, ligaDeFoto: sitio + '/' + medios.fotos[0],
-      texto: pie, pasaAPersona: false, escribio: '[foto antes del ticket]' }];
+    const salen = medios.fotos.slice(0, 3).map(function (foto, i) {
+      return { numeroDeOrigen: envio.numeroDeOrigen, para: envio.para, ligaDeFoto: sitio + '/' + foto,
+        texto: i === 0 ? pie : '', pasaAPersona: false, escribio: '[fotos antes del ticket]' };
+    });
     if (vistas.indexOf(u.id) < 0) tickets.anotaEtapa(envio.para, ficha ? ficha.etapa : 'escribio', { fotos: vistas.concat([u.id]) }, Date.now());
+    /* Y en la PLÁTICA, para que una corrección del mismo viaje («mejor
+       somos 20») no vuelva a mandar las mismas tres fotos. */
+    const charla = webhook.charlaDe(envio.para);
+    if (charla) {
+      const enCharla = Array.isArray(charla.fotosVistas) ? charla.fotosVistas.slice() : [];
+      if (enCharla.indexOf(u.id) < 0) {
+        charla.fotosVistas = enCharla.concat([u.id]);
+        webhook.guardaCharla(envio.para, charla);
+      }
+    }
+    /* El candado vive en la ficha, y la ficha se limpia al empezar una
+       conversación nueva (`empiezaDeNuevo`): dentro del mismo viaje no se
+       repiten aunque lo corrija, y en una cotización nueva sí van. */
     return salen;
   } catch (e) {
     console.error('[precio] no se pudieron armar las fotos antes del ticket: ' + (e && e.message));
@@ -489,6 +506,18 @@ function ticketDePrecio(res, precio, cal, cliente, unidad, historial, yaDado, ap
     if (typeof aproximado === 'number' && aproximado > 0) {
       lineas.push('Aprox. por la fórmula larga (±$9,800): *$' + aproximado.toLocaleString('es-MX') + '*');
     }
+  } else if (precio && typeof precio.total === 'number' && precio.criterio && precio.criterio.porFormula) {
+    /* ------------------------------------------------------------
+       UN DESTINO QUE NO ESTÁ EN EL EXCEL NO LLEVA NÚMERO — 18-sep-2026
+       ------------------------------------------------------------
+       Con una clienta real (lead 26861046) el ticket sugirió $35,000 para
+       un destino que no está en la lista: salió de la fórmula por
+       kilómetros, que el dueño nunca acordó. «Ten cuidado con el criterio
+       de precios». Igual que R46 para la página: si no sale del criterio,
+       no sale número; lo pone él.
+       ------------------------------------------------------------ */
+    lineas.push('No pude calcularlo: *ese destino no está en tu lista de precios*.');
+    lineas.push('Escríbeme el precio y se lo paso.');
   } else if (precio && typeof precio.total === 'number') {
     lineas.push('Calculado: *$' + precio.total.toLocaleString('es-MX') + '*' +
       (typeof precio.anticipo === 'number' ? ' (anticipo $' + precio.anticipo.toLocaleString('es-MX') + ')' : ''));
@@ -2457,7 +2486,16 @@ function preguntaRepetida(respuesta, estado) {
 function esUnSiSeco(texto) {
   const t = conversacion.normaliza(texto).replace(/[!.,;:¡¿?]/g, ' ').trim();
   if (!t || /\bno\b/.test(t) || t.length > 40) return false;
-  return /^(si|sip|simon|claro( que si)?|asi es|exacto|correcto|ese mismo( dia)?|el mismo dia|mismo dia|ida y vuelta( el mismo dia)?|si el mismo dia|si mismo dia|si es ida y vuelta)$/.test(t);
+  return /^(si+|sip|simon|claro( que si)?|asi es|exacto|correcto|ese mismo( dia)?|el mismo dia|mismo dia|ida y vuelta( el mismo dia)?|si el mismo dia|si mismo dia|si es ida y vuelta)$/.test(t);
+}
+/* Un «sí» escrito con dedazo o con muletilla: «ai», «sii», «zi», «aja»,
+   «va», «sale». Solo se lee así cuando el bot acaba de hacer una pregunta
+   de sí/no (prueba del dueño, 18-sep-2026: «ai» a «¿Salen de la zona
+   metropolitana?» y la IA contestó «¿Qué onda? ¿Todo bien?»). */
+function esUnSiConDedazo(texto) {
+  const t = conversacion.normaliza(texto).replace(/[!.,;:¡¿?]/g, ' ').trim();
+  if (!t || /\bno\b/.test(t) || t.length > 12) return false;
+  return esUnSiSeco(texto) || /^(ai|ay|aii|zi|zii|isi|s|aja|ajam|andale|va|vale|sale|dale|ok|okey|oki|obvio|afirmativo)$/.test(t);
 }
 /* Lo dice él solo: «ida y vuelta el mismo día», «regresamos ese mismo
    día», «salimos y nos venimos el mismo día». No entra si trae otra fecha
@@ -2530,7 +2568,7 @@ const NO_SABE_CUANTOS = /\b(no s[eé]|no sabemos|no tengo|todav[ií]a no|a[uú]n
 function diceQueNoSabeCuantos(texto) {
   return NO_SABE_CUANTOS.test(conversacion.normaliza(texto));
 }
-const NO_SE_MUEVEN = /\b(solo|nomas|nada mas|unicamente|puro) (nos |que nos )?(lleven|llevan|llevar|traigan|traen|dejen|dejan)\b|\bllevar y traer\b|\bnos llevan y (nos )?traen\b|\bnos dejan y (nos )?recogen\b|\bno (nos vamos a|vamos a|nos) mover\b|\bsin recorridos\b|\bno ocupamos (la unidad|el camion|la camioneta) alla\b|\bida y vuelta nada mas\b/;
+const NO_SE_MUEVEN = /\b(solo|nomas|nada mas|unicamente|puro) (nos |que nos )?(lleven|llevan|llevar|traigan|traen|dejen|dejan)\b|\bllevar y traer\b|\bnos llevan y (nos )?traen\b|\bnos dejan y (nos )?recogen\b|\bno (nos vamos a|vamos a|nos) mover\b|\bsin recorridos\b|\bno ocupamos (la unidad|el camion|la camioneta) alla\b|\bida y vuelta nada mas\b|\b(solo|nomas|nada mas|unicamente|puro|solamente) (el |los )?(traslado|traslados)\b|\b(solo|nomas|puro) (llevar|llevarnos) y (traer|traernos)\b|\bsin movimientos?\b|\bno hay recorridos\b/;
 function diceQueNoSeMueven(texto) {
   return NO_SE_MUEVEN.test(conversacion.normaliza(texto));
 }
@@ -2753,6 +2791,13 @@ async function loQueDiceElAgente(envio) {
       console.error('[agente] «sí» al mismo día: regreso = salida (' + antes.salida + ')');
       antes = Object.assign({}, antes, { regreso: antes.salida }); cambio = true;
     }
+    /* «Sí» (o «ai», «va», «sale») a «¿Salen de la zona metropolitana de
+       Guadalajara?» es el origen. Lo pone la IA, pero cuando no entiende
+       el dedazo se queda sin dato y suelta una muletilla. */
+    if (!antes.origen && /zona metropolitana de guadalajara|de donde salen/.test(conversacion.normaliza(ultimoTexto)) && esUnSiConDedazo(texto)) {
+      console.error('[agente] «' + String(texto).slice(0, 12) + '» a la pregunta del origen: Guadalajara');
+      antes = Object.assign({}, antes, { origen: 'Guadalajara' }); cambio = true;
+    }
     /* «Solo nos llevan y traen» es recorridos = 0, lo diga en el mensaje
        que lo diga: en la corrida real del 8-sep (escenario c) la IA no lo
        apuntó y el guion acabó preguntando «¿cuántos días quieren usar la
@@ -2777,6 +2822,29 @@ async function loQueDiceElAgente(envio) {
       if (u && !/\bno\b/.test(t) && !(antes.gente && Number(antes.gente) > Number(u.max))) {
         console.error('[agente] nombró la ' + u.name + ': queda escogida');
         antes = Object.assign({}, antes, { unidad: chica, unidadNombre: u.name }); cambio = true;
+      }
+    }
+    /* ------------------------------------------------------------
+       «SEGUIMOS» DESPUÉS DE LAS FOTOS = ESA UNIDAD — 18-sep-2026
+       ------------------------------------------------------------
+       Dictado del dueño: «si quiere continuar, te vas a ir con las últimas
+       fotos que mandaste; ésa va a ser tu unidad». Solo cuando el bot
+       acaba de preguntar «¿otra unidad o seguimos?» y el cliente no nombra
+       otra: así nunca se cotiza la primera que vio por error.
+       ------------------------------------------------------------ */
+    if (antes.ultimaUnidadVista && /ver fotos de otra unidad o seguimos/i.test(ultimoTexto) &&
+      !/\bfotos?\b|\bvideo\b/i.test(conversacion.normaliza(texto)) &&
+      (agente.unidadPorTexto(texto) ||
+        /\b(seguimos|sigamos|continuamos|continuemos|continuar|contin[uú]a|adelante|dale|va|vamos|esa|ese|esta|este|asi|cotiza|cotizame|cotizala|cotizalo|si|sale|ok|okey|perfecto|me late|me gusta)\b/.test(conversacion.normaliza(texto)))) {
+      /* Si nombra otra unidad, manda la que nombró; si no, la última vista. */
+      const nombrada = agente.unidadPorTexto(texto);
+      const u = unidadDelCatalogo(nombrada || antes.ultimaUnidadVista);
+      if (u && conversacion.normaliza(String(antes.unidadNombre || '')) !== conversacion.normaliza(u.name)) {
+        console.error('[agente] «' + String(texto).slice(0, 20) + '» tras las fotos: sigue con ' + u.name);
+        antes = (u.cat === 'sprinter' || u.cat === 'suburban')
+          ? Object.assign({}, antes, { unidad: u.cat, unidadNombre: u.name })
+          : conversacion.pegaDatos(antes, { autobus: u.id });
+        cambio = true;
       }
     }
     /* «Ese» / «el G8» con quiero/precio/reservar = lo escogió. */
@@ -3960,12 +4028,27 @@ async function loQueDiceElAgente(envio) {
        IA haya dicho, o nada (el cliente ya tiene qué mirar). Con
        MODO_GUION=1 vuelve el remate fijo de antes. */
   const modoGuion = process.env.MODO_GUION === '1' || process.env.MODO_GUION === 'true';
+    /* ------------------------------------------------------------
+       DESPUÉS DE LAS FOTOS, SIEMPRE LA MISMA PREGUNTA — 18-sep-2026
+       ------------------------------------------------------------
+       Dictado del dueño: «después de mandármelas todas, me vuelves a
+       preguntar si quiero ver otra unidad o continuamos la cotización con
+       esa». Va fijo, gane o no la IA, para que el cliente siempre tenga a
+       dónde avanzar y para que quede claro CON CUÁL unidad se sigue.
+       ------------------------------------------------------------ */
+    const cierreDeFotos = (accion === 'fotos' && mandadas)
+      ? '¿Quieres ver fotos de otra unidad o seguimos tu cotización con la *' + nombreBonito + '*?' : '';
     const remate = dicho.respuesta || (!modoGuion ? '' : (
       (conPrecio && conPrecio.estado === 'dado') ? '¿Te la aparto?'
         : (conPrecio && conPrecio.estado === 'pedido') ? 'En cuanto tenga tu precio te lo paso por aquí 🙌'
           : (siguiente ? '¿Te saco el precio? ' + siguiente : '¿Te saco el precio?')));
     if (remate) await manda({ numeroDeOrigen: envio.numeroDeOrigen, para: cliente, texto: remate, pasaAPersona: false, escribio: '[agente]' });
-    agente.recuerda(cliente, 'bot', pie + (remate ? ' ' + remate : ''));
+    /* Y el cierre fijo va SIEMPRE al final, después de lo que diga la IA. */
+    if (cierreDeFotos) {
+      await manda({ numeroDeOrigen: envio.numeroDeOrigen, para: cliente, texto: cierreDeFotos, pasaAPersona: false, escribio: '[agente · cierre de fotos]' });
+      nuevo.ultimaUnidadVista = nombre;
+    }
+    agente.recuerda(cliente, 'bot', pie + (remate ? ' ' + remate : '') + (cierreDeFotos ? ' ' + cierreDeFotos : ''));
     /* La plática recuerda de qué unidad ya vio fotos: con el precio no se
        le vuelve a mandar la misma (dictado del dueño, 8-sep-2026). */
     const vistas = Array.isArray(nuevo.fotosVistas) ? nuevo.fotosVistas.slice() : [];
@@ -4070,6 +4153,9 @@ async function loQueDiceElAgente(envio) {
       /* Si ya pidió fotos de esa unidad en esta plática, con el precio no
          se le repite la foto (dictado del dueño, 8-sep-2026). */
       const unidadCotizada = unidadDelCatalogo(nuevo.unidadId || nuevo.unidadNombre || resumen.unidad || nuevo.unidad);
+      /* Solo cuenta ESTA plática: la ficha guarda las unidades vistas en
+         cotizaciones viejas y por eso la foto no salía con el ticket
+         (dictado del dueño, 18-sep-2026, tercera vez que lo pide). */
       const fichaAlCotizar = tickets.fichaDe(cliente);
       const vistasAlCotizar = (Array.isArray(nuevo.fotosVistas) ? nuevo.fotosVistas : [])
         .concat((fichaAlCotizar && Array.isArray(fichaAlCotizar.fotos)) ? fichaAlCotizar.fotos : []);

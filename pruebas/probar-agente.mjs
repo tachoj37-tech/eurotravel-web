@@ -983,6 +983,41 @@ titulo('simulación del 17-sep (x2, x11, x17, x20): lo que la IA dejó pasar lo 
   const rE = textos(E).slice(-1)[0] || '';
   okQue('x6 · contesta que sí traen baño y aire, sin listar la flota', /traen baño y aire/.test(rE) && !/Marcopolo/.test(rE));
 
+  /* ------------------------------------------------------------
+     18-sep-2026 · FOTOS PEDIDAS: CIERRE Y «SEGUIMOS» = ESA UNIDAD
+     ------------------------------------------------------------
+     Dictado del dueño: tras mandar las fotos, preguntar siempre «¿otra
+     unidad o seguimos?»; y si dice que sigamos, la unidad es la ÚLTIMA de
+     la que vio fotos, nunca la primera.
+     ------------------------------------------------------------ */
+  limpia();
+  const J = '5213366670269';
+  laIA = function (t) {
+    if (/fotos del i6/i.test(t)) return { respuesta: null, datos: {}, unidadPedida: 'irizar-i6s', accion: 'fotos' };
+    if (/fotos del pb/i.test(t)) return { respuesta: null, datos: {}, unidadPedida: 'irizar-pb', accion: 'fotos' };
+    return { respuesta: 'Va.', datos: {}, accion: 'seguir' };
+  };
+  await dice('mándame fotos del i6s', J);
+  const trasI6S = textos(J).slice(-1)[0] || '';
+  okQue('tras las fotos pedidas, el bot pregunta si quiere ver otra o seguir', /Quieres ver fotos de otra unidad o seguimos tu cotizaci[oó]n con la \*Irizar i6S\*/.test(trasI6S));
+  okQue('  y con las fotos pedidas SÍ va el video', /youtube\.com/.test(textos(J).join('\n')));
+  await dice('ahora fotos del pb', J);
+  okQue('  con la segunda unidad el cierre nombra la segunda', /seguimos tu cotizaci[oó]n con la \*Irizar PB\*/.test(textos(J).slice(-1)[0] || ''));
+  await dice('seguimos', J);
+  const charlaJ = webhook.charlaDe(J) || {};
+  ok('«seguimos» toma la ÚLTIMA unidad vista, no la primera', charlaJ.unidadId || charlaJ.autobus, 'irizar-pb');
+  /* Y si nombra otra, manda la que nombró. */
+  limpia();
+  const I = '5213366670270';
+  laIA = function (t) {
+    if (/fotos del i6/i.test(t)) return { respuesta: null, datos: {}, unidadPedida: 'irizar-i6s', accion: 'fotos' };
+    return { respuesta: 'Va.', datos: {}, accion: 'seguir' };
+  };
+  await dice('mándame fotos del i6s', I);
+  await dice('mejor sigamos con el neobus', I);
+  const charlaI = webhook.charlaDe(I) || {};
+  ok('  si nombra otra unidad, esa manda', charlaI.unidadId || charlaI.autobus, 'neobus');
+
   /* Observación 3 del dueño (17-sep-2026, su teléfono): «quiero una sprinter
      para ir a mazatlán» y NO llegaron las fotos. El guion fija la Sprinter
      por el nombre ANTES de que conteste la IA, y la comparación «¿ya la
@@ -1019,7 +1054,7 @@ titulo('simulación del 17-sep (x2, x11, x17, x20): lo que la IA dejó pasar lo 
   const charlaG = webhook.charlaDe(G);
   ok('z1 · «del 20 al 25» sin mes, hoy 5-sep: la salida queda en septiembre aunque la IA diga octubre', charlaG && charlaG.salida, '2026-09-20');
   ok('  y el regreso también', charlaG && charlaG.regreso, '2026-09-25');
-  okQue('  y al cliente no se le repite «octubre»', !/octubre/i.test(textos(G).slice(-1)[0] || ''));
+  okQue('  y al cliente no se le repite «octubre»', !/octubre/i.test(textos(J).slice(-1)[0] || ''));
 }
 
 console.log('\n' + buenas + ' buenas, ' + malas + ' malas');

@@ -494,7 +494,11 @@ function anotaEtapa(cliente, etapa, extra, ahora) {
     }
     antes = Object.assign({}, antes, {
       viajes: archivados, porConfirmar: null, viajeDatos: null, total: null, anticipo: null,
-      enManosDe: null, etapa: 'escribio', precioEn: null, toques: 0
+      enManosDe: null, etapa: 'escribio', precioEn: null, toques: 0,
+      /* Y las fotos vistas se olvidan: en una cotización NUEVA vuelven a
+         ir las tres con el ticket, aunque haya visto esa unidad la semana
+         pasada (dictado del dueño, 18-sep-2026). */
+      fotos: []
     });
   }
   /* El número completo (52 1 33…) se conserva aunque la orden del dueño
