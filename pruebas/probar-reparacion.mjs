@@ -204,10 +204,7 @@ titulo('R2 · pedir foto, recibirla, «apártamelo»: cero fotos repetidas (Fall
   await dice('apártamela', C);
   ok('con «apártamela» NO va ninguna foto de la unidad', mandados.slice(antes1).filter((m) => mismo(m.to, C) && m.image && /sprinter/i.test(m.image.link || '')).length, 0);
   okQue('  y sí van el anticipo y la CLABE', /de anticipo/.test(textos(C).slice(antes1).join('\n')) && textos(C).indexOf('012345678901234567') >= 0);
-  const antes2 = mandados.length;
-  await dice('mándame las fotos', C);
-  ok('si vuelve a pedir las mismas fotos, no se repiten', fotosA(antes2), 0);
-  okQue('  se le dice que van arriba', /van arriba/.test(textos(C).slice(-1)[0] || ''));
+  /* Las fotos pedidas («mándame fotos del i6») se prueban en probar-agente. */
   const antes3 = mandados.length;
   await dice('no me llegaron las fotos, mándamelas otra vez', C);
   okQue('  pero si dice que no le llegaron, sí se mandan de nuevo', fotosA(antes3) >= 1);
@@ -643,11 +640,14 @@ titulo('R13 · «¿Te mando fotos de alguno?» → «i6»: van las fotos del i6,
   await dice('i6', C);
   const desde = mandados.slice(antes).filter((m) => mismo(m.to, C));
   const fotos = desde.filter((m) => m.image && /irizar-i6\//.test(m.image.link || ''));
-  ok('llegaron las 3 fotos del Irizar i6', fotos.length, 3);
-  /* La descripción de la IA sí llega, pero DESPUÉS de las fotos, como remate. */
-  const iFoto = desde.findIndex((m) => m.image);
-  const iTexto = desde.findIndex((m) => /muy cómodo para viajes largos/.test((m.text && m.text.body) || (m.interactive && m.interactive.body && m.interactive.body.text) || ''));
-  okQue('  la descripción de la IA va después de las fotos, como remate', iFoto >= 0 && iTexto > iFoto);
+  /* CAMBIÓ DE LADO el 18-sep-2026. Antes, nombrar una unidad tras la
+     oferta de fotos mandaba las fotos. El dueño dictó lo contrario: «una
+     cosa es pedir fotos y otra cotizar la unidad»; «el i6» la ESCOGE y
+     las fotos van luego, con el ticket. Solo se mandan si las pide. */
+  ok('nombrar la unidad NO manda fotos: la escoge', fotos.length, 0);
+  const antes2 = mandados.length;
+  await dice('mándame fotos del i6', C);
+  const trasPedir = mandados.slice(antes2).filter((m) => mismo(m.to, C) && m.image && /irizar-i6\//.test(m.image.link || ''));
   ok('  el i6 quedó escogido', (webhook.charlaDe(C) || {}).unidadNombre, 'Irizar i6');
   okQue('  y el remate no pregunta cuántos son', !/cu[aá]ntos (van|son)/i.test(desde.map((m) => (m.text && m.text.body) || (m.interactive && m.interactive.body && m.interactive.body.text) || '').join('\n')));
 }

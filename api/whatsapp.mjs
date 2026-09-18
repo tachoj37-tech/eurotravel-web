@@ -2794,9 +2794,15 @@ async function loQueDiceElAgente(envio) {
     /* «Sí» (o «ai», «va», «sale») a «¿Salen de la zona metropolitana de
        Guadalajara?» es el origen. Lo pone la IA, pero cuando no entiende
        el dedazo se queda sin dato y suelta una muletilla. */
-    if (!antes.origen && /zona metropolitana de guadalajara|de donde salen/.test(conversacion.normaliza(ultimoTexto)) && esUnSiConDedazo(texto)) {
-      console.error('[agente] «' + String(texto).slice(0, 12) + '» a la pregunta del origen: Guadalajara');
-      antes = Object.assign({}, antes, { origen: 'Guadalajara' }); cambio = true;
+    if (!antes.origen && /zona metropolitana de guadalajara|de donde salen|de que ciudad salen/.test(conversacion.normaliza(ultimoTexto))) {
+      /* «sí» (o «ai», «va») = Guadalajara; y si contesta con la ciudad
+         («de gdl», «zapopan»), ésa es (18-sep-2026: «de gdl» se perdía y
+         el bot preguntaba el origen dos veces). */
+      const ciudad = esUnSiConDedazo(texto) ? 'Guadalajara' : conversacion.comoOrigen(texto);
+      if (ciudad) {
+        console.error('[agente] «' + String(texto).slice(0, 15) + '» a la pregunta del origen: ' + ciudad);
+        antes = Object.assign({}, antes, { origen: ciudad }); cambio = true;
+      }
     }
     /* «Solo nos llevan y traen» es recorridos = 0, lo diga en el mensaje
        que lo diga: en la corrida real del 8-sep (escenario c) la IA no lo
@@ -3310,7 +3316,12 @@ async function loQueDiceElAgente(envio) {
   const ultimoDelBot = agente.historialDe(cliente).filter(function (t) { return t.de === 'bot'; }).pop();
   const ofrecioFotos = !!(ultimoDelBot && /te mando fotos|quieres fotos|te paso fotos/i.test(ultimoDelBot.texto || ''));
   const unidadNombrada = agente.unidadPorTexto ? agente.unidadPorTexto(texto) : null;
-  if (ofrecioFotos && unidadNombrada && dicho.accion !== 'video' && !/\bno\b/i.test(String(texto || '').slice(0, 4))) {
+  /* 18-sep-2026, dictado del dueño: «una cosa es pedir fotos y otra
+     cotizar la unidad». La lista de autobuses ahora SIEMPRE ofrece fotos,
+     así que nombrar una unidad («el i6s») es ESCOGERLA para cotizar; solo
+     es pedir fotos si el cliente dice «fotos», «foto» o «ver». */
+  const pidioFotos = /\bfotos?\b|\bim[aá]genes\b|\bver(las|lo|la)?\b|\bense[ñn]a/i.test(String(texto || ''));
+  if (ofrecioFotos && pidioFotos && unidadNombrada && dicho.accion !== 'video' && !/\bno\b/i.test(String(texto || '').slice(0, 4))) {
     console.error('[agente] ofreció fotos y el cliente nombró ' + unidadNombrada + ': se mandan sus fotos');
     dicho.accion = 'fotos';
     dicho.unidadPedida = unidadNombrada;
@@ -5918,7 +5929,21 @@ async function trabajoDeKommo(crudo, modo) {
      (`data.fotos`) y el pie de la primera (`data.pie`); el texto no lleva
      ligas de fotos (ver fotosParaKommo en _kommo.js). */
   const fotos = kommo.fotosParaKommo(alCliente);
-  const texto = kommo.textoParaKommo(alCliente, { sitio: process.env.SITIO_URL, fotosAparte: !!fotos });
+  let texto = kommo.textoParaKommo(alCliente, { sitio: process.env.SITIO_URL, fotosAparte: !!fotos });
+  /* ------------------------------------------------------------
+     NADA DE SÁNDWICH: EL TEXTO VA PEGADO A LA PRIMERA FOTO — 18-sep-2026
+     ------------------------------------------------------------
+     En el teléfono del dueño salió foto → ticket → dos fotos: Kommo manda
+     los adjuntos y el texto por caminos distintos y llegan entreverados.
+     Con el texto como PIE de la primera foto no se puede partir: sale una
+     sola burbuja con la foto y el resumen, y las otras dos fotos abajo.
+     El pie de WhatsApp aguanta 1024 letras; el resumen mide ~500.
+     ------------------------------------------------------------ */
+  let pieDeFoto = fotos ? fotos.pie : '';
+  if (fotos && texto && texto.length <= 1000) {
+    pieDeFoto = texto;
+    texto = '';
+  }
   /* Kommo exige al menos un handler («This collection should contain 1
      element or more», 16-sep-2026 21:39 UTC). Se manda el mismo `goto` con
      el que el widget sigue a su paso de condiciones (paso 1 de
@@ -5932,7 +5957,7 @@ async function trabajoDeKommo(crudo, modo) {
      widget lo saca por la salida «silencio» → parar, sin mandar un
      mensaje vacío. */
   const callado = status === 'fin' && !texto && !fotos;
-  const datos = { status: status, texto: texto, fotos: fotos ? fotos.carpeta : '', pie: fotos ? fotos.pie : '', callado: callado ? 'si' : 'no' };
+  const datos = { status: status, texto: texto, fotos: fotos ? fotos.carpeta : '', pie: pieDeFoto, callado: callado ? 'si' : 'no' };
   const seguido = await kommo.continuaSalesbot(aviso.returnUrl, { data: datos, execute_handlers: handlers });
   if (!seguido) console.error('[kommo-trabajo] Kommo no aceptó la continuación del lead ' + aviso.leadId + ': el cliente se quedó sin respuesta');
   return { ok: seguido, status: status, envios: alCliente.length, texto: texto, fotos: datos.fotos };

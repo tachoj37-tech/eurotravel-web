@@ -315,8 +315,11 @@ function peticion(cuerpo, cabeceras, llave) {
     !!nota && /\nCriterio: Excel Puerto Vallarta[^\n]* \$[\d,]+ \(3 noches incl\.\)/.test(nota.params.text) &&
     !/noches? extra|con movimiento/.test(nota.params.text));
   const ultima = continuaciones[continuaciones.length - 1].body;
+  /* 18-sep-2026: con fotos, el resumen va como PIE de la primera foto
+     (para que Kommo no lo meta entre los adjuntos), no en `texto`. */
+  const alCliente = ultima.data.texto || ultima.data.pie || '';
   ok('al cliente le llegó el resumen con lo que incluye, y NADA del ticket',
-    /Incluye:/.test(ultima.data.texto) && !/Precio por confirmar|Calculado/.test(ultima.data.texto));
+    /Incluye:/.test(alCliente) && !/Precio por confirmar|Calculado/.test(alCliente));
 
   titulo('x9 (17-sep): «ya deposité, ahí les mando el comprobante» a media plática');
   res = respuesta();

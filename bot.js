@@ -2823,8 +2823,11 @@ function pregunta(estado) {
       return { texto: '¿A dónde van? 📍', opciones: [] };
     case 'origen':
       return {
-        texto: '¿De dónde salen?',
-        opciones: ['Guadalajara', 'Tlaquepaque', 'Otro lugar']
+        /* Las MISMAS palabras que usa la IA (18-sep-2026): con «¿De dónde
+           salen?» el cliente contestó «de gdl», no se guardó y el bot
+           preguntó otra vez con la frase larga. Una sola pregunta. */
+        texto: '¿Salen de la zona metropolitana de Guadalajara?',
+        opciones: ['Sí', 'No, de otro lado']
       };
     case 'origenLibre':
       return { texto: '¿De qué ciudad salen?', opciones: [] };
@@ -3629,6 +3632,18 @@ function pasoDeCotizacion(t, crudo, estado, hoy) {
         const p = pregunta(e);
         return { texto: acuse + '\n\n' + p.texto, pasa: false, estado: e, opciones: p.opciones };
       }
+    }
+    /* Los botones nuevos del paso origen (18-sep-2026): «Sí» es la zona
+       metropolitana; «No, de otro lado» pregunta la ciudad. Va antes que
+       el corte por largo, porque «Sí» tiene dos letras. */
+    if (e.paso === 'origen' && /^(no\b|no,)/.test(t)) {
+      e.paso = 'origenLibre';
+      return siguiente(e);
+    }
+    if (e.paso === 'origen' && /^(si|s[ií]|sip|claro|correcto|asi es|exacto|de la zmg|de la zona metropolitana)\b/.test(t)) {
+      e.origen = comoOrigen('Guadalajara');
+      alSiguienteHueco(e);
+      return siguiente(e, 'Salen de *' + e.origen + '* 👍');
     }
     if (e.paso === 'origen' && /otro/.test(t)) {
       e.paso = 'origenLibre';
@@ -6122,7 +6137,9 @@ function mensajeDeAutobuses(gente) {
   if (g.noCaben.length) {
     texto += '\n\nEstos no caben, pero también tenemos otras opciones por si gustas:\n' + g.noCaben.join('\n');
   }
-  return texto + '\n\n¿Cuál te late? Si quieres te recomiendo uno.';
+  /* Y se ofrecen fotos SIEMPRE (dictado del dueño, 18-sep-2026: «cuando me
+     dices qué unidades hay, pregúntame si quiero ver fotos de una»). */
+  return texto + '\n\n¿Cuál te late? Si quieres te mando fotos de alguno o te recomiendo uno.';
 }
 
 /* Qué le falta al viaje, en palabras, para decírselo al agente. `null`
