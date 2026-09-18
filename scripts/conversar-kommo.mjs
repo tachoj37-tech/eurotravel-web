@@ -243,7 +243,11 @@ const escenarios = {
      su plática exacta de las 14:33 y dos variantes. */
   z1: ['puerta:hola', 'Nueva cotización', 'quiero una sprinter para ir a mazatlán', 'salimos del 20 al 25', 'si', 'solo el traslado', 'todo bien'],
   z2: ['Nueva cotización', 'sprinter a mazatlán del 20 al 25 de septiembre, 10 personas, salimos de zapopan', 'solo el traslado', 'gracias'],
-  z3: ['Nueva cotización', 'quiero una sprinter', 'a mazatlan', '20 de septiembre', 'el 25', 'sí', 'nos movemos 1 día allá', 'fotos de la sprinter', 'ok']
+  z3: ['Nueva cotización', 'quiero una sprinter', 'a mazatlan', '20 de septiembre', 'el 25', 'sí', 'nos movemos 1 día allá', 'fotos de la sprinter', 'ok'],
+  /* Tanda w · 18-sep: la plática exacta del dueño con autobús y las reglas nuevas. */
+  w1: ['Nueva cotización', 'vamos a vallarta', 'salimos pasado mañana y regresamos el lunes', 'somos 50', 'el i6s', 'de gdl', 'solo llevar y traer', 'todo bien'],
+  w2: ['Nueva cotización', 'a chapala el 4 de octubre somos 40 mismo dia', 'mandame fotos del neobus', 'seguimos', 'de guadalajara', 'no nos movemos'],
+  w3: ['Nueva cotización', 'a vallarta el 10 de octubre regresando el 12, 45 personas', 'fotos del i6s', 'mejor el pb', 'si', 'solo traslado']
 };
 const pedidos = process.argv.slice(2).filter((x) => escenarios[x]);
 let lead = 26818280;

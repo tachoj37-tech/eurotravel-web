@@ -74,6 +74,18 @@ titulo('comoDestino · lo que NO es un lugar');
   }
 }
 
+titulo('comoOrigen · una petición no es una ciudad (18-sep-2026)');
+{
+  /* Simulación w2: «mándame fotos del neobus» contestando «¿salen de la
+     ZMG?» se guardó como origen y salió en el resumen y en el ticket. */
+  [['mandame fotos del neobus', 'pide fotos'], ['fotos del i6s', 'pide fotos'],
+   ['mándame el video', 'pide video'], ['quiero cotizar', 'una intención'],
+   ['el neobus', 'una unidad'], ['hola buenas', 'un saludo']]
+    .forEach(function (par) { ok('«' + par[0] + '» no es origen (' + par[1] + ')', conv.comoOrigen(par[0]) === null); });
+  [['de guadalajara', 'Guadalajara'], ['zapopan', 'Zapopan'], ['de gdl', 'Guadalajara'], ['tlaquepaque', 'Tlaquepaque']]
+    .forEach(function (par) { ok('«' + par[0] + '» → ' + par[1], conv.comoOrigen(par[0]) === par[1]); });
+}
+
 titulo('comoDestino · lo que SÍ, y con qué nombre queda');
 {
   const buenos = [

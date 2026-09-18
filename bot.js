@@ -1317,6 +1317,12 @@ function comoOrigen(crudo) {
   const n = normaliza(bruto);
   if (NO_ES_CIUDAD.test(n) || NO_ES_UN_LUGAR.test(n) || SOLO_ES_FECHA.test(n)) return null;
   if (pareceDireccion(bruto)) return null;
+  /* Ni una petición ni una unidad son una ciudad (18-sep-2026, simulación
+     w2): «mándame fotos del neobus» se guardó como origen *Mandame Fotos
+     del Neobus* y así salió en el resumen y en el ticket. */
+  if (/\bfotos?\b|\bvideos?\b|\bim[aá]genes\b|\bprecio\b|\bcotiz\w+\b|\bmanda\w*\b|\bense[ñn]a\w*\b/.test(n)) return null;
+  if (/\b(sprinter|suburban|camion\w*|autobus\w*|camioneta|neobus|irizar|marcopolo|century)\b/.test(n) || unidadPorNombre(bruto)) return null;
+  if (!n.replace(SALUDO_O_INTENCION, ' ').replace(/[^a-z]/g, '')) return null;
   const o = comoCiudad(bruto);
   const limpio = normaliza(o);
   if (!limpio || limpio.length < 3) return null;

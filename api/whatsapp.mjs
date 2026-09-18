@@ -463,6 +463,42 @@ function renglonDelCriterio(precio) {
   return 'Criterio: ' + partes.join(' + ');
 }
 
+/* ------------------------------------------------------------
+   LO QUE EL BOT DICE Y LO QUE COTIZA, EL MISMO DÍA — 18-sep-2026
+   ------------------------------------------------------------
+   Simulación w1: «salimos pasado mañana y regresamos el lunes» → la IA
+   contestó «salida el 19 y regreso el 24» y el ticket salió del 19 al 21
+   (el lunes, que es el bueno). El cliente lee una fecha y el vendedor
+   cotiza otra. Aquí se corrigen los días que la respuesta afirma para que
+   cuadren con las fechas guardadas. Solo toca números pegados a palabras
+   de fecha; nunca un «somos 50» ni un «47 asientos».
+   ------------------------------------------------------------ */
+function conLasFechasBuenas(respuesta, estado) {
+  const t = String(respuesta || '');
+  const e = estado || {};
+  if (!t || (!e.salida && !e.regreso)) return t;
+  const dia = function (iso) { const n = Number(String(iso || '').slice(8, 10)); return n || null; };
+  const dSalida = dia(e.salida), dRegreso = dia(e.regreso);
+  let salida = t;
+  if (dSalida && dRegreso) {
+    salida = salida.replace(/\bdel\s+(\d{1,2})\s+al\s+(\d{1,2})\b/gi, function (todo, a, b) {
+      return (Number(a) === dSalida && Number(b) === dRegreso) ? todo : 'del ' + dSalida + ' al ' + dRegreso;
+    });
+  }
+  if (dRegreso) {
+    salida = salida.replace(/\b(regreso|regresan|regresando|vuelta|vuelven)\s+(el\s+)?(\d{1,2})\b/gi, function (todo, verbo, el, n) {
+      return Number(n) === dRegreso ? todo : verbo + ' ' + (el || 'el ') + dRegreso;
+    });
+  }
+  if (dSalida) {
+    salida = salida.replace(/\b(salida|salen|sale|saliendo)\s+(el\s+)?(\d{1,2})\b/gi, function (todo, verbo, el, n) {
+      return Number(n) === dSalida ? todo : verbo + ' ' + (el || 'el ') + dSalida;
+    });
+  }
+  if (salida !== t) console.error('[agente] fechas corregidas en la respuesta: «' + t.slice(0, 60) + '» → «' + salida.slice(0, 60) + '»');
+  return salida;
+}
+
 function ticketDePrecio(res, precio, cal, cliente, unidad, historial, yaDado, aproximado) {
   const lineas = ['💰 *Precio por confirmar*', ''];
   const pax = res.gente || res.pasajeros;
@@ -4295,7 +4331,8 @@ async function loQueDiceElAgente(envio) {
   /* Y si pidió ver camiones y la IA no le enseñó ninguno, la lista
      (dictado del dueño, 8-sep-2026). */
   const respuestaFinal = sinMuletillaRepetida(
-    conLosAutobusesQuePidio(sinAutobusesQueNoCaben(dicho.respuesta, nuevo), texto, nuevo),
+    conLasFechasBuenas(
+      conLosAutobusesQuePidio(sinAutobusesQueNoCaben(dicho.respuesta, nuevo), texto, nuevo), nuevo),
     ultimoDelBot && ultimoDelBot.texto);
   await manda({ numeroDeOrigen: envio.numeroDeOrigen, para: cliente, texto: respuestaFinal,
     pasaAPersona: false, escribio: respuestaFinal === dicho.respuesta ? '[agente]' : '[agente · lista corregida]' });
@@ -5940,8 +5977,10 @@ async function trabajoDeKommo(crudo, modo) {
      El pie de WhatsApp aguanta 1024 letras; el resumen mide ~500.
      ------------------------------------------------------------ */
   let pieDeFoto = fotos ? fotos.pie : '';
-  if (fotos && texto && texto.length <= 1000) {
-    pieDeFoto = texto;
+  if (fotos && texto && (pieDeFoto.length + texto.length) <= 1000) {
+    /* El pie propio de la foto («Ésta es la Neobus — 50 pasajeros») queda
+       arriba y el texto debajo, todo en la misma burbuja. */
+    pieDeFoto = pieDeFoto ? (pieDeFoto + '\n\n' + texto) : texto;
     texto = '';
   }
   /* Kommo exige al menos un handler («This collection should contain 1

@@ -1022,6 +1022,19 @@ titulo('simulación del 17-sep (x2, x11, x17, x20): lo que la IA dejó pasar lo 
   const charlaI = webhook.charlaDe(I) || {};
   ok('  si nombra otra unidad, esa manda', charlaI.unidadId || charlaI.autobus, 'neobus');
 
+  /* 18-sep-2026 (simulación w1): «salimos pasado mañana y regresamos el lunes»
+     y la IA contestó «salida el 19 y regreso el 24» mientras el ticket salía al
+     21. Lo que el bot dice y lo que cotiza tienen que ser el mismo día. */
+  limpia();
+  const K = '5213366670271';
+  laIA = function (t) {
+    if (/pasado ma/i.test(t)) return { respuesta: 'Perfecto, salida el 19 y regreso el 24. ¿Cuántos van?', datos: { salida: '2026-09-19', regreso: '2026-09-21' }, accion: 'seguir' };
+    return { respuesta: 'Vallarta, va. ¿Qué días?', datos: { destino: 'Puerto Vallarta' }, accion: 'seguir' };
+  };
+  await dice('vamos a vallarta', K);
+  await dice('salimos pasado mañana y regresamos el lunes', K);
+  okQue('la respuesta corrige el día del regreso para que cuadre con lo cotizado', /regreso el 21/.test(textos(K).slice(-1)[0] || '') && !/el 24/.test(textos(K).slice(-1)[0] || ''));
+
   /* Observación 3 del dueño (17-sep-2026, su teléfono): «quiero una sprinter
      para ir a mazatlán» y NO llegaron las fotos. El guion fija la Sprinter
      por el nombre ANTES de que conteste la IA, y la comparación «¿ya la
