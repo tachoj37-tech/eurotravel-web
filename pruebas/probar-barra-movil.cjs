@@ -37,9 +37,12 @@ const barra = (INDEX.match(/<div class="tabs-mobile"[^>]*>([\s\S]*?)<\/div>/) ||
 cierto('existe la barra móvil', barra.length > 0);
 const pestanas = [...barra.matchAll(/<button[^>]*data-go="([^"]+)"[^>]*>([^<]*)<\/button>/g)]
   .map(m => ({ va: m[1], dice: m[2].trim() }));
-igual('tiene las cinco pestañas', pestanas.map(p => p.va), ['inicio', 'unidades', 'cotizar', 'nosotros', 'contacto']);
+/* 17-sep-2026: el dueño pidió «Abonar» a la vista. En el celular no caben seis,
+   así que ahí entra en lugar de «Nosotros», que se queda en la barra de
+   escritorio y en el pie. «Abonar» es una LIGA a viaje.html, no una pestaña. */
+igual('lleva cuatro pestañas internas', pestanas.map(p => p.va), ['inicio', 'unidades', 'cotizar', 'contacto']);
 igual('en el celular dice «Cotizar», no «Cotizaciones»', (pestanas.find(p => p.va === 'cotizar') || {}).dice, 'Cotizar');
-igual('y «Nosotros», no «Sobre nosotros»', (pestanas.find(p => p.va === 'nosotros') || {}).dice, 'Nosotros');
+cierto('y «Abonar» como liga a viaje.html', /<a[^>]*class="tab tab-abonar"[^>]*href="viaje\.html"[^>]*>Abonar<\/a>/.test(barra));
 
 /* La regla que hace que quepan. */
 const regla = (INDEX.match(/\.tabs-mobile \.tab\s*\{([^}]*)\}/) || [])[1] || '';

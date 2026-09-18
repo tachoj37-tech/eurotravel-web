@@ -233,7 +233,9 @@ igual('cada ruta de window.IMGS existe en la carpeta',
     return (html.slice(desde, hasta).match(/class="tab( on)?"/g) || []).length;
   }
   igual('la barra de la computadora lleva las cinco pestañas', pestanasDe('tabs nav-mid'), 5);
-  igual('y la del celular también', pestanasDe('tabs-mobile'), 5);
+  /* En el celular son cuatro internas: la quinta ranura la ocupa «Abonar»,
+     que es liga a viaje.html (17-sep-2026). «Nosotros» sigue en escritorio. */
+  igual('y la del celular, cuatro más la de Abonar', pestanasDe('tabs-mobile'), 4);
 }
 
 /* ------------------------------------------------------------
