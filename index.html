@@ -1772,7 +1772,11 @@
 }
 #v-inicio .punto::before {
   content: ''; position: absolute;
-  left: -3px; right: -3px; top: -14px; bottom: -14px;
+  /* El punto se dibuja de 26 × 3 px: con el dedo no se le atina. Esta caja
+     invisible estira el área que responde hasta 44 × 44, que es lo que piden
+     Apple y Google. Medido en celular el 17-sep-2026; antes llegaba a 32.
+     Lo cuida pruebas/probar-toque-movil.cjs. */
+  left: -9px; right: -9px; top: -21px; bottom: -21px;
 }
 #v-inicio .punto:hover { background: rgba(255,255,255,.7); }
 #v-inicio .punto[aria-current="true"] { background: #fff; }
