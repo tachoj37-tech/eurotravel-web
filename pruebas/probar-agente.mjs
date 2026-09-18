@@ -186,6 +186,10 @@ titulo('la plática de un cliente real, ahora con el agente');
   ok('  y con la espera NO va foto (ya las vio al elegir; y la del precio va con el precio)', fotosAlCliente.length, 0);
   const instrucciones = JSON.stringify(sistemasVistos[sistemasVistos.length - 1] || []);
   okQue('  la IA sabe que para Tequila/Chapala pregunta «¿Es ida y vuelta el mismo día?»', /Es ida y vuelta el mismo d[ií]a/.test(instrucciones));
+  /* 18-sep-2026: con «cualquier lugar a menos de dos horas» la IA le dijo a una
+     clienta «Ayala está cerca» (está a 5 horas). Ya no opina de distancias. */
+  okQue('  y NO la deja decidir por distancia («a menos de dos horas»)', !/dos horas/.test(instrucciones));
+  okQue('  y le prohíbe decir si un destino está cerca o lejos', /NUNCA digas si un destino está cerca o lejos/.test(instrucciones));
   okQue('  y que nombra la unidad en el mismo mensaje en que le dicen cuántos', /EN EL MISMO MENSAJE/.test(instrucciones));
   okQue('  y al dueño le llega el ticket de precio', /Precio por confirmar/.test(alDueno));
   okQue('  con Puerto Vallarta, 12 pax y las fechas', /Vallarta/.test(alDueno) && /12 pax/.test(alDueno));

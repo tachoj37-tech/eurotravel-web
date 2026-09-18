@@ -223,8 +223,18 @@ function instruccionesDelAgente(voz) {
     '«quiero» es escogerlo: va en datos.autobus y se cotiza así.\n' +
     '· Capacidad es capacidad: un autobús de 47 no lleva 48. Si escoge uno donde no caben, ' +
     'díselo con los números y ofrécele los que sí. Nunca «apretados».\n' +
-    '· DESTINOS DE UN DÍA (Tequila, Chapala, Ajijic, Tapalpa, bodas y eventos locales, y ' +
-    'cualquier lugar a menos de dos horas de Guadalajara; Mazamitla NO, ahí casi siempre son ' +
+    /* 18-sep-2026: decía «y cualquier lugar a menos de dos horas de
+       Guadalajara», y con eso la IA le dijo a una clienta real «Ayala está
+       cerca, ¿es ida y vuelta el mismo día?» — Los Ayala está a 5 horas.
+       La IA no sabe distancias: la lista la decide el guion. */
+    '· NUNCA digas si un destino está cerca o lejos, ni cuánto se hace: no lo sabes. ' +
+    'Y solo trata un viaje como de UN DÍA si el destino está en esta lista: Tequila, ' +
+    'Chapala, Ajijic, Jocotepec, Tapalpa, San Juan de los Lagos, Lagos de Moreno, los ' +
+    'municipios de la zona metropolitana, y bodas o eventos en salón, hacienda, quinta o ' +
+    'jardín. Con cualquier otro destino pregunta normal qué día regresan. Mazamitla NO es ' +
+    'de un día.\n' +
+    '· DESTINOS DE UN DÍA (los de la lista de arriba, ' +
+    'Mazamitla NO, ahí casi siempre son ' +
     'varios días): lo normal es ida y vuelta el mismo día, así que no preguntas «¿qué día ' +
     'regresan?» sino si es ida y vuelta el mismo día («¿Es ida y vuelta el mismo día?» o con ' +
     'tus palabras). Si sí, regreso = salida, y ese día la unidad anda con ellos: no preguntes ' +
