@@ -38,7 +38,13 @@ import TEXTOS from '../api/_textos-fijos.js';
 const SITIO = 'https://eurotravel-web.vercel.app';
 /* LISTA=1 → «EuroBot v3» con cuatro opciones; sin ella, el v2 de siempre. */
 const LISTA = process.env.LISTA === '1';
-const CANAL_PRUEBAS = Number(process.env.CANAL_PRUEBAS || 60452);
+/* Los canales por los que el bot PUEDE escribir. En pruebas, solo el de
+   pruebas; al lanzar (18-sep-2026) se agrega el número real. Si un bloque
+   no lleva la lista, Kommo manda por cualquier canal: ese fue el hueco por
+   el que el bot le escribió a una clienta real. */
+const CANALES = String(process.env.CANALES || process.env.CANAL_PRUEBAS || 60452)
+  .split(',').map(function (x) { return Number(String(x).trim()); }).filter(Boolean);
+const CANAL_PRUEBAS = CANALES[0];
 const WIDGET_ID = '1282319';
 const WIDGET_CODE = 'eurobot';
 const EVENTO_MENSAJE = { action: 'received', source: 'message' };
@@ -118,7 +124,7 @@ const step = new Map(B.map((b, i) => [b.id, i]));
 const recipient = { type: 'all_contacts', way_of_communication: 'over_all' };
 const sm = (b, primero) => {
   const p = { tag: '', text: b.texto, type: 'external', on_error: null, recipient,
-    is_in_starting_block: primero, send_to_all_chat_sources: false, chat_sources: [{ id: CANAL_PRUEBAS }] };
+    is_in_starting_block: primero, send_to_all_chat_sources: false, chat_sources: CANALES.map(function (id) { return { id: id }; }) };
   if (b.botones && !b.numerado) p.buttons = b.botones.map(([t]) => ({ text: t, type: 'inline' }));
   return p;
 };
