@@ -69,7 +69,13 @@
     line-height: 1.6;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    /* `hidden` aquí volvía `auto` el eje vertical: el body pasaba a ser la
+       caja que scrollea y TODO `position: fixed` se anclaba a él en vez de a
+       la pantalla (el aviso de cookies salió 122 px arriba del viewport,
+       17-sep-2026). `clip` recorta igual sin crear scroll; `hidden` queda de
+       respaldo para navegadores viejos. Lo cuida probar-una-sola-barra.cjs. */
     overflow-x: hidden;
+    overflow-x: clip;
   }
 
   h1, h2, h3, h4 {

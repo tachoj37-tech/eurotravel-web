@@ -75,5 +75,35 @@ cierto('no usa overflow a secas con hidden/auto/scroll', !declaraciones.some(fun
   return /^overflow: (auto|scroll|hidden)/.test(d);
 }));
 
+/* ============================================================
+   EL BODY TAMPOCO ES CONTENEDOR DE SCROLL (17-sep-2026)
+   ------------------------------------------------------------
+   `body { overflow-x: hidden }` hace lo mismo que hacía la portada: al
+   recortar un eje, el otro pasa a `auto` y el body se vuelve la caja que
+   scrollea. Y entonces TODO `position: fixed` se ancla al body en vez de
+   a la pantalla: el aviso de cookies apareció 122 px ARRIBA del viewport,
+   imposible de tocar. Medido con Playwright contra el sitio publicado.
+
+   `overflow-x: clip` recorta igual sin crear scroll.
+   ============================================================ */
+console.log('\n── el body no es contenedor de scroll ──');
+
+const cuerpo = (function () {
+  const re = /(^|[}\s])body\s*\{([^}]*)\}/g;
+  const out = []; let m;
+  while ((m = re.exec(INDEX))) out.push(m[2]);
+  return out.join(';').split(';').map(function (d) { return d.trim().replace(/\s+/g, ' '); }).filter(Boolean);
+})();
+
+cierto('hay reglas para body', cuerpo.length > 0);
+cierto('body recorta los lados con overflow-x: clip', cuerpo.indexOf('overflow-x: clip') !== -1);
+(function () {
+  const h = cuerpo.indexOf('overflow-x: hidden'), c = cuerpo.indexOf('overflow-x: clip');
+  cierto('si body conserva hidden, va ANTES de clip', h === -1 || h < c);
+})();
+cierto('body no fuerza scroll vertical propio', !cuerpo.some(function (d) {
+  return /^overflow-y: (auto|scroll|hidden)$/.test(d);
+}));
+
 console.log('\n' + buenas + ' buenas, ' + malas + ' malas');
 process.exit(malas ? 1 : 0);
