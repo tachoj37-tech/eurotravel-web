@@ -2750,6 +2750,22 @@ async function loQueDiceElAgente(envio) {
      cliente quiere OTRO viaje, lo tome de cero. */
   /* `let` y no `const`: si el cliente vuelve a una cotización anterior, más
      abajo se le devuelve su precio a la ficha y esto tiene que reflejarlo. */
+  /* ------------------------------------------------------------
+     SI YA LO ATIENDE UNA PERSONA, EL BOT NO VUELVE — 18-sep-2026
+     ------------------------------------------------------------
+     Simulaciones v5 y v6: «dos sprinters» y «cotización anterior» pasan a
+     una persona y el bot se apaga; al siguiente mensaje volvía a
+     contestar. La ficha manda: en manos del dueño, el cerebro calla.
+     ------------------------------------------------------------ */
+  {
+    const fichaAlEntrar = tickets.fichaDe(cliente);
+    if (String(process.env.BOT_HASTA_COTIZACION || '1').trim() === '1' &&
+        fichaAlEntrar && fichaAlEntrar.enManosDe === 'dueno') {
+      console.log('[relevo] el chat ya está en manos de una persona: el bot no contesta');
+      agente.recuerda(cliente, 'cliente', texto);
+      return true;
+    }
+  }
   let viajeDeLaFicha = viajeConPrecio(tickets.fichaDe(cliente));
   /* Una plática que quedó en «confirmar» con el precio ya pedido es un
      residuo del defecto del 7-sep-2026 (las guardadas antes del arreglo
@@ -3245,6 +3261,24 @@ async function loQueDiceElAgente(envio) {
     const fichaAhora = tickets.fichaDe(cliente);
     const base = viajeBaseDeLaFicha(fichaAhora);
     if (base && !cambiaElTicket(nuevo, base)) {
+      /* ------------------------------------------------------------
+         UN «NO» AL RESUMEN ES UNA CORRECCIÓN, NO UN ADIÓS — 18-sep-2026
+         ------------------------------------------------------------
+         Simulación v2: el resumen pregunta «¿Todo bien? Si algo está mal,
+         dímelo y lo corrijo» y al «no» el bot se quedaba callado. Si lo
+         que dice es que algo está mal, se le pregunta qué, y el bot sigue
+         vivo para corregirlo.
+         ------------------------------------------------------------ */
+      const dijoQueEstaMal = /^\s*(no|nel|nop|est[aá] mal|algo est[aá] mal|no est[aá] bien|hay un error|me equivoqu[eé]|corr[ií]gel[oa]|cambia\w*)\b/i
+        .test(conversacion.normaliza(texto));
+      if (dijoQueEstaMal) {
+        const queCorrijo = '¿Qué le corrijo? Dime el dato como va (destino, fechas, cuántos o unidad) 🙌';
+        console.error('[agente] dijo que algo está mal en el resumen: se le pregunta qué corregir');
+        await manda({ numeroDeOrigen: envio.numeroDeOrigen, para: cliente, texto: queCorrijo, pasaAPersona: false, escribio: '[agente · qué corrijo]' });
+        agente.recuerda(cliente, 'cliente', texto);
+        agente.recuerda(cliente, 'bot', queCorrijo);
+        return true;
+      }
       console.log('[relevo] ticket mandado y el mensaje no cambia el viaje: el chat pasa a una persona, el bot no contesta');
       tickets.anotaEtapa(cliente, fichaAhora.etapa, { enManosDe: 'dueno' });
       agente.recuerda(cliente, 'cliente', texto);
@@ -3392,6 +3426,12 @@ async function loQueDiceElAgente(envio) {
     console.error('[agente] ' + (puerta.pideVariasUnidades(texto) ? 'pide varias unidades' : 'quiere retomar una cotización anterior') + ': lo atiende una persona');
     dicho.accion = 'persona';
     dicho.respuesta = '';
+  }
+  /* Y en cuanto se decide que lo atiende una persona, la ficha lo dice: el
+     siguiente mensaje ya no lo contesta el bot (simulaciones v5 y v6). */
+  if (dicho.accion === 'persona') {
+    const fp = tickets.fichaDe(cliente);
+    tickets.anotaEtapa(cliente, (fp && fp.etapa) || 'escribio', { enManosDe: 'dueno' });
   }
 
   /* ------------------------------------------------------------
@@ -4289,6 +4329,19 @@ async function loQueDiceElAgente(envio) {
        CLABE— y después se restaura el viaje que iba. */
     const conPlaticaLimpia = accion === 'persona' || accion === 'apartar';
     if (conPlaticaLimpia) webhook.guardaCharla(cliente, null);
+    /* ------------------------------------------------------------
+       EL QUE PASA A PERSONA NO VUELVE AL BOT — 18-sep-2026
+       ------------------------------------------------------------
+       Simulaciones v5 y v6: «dos sprinters» y «cotización anterior»
+       pasaban a una persona y el bot se apagaba, pero al siguiente
+       mensaje contestaba otra vez («¿Es ida y vuelta el mismo día?»).
+       La ficha queda en manos del dueño: de ahí en adelante el cerebro
+       no contesta, lo atiende quien esté en el chat.
+       ------------------------------------------------------------ */
+    if (accion === 'persona') {
+      const f = tickets.fichaDe(cliente);
+      tickets.anotaEtapa(cliente, (f && f.etapa) || 'escribio', { enManosDe: 'dueno' });
+    }
     /* Cuando el cliente PIDIÓ la cuenta con esas palabras, la reinyección
        las conserva: el guion decide si repite los datos bancarios según lo
        que lee, y un «pásame la cuenta otra vez» convertido en un «quiero

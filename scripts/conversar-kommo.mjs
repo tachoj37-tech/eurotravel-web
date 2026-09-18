@@ -247,7 +247,14 @@ const escenarios = {
   /* Tanda w · 18-sep: la plática exacta del dueño con autobús y las reglas nuevas. */
   w1: ['Nueva cotización', 'vamos a vallarta', 'salimos pasado mañana y regresamos el lunes', 'somos 50', 'el i6s', 'de gdl', 'solo llevar y traer', 'todo bien'],
   w2: ['Nueva cotización', 'a chapala el 4 de octubre somos 40 mismo dia', 'mandame fotos del neobus', 'seguimos', 'de guadalajara', 'no nos movemos'],
-  w3: ['Nueva cotización', 'a vallarta el 10 de octubre regresando el 12, 45 personas', 'fotos del i6s', 'mejor el pb', 'si', 'solo traslado']
+  w3: ['Nueva cotización', 'a vallarta el 10 de octubre regresando el 12, 45 personas', 'fotos del i6s', 'mejor el pb', 'si', 'solo traslado'],
+  /* Tanda v · 18-sep, segunda vuelta de revisión. */
+  v1: ['Nueva cotización', 'a ayala morelos el 20 de octubre regresando el 23, 12 personas de guadalajara', 'no nos movemos'],
+  v2: ['Nueva cotización', 'necesito una suburban para 6 a chapala el 5 de octubre', 'solo de ida', 'si', 'no'],
+  v3: ['Nueva cotización', 'a mazatlan del 28 al 2, 14 personas', 'si', 'solo traslado', 'perdon somos 18'],
+  v4: ['puerta:buenas tardes', 'puerta:ya hice el deposito, ahi les mando el comprobante', 'puerta:gracias'],
+  v5: ['Nueva cotización', 'necesito dos sprinters para 30 a tequila el 18 de octubre', 'si'],
+  v6: ['Cotización anterior', 'Fecha nueva', 'el 15 de noviembre']
 };
 const pedidos = process.argv.slice(2).filter((x) => escenarios[x]);
 let lead = 26818280;

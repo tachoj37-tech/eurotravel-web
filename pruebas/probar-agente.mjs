@@ -1035,6 +1035,30 @@ titulo('simulación del 17-sep (x2, x11, x17, x20): lo que la IA dejó pasar lo 
   await dice('salimos pasado mañana y regresamos el lunes', K);
   okQue('la respuesta corrige el día del regreso para que cuadre con lo cotizado', /regreso el 21/.test(textos(K).slice(-1)[0] || '') && !/el 24/.test(textos(K).slice(-1)[0] || ''));
 
+  /* 18-sep-2026 (simulaciones v2, v5, v6): dos huecos de la segunda vuelta.
+     a) «no» al «¿Todo bien?» del resumen dejaba mudo al bot.
+     b) tras pasar a persona, el bot contestaba otra vez al siguiente mensaje. */
+  limpia();
+  process.env.BOT_HASTA_COTIZACION = '1';
+  const M = '5213366670272';
+  laIA = function (t) {
+    if (/chapala/i.test(t)) return { respuesta: null, datos: { destino: 'Chapala', salida: '2026-10-05', regreso: '2026-10-05', gente: 12, origen: 'Guadalajara', recorridos: 0, unidad: 'sprinter' }, accion: 'cotizar' };
+    return { respuesta: 'Va.', datos: {}, accion: 'seguir' };
+  };
+  await dice('a chapala el 5 de octubre, 12 personas de guadalajara, mismo día, sin movimientos', M);
+  okQue('sale el resumen con «¿Todo bien?»', /Todo bien/.test(textos(M).join(' ')));
+  await dice('no', M);
+  okQue('  y a un «no» le pregunta qué corregir, no se queda mudo', /Qu[eé] le corrijo/.test(textos(M).slice(-1)[0] || ''));
+
+  limpia();
+  const N = '5213366670273';
+  laIA = function () { return { respuesta: 'Va.', datos: {}, accion: 'seguir' }; };
+  await dice('necesito dos sprinters para 30 a tequila el 18 de octubre', N);
+  const trasPersona = textos(N).length;
+  await dice('si', N);
+  ok('tras pasar a persona el bot ya no contesta', textos(N).length, trasPersona);
+  process.env.BOT_HASTA_COTIZACION = '0';
+
   /* Observación 3 del dueño (17-sep-2026, su teléfono): «quiero una sprinter
      para ir a mazatlán» y NO llegaron las fotos. El guion fija la Sprinter
      por el nombre ANTES de que conteste la IA, y la comparación «¿ya la
