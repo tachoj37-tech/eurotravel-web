@@ -118,7 +118,7 @@ const step = new Map(B.map((b, i) => [b.id, i]));
 const recipient = { type: 'all_contacts', way_of_communication: 'over_all' };
 const sm = (b, primero) => {
   const p = { tag: '', text: b.texto, type: 'external', on_error: null, recipient,
-    is_in_starting_block: primero, send_to_all_chat_sources: true, chat_sources: [{ id: CANAL_PRUEBAS }] };
+    is_in_starting_block: primero, send_to_all_chat_sources: false, chat_sources: [{ id: CANAL_PRUEBAS }] };
   if (b.botones && !b.numerado) p.buttons = b.botones.map(([t]) => ({ text: t, type: 'inline' }));
   return p;
 };
