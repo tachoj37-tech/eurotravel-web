@@ -622,7 +622,7 @@
           'impreso en tu contrato en PDF, el que te dieron al firmar.</p>' +
         '<label class="eyebrow" for="portal-apellido">Tu apellido</label>' +
         '<input id="portal-apellido" class="campo" type="text" autocomplete="family-name" ' +
-          'placeholder="Pérez" />' +
+          'inputmode="text" placeholder="Pérez" />' +
         '<p class="error-codigo" id="portal-error" role="alert"></p>' +
         '<button class="btn" id="portal-ir">Ver mi viaje</button>' +
       '</div>' +
@@ -635,6 +635,32 @@
     var apellido = document.getElementById('portal-apellido');
     var boton = document.getElementById('portal-ir');
     var error = document.getElementById('portal-error');
+
+    /* ============================================================
+       EN EL APELLIDO NO ENTRAN NÚMEROS
+       ------------------------------------------------------------
+       Lo pidió el dueño el 17-sep-2026. Al servidor le da igual —la
+       comparación ya descarta todo lo que no sea letra— pero si el
+       cliente teclea un número y se queda ahí, parece que cuenta.
+
+       Se limpia MIENTRAS escribe, no al enviar, y devolviendo el
+       cursor a donde estaba: si no, al corregir una letra de en medio
+       el cursor se brinca al final y se escribe al revés.
+
+       Se dejan espacios, guion y apóstrofe —«Sánchez-López», «D'Angelo»—
+       y los acentos, que el servidor ya ignora.
+       ============================================================ */
+    function limpiaApellido() {
+      var antes = apellido.value;
+      var limpio = antes.replace(/[^a-záéíóúüñ\s'-]/gi, '');
+      if (limpio === antes) return;
+      var donde = apellido.selectionStart;
+      var quitados = antes.slice(0, donde).length -
+        antes.slice(0, donde).replace(/[^a-záéíóúüñ\s'-]/gi, '').length;
+      apellido.value = limpio;
+      try { apellido.setSelectionRange(donde - quitados, donde - quitados); } catch (e) {}
+    }
+    apellido.addEventListener('input', limpiaApellido);
 
     function busca() {
       if (boton.disabled) return;

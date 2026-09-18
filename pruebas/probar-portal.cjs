@@ -444,6 +444,36 @@ function euroDice(status, datos) {
     cierto('PORTAL_API_KEY está en .env.example', ejemplo.indexOf('PORTAL_API_KEY') >= 0);
   }
 
+  /* ============================================================
+     EN EL APELLIDO NO ENTRAN NÚMEROS (17-sep-2026)
+     ------------------------------------------------------------
+     Lo pidió el dueño: «en ese campo no dejas meter números». Del
+     lado de EuroSystem da igual —la comparación ya descarta todo lo
+     que no sea letra, así que «perez123» encontraba a Pérez— pero el
+     cliente no tiene por qué enterarse de eso: si teclea un número y
+     se queda en pantalla, parece que cuenta.
+
+     Se limpia mientras escribe, no al enviar: así nunca ve un dígito
+     en el campo. Se dejan los espacios y el guion de los apellidos
+     compuestos, y los acentos, que el servidor ya ignora.
+     ============================================================ */
+  {
+    const fs = require('fs');
+    const path = require('path');
+    const RAIZ = path.join(__dirname, '..');
+    const viaje = fs.readFileSync(path.join(RAIZ, 'viaje.html'), 'utf8');
+    const limpia = (viaje.match(/function limpiaApellido[\s\S]{0,900}?\n    \}/) || [''])[0];
+
+    cierto('viaje.html tiene un limpiador del apellido', limpia.length > 0);
+    cierto('se aplica mientras se escribe', /addEventListener\('input',\s*limpiaApellido\)/.test(viaje));
+    cierto('quita todo lo que no sea letra, espacio o guion',
+      /replace\(\/\[\^a-z[^/]*\]\/gi/.test(limpia) || /\[\^a-záéíóúüñ\s'-\]/i.test(limpia));
+    cierto('respeta dónde va el cursor', /selectionStart/.test(limpia));
+
+    /* Y el campo se lo dice al navegador, para el teclado del celular. */
+    cierto('el campo pide teclado de letras', /id="portal-apellido"[\s\S]{0,160}inputmode="text"/.test(viaje));
+  }
+
   console.log('\n' + buenas + ' buenas, ' + malas + ' malas');
   process.exit(malas ? 1 : 0);
 })();
