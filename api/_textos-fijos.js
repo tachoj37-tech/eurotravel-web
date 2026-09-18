@@ -26,6 +26,10 @@ const TEXTOS = {
 
   /* Los que viven en bloques del Salesbot de Kommo (referencia). */
   saludo: '¡Qué tal! Estás con *Eurotravel* 🚐\nRenta de autobuses y Sprinter para tu grupo.\n¿Qué necesitas?',
+  /* Menú numerado (17-sep-2026): Kommo no manda listas de WhatsApp y con
+     4 botones parte el saludo en 3 + 1. El cliente contesta con el número
+     o con la palabra. */
+  saludoNumerado: '¡Qué tal! Estás con *Eurotravel* 🚐\nRenta de autobuses y Sprinter para tu grupo.\nResponde con un número:\n*1* Nueva cotización\n*2* Cotización anterior\n*3* Abonar contrato\n*4* Hablar con un agente',
   /* «Mi cotización anterior» pasa del tope de 20 letras por botón de
      WhatsApp; queda «Cotización anterior». */
   botones: ['Nueva cotización', 'Cotización anterior', 'Hablar con un agente'],

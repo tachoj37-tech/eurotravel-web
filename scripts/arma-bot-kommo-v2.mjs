@@ -58,7 +58,9 @@ widget(1, 0, 1, 'Puerta (decide antes del saludo)', SITIO + '/api/whatsapp/kommo
 });
 
 /* Columna 1: las cuatro salidas de la puerta. */
-msg(10, 1, 0, TEXTOS.saludo, {
+msg(10, 1, 0, LISTA ? TEXTOS.saludoNumerado : TEXTOS.saludo, {
+  /* numerado: sin botones pintados; el cliente escribe «1»…«4» o la palabra. */
+  numerado: LISTA,
   /* «Mi cotización anterior» pasa del tope de 20 letras de WhatsApp. */
   /* v3 (17-sep-2026): cuatro opciones. WhatsApp permite 3 botones rápidos;
      con 4, Kommo tendría que mandarlas como LISTA («Ver opciones»). Se
@@ -108,7 +110,7 @@ const recipient = { type: 'all_contacts', way_of_communication: 'over_all' };
 const sm = (b, primero) => {
   const p = { tag: '', text: b.texto, type: 'external', on_error: null, recipient,
     is_in_starting_block: primero, send_to_all_chat_sources: true, chat_sources: [{ id: CANAL_PRUEBAS }] };
-  if (b.botones) p.buttons = b.botones.map(([t]) => ({ text: t, type: 'inline' }));
+  if (b.botones && !b.numerado) p.buttons = b.botones.map(([t]) => ({ text: t, type: 'inline' }));
   return p;
 };
 const goto = id => ({ params: { step: step.get(id), type: porId.get(id).tipo === 'parar' ? 'finish' : 'question' }, handler: 'goto' });
@@ -133,7 +135,7 @@ for (const b of B) {
     const entrada = { question: q, block_uuid: uuid };
     if (b.botones) {
       entrada.answer = [{ params: [
-        ...b.botones.map(([t, id]) => ({ value: t, params: [goto(id)], synonyms: [] })),
+        ...b.botones.map(([t, id], i) => ({ value: t, params: [goto(id)], synonyms: b.numerado ? [String(i + 1)] : [] })),
         { type: 'else', params: [goto(b.sino)] }
       ], handler: 'buttons' }];
     } else {
@@ -144,9 +146,9 @@ for (const b of B) {
     positions.push({ x: X(b.col), y: Y(b.fila), z: z++, id: b.id, goto: { block: b.botones ? b.sino : b.sig },
       name: 'Mensaje', step: s, type: 'question', width: 400, height: alto,
       actions: [{ id: accion++, sort: 0,
-        links: (b.botones || []).map(([t, id]) => ({ data: { regex: `/${t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}/iu` }, block: id })),
+        links: (b.botones || []).map(([t, id], i) => ({ data: { regex: `/${b.numerado ? '^\\s*' + (i + 1) + '\\b|' : ''}${t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}/iu` }, block: id })),
         params: { params: sm(b, primero), handler: 'send_message' },
-        ...(b.botones ? { synonyms: b.botones.map(() => []) } : {}) }],
+        ...(b.botones ? { synonyms: b.botones.map((_, i) => b.numerado ? [String(i + 1)] : []) } : {}) }],
       on_error: null, deletable: true, block_uuid: uuid });
   } else if (b.tipo === 'pausa') {
     text[s] = { question: [{ params: { logic: 'or', conditions: [{ event: EVENTO_MENSAJE, action: ref(b.sig) }] }, handler: 'waits' }], block_uuid: uuid };
@@ -170,7 +172,7 @@ for (const b of B) {
 }
 text.conversation = false;
 
-const salida = { type_functionality: 0, model: { text: JSON.stringify(text), name: LISTA ? 'EuroBot v3' : 'EuroBot v2', positions: JSON.stringify(positions), type: 2 } };
+const salida = { type_functionality: 0, model: { text: JSON.stringify(text), name: LISTA ? 'EuroBot v3 menú' : 'EuroBot v2', positions: JSON.stringify(positions), type: 2 } };
 const destino = process.argv[2] || 'pendiente/kommo-bot/EuroBot-v2.json';
 fs.mkdirSync(path.dirname(destino), { recursive: true });
 fs.writeFileSync(destino, JSON.stringify(salida));
