@@ -490,14 +490,21 @@
   .cot-abonar a:hover { background: var(--soft); }
 
   /* ===== Aviso de cookies: una vez por dispositivo ===== */
+  /* Va en el TOP LAYER con `popover`, no con `position: fixed` a secas.
+     El body recorta con `overflow-x: clip` (para que nada se asome por los
+     lados) y eso ancla los `fixed` al body: el aviso se iba con el scroll.
+     El top layer no lo toca ningún ancestro. Si el navegador es viejo y no
+     sabe de `popover`, el guion le pone `.on` y queda como antes. */
   .cookies {
-    position: fixed; left: 16px; right: 16px; bottom: 16px; z-index: 9000;
+    position: fixed; inset: auto 16px 16px; z-index: 9000;
+    width: auto; max-width: 720px; margin: 0 auto; overflow: visible;
     background: #fff; border: 1px solid var(--line); border-radius: 14px;
     box-shadow: 0 18px 50px rgba(0, 0, 0, .18); padding: 18px 20px;
+    color: var(--ink);
     display: none; gap: 16px; align-items: center; flex-wrap: wrap;
-    max-width: 720px; margin: 0 auto;
   }
   .cookies.on { display: flex; }
+  .cookies:popover-open { display: flex; }
   .cookies p { margin: 0; flex: 1 1 260px; font-size: 14px; line-height: 1.55; color: var(--ink); }
   .cookies a { color: var(--red); }
   .cookies button {
@@ -7747,7 +7754,7 @@ window.IMGS = {
      en navegación privada `localStorage` TRUENA —no devuelve nulo—;
      si truena, el aviso se enseña, que es el lado seguro.
      ============================================================ -->
-<div class="cookies" id="cookies" role="dialog" aria-live="polite" aria-label="Aviso de cookies">
+<div class="cookies" id="cookies" popover="manual" role="dialog" aria-live="polite" aria-label="Aviso de cookies">
   <p>Usamos solo el almacenamiento necesario para que la página funcione. No te rastreamos
      ni compartimos tus datos. <a href="politicas.html">Ver cookies y privacidad</a>.</p>
   <button type="button" id="cookies-ok">Entendido</button>
@@ -7760,10 +7767,21 @@ window.IMGS = {
   var visto = false;
   try { visto = localStorage.getItem('et_cookies') === '1'; } catch (e) {}
   if (visto) return;
-  /* Se enseña con calma: primero que cargue lo que el cliente vino a ver. */
-  setTimeout(function () { caja.classList.add('on'); }, 1200);
-  document.getElementById('cookies-ok').addEventListener('click', function () {
+  /* `popover` lo pinta en el top layer: ningún recorte de un ancestro lo
+     mueve ni lo tapa. Si el navegador no lo conoce, la clase hace el
+     trabajo de siempre. */
+  function abre() {
+    if (typeof caja.showPopover === 'function') { try { caja.showPopover(); return; } catch (e) {} }
+    caja.classList.add('on');
+  }
+  function cierra() {
+    if (typeof caja.hidePopover === 'function') { try { caja.hidePopover(); } catch (e) {} }
     caja.classList.remove('on');
+  }
+  /* Se enseña con calma: primero que cargue lo que el cliente vino a ver. */
+  setTimeout(abre, 1200);
+  document.getElementById('cookies-ok').addEventListener('click', function () {
+    cierra();
     try { localStorage.setItem('et_cookies', '1'); } catch (e) {}
   });
 })();
