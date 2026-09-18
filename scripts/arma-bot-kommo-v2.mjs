@@ -58,16 +58,17 @@ widget(1, 0, 1, 'Puerta (decide antes del saludo)', SITIO + '/api/whatsapp/kommo
 });
 
 /* Columna 1: las cuatro salidas de la puerta. */
-msg(10, 1, 0, LISTA ? TEXTOS.saludoNumerado : TEXTOS.saludo, {
-  /* numerado: sin botones pintados; el cliente escribe «1»…«4» o la palabra. */
-  numerado: LISTA,
+msg(10, 1, 0, LISTA ? TEXTOS.saludoConAgente : TEXTOS.saludo, {
   /* «Mi cotización anterior» pasa del tope de 20 letras de WhatsApp. */
-  /* v3 (17-sep-2026): cuatro opciones. WhatsApp permite 3 botones rápidos;
-     con 4, Kommo tendría que mandarlas como LISTA («Ver opciones»). Se
-     prueba en el embudo de pruebas; el v2 de 3 botones sigue guardado. */
+  /* v3 (17-sep-2026, decisión final del dueño): Kommo no manda listas y con
+     4 botones duplica el saludo (3 + 1). Quedan 3 botones —Nueva
+     cotización · Cotización anterior · Abonar contrato— y «agente» por
+     texto (respuesta oculta, sin botón) en el mismo mensaje. */
   botones: LISTA
-    ? [['Nueva cotización', 50], ['Cotización anterior', 60], ['Abonar contrato', 80], ['Hablar con un agente', 70]]
+    ? [['Nueva cotización', 50], ['Cotización anterior', 60], ['Abonar contrato', 80]]
     : [['Nueva cotización', 50], ['Cotización anterior', 60], ['Hablar con un agente', 70]],
+  /* Respuestas por texto que no se pintan como botón: [valor, bloque, sinónimos]. */
+  ocultos: LISTA ? [['agente', 70, ['persona', 'humano', 'asesor', 'alguien', 'hablar con un agente']]] : [],
   sino: 50 /* escribió otra cosa: se toma como cotización nueva */
 });
 msg(20, 1, 2, '{{json.texto}}', { sig: 21 }); parar(21, 2, 2);
@@ -136,6 +137,7 @@ for (const b of B) {
     if (b.botones) {
       entrada.answer = [{ params: [
         ...b.botones.map(([t, id], i) => ({ value: t, params: [goto(id)], synonyms: b.numerado ? [String(i + 1)] : [] })),
+        ...(b.ocultos || []).map(([t, id, sin]) => ({ value: t, params: [goto(id)], synonyms: sin || [] })),
         { type: 'else', params: [goto(b.sino)] }
       ], handler: 'buttons' }];
     } else {
@@ -146,9 +148,10 @@ for (const b of B) {
     positions.push({ x: X(b.col), y: Y(b.fila), z: z++, id: b.id, goto: { block: b.botones ? b.sino : b.sig },
       name: 'Mensaje', step: s, type: 'question', width: 400, height: alto,
       actions: [{ id: accion++, sort: 0,
-        links: (b.botones || []).map(([t, id], i) => ({ data: { regex: `/${b.numerado ? '^\\s*' + (i + 1) + '\\b|' : ''}${t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}/iu` }, block: id })),
+        links: (b.botones || []).map(([t, id], i) => ({ data: { regex: `/${b.numerado ? '^\\s*' + (i + 1) + '\\b|' : ''}${t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}/iu` }, block: id }))
+          .concat((b.ocultos || []).map(([t, id, sin]) => ({ data: { regex: `/${[t].concat(sin || []).join('|')}/iu` }, block: id }))),
         params: { params: sm(b, primero), handler: 'send_message' },
-        ...(b.botones ? { synonyms: b.botones.map((_, i) => b.numerado ? [String(i + 1)] : []) } : {}) }],
+        ...(b.botones ? { synonyms: b.botones.map((_, i) => b.numerado ? [String(i + 1)] : []).concat((b.ocultos || []).map(([, , sin]) => sin || [])) } : {}) }],
       on_error: null, deletable: true, block_uuid: uuid });
   } else if (b.tipo === 'pausa') {
     text[s] = { question: [{ params: { logic: 'or', conditions: [{ event: EVENTO_MENSAJE, action: ref(b.sig) }] }, handler: 'waits' }], block_uuid: uuid };
@@ -172,7 +175,7 @@ for (const b of B) {
 }
 text.conversation = false;
 
-const salida = { type_functionality: 0, model: { text: JSON.stringify(text), name: LISTA ? 'EuroBot v3 menú' : 'EuroBot v2', positions: JSON.stringify(positions), type: 2 } };
+const salida = { type_functionality: 0, model: { text: JSON.stringify(text), name: LISTA ? 'EuroBot v3 final' : 'EuroBot v2', positions: JSON.stringify(positions), type: 2 } };
 const destino = process.argv[2] || 'pendiente/kommo-bot/EuroBot-v2.json';
 fs.mkdirSync(path.dirname(destino), { recursive: true });
 fs.writeFileSync(destino, JSON.stringify(salida));

@@ -30,6 +30,10 @@ const TEXTOS = {
      4 botones parte el saludo en 3 + 1. El cliente contesta con el número
      o con la palabra. */
   saludoNumerado: '¡Qué tal! Estás con *Eurotravel* 🚐\nRenta de autobuses y Sprinter para tu grupo.\nResponde con un número:\n*1* Nueva cotización\n*2* Cotización anterior\n*3* Abonar contrato\n*4* Hablar con un agente',
+  /* 17-sep-2026, decisión final: 3 botones (Nueva cotización · Cotización
+     anterior · Abonar contrato) y el agente por texto, en el mismo
+     mensaje, para no duplicar el saludo. */
+  saludoConAgente: '¡Qué tal! Estás con *Eurotravel* 🚐\nRenta de autobuses y Sprinter para tu grupo.\n¿Qué necesitas?\n\nSi prefieres hablar con un agente, escribe *agente*.',
   /* «Mi cotización anterior» pasa del tope de 20 letras por botón de
      WhatsApp; queda «Cotización anterior». */
   botones: ['Nueva cotización', 'Cotización anterior', 'Hablar con un agente'],
