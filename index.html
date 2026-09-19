@@ -5773,7 +5773,34 @@ window.IMGS = {
         boton.disabled = true;
         boton.innerHTML = htmlEspera('Abriendo el pago…');
 
+        /* ------------------------------------------------------------
+           EL PAGO SE ABRE EN OTRA PESTAÑA (19-sep-2026)
+           ------------------------------------------------------------
+           Antes esta misma pestaña se iba a Stripe. Quien le daba
+           «Atrás» volvía a un cotizador EN BLANCO: origen, destino,
+           fechas, unidad y sus datos, todo perdido. Nadie vuelve a
+           capturar eso; la venta se caía ahí.
+
+           Con otra pestaña no hay nada que restaurar, porque nada se
+           pierde: la cotización se queda viva detrás.
+
+           SE ABRE AQUÍ, en el clic, ANTES del `fetch`. Después de una
+           petición ya no cuenta como gesto del cliente y el navegador
+           la bloquea. Si aun así la bloquea —hay teléfonos que
+           siempre lo hacen—, más abajo se sigue como antes: vale más
+           cobrar perdiendo la cotización que no cobrar.
+           ------------------------------------------------------------ */
+        var pestana = null;
+        try { pestana = window.open('', '_blank'); } catch (e) { pestana = null; }
+
+        function cierraPestana() {
+          if (pestana && !pestana.closed) { try { pestana.close(); } catch (e) {} }
+          pestana = null;
+        }
+
         function falla(texto) {
+          /* Nadie se queda mirando una pestaña en blanco sin saber por qué. */
+          cierraPestana();
           error.textContent = texto;
           error.classList.add('on');
           boton.disabled = false;
@@ -5832,7 +5859,16 @@ window.IMGS = {
             falla('No pudimos abrir el pago en este momento.');
             return;
           }
-          location.href = aDonde;   // se va a Stripe
+          /* La pestaña que se abrió en el clic. Si el navegador la dejó
+             abrir, ahí va el pago y el cotizador se queda intacto detrás.
+             Si la bloqueó, se va esta misma, como toda la vida. */
+          if (pestana && !pestana.closed) {
+            pestana.location.href = aDonde;
+            boton.disabled = false;
+            boton.innerHTML = 'Pagar anticipo <svg class="arw" aria-hidden="true"><use href="#i-arrow"/></svg>';
+          } else {
+            location.href = aDonde;   // se va a Stripe
+          }
         }, function () {
           falla('No pudimos abrir el pago en este momento.');
         });
