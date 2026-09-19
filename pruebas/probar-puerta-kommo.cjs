@@ -105,6 +105,30 @@ titulo('4b · molesto, grosero o pidiendo persona (spec §5)');
   'es para una boda', 'mándame fotos', 'no sé la fecha todavía'
 ].forEach(function (f) { ok('«' + f + '» NO pasa a persona', !puerta.pareceMolesto(f)); });
 
+titulo('4b-bis · pide a un vendedor POR SU NOMBRE (19-sep-2026)');
+{
+  /* Caso real: el lead 26861216 escribió «Agente Carmen cortina por favor»
+     DOS veces y el bot le contestó «aquí no tenemos agente Carmen» y le
+     siguió cotizando. El candado solo reconocía «agente» a secas; con un
+     nombre detrás dejaba de valer. Quien pide a alguien por su nombre
+     quiere a esa persona, no al bot. */
+  [
+    'Agente Carmen cortina por favor', 'agente carmen', 'asesor Lupita',
+    'vendedora Lupita', 'con la señorita Lupita por favor', 'lic Carmen',
+    'me comunico con Carmen cortina', 'Buenas tardes me comunico con Carmen cortina',
+    'quiero hablar con Lupita', 'busco a Lupita Cortina', 'me pasas con Carmen',
+    'pásame con Lupita', 'comunícame con Carmen'
+  ].forEach(function (f) { ok('«' + f + '» pasa a persona', puerta.pareceMolesto(f)); });
+  /* Y lo que NO es pedir a nadie por su nombre: si esto se rompe, el bot
+     se apaga solo a media cotización. */
+  [
+    'me comunico con ustedes', 'quiero hablar con eurotravel', 'agente de viajes',
+    'busco a mi grupo', 'hablar con el chofer', 'somos 20 personas',
+    'me comunico con la empresa', 'esta bien', 'esta semana', 'busco una sprinter',
+    'quiero cotizar con ustedes', 'hablar con alguien de precios'
+  ].forEach(function (f) { ok('«' + f + '» NO se toma como un nombre', !puerta.pideAAlguienPorSuNombre(f)); });
+}
+
 titulo('4c · varias unidades, cotización anterior a mano y cancelación (tanda y, 17-sep)');
 ['necesito dos sprinters para 34 personas', 'serían 2 autobuses', 'tres camionetas para el 20', 'y otra sprinter aparte para los niños']
   .forEach(function (f) { ok('«' + f + '» pide varias unidades', puerta.pideVariasUnidades(f)); });

@@ -125,11 +125,56 @@ const PIDE_PERSONA = /\b(hablar con (una |un |alguna |algun )?(persona|humano|al
    cortesía alrededor: «un agente», «asesor», «humano por favor». */
 const SOLO_PERSONA = /^(?:(?:con|quiero|dame|pasame|necesito|por favor|porfa|porfavor|un|una|el|la|al)\s+)*(?:agente|asesor|asesora|persona|humano|humana|vendedor|vendedora|alguien)(?:\s+(?:por favor|porfa|porfavor|real|humano|de verdad|gracias))*\s*$/;
 
+/* ------------------------------------------------------------
+   PIDE A UN VENDEDOR POR SU NOMBRE (19-sep-2026)
+   ------------------------------------------------------------
+   Caso real, lead 26861216: «Agente Carmen cortina por favor», dos veces.
+   El bot contestó «aquí no tenemos agente Carmen» y le siguió cotizando,
+   porque `SOLO_PERSONA` exige que el mensaje sea «agente» y nada más: con
+   un nombre detrás dejaba de valer. Quien llama a alguien por su nombre
+   ya sabe con quién quiere hablar, y no es con el bot.
+
+   Las dos formas en que llega: un cargo con el nombre pegado («agente
+   Carmen», «señorita Lupita») o un verbo de buscar a alguien («me
+   comunico con Carmen», «busco a Lupita»). En las dos, lo que sigue tiene
+   que parecer un nombre: si es una palabra común —«ustedes», «la
+   empresa», «el chofer»— no está pidiendo a nadie en particular y el bot
+   sigue trabajando.
+   ------------------------------------------------------------ */
+const NO_ES_NOMBRE = new Set([
+  'de', 'del', 'la', 'el', 'los', 'las', 'un', 'una', 'uno', 'mi', 'su', 'ti', 'usted', 'ustedes',
+  'alguien', 'alguno', 'alguna', 'persona', 'personas', 'humano', 'humana', 'gente', 'grupo',
+  'agente', 'agentes', 'asesor', 'asesora', 'vendedor', 'vendedora', 'ejecutivo', 'ejecutiva',
+  'chofer', 'conductor', 'operador', 'dueno', 'encargado', 'jefe', 'gerente', 'equipo',
+  'empresa', 'oficina', 'eurotravel', 'euro', 'travel', 'ventas', 'atencion', 'soporte',
+  'informacion', 'info', 'precio', 'precios', 'cotizacion', 'cotizar', 'presupuesto',
+  'viajes', 'viaje', 'autobus', 'autobuses', 'camion', 'camiones', 'sprinter', 'unidad', 'unidades',
+  'que', 'quien', 'como', 'donde', 'cuando', 'cuanto', 'porfavor', 'porfa', 'favor', 'gracias',
+  'si', 'no', 'y', 'o', 'para', 'por', 'con', 'bien', 'semana', 'mes', 'dia', 'dias', 'hoy', 'manana'
+]);
+/* El cargo con el nombre pegado. El «con la», «el», etc. lo come el
+   prefijo opcional del otro patrón; aquí basta el cargo. */
+const TITULO_Y_NOMBRE = /\b(?:agente|asesor|asesora|vendedor|vendedora|ejecutiv[oa]|licenciad[oa]|lic|senor|senora|senorita|srita|sr|sra)\s+([a-zñ]{3,})/;
+/* El verbo de buscar a alguien. Solo formas explícitas: un «está…» suelto
+   cazaría «está bien» y «esta semana». */
+const BUSCA_A_ALGUIEN = /\b(?:me comunico con|me comunican con|comunicame con|me pasas? con|pasame con|me puedes? pasar con|busco a|buscaba a|buscando a|hablar con|quiero con)\s+(?:la |el |mi |don |dona |senor |senora |senorita |srita |lic )?([a-zñ]{3,})/;
+
+function pideAAlguienPorSuNombre(texto) {
+  const t = limpia(texto);
+  if (!t) return false;
+  for (const patron of [TITULO_Y_NOMBRE, BUSCA_A_ALGUIEN]) {
+    const hallado = patron.exec(t);
+    if (hallado && !NO_ES_NOMBRE.has(hallado[1])) return true;
+  }
+  return false;
+}
+
 function pareceMolesto(texto) {
   const crudo = String(texto || '');
   const t = limpia(crudo);
   if (!t) return false;
   if (MOLESTO.test(t) || NO_ENTIENDE.test(t) || PIDE_PERSONA.test(t) || SOLO_PERSONA.test(t.replace(/[¿?¡!]/g, '').trim())) return true;
+  if (pideAAlguienPorSuNombre(crudo)) return true;
   /* Gritando: un mensaje de 8 letras o más, todo en mayúsculas, con signos. */
   const letras = crudo.replace(/[^A-Za-zÁÉÍÓÚÑáéíóúñ]/g, '');
   return letras.length >= 8 && letras === letras.toUpperCase() && /[!¡?¿]{2,}/.test(crudo);
@@ -157,4 +202,4 @@ function cancela(texto) {
   return !!t && t.split(' ').length <= 10 && CANCELA.test(t) && !/[?¿]/.test(String(texto || ''));
 }
 
-module.exports = { decide, soloAgradecimiento, anunciaPago, esPregunta, limpia, pareceMolesto, pideVariasUnidades, pideCotizacionAnterior, cancela };
+module.exports = { decide, soloAgradecimiento, anunciaPago, esPregunta, limpia, pareceMolesto, pideAAlguienPorSuNombre, pideVariasUnidades, pideCotizacionAnterior, cancela };
