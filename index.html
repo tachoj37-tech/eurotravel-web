@@ -1945,14 +1945,14 @@
    están en la lista de precios. Antes las cinco eran fotos del mismo
    autobús blanco y la sección no decía nada.
    Procedencia y licencias: img/creditos-viajes.json (todas CC0). */
-#v-inicio .foto-viaje-descanso {background-image:url(img/viaje-descanso.jpg)}
-#v-inicio .foto-viaje-religioso {background-image:url(img/viaje-religioso.jpg);background-position:50% 62%}
-#v-inicio .foto-viaje-sociales {background-image:url(img/viaje-sociales.jpg)}
-#v-inicio .foto-viaje-turismo {background-image:url(img/viaje-turismo.jpg);background-position:50% 58%}
-#v-inicio .foto-destino-vallarta {background-image:url(img/dest-vallarta.jpg)}
-#v-inicio .foto-destino-mazatlan {background-image:url(img/dest-mazatlan.jpg)}
-#v-inicio .foto-destino-cdmx {background-image:url(img/dest-cdmx.jpg)}
-#v-inicio .foto-destino-tequila {background-image:url(img/dest-tequila.jpg)}
+#v-inicio .viva .foto-viaje-descanso {background-image:url(img/viaje-descanso.jpg)}
+#v-inicio .viva .foto-viaje-religioso {background-image:url(img/viaje-religioso.jpg);background-position:50% 62%}
+#v-inicio .viva .foto-viaje-sociales {background-image:url(img/viaje-sociales.jpg)}
+#v-inicio .viva .foto-viaje-turismo {background-image:url(img/viaje-turismo.jpg);background-position:50% 58%}
+#v-inicio .viva .foto-destino-vallarta {background-image:url(img/dest-vallarta.jpg)}
+#v-inicio .viva .foto-destino-mazatlan {background-image:url(img/dest-mazatlan.jpg)}
+#v-inicio .viva .foto-destino-cdmx {background-image:url(img/dest-cdmx.jpg)}
+#v-inicio .viva .foto-destino-tequila {background-image:url(img/dest-tequila.jpg)}
 
 /* ═══ Parche del inicio (zip del 29-ago-2026) ═══ */
 /* ── 1. Aire ─────────────────────────────────────────────────────────────── */
@@ -2326,6 +2326,19 @@ body.cal-abierto .wa-fab { display: none; }
 
 </style>
 <!-- /INICIO-NUEVO:CSS -->
+
+<noscript><style>
+/* Sin guion no hay clase .viva, y estas bandas se verian vacias.
+   Aqui se sirven las reglas de siempre. */
+#v-inicio .foto-viaje-descanso {background-image:url(img/viaje-descanso.jpg)}
+#v-inicio .foto-viaje-religioso {background-image:url(img/viaje-religioso.jpg);background-position:50% 62%}
+#v-inicio .foto-viaje-sociales {background-image:url(img/viaje-sociales.jpg)}
+#v-inicio .foto-viaje-turismo {background-image:url(img/viaje-turismo.jpg);background-position:50% 58%}
+#v-inicio .foto-destino-vallarta {background-image:url(img/dest-vallarta.jpg)}
+#v-inicio .foto-destino-mazatlan {background-image:url(img/dest-mazatlan.jpg)}
+#v-inicio .foto-destino-cdmx {background-image:url(img/dest-cdmx.jpg)}
+#v-inicio .foto-destino-tequila {background-image:url(img/dest-tequila.jpg)}
+</style></noscript>
 </head>
 <body>
 <!-- INICIO-NUEVO:ICONOS -->
