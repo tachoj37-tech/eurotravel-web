@@ -128,3 +128,60 @@ saliendo por correo, como hoy.
 | 5 · Conectar el webhook a Kommo | Claude | con pruebas |
 | 6 · Probar en el canal de PRUEBAS | los dos | 30 min |
 | 7 · Mover al número real | dueño | 5 min |
+
+---
+
+## Lo que se comprobó EN VIVO el 18-sep-2026
+
+Entrando a Kommo con el dueño, mirando sin tocar nada:
+
+- **Las plantillas buenas sí existen** y están en Ajustes → Plantillas. Al crear
+  una, Kommo pregunta el tipo: «Plantilla general» (respuestas rápidas, estatus
+  «No requerido») o **«Plantilla de WhatsApp»**, que es la que Meta aprueba. El
+  dueño ya tenía tres del primer tipo.
+- **El WABA es suyo**: «Eurotravel Renta de Autobuses y Sprinter», con su ID.
+- **Idioma `es_MX` sí está** en la lista («Español (Español MEX)»).
+- **La categoría Utilidad** se elige antes del formulario.
+- **El encabezado ofrece «Imagen o archivo»**, y al elegirlo pide *cargar* un
+  archivo ahí mismo.
+- **Las variables se insertan con el botón `[-]`** de la barra del editor, y la
+  lista que abre son **campos de Kommo**: nombre del contacto, nombre, apellido,
+  teléfonos, correos, nombre del lead, presupuesto. Nada de folio ni montos:
+  esos campos hay que crearlos antes.
+
+### El problema del PDF, sin adornos
+
+El encabezado de archivo pide subir el archivo **al crear la plantilla**, y las
+variables solo se llenan desde campos de texto. Ni la documentación de Kommo ni
+la de su Salesbot mencionan un archivo que cambie por destinatario; los pasos
+del bot solo describen adjuntar un archivo al armarlo. Todo apunta a que sería
+el mismo PDF para todos, que no sirve para contratos.
+
+**No está comprobado**, y esa es la diferencia: no se encontró que NO se pueda,
+se encontró que nadie lo documenta.
+
+### El camino que abrió el dueño (para ver mañana)
+
+Su idea: entrar a business.facebook.com, donde el WABA es suyo, y crear ahí las
+plantillas con encabezado de documento. Llevada un paso más allá:
+
+> **Nosotros enviamos por la Cloud API con una app propia; Kommo sigue
+> recibiendo y atendiendo las pláticas.** Un solo número, el EuroBot intacto, y
+> el PDF como archivo de verdad.
+
+Meta permite que un número conviva con dos sistemas y que el dueño del WABA
+comparta el acceso. Lo que falta confirmar es el caso exacto: una app propia
+junto a la del BSP. Se ve en el Business Manager:
+
+1. ¿El WABA aparece bajo su Business Manager?
+2. ¿Deja crear un usuario del sistema con acceso a ese WABA?
+3. ¿El número admite otra app además de la de Kommo?
+
+Segunda pista que vale revisar: **Kommo tiene un generador de documentos** que
+arma PDF con datos del lead. Si además los manda por WhatsApp, resolvería todo
+sin salir de Kommo.
+
+### Decisión pendiente
+
+El dueño rechazó el camino de la liga: quiere el archivo. Así que **no se
+crearon campos ni plantillas**: se retoma mañana desde el Business Manager.
