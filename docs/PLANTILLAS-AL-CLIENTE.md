@@ -1,184 +1,160 @@
-# Plantillas de WhatsApp para el cliente (Fase 1)
+# Los mensajes para las plantillas de Kommo
 
-**18-sep-2026.** Lo que hay que dar de alta en Meta para que el cliente reciba por
-WhatsApp su contrato, su PDF y el aviso de cada pago. Meta tarda de 1 a 24 h en
-aprobar cada una, así que **esto va primero**.
+**18-sep-2026.** Los textos finales, listos para copiar y pegar en
+**Kommo → Automatizaciones → Plantillas → Plantillas de chat → Crear**.
 
-> No confundir con `venta_en_la_pagina` (en `AVISO-INSTANTANEO.md`): esa es el
-> aviso **interno**, para los teléfonos de la oficina. Estas tres son **para el
-> cliente**.
+Cómo se llena cada una:
 
----
+1. Canal: **WhatsApp Business**.
+2. Pegas el texto de abajo **tal como está**, con los datos de ejemplo puestos.
+3. Seleccionas cada dato señalado y lo conviertes en **marcador de posición**
+   (placeholder). Kommo te pide un ejemplo de cada uno: usa el mismo valor que
+   ya está escrito.
+4. Guardas y mandas a revisión. Tarda de un minuto a 48 horas.
 
-## Dónde se dan de alta
+Son **cuatro**. Todas avisan de algo que el cliente ya hizo, así que entran
+como **Utilidad**, no como publicidad.
 
-business.facebook.com → **WhatsApp Manager** → la cuenta de WhatsApp Business →
-**Plantillas de mensajes** → **Crear plantilla**.
-
-Para las tres: **Categoría `Utilidad`** (no Marketing: Marketing se cobra más caro
-y puede rebotar) · **Idioma `Español (MEX)` → `es_MX`**.
-
----
-
-## 1 · `contrato_listo` — cuando aparta y se genera el contrato
-
-El dueño eligió mandar por Kommo (18-sep), y ahí el contrato viaja como **liga**,
-no como archivo adjunto. Ver `WHATSAPP-POR-KOMMO.md`.
-
-```
-¡Listo {{1}}! Tu viaje ya está apartado 🚐
-
-Folio: {{2}}
-Destino: {{3}}
-Salida: {{4}}
-
-Total: {{5}}
-Anticipo recibido: {{6}}
-Queda por abonar: {{7}}
-
-Aquí está tu contrato: {{8}}
-Puedes abonar cuando quieras desde la página.
-```
-
-
-| Hueco | Ejemplo | Qué es |
-|---|---|---|
-| `{{1}}` | `Ana` | primer nombre |
-| `{{2}}` | `43773` | número de contrato de EuroSystem |
-| `{{3}}` | `Puerto Vallarta, Jalisco` | destino |
-| `{{4}}` | `15 de noviembre de 2026, 08:00` | salida |
-| `{{5}}` | `$12,300` | total del viaje |
-| `{{6}}` | `$3,000` | lo que acaba de pagar |
-| `{{7}}` | `$9,300` | saldo |
-| `{{8}}` | `https://eurosystem.site/…` | liga al contrato en PDF |
+> Detalle del camino B: el contrato viaja como **liga**, no como archivo
+> adjunto. Ver `WHATSAPP-POR-KOMMO.md`.
 
 ---
 
-## 2 · `pago_recibido` — cada abono que entra
+## 1 · `contrato_listo`
 
-Sin adjunto. Es el recibo.
+Sale cuando el cliente aparta y se genera su contrato.
 
 ```
-Recibimos tu pago, {{1}} ✅
+¡Listo Ana! Tu viaje ya quedó apartado 🚐
 
-Folio: {{2}}
-Pagaste: {{3}}
-Fecha: {{4}}
+Folio: 43773
+Destino: Puerto Vallarta, Jalisco
+Salida: 15 de noviembre de 2026, 08:00
 
-Llevas abonado {{5}} de {{6}}.
-Te quedan {{7}} por abonar.
+Total del viaje: $12,300
+Anticipo recibido: $3,000
+Queda por abonar: $9,300
 
-Gracias 🙌
+Aquí está tu contrato: https://eurosystem.site/contrato/43773
+
+Puedes abonar cuando quieras desde nuestra página, con tarjeta o en el OXXO. Cualquier duda, contéstanos por aquí 🙌
 ```
 
-| Hueco | Ejemplo |
+| Qué marcar como variable | Ejemplo |
 |---|---|
-| `{{1}}` | `Ana` |
-| `{{2}}` | `43773` |
-| `{{3}}` | `$1,500` |
-| `{{4}}` | `18 de septiembre de 2026` |
-| `{{5}}` | `$4,500` |
-| `{{6}}` | `$12,300` |
-| `{{7}}` | `$7,800` |
+| `Ana` | Ana |
+| `43773` | 43773 |
+| `Puerto Vallarta, Jalisco` | Puerto Vallarta, Jalisco |
+| `15 de noviembre de 2026, 08:00` | 15 de noviembre de 2026, 08:00 |
+| `$12,300` | $12,300 |
+| `$3,000` | $3,000 |
+| `$9,300` | $9,300 |
+| `https://eurosystem.site/contrato/43773` | https://eurosystem.site/contrato/43773 |
 
 ---
 
-## 3 · `saldo_pendiente` — recordatorio antes del viaje
+## 2 · `pago_recibido`
 
-Solo si el dueño la quiere. Sin adjunto.
+Sale con cada abono que entra, incluido el anticipo.
 
 ```
-Hola {{1}}, te recuerdo tu viaje 🚐
+Recibimos tu pago, Ana ✅
 
-Folio: {{2}}
-Salida: {{3}}
+Folio: 43773
+Pagaste: $1,500
+Fecha: 18 de septiembre de 2026
 
-Te faltan {{4}} por abonar antes de la salida.
-Puedes abonar con tarjeta o en el OXXO desde la página.
+Llevas abonado $4,500 de $12,300.
+Te quedan $7,800 por abonar.
+
+Gracias por tu confianza 🙌
 ```
 
-- **Botón** «Ir al sitio web»: `Abonar` → `https://eurotravel-web.vercel.app/viaje.html`
-
-| Hueco | Ejemplo |
+| Qué marcar como variable | Ejemplo |
 |---|---|
-| `{{1}}` | `Ana` |
-| `{{2}}` | `43773` |
-| `{{3}}` | `15 de noviembre de 2026` |
-| `{{4}}` | `$7,800` |
+| `Ana` | Ana |
+| `43773` | 43773 |
+| `$1,500` | $1,500 |
+| `18 de septiembre de 2026` | 18 de septiembre de 2026 |
+| `$4,500` | $4,500 |
+| `$12,300` | $12,300 |
+| `$7,800` | $7,800 |
 
 ---
 
-## 4 · `pago_revertido` — cuando el dinero se regresa
+## 3 · `pago_revertido`
 
-Un WhatsApp no se puede deshacer. Si el cliente ya recibió «recibimos tu pago» y
-el cargo se reembolsa o llega un contracargo, hay que decírselo: si no, cree que
-su viaje está apartado y no lo está.
+Sale cuando el banco regresa el dinero: un reembolso o un contracargo.
+
+Es **una sola** plantilla para los dos casos —se cayó un abono o se cayó el
+anticipo— a propósito. El texto no promete que el viaje siga apartado ni
+anuncia que se canceló: eso lo resuelve una persona por teléfono, como pidió el
+dueño. Partirla en dos sería una aprobación más y un riesgo más.
 
 ```
-Hola {{1}}, tuvimos un problema con tu pago de {{2}} del folio {{3}}.
+Hola Ana, tuvimos un problema con tu pago de $1,500 del folio 43773.
 
-El banco lo regresó, así que ese abono no quedó aplicado.
-Tu saldo pendiente es {{4}}.
+El banco lo regresó, así que ese pago no quedó aplicado y tu saldo pendiente es de $9,300.
 
-Te marcamos para ayudarte a resolverlo 🙏
+Te vamos a marcar para ayudarte a resolverlo. Si ya lo pagaste de otra forma, contéstanos por aquí 🙏
 ```
 
-| Hueco | Ejemplo |
+| Qué marcar como variable | Ejemplo |
 |---|---|
-| `{{1}}` | `Ana` |
-| `{{2}}` | `$1,500` |
-| `{{3}}` | `43773` |
-| `{{4}}` | `$9,300` |
+| `Ana` | Ana |
+| `$1,500` | $1,500 |
+| `43773` | 43773 |
+| `$9,300` | $9,300 |
 
 ---
 
-## REGLA DEL DINERO: el mensaje sale solo si el pago está de verdad
+## 4 · `saldo_pendiente`
 
-Lo dictó el dueño el 18-sep-2026: **«verificar que el pago no se haya rebotado;
-si se rebota, el mensaje no debería llegar»**. Cómo se cumple:
+Recordatorio antes de la salida. Es la única opcional.
 
-1. **Nunca se le cree al aviso de Stripe.** Del aviso se toma solo el `id`; el
-   estado se le pregunta a Stripe con nuestra llave. Un aviso inventado o viejo
-   no puede afirmar que algo se pagó. (Ya es así, `_webhook-logica.js`.)
-2. **Solo con `payment_status = paid`.** `checkout.session.completed` también
-   llega cuando el cliente generó su voucher de OXXO **sin haber pagado**. En ese
-   caso no se registra contrato, no sale correo y **no sale WhatsApp**. El
-   mensaje sale hasta `checkout.session.async_payment_succeeded`, que es cuando
-   el dinero entró de verdad.
-3. **Si se revierte después**, el webhook ya lo atiende (`charge.refunded`,
-   `charge.dispute.created`, `charge.dispute.funds_withdrawn`): revierte el abono
-   en EuroSystem y avisa a la oficina. Falta que además salga `pago_revertido` al
-   cliente. Eso se conecta junto con las otras plantillas.
-4. **El orden no cambia:** primero registrar en EuroSystem, luego avisar. Si
-   EuroSystem no contesta, se devuelve 500 para que Stripe reintente, y **no se
-   manda el mensaje**: vale más un aviso tarde que un aviso falso.
+```
+Hola Ana, te recordamos tu viaje 🚐
 
----
+Folio: 43773
+Salida: 15 de noviembre de 2026
 
-## Reglas que Meta revisa (para que no la rechacen)
+Te faltan $7,800 por abonar antes de la salida. Puedes pagar con tarjeta o en el OXXO desde nuestra página.
 
-- Nada de promesas ni promociones: son avisos de una operación que el cliente pidió.
-- No empezar ni terminar con un hueco `{{ }}`.
-- Sin dos huecos pegados: `{{1}} {{2}}` está mal, `{{1}}, folio {{2}}` está bien.
-- Los montos van **ya formateados** desde nuestro lado (`$12,300`), no en centavos.
+Cualquier duda, contéstanos por aquí 🙌
+```
+
+| Qué marcar como variable | Ejemplo |
+|---|---|
+| `Ana` | Ana |
+| `43773` | 43773 |
+| `15 de noviembre de 2026` | 15 de noviembre de 2026 |
+| `$7,800` | $7,800 |
 
 ---
 
-## Qué necesito yo cuando estén aprobadas
+## Por qué están escritos así
 
-1. Los **nombres exactos** de las plantillas (si les pones otro nombre).
-2. El **Phone number ID** del número desde el que salen.
-3. El **token** del usuario del sistema con permiso `whatsapp_business_messaging`
-   (sin caducidad). **Va directo a Vercel, nunca al chat.**
+Cada regla de abajo es un motivo de rechazo que Meta aplica:
 
-Con eso conecto EuroSystem → WhatsApp: cada contrato y cada abono dispara su
-mensaje, igual que hoy dispara el correo.
+- **Nunca empiezan ni terminan con una variable.** Por eso `¡Listo Ana!` lleva
+  el «¡Listo» delante, y todas cierran con una frase fija.
+- **Nunca hay dos variables pegadas.** Siempre va texto en medio: `Folio: 43773`,
+  `Pagaste: $1,500`.
+- **No venden nada.** Ni «aprovecha», ni «oferta», ni «te invitamos». Son
+  avisos de una operación que el cliente ya hizo. Eso las mantiene en Utilidad,
+  que es más barato y se aprueba más fácil.
+- **Los montos van ya formateados** (`$12,300`), no en centavos. El formato lo
+  pone nuestro código antes de mandar.
+- **La liga va completa**, sin acortadores: Meta rechaza bit.ly y parecidos.
 
 ---
 
-## Orden
+## Si Meta rechaza alguna
 
-1. Dar de alta las 4 plantillas (hoy) → esperar aprobación
-2. Crear el número en Meta y el token, si aún no está
-3. Pasarme nombres, Phone ID y token en Vercel
-4. Yo conecto y probamos con un contrato real
+Kommo te enseña el motivo en la misma pantalla. Los dos más comunes:
+
+- **Faltan los ejemplos de las variables.** Es el más frecuente. Cada marcador
+  necesita el suyo.
+- **La mandaron como Marketing.** Debe ir en Utilidad.
+
+Se corrige y se reenvía. No hay castigo por reintentar.
