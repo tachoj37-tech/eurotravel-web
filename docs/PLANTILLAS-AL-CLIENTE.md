@@ -22,10 +22,8 @@ y puede rebotar) · **Idioma `Español (MEX)` → `es_MX`**.
 
 ## 1 · `contrato_listo` — cuando aparta y se genera el contrato
 
-Lleva **documento adjunto**: el PDF del contrato.
-
-- **Encabezado:** tipo `Documento`
-- **Cuerpo:**
+El dueño eligió mandar por Kommo (18-sep), y ahí el contrato viaja como **liga**,
+no como archivo adjunto. Ver `WHATSAPP-POR-KOMMO.md`.
 
 ```
 ¡Listo {{1}}! Tu viaje ya está apartado 🚐
@@ -38,11 +36,10 @@ Total: {{5}}
 Anticipo recibido: {{6}}
 Queda por abonar: {{7}}
 
-Te dejo tu contrato aquí arriba. Puedes abonar cuando quieras desde la página.
+Aquí está tu contrato: {{8}}
+Puedes abonar cuando quieras desde la página.
 ```
 
-- **Botón** (opcional, tipo «Ir al sitio web»): `Abonar a mi viaje` →
-  `https://eurotravel-web.vercel.app/viaje.html`
 
 | Hueco | Ejemplo | Qué es |
 |---|---|---|
@@ -53,6 +50,7 @@ Te dejo tu contrato aquí arriba. Puedes abonar cuando quieras desde la página.
 | `{{5}}` | `$12,300` | total del viaje |
 | `{{6}}` | `$3,000` | lo que acaba de pagar |
 | `{{7}}` | `$9,300` | saldo |
+| `{{8}}` | `https://eurosystem.site/…` | liga al contrato en PDF |
 
 ---
 
