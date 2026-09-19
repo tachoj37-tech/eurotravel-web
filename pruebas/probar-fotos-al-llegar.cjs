@@ -15,12 +15,17 @@
    Son `background-image` de CSS, y el navegador las pide en cuanto
    encuentra la regla: `loading="lazy"` no existe para fondos.
 
-   EL ARREGLO: la regla cuelga de `.viva`, la clase que el guion ya le
-   pone a cada banda cuando se acerca a la pantalla. Así el navegador
-   ni se entera de esas fotos hasta que el cliente baja. Quien nunca
-   baja, nunca las descarga.
+   EL ARREGLO: la regla cuelga de `.fotos`, una marca que el guion le
+   pone a cada banda la primera vez que se acerca a la pantalla y que
+   **no se quita nunca**. Así el navegador ni se entera de esas fotos
+   hasta que el cliente baja. Quien nunca baja, nunca las descarga.
 
-   Y un respaldo en `<noscript>`: sin guion no hay `.viva`, y una
+   NO cuelgan de `.viva`, que es la clase de la animación: esa entra y
+   sale con el scroll, y la banda parpadearía al subir y bajar. Se
+   probó y se vio: al llegar al final, solo la última banda conservaba
+   su foto.
+
+   Y un respaldo en `<noscript>`: sin guion no hay `.fotos`, y una
    banda sin su foto se vería vacía. Ahí se sirven las reglas de
    siempre.
    ============================================================ */
@@ -55,8 +60,8 @@ PESADAS.forEach(function (foto) {
   let m;
   while ((m = re.exec(SIN_NOSCRIPT))) renglones.push(m[1]);
   igual(foto + ': tiene su regla', renglones.length, 1);
-  cierto(foto + ': la regla cuelga de .viva',
-    renglones.length === 1 && /\.viva\s/.test(renglones[0]));
+  cierto(foto + ': la regla cuelga de .fotos',
+    renglones.length === 1 && /\.fotos\s/.test(renglones[0]));
 });
 
 console.log('\n── y la portada SÍ se sigue pidiendo de inmediato ──');
