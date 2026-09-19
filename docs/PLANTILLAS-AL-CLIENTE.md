@@ -110,6 +110,53 @@ Puedes abonar con tarjeta o en el OXXO desde la página.
 
 ---
 
+## 4 · `pago_revertido` — cuando el dinero se regresa
+
+Un WhatsApp no se puede deshacer. Si el cliente ya recibió «recibimos tu pago» y
+el cargo se reembolsa o llega un contracargo, hay que decírselo: si no, cree que
+su viaje está apartado y no lo está.
+
+```
+Hola {{1}}, tuvimos un problema con tu pago de {{2}} del folio {{3}}.
+
+El banco lo regresó, así que ese abono no quedó aplicado.
+Tu saldo pendiente es {{4}}.
+
+Te marcamos para ayudarte a resolverlo 🙏
+```
+
+| Hueco | Ejemplo |
+|---|---|
+| `{{1}}` | `Ana` |
+| `{{2}}` | `$1,500` |
+| `{{3}}` | `43773` |
+| `{{4}}` | `$9,300` |
+
+---
+
+## REGLA DEL DINERO: el mensaje sale solo si el pago está de verdad
+
+Lo dictó el dueño el 18-sep-2026: **«verificar que el pago no se haya rebotado;
+si se rebota, el mensaje no debería llegar»**. Cómo se cumple:
+
+1. **Nunca se le cree al aviso de Stripe.** Del aviso se toma solo el `id`; el
+   estado se le pregunta a Stripe con nuestra llave. Un aviso inventado o viejo
+   no puede afirmar que algo se pagó. (Ya es así, `_webhook-logica.js`.)
+2. **Solo con `payment_status = paid`.** `checkout.session.completed` también
+   llega cuando el cliente generó su voucher de OXXO **sin haber pagado**. En ese
+   caso no se registra contrato, no sale correo y **no sale WhatsApp**. El
+   mensaje sale hasta `checkout.session.async_payment_succeeded`, que es cuando
+   el dinero entró de verdad.
+3. **Si se revierte después**, el webhook ya lo atiende (`charge.refunded`,
+   `charge.dispute.created`, `charge.dispute.funds_withdrawn`): revierte el abono
+   en EuroSystem y avisa a la oficina. Falta que además salga `pago_revertido` al
+   cliente. Eso se conecta junto con las otras plantillas.
+4. **El orden no cambia:** primero registrar en EuroSystem, luego avisar. Si
+   EuroSystem no contesta, se devuelve 500 para que Stripe reintente, y **no se
+   manda el mensaje**: vale más un aviso tarde que un aviso falso.
+
+---
+
 ## Reglas que Meta revisa (para que no la rechacen)
 
 - Nada de promesas ni promociones: son avisos de una operación que el cliente pidió.
@@ -133,7 +180,7 @@ mensaje, igual que hoy dispara el correo.
 
 ## Orden
 
-1. Dar de alta las 3 plantillas (hoy) → esperar aprobación
+1. Dar de alta las 4 plantillas (hoy) → esperar aprobación
 2. Crear el número en Meta y el token, si aún no está
 3. Pasarme nombres, Phone ID y token en Vercel
 4. Yo conecto y probamos con un contrato real
