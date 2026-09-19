@@ -212,6 +212,13 @@ function avisoDeReversa(datos) {
       ? '  1. Cancelar el contrato ' + (datos.contrato || '—') + ' en EuroSystem.'
       : '  1. Marcar revertido ese abono en el contrato ' + (datos.contrato || '—') + '.',
     '  2. Avisarle al cliente antes de que se presente el día del viaje.',
+    /* Desde el 18-sep-2026 al cliente se le escribe solo. Este renglón le dice
+       a la oficina si ya salió el correo o si le toca hablarle a ella. */
+    datos.avisadoElCliente === true
+      ? '     (ya se le mandó correo, pero háblenle igual)'
+      : (datos.sinCorreoDelCliente
+        ? '     NO SE LE PUDO AVISAR AL CLIENTE: no tenemos su correo. HÁBLENLE.'
+        : ''),
     quemar ? '  3. Liberar la unidad de ese día.' : '',
     '',
     datos.eurosystem === true
@@ -225,7 +232,69 @@ function avisoDeReversa(datos) {
   return { asunto: asunto, texto: renglones.join('\n') };
 }
 
+/* ------------------------------------------------------------
+   EL AVISO AL CLIENTE (18-sep-2026)
+   ------------------------------------------------------------
+   Dictado del dueño: «que le avise a la persona y al cliente».
+   La oficina ya se enteraba; el cliente no, y es el que se queda
+   creyendo que su viaje está apartado.
+
+   Dos textos, porque son dos noticias muy distintas:
+
+     ABONO    · se le cayó UN pago. Su viaje sigue en pie y su
+                saldo vuelve a subir. Molesta, no asusta.
+     ANTICIPO · se le cayó el pago que apartó el viaje. Su viaje
+                NO quedó apartado. Eso hay que decirlo con todas
+                sus letras, aunque duela: peor es que se entere
+                el día de la salida.
+
+   Aquí NO se cancela nada ni se le dice que se canceló: el dueño
+   fue claro en que el contrato lo cancela una persona. El mensaje
+   invita a hablar, no cierra la puerta.
+   ------------------------------------------------------------ */
+function avisoAlCliente(datos) {
+  const d = datos || {};
+  const esAnticipo = d.clase === 'ANTICIPO';
+  const pesos = function (n) {
+    return '$' + Number(n || 0).toLocaleString('es-MX', { maximumFractionDigits: 0 });
+  };
+  const monto = pesos(d.monto);
+  const quien = String(d.nombre || '').trim().split(/\s+/)[0] || '';
+  const hola = quien ? 'Hola ' + quien + ',' : 'Hola,';
+  const cual = d.contrato ? 'contrato ' + d.contrato : (d.folio ? 'folio ' + d.folio : '');
+
+  const asunto = esAnticipo
+    ? 'Tu pago de ' + monto + ' se regresó · tu viaje no quedó apartado'
+    : 'Tu abono de ' + monto + ' se regresó';
+
+  const cuerpo = esAnticipo
+    ? [
+        'Tu pago de ' + monto + (cual ? ' del ' + cual : '') + ' se regresó a tu cuenta,',
+        'así que tu viaje NO quedó apartado.',
+        '',
+        'Todavía podemos ayudarte: escríbenos y lo resolvemos. Si ya lo habías',
+        'pagado de otra forma, dinos y lo revisamos.'
+      ]
+    : [
+        'Tu abono de ' + monto + (cual ? ' del ' + cual : '') + ' se regresó a tu cuenta,',
+        'así que no quedó aplicado y tu saldo vuelve a subir.',
+        '',
+        'Tu viaje sigue apartado. Puedes volver a abonar cuando quieras desde',
+        'la página, con tu número de contrato y tu apellido.'
+      ];
+
+  const texto = [hola, ''].concat(cuerpo).concat([
+    '',
+    'Cualquier duda, contéstanos este correo o escríbenos por WhatsApp.',
+    '',
+    'Eurotravel · San Pedro Tlaquepaque, Jalisco'
+  ]).join('\n');
+
+  return { asunto: asunto, texto: texto };
+}
+
 module.exports = {
   AVISOS, esReversa, motivoDe, pagoDelAviso, montoRevertido, loQueDiceStripe,
+  avisoAlCliente,
   claseDePago, cuerpoParaEuroSystem, avisoDeReversa
 };

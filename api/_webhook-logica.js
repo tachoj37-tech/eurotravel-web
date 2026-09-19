@@ -441,6 +441,26 @@ async function atiendeReversa(tipo, objeto, firmado) {
     console.error('[reversa] EuroSystem NO la registró: ' + porQueNo + '. Va por correo.');
   }
 
+  /* ---- 1b. AL CLIENTE TAMBIÉN (18-sep-2026) -----------------------------
+     Dictado del dueño: «que le avise a la persona y al cliente». El que se
+     queda creyendo que su viaje está apartado es él.
+
+     UNA sola vez por cobro: Stripe manda DOS avisos por la misma disputa
+     —`created` cuando el banco la abre y `funds_withdrawn` cuando se lleva el
+     dinero— y dos correos por lo mismo asustan el doble. Se le escribe cuando
+     el dinero de verdad salió. Además, si fue él quien abrió la disputa, ya lo
+     sabe: el de `created` es para la oficina, que es la que tiene que
+     reaccionar.
+
+     Si no sale, NO se pierde la reversa: la oficina se entera igual y el
+     renglón del correo le dice que le hable. Nunca al revés.
+     ---------------------------------------------------------------------- */
+  const correoDelCliente = correoDelCobro(sesion);
+  const yaSalioElDinero = tipo === 'charge.refunded' || tipo === 'charge.dispute.funds_withdrawn';
+  const toca = yaSalioElDinero && !!correoDelCliente;
+  datos.sinCorreoDelCliente = yaSalioElDinero && !correoDelCliente;
+  datos.avisadoElCliente = toca;
+
   /* ---- 2. que una persona se entere. ESTO es lo que no puede fallar ----
      Va SIEMPRE, y va antes de decidir qué se le contesta a Stripe: el dinero
      ya salió de la cuenta y eso no espera tres días de reintentos. */
@@ -453,6 +473,26 @@ async function atiendeReversa(tipo, objeto, firmado) {
     console.error('[reversa] EL AVISO NO SALIO (' + envio.motivo + '). ' +
       'Folio ' + (datos.folio || '?') + ', pago ' + pago + '. Stripe reintentará.');
     return { status: 500, cuerpo: { error: 'no se pudo avisar de la reversa' } };
+  }
+
+  /* ---- 2b. y ahora sí, al cliente ---------------------------------------
+     Después de la oficina, nunca antes: si solo uno de los dos puede salir,
+     tiene que ser el de la oficina, que es quien puede reaccionar. Si este
+     falla, la reversa NO se pierde: queda en el registro y el correo de la
+     oficina ya le dijo que le hable. */
+  if (toca) {
+    const suyo = reversas.avisoAlCliente(datos);
+    const aCliente = await correo.manda({
+      from: correo.DE, to: [correoDelCliente],
+      subject: suyo.asunto, text: suyo.texto
+    });
+    if (!aCliente.ok) {
+      console.error('[reversa] NO se le pudo avisar al cliente ' + correoDelCliente +
+        ' (' + (aCliente.motivo || 'sin detalle') + '). La oficina sí se enteró.');
+    }
+  } else if (yaSalioElDinero) {
+    console.error('[reversa] sin correo del cliente para el pago ' + pago +
+      ': le toca hablarle a la oficina.');
   }
 
   /* ---- 3. y solo ahora, qué se le contesta a Stripe ----------------------

@@ -105,6 +105,12 @@ async function avisa(tipo, objeto) {
   return logica.procesa(ev, firma.firmaDePrueba(ev, 'whsec_x'));
 }
 
+/* Los correos que le llegaron a la OFICINA. Desde el 18-sep-2026 una reversa
+   manda dos: el de la oficina y el del cliente. */
+function aLaOficina() {
+  return CORREOS.filter(function (c) { return (c.to || []).join(',').indexOf('eurotravel.com.mx') >= 0; });
+}
+
 /* Un reembolso, tal como lo manda Stripe */
 const REEMBOLSO = { id: 'ch_1', payment_intent: 'pi_ABC123', amount: 520000,
                     amount_refunded: 520000 };
@@ -212,7 +218,9 @@ const CONTRACARGO = { id: 'dp_1', charge: 'ch_1', payment_intent: 'pi_ABC123', a
 
     /* Pero la oficina se entera IGUAL, y en el primer intento: el dinero ya
        salio de la cuenta y eso no espera tres dias de reintentos. */
-    igual('y aun asi se le avisó a la oficina', CORREOS.length, 1);
+    /* Desde el 18-sep-2026 al cliente tambien se le escribe, asi que se
+       cuentan SOLO los de la oficina: es el que no puede faltar. */
+    igual('y aun asi se le avisó a la oficina', aLaOficina().length, 1);
     const aviso = CORREOS[0];
     cierto('el aviso dice que EuroSystem no lo registró',
       /NO pudo registrarlo/.test(aviso.text));
@@ -245,7 +253,7 @@ const CONTRACARGO = { id: 'dp_1', charge: 'ch_1', payment_intent: 'pi_ABC123', a
       const r = await avisa('charge.refunded', REEMBOLSO);
       igual('EuroSystem contesta ' + caso.status + ': 500, que Stripe reintente', r.status, 500);
       igual('EuroSystem contesta ' + caso.status + ': y la oficina se entera igual',
-        CORREOS.length, 1);
+        aLaOficina().length, 1);
     }
 
     /* Y si ni se le pudo hablar. */
@@ -253,7 +261,7 @@ const CONTRACARGO = { id: 'dp_1', charge: 'ch_1', payment_intent: 'pi_ABC123', a
     EUROSYSTEM_REVERSA = { ok: false, status: 0, tronar: true };
     const r = await avisa('charge.refunded', REEMBOLSO);
     igual('EuroSystem inalcanzable: 500, que Stripe reintente', r.status, 500);
-    igual('y la oficina se entera igual', CORREOS.length, 1);
+    igual('y la oficina se entera igual', aLaOficina().length, 1);
   }
 
   /* ============ 5. SI NI EL CORREO SALE, QUE STRIPE INSISTA ============
@@ -381,7 +389,7 @@ const CONTRACARGO = { id: 'dp_1', charge: 'ch_1', payment_intent: 'pi_ABC123', a
     CARGO = { id: 'ch_1', amount: 520000, amount_refunded: 520000, disputed: false };
     r = await avisaSinFirma('charge.refunded', REEMBOLSO);
     cierto('un reembolso real sin firma SÍ se atiende', r.cuerpo.reversa);
-    igual('y se le avisa a la oficina', CORREOS.length, 1);
+    igual('y se le avisa a la oficina', aLaOficina().length, 1);
 
     /* --- d) firmado pero Stripe todavía no lo refleja: que insista --- */
     CARGO = { id: 'ch_1', amount: 520000, amount_refunded: 0, disputed: false };
@@ -416,6 +424,109 @@ const CONTRACARGO = { id: 'dp_1', charge: 'ch_1', payment_intent: 'pi_ABC123', a
       reversas.loQueDiceStripe('CONTRACARGO', { amount: 520000, disputed: true }).confirmada, true);
     igual('un cobro vacío no confirma nada',
       reversas.loQueDiceStripe('REEMBOLSO', null).confirmada, false);
+  }
+
+  /* ============================================================
+     AL CLIENTE TAMBIÉN SE LE AVISA (18-sep-2026)
+     ------------------------------------------------------------
+     Dictado del dueño: «que le avise a la persona y al cliente; si fue
+     un abono se cancela el abono y se revierte; si es contrato y el
+     cliente no avisa ni dice nada, el usuario lo cancela, pero se le
+     avisa siempre a una persona».
+
+     O sea: la oficina SIEMPRE (ya estaba) y el cliente TAMBIÉN. Nadie
+     cancela el contrato solo: eso lo decide una persona.
+
+     Una regla más, que no dijo pero se cae de madura: al cliente se le
+     escribe UNA vez por cobro. Stripe manda dos avisos por la misma
+     disputa —`created` cuando el banco la abre y `funds_withdrawn`
+     cuando se lleva el dinero— y dos correos por lo mismo asustan el
+     doble. Al cliente se le escribe cuando el dinero de verdad salió.
+     Y si fue él quien abrió la disputa, ya lo sabe: el de `created` es
+     para la oficina, que es la que tiene que reaccionar.
+     ============================================================ */
+  {
+    console.log('\n== AL CLIENTE TAMBIEN SE LE AVISA ==');
+
+    function correosAl(quien) {
+      return CORREOS.filter(function (c) {
+        const para = (c.to || []).join(',');
+        return quien === 'oficina' ? /eurotravel\.com\.mx/.test(para) : /ana@ejemplo\.mx/.test(para);
+      });
+    }
+
+    /* --- a) un ABONO que se cae: se le dice que su saldo vuelve a subir --- */
+    SESION_POR_PAGO = sesionCon({ metadata: Object.assign({}, sesionCon().metadata, { tipo: 'abono' }) });
+    EUROSYSTEM_REVERSA = { ok: true, status: 200, datos: { revertido: true } };
+    RESEND = { ok: true };
+    let r = await avisa('charge.refunded', REEMBOLSO);
+    igual('abono revertido: a la oficina le llega', correosAl('oficina').length, 1);
+    igual('abono revertido: al cliente también', correosAl('cliente').length, 1);
+    cierto('y se le dice que el abono no quedó aplicado',
+      /no qued[oó] aplicado|se regres[oó]/i.test(JSON.stringify(correosAl('cliente')[0])));
+    cierto('sin decirle que su viaje se cayó, porque no se cayó',
+      !/no est[aá] apartado|se cay[oó] tu viaje/i.test(JSON.stringify(correosAl('cliente')[0])));
+    igual('y la respuesta sigue siendo la de siempre', r.status, 200);
+
+    /* --- b) el ANTICIPO que se cae: el viaje NO está apartado --- */
+    SESION_POR_PAGO = sesionCon();           // sin `tipo` = anticipo
+    r = await avisa('charge.refunded', REEMBOLSO);
+    igual('anticipo revertido: a la oficina le llega', correosAl('oficina').length, 1);
+    igual('anticipo revertido: al cliente también', correosAl('cliente').length, 1);
+    cierto('y se le dice que su viaje no quedó apartado',
+      /no qued[oó] apartado|no est[aá] apartado/i.test(JSON.stringify(correosAl('cliente')[0])));
+    cierto('el correo de la oficina sigue gritando que se cayó un contrato',
+      /SE CAYO UN CONTRATO|SE CAY[OÓ] UN CONTRATO/i.test(correosAl('oficina')[0].subject));
+
+    /* --- c) NADIE cancela el contrato solo --- */
+    cierto('a EuroSystem solo se le pide revertir, nunca cancelar',
+      LLAMADAS_EURO_CRUDAS.every(function (l) { return !/cancel/i.test(l.url); }));
+    cierto('y el cuerpo no trae ninguna orden de cancelar',
+      LLAMADAS_EURO.every(function (c) { return !/cancel/i.test(JSON.stringify(c)); }));
+
+    /* --- d) la disputa recién abierta: oficina sí, cliente no --- */
+    SESION_POR_PAGO = sesionCon();
+    CARGO.disputed = true;
+    r = await avisa('charge.dispute.created', CONTRACARGO);
+    igual('disputa abierta: la oficina se entera', correosAl('oficina').length, 1);
+    igual('disputa abierta: al cliente NO se le escribe todavía', correosAl('cliente').length, 0);
+
+    /* --- e) cuando el banco se lleva el dinero, ahí sí --- */
+    r = await avisa('charge.dispute.funds_withdrawn', CONTRACARGO);
+    igual('dinero retirado: la oficina se entera', correosAl('oficina').length, 1);
+    igual('dinero retirado: al cliente también', correosAl('cliente').length, 1);
+
+    /* --- f) sin correo del cliente no se truena: se le dice a la oficina --- */
+    SESION_POR_PAGO = sesionCon({
+      metadata: { folio: 'ET-Q7TW-K3R', contrato: '51001', nombre: 'Ana Ruiz' },
+      customer_details: null
+    });
+    r = await avisa('charge.refunded', REEMBOLSO);
+    igual('sin correo del cliente: a la oficina le llega igual', correosAl('oficina').length, 1);
+    igual('sin correo del cliente: no se le escribe a nadie más', correosAl('cliente').length, 0);
+    cierto('y el correo de la oficina avisa que no se le pudo escribir',
+      /no se le pudo avisar al cliente|sin correo del cliente/i.test(JSON.stringify(correosAl('oficina')[0])));
+    igual('y la reversa se atendió igual', r.cuerpo.reversa, true);
+
+    /* --- g) si el correo del cliente falla, la reversa NO se pierde --- */
+    SESION_POR_PAGO = sesionCon();
+    let cuantos = 0;
+    const resendBueno = global.fetch;
+    global.fetch = function (url, opc) {
+      const u = String(url);
+      if (u.indexOf('api.resend.com') >= 0) {
+        cuantos++;
+        /* el primero (oficina) pasa, el segundo (cliente) truena */
+        if (cuantos >= 2) return Promise.resolve({ ok: false, status: 500, json: () => Promise.resolve({}) });
+        CORREOS.push(JSON.parse(opc.body));
+        return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ id: 'em' }) });
+      }
+      return resendBueno(url, opc);
+    };
+    r = await avisa('charge.refunded', REEMBOLSO);
+    global.fetch = resendBueno;
+    igual('si falla el correo al cliente, la reversa sigue atendida', r.cuerpo.reversa, true);
+    igual('y se contesta 200 porque la oficina sí se enteró', r.status, 200);
   }
 
   console.log('\n' + buenas + ' buenas, ' + malas + ' malas');
