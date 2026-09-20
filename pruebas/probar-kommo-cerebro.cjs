@@ -415,6 +415,48 @@ function peticion(cuerpo, cabeceras, llave) {
   ok('con la instancia reciclada, la plática del almacén salva la cotización',
     cReciclada && cReciclada.data.status === 'sigue');
 
+  titulo('19-sep: dos sesiones del bot contestando el MISMO mensaje');
+  /* Caso real, lead 26878860 (Lucina). El 18-sep le salió el saludo y su
+     sesión quedó estacionada esperando que apretara un botón. Contestó 25
+     horas después: esa sesión vieja despertó y se fue al cerebro, Y el
+     disparador —que tiene una pausa de un día— lanzó otra corrida que
+     entró por la puerta. Le llegaron DOS respuestas al mismo segundo.
+
+     El bot de Kommo estaciona sin caducidad y el disparador revive al
+     día siguiente: cualquiera que tarde más de un día en contestar cae
+     en esto. El candado de aquí es del servidor: el mismo mensaje del
+     mismo lead se contesta UNA vez; la segunda sesión se calla y para. */
+  const dosSesiones = async function (lead, texto) {
+    const antes = continuaciones.length;
+    const r1 = respuesta(), r2 = respuesta();
+    await atiende(peticion(avisoDe(lead, texto), { 'x-interno': process.env.WHATSAPP_RUTA_SECRETA }, 'kommo-trabajo-puerta'), r1);
+    await atiende(peticion(avisoDe(lead, texto), { 'x-interno': process.env.WHATSAPP_RUTA_SECRETA }, 'kommo-trabajo'), r2);
+    return continuaciones.slice(antes).map(function (c) { return c.body.data; });
+  };
+  const dos = await dosSesiones(26900400, 'Muchas gracias');
+  ok('las dos sesiones siguen, pero solo UNA le habla al cliente',
+    dos.length === 2 && dos.filter(function (d) { return String(d.texto || '') || String(d.pie || ''); }).length === 1);
+  ok('  y la segunda se calla y para, sin mensaje vacío',
+    dos.length === 2 && dos[1].callado === 'si' && dos[1].status === 'fin');
+
+  /* Y el candado no puede tragarse un mensaje de verdad: el mismo texto
+     en OTRO lead se contesta. */
+  const deOtro = await dosSesiones(26900401, 'Muchas gracias');
+  ok('el mismo texto en otro lead sí se contesta',
+    deOtro.length === 2 && deOtro.filter(function (d) { return String(d.texto || ''); }).length === 1);
+
+  /* El primer intento de este candado fue «mismo lead y mismo texto», y se
+     llevó por delante una conversación entera: el cliente contesta «sí» a
+     dos preguntas seguidas y el segundo «sí» se perdía. Dos turnos del
+     CEREBRO con el mismo texto son normales y los dos trabajan. */
+  const antesDelSi = continuaciones.length;
+  await alCerebro(26900500, 'quiero cotizar a Mazatlán');
+  await alCerebro(26900500, 'sí');
+  await alCerebro(26900500, 'sí');
+  const tresTurnos = continuaciones.slice(antesDelSi).map(function (c) { return c.body.data; });
+  ok('dos «sí» seguidos en la misma cotización se contestan los dos',
+    tresTurnos.length === 3 && tresTurnos.every(function (d) { return d.callado !== 'si'; }));
+
   titulo('la primera puerta reenvía el aviso tal cual');
   /* Kommo manda un formulario; la segunda puerta lo recibe byte por byte
      como texto plano (con application/json Vercel lo parseaba, fallaba y

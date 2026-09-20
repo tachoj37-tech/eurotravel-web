@@ -5853,6 +5853,71 @@ async function empiezaDeNuevo(numero) {
   console.log('[kommo-puerta] ' + numero + ' empieza de nuevo' + (ficha && (ficha.porConfirmar || ficha.viajeDatos) ? ' (viaje anterior archivado)' : ''));
 }
 
+/* ------------------------------------------------------------
+   DOS SESIONES DEL BOT CONTESTANDO EL MISMO MENSAJE (19-sep-2026)
+   ------------------------------------------------------------
+   Caso real, lead 26878860. El 18-sep a las 19:47 le salió el saludo y su
+   sesión del Salesbot quedó ESTACIONADA esperando que apretara un botón.
+   Contestó «Muchas gracias» 25 horas después, y pasaron dos cosas a la
+   vez: esa sesión vieja despertó y se fue al cerebro, y el disparador
+   —que tiene una pausa de un día— lanzó una corrida nueva que entró por
+   la puerta. Le llegaron dos respuestas en el mismo segundo.
+
+   No es de ella: el bot de Kommo estaciona sin caducidad (el saludo con
+   botones y las pausas) y el disparador revive al día siguiente, así que
+   le pasa a CUALQUIERA que tarde más de un día en contestar.
+
+   Arreglarlo del lado de Kommo pide rehacer el bot en el diseñador y eso
+   se ve con el dueño. Este candado es del servidor y vale para las dos
+   mitades —puerta y cerebro entran por aquí—: el mismo mensaje del mismo
+   lead se contesta UNA vez; la sesión que llegue después se calla y para.
+
+   QUÉ CUENTA COMO REPETIDO, Y QUÉ NO. El primer intento fue «mismo lead
+   y mismo texto» y se llevó por delante una conversación entera: un
+   cliente contesta «sí» a dos preguntas seguidas y el segundo «sí» se
+   perdía. Lo que de verdad distingue al caso malo es que **las dos
+   mitades del bot —la puerta y el cerebro— atienden el mismo texto**, y
+   eso no pasa nunca en una conversación sana: la puerta solo corre al
+   arrancar una corrida. Así que:
+
+     · puerta y cerebro con el mismo texto → repetido, la segunda se calla
+     · dos veces la puerta con el mismo texto → repetido (dos corridas)
+     · dos veces el cerebro con el mismo texto → NORMAL, las dos trabajan
+
+   La clave se apunta ANTES de trabajar, para que dos llamadas a la vez no
+   se cuelen las dos, y se BORRA si la respuesta no llegó a Kommo: si el
+   cliente se quedó sin contestación, un reintento tiene que poder
+   trabajar.
+   ------------------------------------------------------------ */
+const AVISOS_CONTESTADOS = new Map();
+const VIDA_DEL_AVISO_MS = 60000;
+const TOPE_AVISOS = 500;
+
+function claveDelAviso(aviso) {
+  return String(aviso.leadId) + '·' + puerta.limpia(aviso.mensaje || '') + '·' + String(aviso.mensaje || '').length;
+}
+function apuntaElAviso(clave, modo, ahora) {
+  const hoy = ahora || Date.now();
+  for (const [k, v] of AVISOS_CONTESTADOS) {
+    if (hoy - v.cuando > VIDA_DEL_AVISO_MS) AVISOS_CONTESTADOS.delete(k);
+  }
+  const antes = AVISOS_CONTESTADOS.get(clave);
+  /* Dos turnos seguidos del cerebro con el mismo texto son una
+     conversación normal («sí», «sí»): pasan los dos. */
+  const esRepetido = !!antes && !(antes.modo !== 'puerta' && modo !== 'puerta');
+  AVISOS_CONTESTADOS.set(clave, { cuando: hoy, modo: modo });
+  while (AVISOS_CONTESTADOS.size > TOPE_AVISOS) {
+    AVISOS_CONTESTADOS.delete(AVISOS_CONTESTADOS.keys().next().value);
+  }
+  return !esRepetido;
+}
+function olvidaElAviso(clave) { AVISOS_CONTESTADOS.delete(clave); }
+
+/* Callarse y parar, en el lenguaje que entienden los dos bloques: el
+   widget lo saca por la salida «silencio», que va a Parar. */
+const CALLADO = { modo: '', texto: '', status: 'fin', fotos: '', pie: '', callado: 'si' };
+const HANDLERS_KOMMO = [{ handler: 'goto', params: { type: 'question', step: 1 } }];
+
 async function trabajoDeKommo(crudo, modo) {
   const aviso = kommo.leeAvisoDeWidget(crudo);
   if (aviso.error) {
@@ -5872,6 +5937,15 @@ async function trabajoDeKommo(crudo, modo) {
     return { ok: false, motivo: 'token inválido' };
   }
   if (firma === null && !sinToken) console.error('[kommo-trabajo] sin KOMMO_SECRETO en Vercel: el token del widget no se comprueba');
+
+  /* Ver la nota de AVISOS_CONTESTADOS: dos sesiones del bot sobre el
+     mismo mensaje. La primera trabaja; la segunda se calla y para. */
+  const claveAviso = claveDelAviso(aviso);
+  if (!apuntaElAviso(claveAviso, modo)) {
+    console.error('[kommo-trabajo] el lead ' + aviso.leadId + ' ya tiene ese mensaje contestado por otra sesión del bot: ésta se calla y para');
+    await kommo.continuaSalesbot(aviso.returnUrl, { data: CALLADO, execute_handlers: HANDLERS_KOMMO });
+    return { ok: true, modo: 'repetido' };
+  }
 
   /* ------------------------------------------------------------
      LA PUERTA: EL CEREBRO DECIDE ANTES DEL SALUDO (spec §2, 16-sep-2026)
@@ -5903,7 +5977,9 @@ async function trabajoDeKommo(crudo, modo) {
     const handlersPuerta = [{ handler: 'goto', params: { type: 'question', step: 1 } }];
     console.log('[kommo-puerta] lead ' + aviso.leadId + ' · ' + decision.modo);
     const seguidoPuerta = await kommo.continuaSalesbot(aviso.returnUrl, { data: datosPuerta, execute_handlers: handlersPuerta });
-    if (!seguidoPuerta) console.error('[kommo-puerta] Kommo no aceptó la continuación del lead ' + aviso.leadId);
+    /* No llegó: el cliente se quedó sin respuesta, así que un reintento
+       tiene que poder trabajar (ver la nota de AVISOS_CONTESTADOS). */
+    if (!seguidoPuerta) { olvidaElAviso(claveAviso); console.error('[kommo-puerta] Kommo no aceptó la continuación del lead ' + aviso.leadId); }
     return { ok: seguidoPuerta, modo: decision.modo, texto: decision.texto };
   }
 
@@ -6122,7 +6198,7 @@ async function trabajoDeKommo(crudo, modo) {
   const callado = status === 'fin' && !texto && !fotos;
   const datos = { status: status, texto: texto, fotos: fotos ? fotos.carpeta : '', pie: pieDeFoto, callado: callado ? 'si' : 'no' };
   const seguido = await kommo.continuaSalesbot(aviso.returnUrl, { data: datos, execute_handlers: handlers });
-  if (!seguido) console.error('[kommo-trabajo] Kommo no aceptó la continuación del lead ' + aviso.leadId + ': el cliente se quedó sin respuesta');
+  if (!seguido) { olvidaElAviso(claveAviso); console.error('[kommo-trabajo] Kommo no aceptó la continuación del lead ' + aviso.leadId + ': el cliente se quedó sin respuesta'); }
   return { ok: seguido, status: status, envios: alCliente.length, texto: texto, fotos: datos.fotos };
 }
 
