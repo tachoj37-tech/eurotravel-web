@@ -5928,7 +5928,37 @@ async function trabajoDeKommo(crudo, modo) {
 
   const colector = { envios: [] };
   let resultado = null;
-  if (mensaje && puerta.anunciaPago(aviso.mensaje)) {
+  /* ------------------------------------------------------------
+     UN «GRACIAS» ANTES DE QUE EL CEREBRO ABRA LA BOCA (19-sep-2026)
+     ------------------------------------------------------------
+     Tres clientas reales el mismo día (leads 26892582, 26878860 y
+     26816888): contestaron «Muchas gracias» al aviso de su abono, no
+     apretaron ningún botón, y el cerebro —que solo sabe cotizar— les
+     abrió una cotización: «¿A dónde va el plan?». Una llegó a darle
+     destino y fechas.
+
+     La puerta ya sabía qué hacer con un «gracias», pero la puerta solo
+     corre con el PRIMER mensaje; del segundo en adelante todo va al
+     cerebro. Dictado del dueño: «este número principalmente recibe
+     agradecimientos de pagos».
+
+     El candado es estrecho a propósito: solo cuando NO hay viaje de por
+     medio, ni en la plática del guion ni en la ficha. Así un «va» o un
+     «ok» contestando una pregunta del bot a media cotización sigue su
+     camino. Medirlo por «el cerebro no ha hablado» no servía: al terminar
+     una conversación la plática se borra, y entonces un «gracias» después
+     del ticket también se lo tragaba.
+     ------------------------------------------------------------ */
+  const charlaDeAhora = webhook.charlaDe(aviso.numero);
+  const fichaDeAhora = tickets.fichaDe(aviso.numero);
+  const sinViajeDePorMedio =
+    !(charlaDeAhora && (charlaDeAhora.destino || charlaDeAhora.salida || charlaDeAhora.cuantos || charlaDeAhora.unidad)) &&
+    !(fichaDeAhora && (fichaDeAhora.porConfirmar || fichaDeAhora.viajeDatos));
+  if (mensaje && sinViajeDePorMedio && puerta.soloAgradecimiento(aviso.mensaje)) {
+    console.log('[kommo-trabajo] solo un agradecimiento y el cerebro no ha hablado: «de nada» y el bot se apaga');
+    colector.envios.push({ para: aviso.numero, texto: TEXTOS.deNada, esPersona: true, pasaAPersona: false, escribio: '[kommo · solo gracias]' });
+    resultado = { status: 200 };
+  } else if (mensaje && puerta.anunciaPago(aviso.mensaje)) {
     /* «Ya deposité, ahí les mando el comprobante» a media plática
        (simulación x9, 17-sep-2026): antes el bot se callaba y se paraba, y
        la foto que venía después ya no tenía quién le contestara. Ahora

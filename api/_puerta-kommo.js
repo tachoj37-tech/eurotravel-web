@@ -53,6 +53,11 @@ const PALABRAS_DE_GRACIAS = new Set([
   'excelente', 'genial', 'super', 'buenisimo', 'bien', 'muy', 'amable', 'gentil',
   'de', 'acuerdo', 'entendido', 'enterado', 'recibido', 'anotado', 'claro', 'si', 'sii', 'siii',
   'por', 'la', 'el', 'lo', 'info', 'informacion', 'respuesta', 'atencion', 'ayuda', 'todo', 'tu', 'su',
+  /* 19-sep-2026: este número recibe sobre todo agradecimientos de pago
+     («gracias por el abono»). Antes traían «palabras de más» y caían al
+     cerebro, que solo sabe cotizar. */
+  'abono', 'abonos', 'pago', 'pagos', 'deposito', 'comprobante', 'servicio', 'apoyo',
+  'amabilidad', 'comprension', 'paciencia', 'confirmacion', 'aviso', 'aviso',
   'quedo', 'pendiente', 'al', 'estamos', 'en', 'contacto', 'saludos', 'buen', 'buenas', 'dia', 'tarde', 'noche', 'noches', 'tardes', 'dias',
   'igualmente', 'bendiciones', 'que', 'este', 'esten', 'les', 'te', 'a', 'ti', 'usted', 'ustedes', 'y', 'un', 'una', 'buena'
 ]);
@@ -83,11 +88,30 @@ const PALABRA_DE_PAGO = /\b(comprobante|ficha|transferencia|deposito|pago|abono|
 const VERBO_DE_MANDAR = /\b(te|le|les)?\s?(mando|envio|enviamos|mandamos|paso|pasamos|comparto|adjunto|dejo|anexo|ahi va|ahi te va|aqui va|aqui te va|ahi esta|aqui esta|ahi le va|aqui le va)\b/;
 const YA_PAGUE = /\b(ya|acabo de|acabamos de|recien)\s+(hice|hicimos|realice|realizamos|deposite|depositamos|transferi|transferimos|pague|pagamos|mande|mandamos|envie|enviamos|abone|abonamos|depositar|transferir|pagar|abonar|hacer(?:la|lo)?(?: la| el)?(?: transferencia| deposito| pago)?)\b|\b(deposite|transferi|pague|abone|depositamos|transferimos|pagamos|abonamos)\b/;
 
+/* ------------------------------------------------------------
+   EL PAGO YA ESTÁ HECHO, SIN VERBO DE MANDAR (19-sep-2026)
+   ------------------------------------------------------------
+   Caso real, lead 26816888: «Ya quedo el pago completo». `YA_PAGUE` pedía
+   un verbo de su lista (hice, deposité, pagué) y «quedó» no estaba, así
+   que el mensaje cayó al cerebro y salió una cotización a Mazatlán que
+   nadie pidió. Así habla la gente de un pago ya saldado.
+
+   Las tres formas, y lo que las separa de una pregunta o de un «ya
+   quedamos» que no habla de dinero: SIEMPRE tiene que haber una palabra
+   de pago. «Ya quedó la fecha» no entra.
+   ------------------------------------------------------------ */
+const COSA_PAGADA = 'pago|pagado|pagada|abono|abonado|deposito|depositado|anticipo|saldo|saldado|cubierto|liquidado|transferencia|contrato';
+const YA_QUEDO_PAGADO = new RegExp('\\bya\\s+(?:quedo|quedaron|esta|estan|fue|fueron)\\b[\\s\\wñ]{0,25}\\b(?:' + COSA_PAGADA + ')\\b');
+const YA_SE_HIZO = new RegExp('\\bya\\s+se\\s+(?:hizo|hicieron|realizo|efectuo)\\b[\\s\\wñ]{0,15}\\b(?:' + COSA_PAGADA + ')\\b');
+const COSA_YA_ESTA = new RegExp('\\b(?:' + COSA_PAGADA + ')\\b\\s+ya\\s+(?:esta|quedo|fue)\\s+(?:hecho|hecha|pagado|pagada|saldado|cubierto|liquidado|realizado)\\b');
+const YA_LIQUIDE = /\bya\s+(?:liquide|liquidamos|salde|saldamos|cubri|cubrimos|complete|completamos)\b/;
+
 function anunciaPago(texto) {
   const crudo = String(texto || '');
   if (!crudo.trim() || esPregunta(crudo)) return false;
   const t = limpia(crudo);
   if (YA_PAGUE.test(t)) return true;
+  if (YA_QUEDO_PAGADO.test(t) || YA_SE_HIZO.test(t) || COSA_YA_ESTA.test(t) || YA_LIQUIDE.test(t)) return true;
   return VERBO_DE_MANDAR.test(t) && PALABRA_DE_PAGO.test(t);
 }
 

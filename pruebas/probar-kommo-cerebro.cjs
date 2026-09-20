@@ -328,6 +328,42 @@ function peticion(cuerpo, cabeceras, llave) {
   ok('contesta «mándamelo por aquí» y el bot SIGUE vivo para recibir la foto',
     cx9 && cx9.data.status === 'fin' && cx9.data.callado === 'si' && !cx9.data.texto);
 
+  titulo('19-sep: el agradecimiento de un abono NO abre una cotización');
+  /* Tres clientas reales el mismo día contestaron «Muchas gracias» al
+     aviso de su abono, sin apretar ningún botón, y el cerebro les abrió
+     una cotización («¿A dónde va el plan?»). La puerta sabía qué hacer,
+     pero la puerta solo corre con el primer mensaje. */
+  const avisoDe = function (lead, texto) {
+    const a = aviso(texto);
+    a.data.lead_id = String(lead);
+    a.data.contact_name = 'Adriana';
+    return a;
+  };
+  res = respuesta();
+  await atiende(peticion(avisoDe(26892582, 'Muchas gracias'), { 'x-interno': process.env.WHATSAPP_RUTA_SECRETA }), res);
+  const cGracias = continuaciones[continuaciones.length - 1].body;
+  ok('«Muchas gracias» → «de nada» y el bot se apaga, sin preguntar a dónde van',
+    cGracias && cGracias.data.status === 'fin' && cGracias.data.texto === TEXTOS_FIJOS.deNada);
+  ok('  y NO le pregunta por el viaje',
+    cGracias && !/d[oó]nde|plan|viaje|cotiz/i.test(String(cGracias.data.texto)));
+
+  res = respuesta();
+  const notasAntesDelPago = notas.length;
+  await atiende(peticion(avisoDe(26816888, 'Ya quedo el pago completo'), { 'x-interno': process.env.WHATSAPP_RUTA_SECRETA }), res);
+  const cPagado = continuaciones[continuaciones.length - 1].body;
+  ok('«Ya quedo el pago completo» → el bot se calla y se apaga, no cotiza',
+    cPagado && cPagado.data.status === 'fin' && cPagado.data.callado === 'si' && !cPagado.data.texto);
+  ok('  y le queda la nota al vendedor en su lead',
+    notas.length === notasAntesDelPago + 1 && /\/leads\/26816888\/notes$/.test(notas[notasAntesDelPago].url));
+
+  /* El candado no puede tragarse un «va» que contesta una pregunta del
+     bot: el lead 26818280 ya trae plática, así que sigue su camino. */
+  res = respuesta();
+  await atiende(peticion(aviso('va'), { 'x-interno': process.env.WHATSAPP_RUTA_SECRETA }), res);
+  const cVa = continuaciones[continuaciones.length - 1].body;
+  ok('un «va» a media plática NO se convierte en «de nada»',
+    cVa && cVa.data.texto !== TEXTOS_FIJOS.deNada);
+
   titulo('la primera puerta reenvía el aviso tal cual');
   /* Kommo manda un formulario; la segunda puerta lo recibe byte por byte
      como texto plano (con application/json Vercel lo parseaba, fallaba y

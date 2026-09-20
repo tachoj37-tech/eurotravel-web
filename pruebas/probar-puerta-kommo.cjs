@@ -90,6 +90,36 @@ titulo('4 · NO anuncia un pago');
   'ya vi el precio', 'te mando los datos del contrato', 'ahí va mi nombre', 'ya salimos', '', '¿ya les llegó mi pago?'
 ].forEach(function (f) { ok('«' + f + '» NO anuncia pago', !puerta.anunciaPago(f)); });
 
+titulo('3b · el pago YA ESTÁ HECHO, sin verbo de mandar (19-sep-2026)');
+{
+  /* Caso real, lead 26816888: la clienta escribió «Ya quedo el pago
+     completo» y el bot le empezó a cotizar un viaje nuevo a Mazatlán.
+     `YA_PAGUE` pedía un verbo de su lista —hice, deposité, pagué— y
+     «quedó» no estaba. Así habla la gente de un pago ya saldado. */
+  [
+    'Ya quedo el pago completo', 'ya quedó el pago', 'ya está pagado', 'ya quedó pagado',
+    'ya se hizo el pago', 'el pago ya está hecho', 'ya quedó saldado', 'ya liquidé el contrato',
+    'ya quedó cubierto el anticipo', 'el abono ya está hecho', 'ya quedó el depósito'
+  ].forEach(function (f) { ok('«' + f + '» anuncia pago', puerta.anunciaPago(f)); });
+  /* Y lo que NO: preguntar por un pago no es avisar de uno. */
+  [
+    '¿ya quedó el pago?', 'cuándo queda el pago', 'quiero pagar', 'cómo quedo el pago',
+    'ya quedamos en el precio', 'ya quedó la fecha', 'ya quedamos', '¿ya está pagado?'
+  ].forEach(function (f) { ok('«' + f + '» NO anuncia pago', !puerta.anunciaPago(f)); });
+}
+
+titulo('3c · dar las gracias POR UN ABONO sigue siendo solo gracias');
+{
+  /* Este número recibe sobre todo agradecimientos de pago (dictado del
+     dueño, 19-sep-2026): «gracias por el abono» no puede caer al cerebro
+     y volverse una cotización. */
+  [
+    'Gracias por el abono', 'muchas gracias por el pago', 'gracias por su atención',
+    'gracias por el depósito', 'muchas gracias por el servicio', 'gracias por el apoyo',
+    'gracias por la confirmación'
+  ].forEach(function (f) { ok('«' + f + '» es solo gracias', puerta.soloAgradecimiento(f)); });
+}
+
 titulo('4b · molesto, grosero o pidiendo persona (spec §5)');
 [
   'no me entiendes', 'NO ME ENTIENDES NADA', 'ya te dije que vamos a vallarta', 'eres un bot?', 'esto es un bot',
