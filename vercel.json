@@ -1,5 +1,87 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
+  "redirects": [
+    {
+      "source": "/inicio",
+      "destination": "/#/inicio",
+      "permanent": true
+    },
+    {
+      "source": "/contacto",
+      "destination": "/#/contacto",
+      "permanent": true
+    },
+    {
+      "source": "/cotizacion-en-linea",
+      "destination": "/#/cotizar",
+      "permanent": true
+    },
+    {
+      "source": "/empresariales",
+      "destination": "/#/cotizar",
+      "permanent": true
+    },
+    {
+      "source": "/sobre-nosotros",
+      "destination": "/#/nosotros",
+      "permanent": true
+    },
+    {
+      "source": "/renta",
+      "destination": "/#/unidades",
+      "permanent": true
+    },
+    {
+      "source": "/renta/autobuses",
+      "destination": "/#/unidades",
+      "permanent": true
+    },
+    {
+      "source": "/renta/autobuses/:cual",
+      "destination": "/#/unidades",
+      "permanent": true
+    },
+    {
+      "source": "/renta/sprinter",
+      "destination": "/#/unidades",
+      "permanent": true
+    },
+    {
+      "source": "/renta/suburban-3",
+      "destination": "/#/unidades",
+      "permanent": true
+    },
+    {
+      "source": "/pagos-en-linea",
+      "destination": "/viaje.html",
+      "permanent": true
+    },
+    {
+      "source": "/feed",
+      "destination": "/",
+      "permanent": true
+    },
+    {
+      "source": "/comments/feed",
+      "destination": "/",
+      "permanent": true
+    },
+    {
+      "source": "/wp-json/:resto*",
+      "destination": "/",
+      "permanent": true
+    },
+    {
+      "source": "/wp-admin/:resto*",
+      "destination": "/",
+      "permanent": true
+    },
+    {
+      "source": "/wp-login.php",
+      "destination": "/",
+      "permanent": true
+    }
+  ],
   "rewrites": [
     {
       "source": "/api/whatsapp/:llave",
