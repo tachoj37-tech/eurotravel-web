@@ -120,6 +120,29 @@ titulo('3c · dar las gracias POR UN ABONO sigue siendo solo gracias');
   ].forEach(function (f) { ok('«' + f + '» es solo gracias', puerta.soloAgradecimiento(f)); });
 }
 
+titulo('3d · ¿este mensaje pide cotizar? (19-sep-2026)');
+{
+  /* El saludo manda al cerebro todo lo que no sea un botón, y el cerebro
+     solo sabe cotizar. Este filtro decide si el cerebro abre la boca. */
+  [
+    'Nueva cotización', 'nueva cotizacion',
+    'quiero cotizar un viaje', 'me pasas un presupuesto', 'cuánto sale una sprinter',
+    'cuánto cuesta un autobús a Mazatlán', 'cuánto me cobran por un camión',
+    'necesito rentar una camioneta', 'ocupo transporte para una boda',
+    'quiero apartar para el 20', 'tienen disponibilidad el 5',
+    'somos 45', '45 personas', 'para 30 pax', 'vamos 20',
+    'Vallarta', 'vamos a vta', 'a chapala', 'Mazatlán', 'pv',
+    'qué precio tiene el viaje a Tequila', 'quiero información de tarifas'
+  ].forEach(function (f) { ok('«' + f + '» pide cotizar', puerta.pideCotizar(f)); });
+  /* Y lo que NO: aquí es donde se coló la cotización que nadie pidió. */
+  [
+    'Buenas tardes', 'Hola qué tal', 'Muchas gracias', 'Ya quedo el pago completo',
+    'Es sobre mi contrato', 'quiero saber de mi contrato', 'Sigo esperando',
+    'Quién habla', 'ok', 'ya mandé el comprobante', 'necesito hablar con alguien',
+    'me urge una respuesta', 'buenos días, disculpe la hora', ''
+  ].forEach(function (f) { ok('«' + f + '» NO pide cotizar', !puerta.pideCotizar(f)); });
+}
+
 titulo('4b · molesto, grosero o pidiendo persona (spec §5)');
 [
   'no me entiendes', 'NO ME ENTIENDES NADA', 'ya te dije que vamos a vallarta', 'eres un bot?', 'esto es un bot',

@@ -51,7 +51,11 @@ const TEXTOS = {
   pasoAPersona: 'Va, en un momento te atiende alguien del equipo 🙌',
 
   /* Nota interna en el lead cuando llega un comprobante. */
-  notaComprobante: '📎 Comprobante recibido por WhatsApp. Regístralo en EuroSystem; al aprobarlo, avísale al cliente.'
+  notaComprobante: '📎 Comprobante recibido por WhatsApp. Regístralo en EuroSystem; al aprobarlo, avísale al cliente.',
+
+  /* 19-sep-2026: el cliente escribió en vez de elegir del menú y lo que
+     escribió no pide cotizar. El bot no adivina: lo atiende una persona. */
+  notaSinMenu: '💬 El cliente escribió sin elegir del menú y no pidió cotizar. Lo atiende una persona.'
 };
 
 module.exports = TEXTOS;

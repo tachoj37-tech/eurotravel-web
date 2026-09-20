@@ -226,4 +226,75 @@ function cancela(texto) {
   return !!t && t.split(' ').length <= 10 && CANCELA.test(t) && !/[?¿]/.test(String(texto || ''));
 }
 
-module.exports = { decide, soloAgradecimiento, anunciaPago, esPregunta, limpia, pareceMolesto, pideAAlguienPorSuNombre, pideVariasUnidades, pideCotizacionAnterior, cancela };
+/* ------------------------------------------------------------
+   ¿ESTE MENSAJE PIDE COTIZAR UN VIAJE? (19-sep-2026)
+   ------------------------------------------------------------
+   El saludo de Kommo manda al cerebro TODO lo que no sea un botón, y el
+   cerebro solo sabe cotizar. Por eso, el 19-sep, tres clientas que solo
+   contestaron al aviso de su abono acabaron con una cotización abierta.
+   Dictado del dueño: «si no le picaron a ningún botón y hablaron, el bot
+   empieza a cotizar, ¿te diste cuenta?».
+
+   Este es el filtro de entrada: la PRIMERA vez que el cerebro habla en
+   una conversación, el mensaje tiene que pedir un viaje. Si no, no se
+   adivina: lo atiende una persona.
+
+   A propósito NO vive aquí la lista de destinos —eso lo sabe
+   `_destinos.js`, y quien llama la consulta aparte—: aquí solo están las
+   palabras con las que la gente pide transporte.
+   ------------------------------------------------------------ */
+const BOTON_DE_COTIZAR = /^nueva cotizacion$/;
+const PIDE_VIAJE = new RegExp(
+  /* Solo palabras que hablan de un viaje o de su precio. Los verbos
+     sueltos («quiero», «necesito», «ocupo») quedaron FUERA a propósito:
+     «quiero saber de mi contrato» no es pedir una cotización, y con
+     ellos dentro volvía a colarse al cerebro. «Contrato» tampoco entra,
+     por lo mismo: casi siempre habla de uno que ya existe. */
+  '\\b(?:cotiz\\w*|presupuest\\w*|precio|precios|costo|costos|tarifa|tarifas' +
+  '|rent\\w*|alquil\\w*|apart\\w*|reserv\\w*|disponib\\w*' +
+  '|viaje|viajes|excursion|paseo|traslado|tour|itinerario' +
+  '|autobus|autobuses|camion|camiones|sprinter|van|vans|camioneta|camionetas|suburban|unidad|unidades|transporte' +
+  '|pasajeros|pax)\\b'
+);
+/* «cuánto sale», «cuánto cuesta», «cuánto me cobran»: preguntas de precio. */
+const PREGUNTA_DE_PRECIO = /\bcuanto\s+(?:sale|cuesta|cuestan|es|seria|serian|me\s+(?:sale|cuesta|cobran|saldria))\b/;
+/* Un número de gente suelto («somos 45», «45 personas», «para 30»). */
+const CUANTA_GENTE = /\b(?:somos|seriamos|para|van|vamos|iremos)\s+\d{1,3}\b|\b\d{1,3}\s*(?:personas|pasajeros|pax|gentes?)\b/;
+
+/* ------------------------------------------------------------
+   ¿NOMBRA UN LUGAR QUE CONOCEMOS?
+   ------------------------------------------------------------
+   Decirle «Vallarta» o «vamos a vta» al bot es pedir una cotización,
+   aunque no traiga ni una palabra de las de arriba.
+
+   Se pasa por las DOS puertas que ya existen, y hacen falta las dos:
+   `comoDestino` (bot.js) normaliza y entiende las abreviaturas —«vta» es
+   Puerto Vallarta—, pero acepta lugares que no están en el catálogo, así
+   que por sí sola convertiría «Es sobre mi contrato» en un destino.
+   `buscaDestino` (_destinos.js) es el catálogo y no inventa. Juntas:
+   se normaliza primero y se comprueba contra el catálogo después.
+
+   Los `require` van perezosos y protegidos, como en `_agente.js`: si
+   alguno falta, la respuesta es «no sé», que es la prudente.
+   ------------------------------------------------------------ */
+function nombraUnLugarDelCatalogo(texto) {
+  try {
+    const bot = require('../bot.js');
+    const destinos = require('./_destinos.js');
+    const nombre = bot.comoDestino(String(texto || ''));
+    if (!nombre) return false;
+    return !!destinos.buscaDestino({ texto: nombre });
+  } catch (e) {
+    return false;
+  }
+}
+
+function pideCotizar(texto) {
+  const t = limpia(texto);
+  if (!t) return false;
+  if (BOTON_DE_COTIZAR.test(t)) return true;
+  if (PIDE_VIAJE.test(t) || PREGUNTA_DE_PRECIO.test(t) || CUANTA_GENTE.test(t)) return true;
+  return nombraUnLugarDelCatalogo(texto);
+}
+
+module.exports = { decide, soloAgradecimiento, anunciaPago, esPregunta, limpia, pareceMolesto, pideAAlguienPorSuNombre, pideCotizar, pideVariasUnidades, pideCotizacionAnterior, cancela };

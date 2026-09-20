@@ -5949,26 +5949,67 @@ async function trabajoDeKommo(crudo, modo) {
      una conversación la plática se borra, y entonces un «gracias» después
      del ticket también se lo tragaba.
      ------------------------------------------------------------ */
+  /* ------------------------------------------------------------
+     LO DE MEMORIA PUEDE ESTAR VACÍO Y NO SIGNIFICAR NADA
+     ------------------------------------------------------------
+     Vercel recicla instancias: a media cotización, la plática en memoria
+     puede no existir en la instancia que atiende este mensaje. El cerebro
+     ya lo resuelve leyendo del almacén, pero lo hace más abajo, y los dos
+     candados de aquí se decidirían antes con la mesa vacía: a alguien que
+     lleva media cotización se le contestaría «ahorita te atiende una
+     persona». Por eso la lectura se adelanta. `siembra*` no pisa lo que
+     ya está en memoria, así que en el caso normal esto no cuesta nada.
+     ------------------------------------------------------------ */
+  if (mensaje && almacen.hayAlmacen() && !webhook.charlaDe(aviso.numero)) {
+    const [fichaDeLaBase, charlaDeLaBase] = await Promise.all([
+      almacen.leeFicha(aviso.numero).catch(function () { return null; }),
+      almacen.leeCharla(aviso.numero).catch(function () { return undefined; })
+    ]);
+    if (fichaDeLaBase) tickets.siembraFicha(fichaDeLaBase);
+    if (charlaDeLaBase) webhook.siembraCharla(aviso.numero, charlaDeLaBase);
+  }
   const charlaDeAhora = webhook.charlaDe(aviso.numero);
   const fichaDeAhora = tickets.fichaDe(aviso.numero);
   const sinViajeDePorMedio =
     !(charlaDeAhora && (charlaDeAhora.destino || charlaDeAhora.salida || charlaDeAhora.cuantos || charlaDeAhora.unidad)) &&
+    !(fichaDeAhora && (fichaDeAhora.porConfirmar || fichaDeAhora.viajeDatos));
+  /* El cerebro todavía no ha abierto la boca en esta conversación: no hay
+     plática guardada y la ficha no trae un viaje vivo. */
+  const primeraVezDelCerebro = !charlaDeAhora &&
     !(fichaDeAhora && (fichaDeAhora.porConfirmar || fichaDeAhora.viajeDatos));
   if (mensaje && sinViajeDePorMedio && puerta.soloAgradecimiento(aviso.mensaje)) {
     console.log('[kommo-trabajo] solo un agradecimiento y el cerebro no ha hablado: «de nada» y el bot se apaga');
     colector.envios.push({ para: aviso.numero, texto: TEXTOS.deNada, esPersona: true, pasaAPersona: false, escribio: '[kommo · solo gracias]' });
     resultado = { status: 200 };
   } else if (mensaje && puerta.anunciaPago(aviso.mensaje)) {
-    /* «Ya deposité, ahí les mando el comprobante» a media plática
-       (simulación x9, 17-sep-2026): antes el bot se callaba y se paraba, y
-       la foto que venía después ya no tenía quién le contestara. Ahora
-       contesta «mándamelo» y sigue vivo: la foto llega al cerebro y sale
-       el acuse de comprobante. */
-    /* 17-sep-2026, dictado del dueño: el bot no atiende pagos. Se calla,
-       se apaga y deja nota al vendedor. */
-    console.log('[kommo-trabajo] anuncia un pago a media plática: el bot se apaga y lo atiende una persona');
+    /* El aviso de pago manda sobre todo lo demás: el bot se calla y lo
+       atiende una persona (dictado del dueño, 17-sep-2026). */
+    console.log('[kommo-trabajo] anuncia un pago: el bot se apaga y lo atiende una persona');
     try { await kommo.anotaEnLead(aviso.leadId, TEXTOS.notaPago); } catch (e) { console.error('[kommo-trabajo] la nota del pago tronó: ' + (e && e.message)); }
     colector.envios.push({ para: aviso.numero, texto: '', esPersona: true, pasaAPersona: false, escribio: '[kommo · anuncia pago]' });
+    resultado = { status: 200 };
+  } else if (mensaje && primeraVezDelCerebro && !puerta.pideCotizar(aviso.mensaje)) {
+    /* ------------------------------------------------------------
+       ESCRIBIÓ EN VEZ DE ELEGIR DEL MENÚ, Y NO PIDIÓ COTIZAR
+       ------------------------------------------------------------
+       El hueco de fondo del 19-sep-2026, en palabras del dueño: «si no le
+       picaron a ningún botón y hablaron, el bot empieza a cotizar». El
+       saludo de Kommo manda al cerebro todo lo que no sea un botón, y el
+       cerebro solo sabe cotizar: por eso un «buenas tardes» o un «es
+       sobre mi contrato» terminaba en «¿a dónde van?».
+
+       Ahora el cerebro solo abre la boca si el mensaje pide un viaje —el
+       botón, palabras de transporte, una pregunta de precio, cuánta gente
+       o un destino del catálogo—. Lo demás lo atiende una persona; el bot
+       no adivina.
+
+       Solo la PRIMERA vez: una vez dentro de la cotización, el cerebro
+       atiende todo, incluido un «todavía no sé a dónde».
+       ------------------------------------------------------------ */
+    console.log('[kommo-trabajo] escribió sin elegir del menú y no pide cotizar: lo atiende una persona');
+    try { await kommo.anotaEnLead(aviso.leadId, TEXTOS.notaSinMenu); }
+    catch (e) { console.error('[kommo-trabajo] la nota del relevo tronó: ' + (e && e.message)); }
+    colector.envios.push({ para: aviso.numero, texto: TEXTOS.agente, esPersona: true, pasaAPersona: true, escribio: '[kommo · sin menú, no pide cotizar]' });
     resultado = { status: 200 };
   } else if (mensaje) {
     try {

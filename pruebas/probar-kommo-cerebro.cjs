@@ -364,6 +364,57 @@ function peticion(cuerpo, cabeceras, llave) {
   ok('un «va» a media plática NO se convierte en «de nada»',
     cVa && cVa.data.texto !== TEXTOS_FIJOS.deNada);
 
+  titulo('19-sep: sin apretar botón y sin pedir cotización, el bot NO cotiza');
+  /* El hueco de fondo, dictado del dueño: «si no le picaron a ningún
+     botón y hablaron, el bot empieza a cotizar». El saludo manda al
+     cerebro TODO lo que no sea un botón, y el cerebro solo sabe cotizar.
+     La primera vez que el cerebro abre la boca en una conversación, el
+     mensaje tiene que pedir un viaje; si no, lo atiende una persona. */
+  const alCerebro = async function (lead, texto) {
+    const r = respuesta();
+    await atiende(peticion(avisoDe(lead, texto), { 'x-interno': process.env.WHATSAPP_RUTA_SECRETA }), r);
+    return continuaciones[continuaciones.length - 1].body;
+  };
+
+  for (const t of ['Buenas tardes', 'Hola qué tal', 'Sigo esperando', 'Es sobre mi contrato', 'Quién habla']) {
+    const c = await alCerebro(26900000 + t.length, t);
+    ok('«' + t + '» no cotiza: pasa a una persona y el bot se apaga',
+      c && c.data.status === 'fin' && !/d[oó]nde van|cu[aá]ntos|qu[eé] d[ií]a/i.test(String(c.data.texto || '')));
+  }
+
+  /* Y lo que SÍ tiene que seguir trabajando solo, que es el negocio. */
+  const siCotizan = [
+    ['Nueva cotización', 26900101],
+    ['quiero cotizar un viaje a Mazatlán', 26900102],
+    ['ocupo transporte para 40 personas', 26900103],
+    ['cuánto sale una sprinter a Chapala', 26900104],
+    ['Vallarta', 26900105]
+  ];
+  for (const par of siCotizan) {
+    const c = await alCerebro(par[1], par[0]);
+    ok('«' + par[0] + '» sí entra al cerebro',
+      c && c.data.status === 'sigue' && String(c.data.texto || '').length > 0);
+  }
+
+  /* Y una vez adentro, el candado no vuelve a morder: un «todavía no sé»
+     en el segundo turno lo atiende el cerebro, no una persona. */
+  await alCerebro(26900200, 'Nueva cotización');
+  const cDespues = await alCerebro(26900200, 'todavía no sé a dónde');
+  ok('ya dentro de la cotización, un «todavía no sé» sigue con el cerebro',
+    cDespues && cDespues.data.status === 'sigue');
+
+  /* Y si Vercel recicla la instancia a media cotización, la plática se lee
+     del almacén ANTES de decidir: al cliente no se le corta por eso. */
+  const hubo = almacen.hayAlmacen;
+  const leeCharlaAntes = almacen.leeCharla, leeFichaAntes = almacen.leeFicha;
+  almacen.hayAlmacen = function () { return true; };
+  almacen.leeCharla = async function (n) { return n === '529926900300' ? { destino: 'Mazatlán', salida: '2026-10-10' } : null; };
+  almacen.leeFicha = async function () { return null; };
+  const cReciclada = await alCerebro(26900300, 'todavía no sé cuántos vamos');
+  almacen.hayAlmacen = hubo; almacen.leeCharla = leeCharlaAntes; almacen.leeFicha = leeFichaAntes;
+  ok('con la instancia reciclada, la plática del almacén salva la cotización',
+    cReciclada && cReciclada.data.status === 'sigue');
+
   titulo('la primera puerta reenvía el aviso tal cual');
   /* Kommo manda un formulario; la segunda puerta lo recibe byte por byte
      como texto plano (con application/json Vercel lo parseaba, fallaba y
