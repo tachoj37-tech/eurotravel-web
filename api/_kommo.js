@@ -79,6 +79,10 @@ async function pide(camino, opciones) {
       return null;
     }
     if (o.sinRespuesta) return true;
+    /* 204 = «no hay nada»: éxito sin cuerpo. Antes se leía como JSON y
+       tronaba («Unexpected end of JSON input»), y el registro de precios
+       no distinguía «no cambió ningún lead» de «está roto» (21-sep-2026). */
+    if (r.status === 204) return {};
     return await r.json();
   } catch (e) {
     console.error('[kommo] no se pudo ' + camino + ': ' + (e && e.message));
