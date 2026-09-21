@@ -1098,5 +1098,22 @@ titulo('simulación del 17-sep (x2, x11, x17, x20): lo que la IA dejó pasar lo 
   okQue('  y al cliente no se le repite «octubre»', !/octubre/i.test(textos(J).slice(-1)[0] || ''));
 }
 
+titulo('«solo de ida» dicho con otras palabras: lo entiende la IA y el estado lo guarda (21-sep-2026)');
+{
+  /* Escenario v2 con el modelo real: a «solo de ida» la IA contestó «¿qué
+     día tienen pensado el regreso?». No tenía cómo anotarlo, y `pegaDatos`
+     no conserva ese campo: se pega en whatsapp.mjs junto al del texto. */
+  limpia();
+  const S = '5213366670900';
+  laIA = function () {
+    return { respuesta: 'Va, nomás los dejamos allá 🙌 ¿Salen de la zona metropolitana de Guadalajara?',
+      datos: { destino: 'Chapala', salida: '2026-10-05', gente: 6, soloIda: true }, accion: 'seguir' };
+  };
+  await dice('nos dejan en chapala el 5 de octubre, somos 6, no regresamos con ustedes', S);
+  const ch = webhook.charlaDe(S);
+  okQue('el estado queda como solo ida', ch && ch.soloIda === true);
+  ok('  y el regreso (para el motor) es el mismo día', ch && ch.regreso, '2026-10-05');
+}
+
 console.log('\n' + buenas + ' buenas, ' + malas + ' malas');
 process.exit(malas ? 1 : 0);

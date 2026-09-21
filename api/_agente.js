@@ -431,7 +431,11 @@ function instruccionesDelAgente(voz) {
     'ACCIONES (el motor las ejecuta, tú solo las pides):\n' +
     '· "seguir": lo normal, tu respuesta es lo que ve el cliente.\n' +
     '· "cotizar": el cliente pide el precio o ya diste todo; el motor lo calcula y lo pasa ' +
-    'por el dueño. Tu "respuesta" puede ir vacía.\n' +
+    'por el dueño. Tu "respuesta" puede ir vacía, SALVO que en ese mismo mensaje preguntó algo ' +
+    '(si el chofer se queda, si hay factura, pagos en partes, baño): entonces contéstalo en ' +
+    '"respuesta" —sin precios— y sale antes del resumen. Lo que no sepas: «eso lo checo con el equipo».\n' +
+    '· Solo de ida: si dice «solo de ida», «sencillo», «sin regreso», el viaje no tiene regreso: ' +
+    'pon datos.soloIda = true y NO preguntes ni confirmes el día de regreso.\n' +
     '· "fotos": pide fotos o ver la unidad. El motor las manda; tu "respuesta" va vacía. ' +
     'Si nombró una unidad, ponla en "unidadPedida" (id de la ficha).\n' +
     '· "video": pide video. El motor manda la liga; tu "respuesta" va vacía; "unidadPedida" igual.\n' +
@@ -544,6 +548,11 @@ function textoDelContexto(c) {
         'o cambiar algo, toma los datos nuevos como un viaje nuevo y pregunta lo que falte.\n'
       : 'PRECIO YA DADO: ' + v.resumen + '. No repitas cifras ni preguntes datos de ese viaje; sigue con ' +
         'apartar o resuelve dudas. Si quiere OTRO viaje, tómalo como nuevo.\n');
+  /* Solo de ida (21-sep-2026, escenario v2): el motor anota regreso =
+     salida para cobrar, y sin esto la IA veía dos fechas iguales y
+     «confirmaba» el regreso a quien dijo que no regresa. */
+  const soloIda = e.soloIda ? 'Viaje SOLO DE IDA, el cliente lo dijo: no preguntes el regreso ni lo confirmes ' +
+    '(la fecha de regreso anotada es solo para el motor).\n' : '';
   const turnos = ((c && c.historial) || []).slice(-TURNOS_QUE_RECUERDA)
     .map(function (t) { return (t.de === 'cliente' ? 'Cliente: ' : 'Tú: ') + entendedor.recorta(String(t.texto || '').replace(/\s+/g, ' '), 220); });
   /* ------------------------------------------------------------
@@ -588,7 +597,7 @@ function textoDelContexto(c) {
     'que no haya pasado: de ESTE mes si ese día aún no pasa, si no del que sigue. Nunca brinques un mes de más.\n' +
     (sabido.length ? 'YA SE SABE DEL VIAJE: ' + sabido.join(', ') + '. No lo vuelvas a preguntar.\n'
       : (viaje ? '' : 'Todavía no se sabe nada del viaje.\n')) +
-    viaje +
+    viaje + soloIda +
     (falta ? 'LO QUE SIGUE POR SABER: ' + falta + '.\n' : '') +
     (turnos.length ? 'ÚLTIMOS MENSAJES:\n' + turnos.join('\n') : '');
 }
@@ -773,7 +782,9 @@ function limpiaDatos(d, hoy) {
     salida: fecha(x.salida), regreso: fecha(x.regreso),
     gente: numero(x.gente, 120), unidad: unidad, ocasion: texto(x.ocasion, 30),
     recorridos: (x.recorridos === 0 || x.recorridos === '0') ? 0 : numero(x.recorridos, 30),
-    autobus: autobus
+    autobus: autobus,
+    /* Solo de ida (21-sep-2026): solo si la IA lo afirma; nunca se supone. */
+    soloIda: (x.soloIda === true || x.soloIda === 'true') ? true : null
   };
 }
 

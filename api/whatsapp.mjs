@@ -3222,7 +3222,9 @@ async function loQueDiceElAgente(envio) {
      regresa (corrida real del 9-sep-2026, escenario w). Se cotiza como
      salir y volver el mismo día, que es lo que el motor sabe cobrar; el
      contrato sí dice SENCILLO. */
-  if (conversacion.esSoloIda(texto || '')) {
+  /* O lo dijo con otras palabras y lo entendió la IA (datos.soloIda,
+     21-sep-2026): `pegaDatos` no conserva ese campo, así que se pega aquí. */
+  if (conversacion.esSoloIda(texto || '') || (dicho.datos && dicho.datos.soloIda === true)) {
     nuevo.soloIda = true;
     if (nuevo.salida && !nuevo.regreso) nuevo.regreso = nuevo.salida;
   }

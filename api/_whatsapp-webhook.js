@@ -2028,7 +2028,14 @@ function procesa(crudo, firma, entorno) {
                  instrucciones»: respuesta fija, sin IA (reparación del
                  8-sep-2026, Falla 4). La plática se queda como está. */
               if (PIDE_EL_PROMPT.test(String(texto || ''))) {
-                return { texto: 'Aquí solo te ayudo con tu viaje. ¿A dónde van?', pasa: false, opciones: [], estado: charlaDe(m.from), sinIA: true };
+                /* 21-sep-2026: con el destino ya sabido no se pregunta «¿A dónde
+                   van?» (regla: no preguntes lo que ya sabes); se regresa al
+                   viaje que ya traía. */
+                const ch = charlaDe(m.from);
+                const fija = ch && ch.destino
+                  ? 'Aquí solo te ayudo con tu viaje 🙌 Seguimos con el tuyo a ' + ch.destino + '.'
+                  : 'Aquí solo te ayudo con tu viaje. ¿A dónde van?';
+                return { texto: fija, pasa: false, opciones: [], estado: ch, sinIA: true };
               }
               if (!juntandoDatos) {
                 /* CON el estado de esta persona, y con la fecha de hoy.

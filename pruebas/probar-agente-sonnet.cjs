@@ -228,6 +228,25 @@ const CLIENTE_REAL = '5213312345678';
     ok('y sin falta calculada, con solo el nombre, tampoco dice «completo»', !/está completo/.test(c2));
   }
 
+  titulo('segunda vuelta del 21-sep: solo de ida, preguntas con el viaje completo');
+  {
+    /* v2 con el modelo real: «solo de ida» → «Va, solo de ida. ¿Qué día
+       tienen pensado el regreso?». La IA no tenía cómo anotar «solo ida»
+       ni el contexto se lo decía, así que seguía el mapa (regreso). */
+    const d = agente.limpiaDatos({ soloIda: true, salida: '2026-10-05' }, '2026-09-21');
+    ok('la IA puede anotar «solo ida» en datos', d.soloIda === true);
+    ok('  y sin decirlo, no se inventa', agente.limpiaDatos({ salida: '2026-10-05' }, '2026-09-21').soloIda !== true);
+    const c = agente.textoDelContexto({ hoy: '2026-09-21', estado: { destino: 'Chapala', salida: '2026-10-05', regreso: '2026-10-05', soloIda: true }, falta: 'cuántos son' });
+    ok('el contexto le dice que es solo de ida y que no pregunte el regreso', /solo de ida/i.test(c) && /no preguntes el regreso/i.test(c));
+    const fijo = agente.instruccionesDelAgente();
+    ok('el prompt explica «solo de ida» y datos.soloIda', /solo de ida/i.test(fijo) && /datos\.soloIda|"soloIda"/.test(fijo));
+    /* x14: el cliente completa el viaje y pregunta tres cosas en el mismo
+       mensaje; la IA pidió «cotizar» con respuesta vacía y las preguntas se
+       perdieron. */
+    ok('el prompt dice que con «cotizar» las preguntas del mensaje se contestan en respuesta',
+      /"cotizar"[^\n]*\n?[^\n]*pregunt[oó] algo[^\n]*respuesta/i.test(fijo));
+  }
+
   titulo('el costo se cuenta con la tarifa del modelo que contestó');
   {
     const millon = { input_tokens: 1e6, output_tokens: 1e6 };
