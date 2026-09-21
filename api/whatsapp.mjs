@@ -2937,7 +2937,13 @@ async function loQueDiceElAgente(envio) {
     hechos: loQueYaHice(tickets.fichaDe(cliente), antes),
     /* El sistema sabe si el comprobante llegó; la IA nunca lo pregunta. */
     deposito: estadoDelDeposito(tickets.fichaDe(cliente)),
-    falta: hayViaje ? conversacion.loQueFalta(antes) : (viajeDeLaFicha ? null : 'a dónde van'),
+    /* «Nada falta» SOLO con un viaje vivo en precio (con resumen). Con puros
+       viajes archivados —lo normal al empezar de cero— falta todo, empezando
+       por a dónde van. Visto el 21-sep-2026 en el chat de pruebas: a
+       «quería cotizar un viaje a vta» le llegó «el viaje está completo,
+       pide accion cotizar» sin saber nada, Sonnet obedeció, y el guion de
+       respaldo tomó «Cotizar Un Viaje A Vta» como destino. */
+    falta: hayViaje ? conversacion.loQueFalta(antes) : ((viajeDeLaFicha && viajeDeLaFicha.resumen) ? null : 'a dónde van'),
     historial: agente.historialDe(cliente),
     voz: { usted: /^(1|si|sí|usted)$/i.test(String(process.env.AGENTE_DE_USTED || '')) }
   };

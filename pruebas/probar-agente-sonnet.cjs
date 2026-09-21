@@ -215,6 +215,19 @@ const CLIENTE_REAL = '5213312345678';
       /No te sales del tema/.test(fijo) && /No repites una pregunta/.test(fijo));
   }
 
+  titulo('al empezar de cero no se le dice «el viaje está completo» (21-sep)');
+  {
+    /* Chat de pruebas del dueño: ficha con viajes archivados y solo el
+       nombre sabido. El contexto decía «nada: el viaje está completo, pide
+       accion cotizar», Sonnet obedeció y el guion de respaldo tomó
+       «Cotizar Un Viaje A Vta» como destino. */
+    const c = agente.textoDelContexto({ hoy: '2026-09-21', estado: { nombre: 'Tacho' }, falta: 'a dónde van',
+      viaje: { estado: null, resumen: null, anteriores: ['Guadalajara → Mazatlán · 2026-09-20 al 2026-09-25 · Sprinter'] } });
+    ok('con solo el nombre y viajes viejos, LO QUE FALTA es a dónde van', /LO QUE FALTA ══\n- a dónde van/.test(c) && !/está completo/.test(c));
+    const c2 = agente.textoDelContexto({ hoy: '2026-09-21', estado: { nombre: 'Tacho' }, falta: null, viaje: null });
+    ok('y sin falta calculada, con solo el nombre, tampoco dice «completo»', !/está completo/.test(c2));
+  }
+
   titulo('el costo se cuenta con la tarifa del modelo que contestó');
   {
     const millon = { input_tokens: 1e6, output_tokens: 1e6 };

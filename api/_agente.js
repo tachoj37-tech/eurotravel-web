@@ -578,7 +578,10 @@ function textoDelContexto(c) {
        gente, unidad, origen y recorridos ya sabidos. */
     '══ LO QUE FALTA ══\n' + (falta ? '- ' + falta
       : (v ? '- nada del viaje: sigue con apartar o resuelve dudas'
-        : (se.length ? '- nada: el viaje está completo, pide accion "cotizar"' : '- todo'))) + '\n' +
+        /* «Completo» se mide con los datos del VIAJE (`sabido`), no con `se`,
+           que trae también el nombre: con solo «Nombre: Tacho» decía
+           «el viaje está completo» (21-sep-2026). */
+        : (sabido.length ? '- nada: el viaje está completo, pide accion "cotizar"' : '- todo'))) + '\n' +
     '════════════════════════════════════════\n';
   return aviso + estadoBloque +
     'Hoy es ' + (c && c.hoy) + '. Si dice un día sin mes ni año («el 20», «del 20 al 25»), es el más cercano ' +
