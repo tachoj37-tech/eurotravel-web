@@ -255,6 +255,16 @@ const CLIENTE_REAL = '5213312345678';
     ok('el prompt dice: se avisa UNA vez y si insiste, el cliente manda', /una vez/i.test(fijo) && /el cliente manda/i.test(fijo));
   }
 
+  titulo('las notas internas del historial nunca salen al cliente (21-sep)');
+  {
+    /* En el historial que ve la IA, las fotos quedan como «Tú: [Acción:
+       envié 3 fotos de Irizar PB]». El dueño recibió «un texto entre
+       corchetes» en su chat de pruebas: si la IA copia esa nota, no sale. */
+    ok('«[Acción: envié 3 fotos…]» no sale', agente.sanea('[Acción: envié 3 fotos de Irizar PB]') === null);
+    ok('  ni pegado a una respuesta', agente.sanea('Va 🙌 [Acción: envié 3 fotos de Irizar PB] ¿Qué día salen?') === null);
+    ok('  pero unos corchetes normales sí pasan', agente.sanea('Va, del 10 al 12 [de octubre] 🙌 ¿Cuántos son?') !== null);
+  }
+
   titulo('el costo se cuenta con la tarifa del modelo que contestó');
   {
     const millon = { input_tokens: 1e6, output_tokens: 1e6 };
