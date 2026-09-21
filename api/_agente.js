@@ -32,6 +32,58 @@ const entendedor = require('./_entender.js');
 const psicologia = require('./_psicologia.js');
 
 const MODELO = entendedor.MODELO;
+/* ------------------------------------------------------------
+   EL QUE HABLA CON EL CLIENTE PIENSA (21-sep-2026)
+   ------------------------------------------------------------
+   Dictado del dueño en la revisión del lunes: «siento que el bot no
+   piensa». Tenía razón: esto corría en Haiku 4.5 sin razonamiento, y se
+   veía en las pláticas reales —a «ya quedó el pago completo» contestó
+   «¿a dónde van?»; a un viaje nuevo le siguió cargando el Mazatlán de
+   antes—. Escogió Sonnet 5 (Opus, dijo, no le ve sentido).
+
+   Solo cambia ESTE agente. El extractor de `_entender.js` y el mensaje de
+   seguimiento siguen en Haiku: leen campos o escriben dos renglones, y
+   ahí razonar no compra nada.
+
+   Tres cosas que Sonnet 5 exige, y que mal hechas no truenan: vuelven a
+   dejar contestando al guion sin avisar (ver pruebas/probar-agente-sonnet.cjs):
+     · sin `temperature` (la rechaza con un 400);
+     · `max_tokens` con espacio para razonar Y contestar;
+     · más tiempo de espera, porque razonar tarda.
+   ------------------------------------------------------------ */
+const MODELO_AGENTE = 'claude-sonnet-5';
+/* `medium`: el escalón que la guía de Anthropic compara con el mejor
+   Sonnet anterior a toda máquina. Si en las pláticas se ve que razona de
+   menos, se sube a `high`; si tarda demasiado, se baja a `low`. */
+const ESFUERZO_AGENTE = 'medium';
+/* El razonamiento cuenta dentro de este tope. La respuesta en sí mide
+   ~150; con 500 (el tope de Haiku) se cortaba a media idea. */
+const TOPE_SALIDA_AGENTE = 6000;
+/* Razonar tarda más que contestar. Si la IA no llega a tiempo contesta el
+   guion, así que un tope corto convertiría la mejora en el bot tonto de
+   siempre sin que nadie se enterara. */
+const ESPERA_AGENTE_MS = 30000;
+/* ------------------------------------------------------------
+   PRIMERO EN PRUEBAS (dictado del dueño, 21-sep-2026: «publícalo en
+   prueba y le damos»)
+   ------------------------------------------------------------
+   Sonnet 5 contesta SOLO en las conversaciones de prueba del dueño; los
+   clientes reales siguen en Haiku, con la llamada exactamente como era,
+   hasta que él lo apruebe. Para dárselo a todos: `AGENTE_SONNET=1` en
+   Vercel (y volver a publicar). El simulador la pone para probar Sonnet
+   con sus clientes inventados.
+
+   Kommo no llena el teléfono del contacto en el aviso, así que el número
+   con el que el cerebro guarda la plática es «5299» + el lead. Éstos son
+   los dos leads de prueba (ver docs/ARRANQUE-BOT-KOMMO.md §15), en la
+   forma de `llave()`: los últimos 10 dígitos. Si un día Kommo sí manda el
+   teléfono, esto deja de coincidir y la prueba cae a Haiku: falla hacia
+   el lado seguro, nunca le toca el experimento a un cliente.
+   ------------------------------------------------------------ */
+const CLIENTES_DE_PRUEBA = new Set(['9926818280', '9926838770']);
+function usaSonnet(cliente) {
+  return process.env.AGENTE_SONNET === '1' || CLIENTES_DE_PRUEBA.has(llave(cliente));
+}
 
 /* ---- las unidades, con todo lo que se puede decir de ellas ---- */
 function unidades() {
@@ -129,7 +181,7 @@ function instruccionesDelAgente(voz) {
     'alguien que lleva años haciéndolo. No sigues un guion: escuchas lo que el cliente dice, ' +
     'ves en qué punto va, y le dices exactamente lo que necesita para avanzar, con tus ' +
     'palabras, distintas cada vez. Hablas de ' + trato + ', por WhatsApp, como persona de ' +
-    'Guadalajara que vende viajes: cálida, directa, sin corporativismo. No te presentas con ' +
+    'Guadalajara que vende viajes: amable, directa, sin corporativismo y sin plática de más. No te presentas con ' +
     'el nombre ni dices qué eres; saludas como del equipo de Eurotravel. Si te preguntan de ' +
     'frente si eres un bot, no mientes («soy Eurobot, del equipo de Eurotravel») y sigues.\n\n' +
 
@@ -179,12 +231,19 @@ function instruccionesDelAgente(voz) {
     '· Nunca uses dos veces la misma formulación en una conversación. Varía. Si ya dijiste ' +
     '«perfecto», la siguiente vez di otra cosa o nada. Tres «Perfecto» seguidos suenan a máquina.\n' +
     '· Puedes no preguntar nada. A veces lo correcto es solo responder o confirmar y esperar.\n' +
-    '· Si se desvía (el clima en Vallarta, una anécdota), acompáñalo una línea y regresa con ' +
-    'naturalidad, sin «volviendo al tema». «bien y tú?» es plática, no un destino.\n' +
+    '· Si se desvía (el clima en Vallarta, una anécdota), no le sigas la plática: contesta lo ' +
+    'que haya preguntado, si preguntó algo, y regresa a lo que falta para cotizar. «bien y tú?» ' +
+    'es plática, no un destino.\n' +
     '· Si está indeciso, no lo empujes: nómbrale la duda («suena a que lo que te frena es la ' +
     'fecha») y ayúdalo a resolverla.\n' +
-    '· Cálido, directo, sin exclamaciones de más, máximo un emoji y no siempre. Tres líneas ' +
-    'como máximo (las únicas excepciones: la lista de autobuses y la de qué incluye).\n' +
+    '· Amable y directo, con un emoji cuando quede. Contestas lo que preguntó y lo que sigue ' +
+    'para cotizar, nada más: sin comentarios de ánimo ni celebraciones («¡qué buena noticia!», ' +
+    '«¡qué padre!», «qué emoción»), sin opinar del viaje, del destino ni de la ocasión («buena ' +
+    'opción», «está padrísimo»), y sin calificar lo que te preguntan («buena pregunta»). Si te ' +
+    'cuenta que es la despedida de su hermano, no lo comentas: «Va 🙌 ¿A dónde van y qué ' +
+    'fecha?». Si dice «a Tequila», confirmas y sigues: «Tequila, va 🙌 ¿Es el mismo día?». ' +
+    'Dictado del dueño, 21-sep-2026: «no saques conversación, solo contesta».\n' +
+    '· Tres líneas como máximo (las únicas excepciones: la lista de autobuses y la de qué incluye).\n' +
     '· Nunca digas «paso», «etapa», «proceso», «formulario», «sistema», «opción», «menú». ' +
     'Nunca listes opciones numeradas salvo que el cliente pida comparar.\n' +
     '· Nunca te presentes dos veces. Nunca repitas una acción de LO QUE YA HICE (foto, ' +
@@ -674,17 +733,31 @@ async function conversa(mensaje, opciones) {
     { type: 'text', text: textoDelContexto({ hoy: hoy, estado: o.estado, falta: o.falta, historial: o.historial, viaje: o.viaje, hechos: o.hechos, aviso: o.aviso, deposito: o.deposito }) }
   ];
 
+  /* Sonnet 5 (pruebas, o todos si ya se aprobó) o Haiku como siempre. Cada
+     uno con SU llamada: Haiku no acepta el razonamiento adaptable ni el
+     esfuerzo, y Sonnet 5 no acepta `temperature`. */
+  const conSonnet = usaSonnet(o.cliente);
+  const modelo = conSonnet ? MODELO_AGENTE : MODELO;
+  const pedido = conSonnet
+    /* Sin `temperature`: Sonnet 5 la rechaza. La «temperatura baja» del
+       8-sep-2026 (Falla 5: un vendedor que sigue reglas, no uno
+       creativo) ahora la dan el razonamiento y las reglas del prompt. */
+    ? { model: modelo, max_tokens: TOPE_SALIDA_AGENTE,
+        thinking: { type: 'adaptive' }, output_config: { effort: ESFUERZO_AGENTE },
+        system: bloques, messages: [{ role: 'user', content: texto }] }
+    /* Temperatura baja (reparación del 8-sep-2026, Falla 5): un vendedor
+       que sigue reglas, no uno creativo. Sin este campo quedaba en 1.0. */
+    : { model: modelo, max_tokens: TOPE_SALIDA, temperature: 0.4, system: bloques,
+        messages: [{ role: 'user', content: texto }] };
+
   try {
     const r = await pide('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       /* Tope de tiempo: una IA colgada no puede colgar al bot (auditoría
          7-sep-2026); si no contesta a tiempo, contesta el guion. */
-      signal: AbortSignal.timeout(ESPERA_IA_MS),
+      signal: AbortSignal.timeout(conSonnet ? ESPERA_AGENTE_MS : ESPERA_IA_MS),
       headers: { 'content-type': 'application/json', 'x-api-key': clave, 'anthropic-version': '2023-06-01' },
-      /* Temperatura baja (reparación del 8-sep-2026, Falla 5): un vendedor
-         que sigue reglas, no uno creativo. Sin este campo quedaba en 1.0. */
-      body: JSON.stringify({ model: MODELO, max_tokens: TOPE_SALIDA, temperature: 0.4, system: bloques,
-        messages: [{ role: 'user', content: texto }] })
+      body: JSON.stringify(pedido)
     });
     /* ------------------------------------------------------------
        CON EL MOTIVO, NO SOLO EL NÚMERO — 10-sep-2026
@@ -701,8 +774,14 @@ async function conversa(mensaje, opciones) {
       return null;
     }
     const cuerpo = await r.json();
-    entendedor.apuntaElCosto(cuerpo && cuerpo.usage, o.cliente);
-    /* Solo los bloques de texto; nunca `content[0]` a ciegas (Falla 4). */
+    entendedor.apuntaElCosto(cuerpo && cuerpo.usage, o.cliente, modelo);
+    /* Se quedó sin espacio: no hay respuesta completa que leer. Se dice en
+       el registro para que se note y se suba el tope. */
+    if (cuerpo && cuerpo.stop_reason === 'max_tokens') {
+      console.error('[agente] la IA (' + modelo + ') se quedó sin espacio (max_tokens ' + pedido.max_tokens + '): contesta el guion');
+    }
+    /* Solo los bloques de texto; nunca `content[0]` a ciegas (Falla 4).
+       Con Sonnet 5 llegan además bloques de razonamiento, que se saltan. */
     const dijo = (cuerpo && Array.isArray(cuerpo.content) ? cuerpo.content : [])
       .filter(function (b) { return b && (b.type === 'text' || b.type === undefined) && typeof b.text === 'string'; })
       .map(function (b) { return b.text; }).join('\n');

@@ -2,6 +2,14 @@
 
 Borrador para el «va» del dueño. 6-sep-2026. **Sin código todavía.**
 
+> **21-sep-2026 — cambio de modelo.** El agente que habla con el cliente
+> (`api/_agente.js`, `conversa`) pasa de Haiku 4.5 a **Claude Sonnet 5 con
+> razonamiento adaptable** (esfuerzo `medium`), porque el dueño notó que «no
+> piensa». Primero solo en sus chats de prueba; a todos con `AGENTE_SONNET=1`
+> en Vercel. El extractor (`_entender.js`) y el mensaje de seguimiento siguen
+> en Haiku. Donde este documento dice «Haiku», léase el modelo del agente.
+> Medido en el simulador: ~$0.04 USD por conversación completa.
+
 Lo que se construye: Claude Haiku 4.5 con *tool use*, una ficha por cliente
 que no se pierde, y herramientas que el modelo decide cuándo llamar. El
 motor de cotización (`_cotiza-nucleo.js`, `_tarifa.js`, el Excel) y los

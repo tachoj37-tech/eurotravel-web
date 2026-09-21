@@ -254,7 +254,12 @@ const escenarios = {
   v3: ['Nueva cotización', 'a mazatlan del 28 al 2, 14 personas', 'si', 'solo traslado', 'perdon somos 18'],
   v4: ['puerta:buenas tardes', 'puerta:ya hice el deposito, ahi les mando el comprobante', 'puerta:gracias'],
   v5: ['Nueva cotización', 'necesito dos sprinters para 30 a tequila el 18 de octubre', 'si'],
-  v6: ['Cotización anterior', 'Fecha nueva', 'el 15 de noviembre']
+  v6: ['Cotización anterior', 'Fecha nueva', 'el 15 de noviembre'],
+  /* 21-sep-2026, caso real (lead 26816888): a media cotización de Mazatlán,
+     la clienta pide OTRO viaje —Sprinter de 20 a Nuevo Vallarta desde Villa
+     Corona— y el bot en Haiku siguió cargando el Mazatlán. Un modelo que
+     razona tiene que notar que cambió el viaje. */
+  r1: ['Nueva cotización', 'a mazatlan', 'el 21 regreso el 24', 'Hola la sprinter de 20 que costo tiene a nuevo vallarta saliendo de villa corona']
 };
 const pedidos = process.argv.slice(2).filter((x) => escenarios[x]);
 let lead = 26818280;

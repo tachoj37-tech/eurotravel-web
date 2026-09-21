@@ -277,26 +277,36 @@ function bloquesDelSistema(instruccionesAjenas, hoy, contexto) {
    cliente con tope, para el tablero. Sin `usage` no se apunta
    nada: mejor un hueco que una cifra inventada.
    ------------------------------------------------------------ */
-const TARIFA = { entrada: 1.00, escritura: 1.25, lectura: 0.10, salida: 5.00 };
+/* Dólares por millón de tokens, por modelo. Desde el 21-sep-2026 el agente
+   que habla con el cliente corre en Sonnet 5 y este extractor sigue en
+   Haiku: el costo se cuenta con la tarifa del que contestó, porque el
+   tope en dólares del simulador (TOPE_USD) se fía de este número. Caché:
+   escribir cuesta 1.25× la entrada y leer 0.1×. */
+const TARIFAS = {
+  'claude-haiku-4-5-20251001': { entrada: 1.00, escritura: 1.25, lectura: 0.10, salida: 5.00 },
+  'claude-sonnet-5': { entrada: 2.00, escritura: 2.50, lectura: 0.20, salida: 10.00 }
+};
+const TARIFA = TARIFAS[MODELO];
 const TOPE_CLIENTES_CON_COSTO = 500;
 const costoPorCliente = new Map();
 
-function costoDeUso(u) {
+function costoDeUso(u, modelo) {
   const n = function (v) { return Number(v) || 0; };
-  return (n(u.input_tokens) * TARIFA.entrada +
-    n(u.cache_creation_input_tokens) * TARIFA.escritura +
-    n(u.cache_read_input_tokens) * TARIFA.lectura +
-    n(u.output_tokens) * TARIFA.salida) / 1e6;
+  const t = TARIFAS[modelo] || TARIFA;
+  return (n(u.input_tokens) * t.entrada +
+    n(u.cache_creation_input_tokens) * t.escritura +
+    n(u.cache_read_input_tokens) * t.lectura +
+    n(u.output_tokens) * t.salida) / 1e6;
 }
 
-function apuntaElCosto(usage, cliente) {
+function apuntaElCosto(usage, cliente, modelo) {
   if (!usage || typeof usage !== 'object') return null;
-  const usd = costoDeUso(usage);
+  const usd = costoDeUso(usage, modelo);
   console.log('[ia] entrada=' + (usage.input_tokens || 0) +
     ' cache_escritura=' + (usage.cache_creation_input_tokens || 0) +
     ' cache_lectura=' + (usage.cache_read_input_tokens || 0) +
     ' salida=' + (usage.output_tokens || 0) +
-    ' usd=' + usd.toFixed(5));
+    ' usd=' + usd.toFixed(5) + (modelo ? ' modelo=' + modelo : ''));
   if (cliente) {
     const k = String(cliente).replace(/\D+/g, '').slice(-10);
     const t = costoPorCliente.get(k) || { llamadas: 0, usd: 0, lectura: 0 };
