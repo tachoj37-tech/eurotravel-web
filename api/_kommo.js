@@ -455,17 +455,22 @@ function leeAvisoDeWidget(crudo, opciones) {
   };
   const leadId = limpio(datos.lead_id).replace(/\D/g, '');
   if (!leadId) return { error: 'sin lead_id' };
-  const telefono = limpio(datos.contact_phone).replace(/\D/g, '');
   return {
     token: String(aviso.token || ''),
     returnUrl: retorno,
     leadId: leadId,
     mensaje: limpio(datos.message),
     nombre: limpio(datos.contact_name),
-    /* El «número» con el que el cerebro guarda la plática: el teléfono si
-       Kommo lo dio; si no, uno inventado a partir del lead, que no choca
-       con ningún número real (empieza en 5299). */
-    numero: (telefono.length >= 10 && telefono.length <= 15) ? telefono : ('5299' + leadId),
+    /* El «número» con el que el cerebro guarda la plática: SIEMPRE uno
+       armado a partir del lead. Antes era el teléfono si Kommo lo daba y
+       éste si no; pero Kommo nunca lo da, y con dos llaves posibles había
+       un hueco: las cuatro memorias (ficha, plática, historial, almacén)
+       recortan a los últimos 10 dígitos, y un teléfono real de la forma
+       99XXXXXXXX habría caído en la misma llave que un lead. Con una sola
+       llave por lead no hay forma de mezclar chats (dictado del dueño,
+       21-sep-2026: «no mezcles chats, necesito que estés 100 %»). El
+       teléfono del contacto no se usa para nada. */
+    numero: '5299' + leadId,
     talkId: limpio(datos.talk_id)
   };
 }

@@ -284,7 +284,9 @@ function bloquesDelSistema(instruccionesAjenas, hoy, contexto) {
    escribir cuesta 1.25× la entrada y leer 0.1×. */
 const TARIFAS = {
   'claude-haiku-4-5-20251001': { entrada: 1.00, escritura: 1.25, lectura: 0.10, salida: 5.00 },
-  'claude-sonnet-5': { entrada: 2.00, escritura: 2.50, lectura: 0.20, salida: 10.00 }
+  'claude-sonnet-5': { entrada: 2.00, escritura: 2.50, lectura: 0.20, salida: 10.00 },
+  /* Solo para medir en el simulador (tabla de costo del 21-sep-2026). */
+  'claude-opus-5': { entrada: 5.00, escritura: 6.25, lectura: 0.50, salida: 25.00 }
 };
 const TARIFA = TARIFAS[MODELO];
 const TOPE_CLIENTES_CON_COSTO = 500;

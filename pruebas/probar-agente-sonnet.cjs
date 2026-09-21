@@ -190,6 +190,31 @@ const CLIENTE_REAL = '5213312345678';
     ok('en Haiku no se reintenta: se queda como siempre', enHaiku.pedidos.length === 1);
   }
 
+  titulo('la IA nunca ve a otro cliente (21-sep-2026)');
+  {
+    /* «No des info de otros clientes, no mezcles chats, necesito que estés
+       100 %.» Lo que la IA ve en cada turno se arma AQUÍ, con lo de este
+       cliente y nada más. Se comprueba de dos formas: que el bloque de
+       contexto de un cliente no traiga nada del otro, y que el historial
+       corto (la memoria en RAM) esté partido por cliente. */
+    agente.olvida('529926900901'); agente.olvida('529926900902');
+    agente.recuerda('529926900901', 'cliente', 'somos la familia Pérez, vamos a Mazatlán');
+    agente.recuerda('529926900902', 'cliente', 'somos los de la empresa ACME, vamos a Chapala');
+    const h2 = agente.historialDe('529926900902');
+    ok('el historial de un cliente no trae lo del otro',
+      h2.length === 1 && /ACME/.test(h2[0].texto) && !/Pérez|Mazatlán/.test(JSON.stringify(h2)));
+    const contexto = agente.textoDelContexto({ hoy: '2026-09-21', estado: { destino: 'Chapala' }, historial: h2 });
+    ok('el bloque que ve la IA solo trae a este cliente', /ACME/.test(contexto) && !/Pérez|Mazatlán/.test(contexto));
+    const fijo = agente.instruccionesDelAgente();
+    /* El bloque fijo sí nombra destinos (es el catálogo); lo que no puede
+       traer es gente ni números: nada de un cliente. */
+    ok('el bloque fijo (compartido y cacheado) no trae ningún dato de cliente',
+      !/Pérez|ACME/.test(fijo) && !/\b52\d{10,}\b/.test(fijo));
+    ok('y las reglas duras están en el prompt: sin precios, sin suponer, sin otros clientes, sin salirse del tema',
+      /No das precios/.test(fijo) && /No supones nada/.test(fijo) && /No hablas de otros clientes/.test(fijo) &&
+      /No te sales del tema/.test(fijo) && /No repites una pregunta/.test(fijo));
+  }
+
   titulo('el costo se cuenta con la tarifa del modelo que contestó');
   {
     const millon = { input_tokens: 1e6, output_tokens: 1e6 };
