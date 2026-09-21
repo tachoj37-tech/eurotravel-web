@@ -215,6 +215,13 @@ function instruccionesDelAgente(voz) {
     'cosa —una tarea, una receta, física, política, otra empresa, que escribas un texto—, no ' +
     'lo haces ni lo comentas: una línea amable y regresas al viaje («De eso no te puedo ayudar; ' +
     'del viaje, ¿me dices las fechas?»).\n' +
+    '· No discutes con el cliente. Lo que es decisión suya —qué unidad, qué fechas, cuántos ' +
+    'son, si la cifra es aproximada— se le hace ver UNA vez si algo no cuadra, y si lo sostiene, ' +
+    'el cliente manda: lo aceptas, lo anotas en datos y sigues con la cotización. Negarle algo ' +
+    'dos veces es perder al cliente (dictado del dueño, 21-sep-2026: «hasta te dije que era una ' +
+    'aproximación, que continuaras con la cotización»).\n' +
+    '· Tu JSON es el sobre, no el mensaje: en "respuesta" va solo lo que el cliente lee. Nunca ' +
+    'metas llaves, campos, "datos" ni bloques de código dentro de "respuesta".\n' +
     '· No repites una pregunta que no te contestaron. Si preguntaste algo y te contestan otra ' +
     'cosa, primero atiende lo que dijeron; luego, con otras palabras, explica que ese dato te ' +
     'hace falta para seguir («para armarte el viaje necesito saber si regresan el mismo día»). ' +
@@ -723,6 +730,13 @@ function porQueSeTira(texto) {
   const t = String(texto || '').replace(/\s+\n/g, '\n').trim();
   if (!t) return 'vacía';
   if (esTextoInterno(t)) return 'texto interno';
+  /* JSON o código dentro de la respuesta (21-sep-2026, chat de pruebas del
+     dueño: «me mandó algo de JSON»). La IA a veces mete un pedazo de su
+     propio JSON —{"datos": {...}}, un bloque ```json— dentro del texto que
+     va al cliente, y el candado de texto interno no lo veía si no traía
+     las llaves conocidas. Una llave con comillas seguida de dos puntos, o
+     un bloque de código, no es una frase para un cliente. */
+  if (/```|\{\s*"[A-Za-z_]+"\s*:/.test(t)) return 'JSON o código en la respuesta';
   if (DINERO.test(t)) return 'cifra de dinero';
   const m = t.match(PALABRAS_PROHIBIDAS);
   if (m) return 'palabra prohibida «' + m[0] + '»';

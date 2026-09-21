@@ -265,6 +265,16 @@ const CLIENTE_REAL = '5213312345678';
     ok('  pero unos corchetes normales sí pasan', agente.sanea('Va, del 10 al 12 [de octubre] 🙌 ¿Cuántos son?') !== null);
   }
 
+  titulo('ni JSON ni código llegan al cliente (21-sep: «me mandó algo de JSON»)');
+  {
+    ok('un pedazo de JSON pegado a la respuesta se frena', agente.sanea('Va con el PB 🙌 {"datos": {"autobus": "irizar-pb"}}') === null);
+    ok('un bloque ```json se frena', agente.sanea('Va 🙌\n```json\n{"autobus":"irizar-pb"}\n```') === null);
+    ok('un objeto suelto con llaves se frena', agente.sanea('{"autobus": "irizar-pb", "gente": 50}') === null);
+    ok('pero una frase normal con llaves o dos puntos pasa', agente.sanea('Va: del 10 al 12, {somos} 20 🙌') !== null);
+    const fijo = agente.instruccionesDelAgente();
+    ok('y el prompt tiene la regla general: no discutes, el cliente manda', /No discutes con el cliente/.test(fijo) && /el sobre, no el mensaje/.test(fijo));
+  }
+
   titulo('el costo se cuenta con la tarifa del modelo que contestó');
   {
     const millon = { input_tokens: 1e6, output_tokens: 1e6 };

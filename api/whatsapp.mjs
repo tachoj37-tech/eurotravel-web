@@ -6316,6 +6316,10 @@ async function trabajoDeKommo(crudo, modo) {
      mensaje vacío. */
   const callado = status === 'fin' && !texto && !fotos;
   const datos = { status: status, texto: texto, fotos: fotos ? fotos.carpeta : '', pie: pieDeFoto, callado: callado ? 'si' : 'no' };
+  /* Lo que de verdad le llega al cliente, recortado, para poder revisar
+     una plática sin abrir Kommo (21-sep-2026: «me mandó algo de JSON» y no
+     había forma de ver qué salió). El registro es privado del sistema. */
+  if (texto || pieDeFoto) console.log('[kommo-trabajo] → cliente ' + aviso.leadId + ': «' + String(texto || pieDeFoto).replace(/\s+/g, ' ').slice(0, 160) + '»');
   const seguido = await kommo.continuaSalesbot(aviso.returnUrl, { data: datos, execute_handlers: handlers });
   if (!seguido) { olvidaElAviso(claveAviso); console.error('[kommo-trabajo] Kommo no aceptó la continuación del lead ' + aviso.leadId + ': el cliente se quedó sin respuesta'); }
   return { ok: seguido, status: status, envios: alCliente.length, texto: texto, fotos: datos.fotos };
