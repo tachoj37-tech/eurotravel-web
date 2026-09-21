@@ -584,6 +584,14 @@ function cotiza(extra) {
   const insiste = bot.pegaDatos(Object.assign({}, primeraVez), { autobus: elPB.id });
   okQue('  si insiste con el MISMO autobús, el cliente manda: se acepta', insiste.unidadId === elPB.id && insiste.unidadNombre === 'Irizar PB' && !insiste.noCabe);
   okQue('  y queda marcado para el equipo: 50 en 47 asientos', insiste.apretado && insiste.apretado.gente === 50 && insiste.apretado.asientos === 47);
+  /* Lo mismo con la Sprinter (tope 20): 22 personas, «van niños chiquitos,
+     la Sprinter está bien». Tercera vuelta del 21-sep: el arreglo solo
+     cubría los autobuses y aquí seguía terco. */
+  const veintidos = { destino: 'Chapala', gente: 22, unidad: 'autobus' };
+  const avisoSprinter = bot.pegaDatos(Object.assign({}, veintidos), { unidad: 'sprinter' });
+  okQue('22 piden Sprinter (20): la primera vez no se acepta y queda noCabe', avisoSprinter.unidad === 'autobus' && avisoSprinter.noCabe && avisoSprinter.noCabe.nombre === 'Sprinter');
+  const insisteSprinter = bot.pegaDatos(Object.assign({}, avisoSprinter), { unidad: 'sprinter' });
+  okQue('  si insiste, el cliente manda: queda en Sprinter y marcado', insisteSprinter.unidad === 'sprinter' && !insisteSprinter.noCabe && insisteSprinter.apretado && insisteSprinter.apretado.gente === 22 && insisteSprinter.apretado.asientos === 20);
   const otro = bot.pegaDatos(Object.assign({}, primeraVez), { autobus: 'irizar' });
   okQue('  pero si después del aviso pide OTRO que tampoco cabe (Century, 49), se le avisa de ése', !otro.unidadId && otro.noCabe && otro.noCabe.nombre === 'Irizar Century');
   ok('el i6S es 2023', porNombre('Irizar i6S').modelo, 2023);

@@ -1115,5 +1115,26 @@ titulo('«solo de ida» dicho con otras palabras: lo entiende la IA y el estado 
   ok('  y el regreso (para el motor) es el mismo día', ch && ch.regreso, '2026-10-05');
 }
 
+titulo('22 en la Sprinter: se avisa una vez y, si insiste, el cliente manda (21-sep-2026, tercera vuelta)');
+{
+  /* Con el modelo real: la IA decía «la dejamos en Sprinter» pero el
+     estado no la guardaba —el lector de «nombró la Sprinter» rechazaba el
+     mensaje por traer un «no» («no pasa nada») y por el cupo— y al final
+     el guion preguntaba «¿en cuál los acomodo?». */
+  limpia();
+  const T = '5213366670910';
+  laIA = function () { return { respuesta: 'Va 🙌', datos: { destino: 'Chapala', salida: '2026-10-04', gente: 22, unidad: 'autobus' }, accion: 'seguir' }; };
+  await dice('a chapala el 4 de octubre, somos 22', T);
+  laIA = function () { return { respuesta: 'La Sprinter es hasta 20 y ustedes son 22.', datos: {}, accion: 'seguir' }; };
+  await dice('en la sprinter', T);
+  const aviso = webhook.charlaDe(T) || {};
+  okQue('la primera vez queda el aviso de que no caben', aviso.noCabe && aviso.noCabe.nombre === 'Sprinter' && aviso.unidad !== 'sprinter');
+  laIA = function () { return { respuesta: 'Va, la dejamos en Sprinter 🙌 ¿Es ida y vuelta el mismo día?', datos: {}, accion: 'seguir' }; };
+  await dice('no pasa nada, van niños chiquitos, la sprinter está bien', T);
+  const insiste = webhook.charlaDe(T) || {};
+  okQue('al insistir, aunque la IA no lo anote y el mensaje traiga un «no», queda en Sprinter', insiste.unidad === 'sprinter' && !insiste.noCabe);
+  okQue('  y marcada para el equipo', insiste.apretado && insiste.apretado.gente === 22);
+}
+
 console.log('\n' + buenas + ' buenas, ' + malas + ' malas');
 process.exit(malas ? 1 : 0);

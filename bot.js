@@ -6041,8 +6041,17 @@ function pegaDatos(estado, datos) {
   if (d.unidad && d.unidad !== e.unidad) {
     const topes = { sprinter: 20, suburban: 6 };
     const n = Number(e.gente) || 0;
-    if (topes[d.unidad] && n > topes[d.unidad]) {
-      e.noCabe = { nombre: d.unidad === 'sprinter' ? 'Sprinter' : 'Suburban', asientos: topes[d.unidad], gente: n };
+    const nombreChica = d.unidad === 'sprinter' ? 'Sprinter' : 'Suburban';
+    /* El mismo «el cliente manda» que con los autobuses (21-sep-2026,
+       tercera vuelta: con 22 en la Sprinter seguía terco): se avisa UNA
+       vez; si insiste, se acepta y queda `apretado` para el equipo. */
+    if (topes[d.unidad] && n > topes[d.unidad] && !(e.noCabe && e.noCabe.nombre === nombreChica)) {
+      e.noCabe = { nombre: nombreChica, asientos: topes[d.unidad], gente: n };
+    } else if (topes[d.unidad] && n > topes[d.unidad]) {
+      e.apretado = { nombre: nombreChica, asientos: topes[d.unidad], gente: n };
+      delete e.noCabe;
+      e.unidad = d.unidad; delete e.unidadId;
+      e.unidadNombre = nombreChica;
     } else {
       delete e.noCabe;
       e.unidad = d.unidad; delete e.unidadNombre; delete e.unidadId;

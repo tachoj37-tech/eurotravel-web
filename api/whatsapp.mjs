@@ -2881,9 +2881,22 @@ async function loQueDiceElAgente(envio) {
       const t = conversacion.normaliza(texto);
       const chica = /\bsprinter\b/.test(t) ? 'sprinter' : (/\bsuburban\b/.test(t) ? 'suburban' : null);
       const u = chica && (conversacion.UNIDADES || []).find(function (x) { return x.cat === chica; });
-      if (u && !/\bno\b/.test(t) && !(antes.gente && Number(antes.gente) > Number(u.max))) {
-        console.error('[agente] nombró la ' + u.name + ': queda escogida');
-        antes = Object.assign({}, antes, { unidad: chica, unidadNombre: u.name }); cambio = true;
+      /* Un «no» descarta («no, la sprinter no»), salvo que sea de insistir:
+         «no pasa nada», «no importa, la sprinter está bien» (21-sep-2026). */
+      const niega = /\bno\b/.test(t) && !/no pasa nada|no importa|est[aá] bien|as[ií] est[aá]|d[eé]jal[oa]|va con/.test(t);
+      if (u && !niega) {
+        /* Por `pegaDatos`, que sabe de cupo: la primera vez que no caben
+           deja el aviso (`noCabe`); si insiste con la misma, el cliente
+           manda y queda `apretado` (tercera vuelta del 21-sep-2026: la IA
+           decía «la dejamos en Sprinter» y el estado no la guardaba). */
+        const conCupo = conversacion.pegaDatos(antes, { unidad: chica });
+        if (conCupo.unidad === chica) {
+          console.error('[agente] nombró la ' + u.name + ': queda escogida' + (conCupo.apretado ? ' (insistió: ' + conCupo.apretado.gente + ' en ' + conCupo.apretado.asientos + ')' : ''));
+          antes = conCupo; cambio = true;
+        } else if (conCupo.noCabe && !(antes.noCabe && antes.noCabe.nombre === conCupo.noCabe.nombre)) {
+          console.error('[agente] nombró la ' + u.name + ' y no le caben ' + antes.gente + ': se le avisa');
+          antes = conCupo; cambio = true;
+        }
       }
     }
     /* ------------------------------------------------------------
