@@ -297,4 +297,10 @@ function pideCotizar(texto) {
   return nombraUnLugarDelCatalogo(texto);
 }
 
-module.exports = { decide, soloAgradecimiento, anunciaPago, esPregunta, limpia, pareceMolesto, pideAAlguienPorSuNombre, pideCotizar, pideVariasUnidades, pideCotizacionAnterior, cancela };
+/* ¿Habla de un contrato, un pago o un abono que ya existe? Eso no es para
+   el bot: lo atiende una persona (21-sep-2026). «¿cuánto hay que pagar?»
+   también cae aquí, y está bien: el dinero lo ve una persona. */
+const DE_UN_CONTRATO = /\b(?:contrat\w*|abon\w*|anticipo|saldo|pag(?:o|os|ar|ue|amos|ado|ada)|factur\w*|deposit\w*|comprobante\w*|folio|reembols\w*|devoluci\w*|cancel\w*)\b/;
+function hablaDeUnContrato(texto) { return DE_UN_CONTRATO.test(limpia(texto)); }
+
+module.exports = { decide, soloAgradecimiento, anunciaPago, esPregunta, limpia, pareceMolesto, pideAAlguienPorSuNombre, pideCotizar, hablaDeUnContrato, pideVariasUnidades, pideCotizacionAnterior, cancela };

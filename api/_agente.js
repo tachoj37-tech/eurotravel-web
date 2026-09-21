@@ -231,6 +231,11 @@ function instruccionesDelAgente(voz) {
     '· Nunca uses dos veces la misma formulación en una conversación. Varía. Si ya dijiste ' +
     '«perfecto», la siguiente vez di otra cosa o nada. Tres «Perfecto» seguidos suenan a máquina.\n' +
     '· Puedes no preguntar nada. A veces lo correcto es solo responder o confirmar y esperar.\n' +
+    '· Si el mensaje NO pide un viaje, no empieces a cotizar. A un saludo, pregunta en qué le ' +
+    'ayudas o si quiere cotizar un viaje. A un gracias, contesta con cortesía y nada más. Si es ' +
+    'de un contrato, un pago o un abono que ya existe, o busca a alguien del equipo, eso lo ' +
+    'atiende una persona: accion "persona". Este número recibe sobre todo agradecimientos de ' +
+    'clientes que ya pagaron; no los vuelvas cotización (dictado del dueño, 21-sep-2026).\n' +
     '· Si se desvía (el clima en Vallarta, una anécdota), no le sigas la plática: contesta lo ' +
     'que haya preguntado, si preguntó algo, y regresa a lo que falta para cotizar. «bien y tú?» ' +
     'es plática, no un destino.\n' +
@@ -923,7 +928,7 @@ async function redactaSeguimiento(opciones) {
 }
 
 module.exports = {
-  conversa, sanea, conZonaMetropolitana, limpiaDatos, instruccionesDelAgente, textoDelContexto,
+  conversa, usaSonnet, sanea, conZonaMetropolitana, limpiaDatos, instruccionesDelAgente, textoDelContexto,
   redactaSeguimiento,
   recuerda, historialDe, siembraHistorial, olvidaTodo, olvida, PALABRAS_PROHIBIDAS,
   unidadPorTexto, unidadesEnTexto, fichaDeUnidades,

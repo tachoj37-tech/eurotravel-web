@@ -143,6 +143,15 @@ titulo('3d · ¿este mensaje pide cotizar? (19-sep-2026)');
   ].forEach(function (f) { ok('«' + f + '» NO pide cotizar', !puerta.pideCotizar(f)); });
 }
 
+titulo('3e · habla de un contrato, un pago o un abono (21-sep-2026)');
+{
+  ['Es sobre mi contrato', 'quiero saber mi saldo', 'cuánto me falta por pagar', 'ya hice el abono',
+   'me pasas la factura', 'mi folio es 45278', 'quiero cancelar', 'el anticipo cuándo es']
+    .forEach(function (f) { ok('«' + f + '» habla de un contrato', puerta.hablaDeUnContrato(f)); });
+  ['buenas tardes', 'buenas trades', 'hola qué tal', 'a vallarta el 5', 'somos 40', 'quién habla']
+    .forEach(function (f) { ok('«' + f + '» NO habla de un contrato', !puerta.hablaDeUnContrato(f)); });
+}
+
 titulo('4b · molesto, grosero o pidiendo persona (spec §5)');
 [
   'no me entiendes', 'NO ME ENTIENDES NADA', 'ya te dije que vamos a vallarta', 'eres un bot?', 'esto es un bot',

@@ -5839,7 +5839,11 @@ async function empiezaDeNuevo(numero) {
     if (deLaBase) tickets.siembraFicha(deLaBase);
   }
   const ficha = tickets.fichaDe(numero);
-  if (ficha) tickets.anotaEtapa(numero, 'escribio', { empiezaDeNuevo: true, porConfirmar: null });
+  /* `clienteEn`: el cliente acaba de escribir. Sin esto la ficha seguía con
+     la hora de su mensaje de hace días, y el cerebro —que por esa hora
+     decide si su sesión es vieja— se callaba al «Nueva cotización» que
+     viene segundos después del saludo (21-sep-2026). */
+  if (ficha) tickets.anotaEtapa(numero, 'escribio', { empiezaDeNuevo: true, porConfirmar: null, clienteEn: Date.now() });
   webhook.guardaCharla(numero, null);
   agente.olvida(numero);
   if (almacen.hayAlmacen()) {
@@ -5903,8 +5907,18 @@ function apuntaElAviso(clave, modo, ahora) {
   }
   const antes = AVISOS_CONTESTADOS.get(clave);
   /* Dos turnos seguidos del cerebro con el mismo texto son una
-     conversación normal («sí», «sí»): pasan los dos. */
-  const esRepetido = !!antes && !(antes.modo !== 'puerta' && modo !== 'puerta');
+     conversación normal («sí», «sí»): pasan los dos.
+     21-sep-2026: y la PUERTA nunca se calla por el cerebro. La puerta es
+     la sesión que el disparador acaba de abrir, la única que seguro está
+     viva; la del cerebro puede venir de una conversación que Kommo ya
+     cerró, y lo que diga se pierde (lead 26818280: silencio total, porque
+     aquí se callaba a la nueva). Si el cerebro llegó primero y la puerta
+     también contesta, sale doble: se prefiere a que no salga nada. Lo
+     normal es que ni pase, porque el cerebro de una sesión vieja se calla
+     antes (ver SESIÓN VIEJA en `trabajoDeKommo`). */
+  const esRepetido = !!antes && (
+    modo === 'puerta' ? antes.modo === 'puerta' : true
+  ) && !(antes.modo !== 'puerta' && modo !== 'puerta');
   AVISOS_CONTESTADOS.set(clave, { cuando: hoy, modo: modo });
   while (AVISOS_CONTESTADOS.size > TOPE_AVISOS) {
     AVISOS_CONTESTADOS.delete(AVISOS_CONTESTADOS.keys().next().value);
@@ -5912,6 +5926,21 @@ function apuntaElAviso(clave, modo, ahora) {
   return !esRepetido;
 }
 function olvidaElAviso(clave) { AVISOS_CONTESTADOS.delete(clave); }
+
+/* Vercel recicla instancias: la plática y la ficha en memoria pueden no
+   estar en la instancia que atiende este mensaje. Se leen del almacén
+   antes de decidir nada. `siembra*` no pisa lo que ya está en memoria, y
+   si la plática ya está aquí no se lee nada: en el caso normal no cuesta. */
+async function siembraDeLaBase(numero) {
+  if (!numero || !almacen.hayAlmacen() || webhook.charlaDe(numero)) return;
+  const [fichaDeLaBase, charlaDeLaBase] = await Promise.all([
+    almacen.leeFicha(numero).catch(function () { return null; }),
+    almacen.leeCharla(numero).catch(function () { return undefined; })
+  ]);
+  if (fichaDeLaBase) tickets.siembraFicha(fichaDeLaBase);
+  if (charlaDeLaBase) webhook.siembraCharla(numero, charlaDeLaBase);
+}
+const UN_DIA_MS = 24 * 3600 * 1000;
 
 /* Callarse y parar, en el lenguaje que entienden los dos bloques: el
    widget lo saca por la salida «silencio», que va a Parar. */
@@ -5938,8 +5967,41 @@ async function trabajoDeKommo(crudo, modo) {
   }
   if (firma === null && !sinToken) console.error('[kommo-trabajo] sin KOMMO_SECRETO en Vercel: el token del widget no se comprueba');
 
+  /* ------------------------------------------------------------
+     SESIÓN VIEJA (21-sep-2026)
+     ------------------------------------------------------------
+     Visto en el chat de pruebas del dueño (lead 26818280): su sesión del
+     bot se quedó estacionada del viernes al lunes. Al escribir, Kommo ya
+     había cerrado esa conversación y abierto otra; la sesión vieja
+     despertó y contestó, y el mensaje se perdió en la conversación
+     cerrada. A la vez, el disparador —con su pausa de un día— abrió una
+     sesión nueva por la puerta.
+
+     Si el último mensaje del cliente fue hace más de un día, esta sesión
+     del cerebro es de ésas: se calla y para, y NO aparta el mensaje, para
+     que la nueva (la puerta) conteste. Más de un día y no menos: con la
+     pausa del disparador medida desde su último disparo, que siempre es
+     anterior o igual al último mensaje, pasado un día desde el mensaje el
+     disparador seguro abre la nueva. Con menos, podría no abrirla y nadie
+     contestaría. La puerta apunta la hora del mensaje al saludar
+     (`empiezaDeNuevo`), así que el «Nueva cotización» de después no se
+     confunde con una sesión vieja.
+     ------------------------------------------------------------ */
+  if (modo !== 'puerta' && aviso.mensaje) {
+    await siembraDeLaBase(aviso.numero);
+    const fichaPrevia = tickets.fichaDe(aviso.numero);
+    const desde = fichaPrevia && Number(fichaPrevia.clienteEn);
+    if (desde && Date.now() - desde > UN_DIA_MS) {
+      console.log('[kommo-trabajo] sesión vieja del lead ' + aviso.leadId + ' (último mensaje hace ' +
+        Math.round((Date.now() - desde) / 3600000) + ' h): se calla y contesta la sesión nueva');
+      await kommo.continuaSalesbot(aviso.returnUrl, { data: CALLADO, execute_handlers: HANDLERS_KOMMO });
+      return { ok: true, modo: 'sesion-vieja' };
+    }
+  }
+
   /* Ver la nota de AVISOS_CONTESTADOS: dos sesiones del bot sobre el
-     mismo mensaje. La primera trabaja; la segunda se calla y para. */
+     mismo mensaje. La primera trabaja; la segunda se calla y para, salvo
+     que la segunda sea la puerta. */
   const claveAviso = claveDelAviso(aviso);
   if (!apuntaElAviso(claveAviso, modo)) {
     console.error('[kommo-trabajo] el lead ' + aviso.leadId + ' ya tiene ese mensaje contestado por otra sesión del bot: ésta se calla y para');
@@ -6033,17 +6095,10 @@ async function trabajoDeKommo(crudo, modo) {
      ya lo resuelve leyendo del almacén, pero lo hace más abajo, y los dos
      candados de aquí se decidirían antes con la mesa vacía: a alguien que
      lleva media cotización se le contestaría «ahorita te atiende una
-     persona». Por eso la lectura se adelanta. `siembra*` no pisa lo que
-     ya está en memoria, así que en el caso normal esto no cuesta nada.
+     persona». Por eso la lectura se adelanta (`siembraDeLaBase`; ya corrió
+     arriba, en SESIÓN VIEJA, y aquí no repite la lectura).
      ------------------------------------------------------------ */
-  if (mensaje && almacen.hayAlmacen() && !webhook.charlaDe(aviso.numero)) {
-    const [fichaDeLaBase, charlaDeLaBase] = await Promise.all([
-      almacen.leeFicha(aviso.numero).catch(function () { return null; }),
-      almacen.leeCharla(aviso.numero).catch(function () { return undefined; })
-    ]);
-    if (fichaDeLaBase) tickets.siembraFicha(fichaDeLaBase);
-    if (charlaDeLaBase) webhook.siembraCharla(aviso.numero, charlaDeLaBase);
-  }
+  if (mensaje) await siembraDeLaBase(aviso.numero);
   const charlaDeAhora = webhook.charlaDe(aviso.numero);
   const fichaDeAhora = tickets.fichaDe(aviso.numero);
   const sinViajeDePorMedio =
@@ -6053,7 +6108,22 @@ async function trabajoDeKommo(crudo, modo) {
      plática guardada y la ficha no trae un viaje vivo. */
   const primeraVezDelCerebro = !charlaDeAhora &&
     !(fichaDeAhora && (fichaDeAhora.porConfirmar || fichaDeAhora.viajeDatos));
-  if (mensaje && sinViajeDePorMedio && puerta.soloAgradecimiento(aviso.mensaje)) {
+  /* ------------------------------------------------------------
+     CON SONNET, LA IA CONTESTA TODO (dictado del dueño, 21-sep-2026:
+     «la IA debe estar en todo, cada respuesta debe razonar, para eso es
+     el Sonnet»)
+     ------------------------------------------------------------
+     Los dos filtros de abajo que contestan con texto fijo —el «de nada» y
+     el de «escribió sin elegir del menú»— existían porque Haiku no
+     razonaba: a un «gracias» le abría una cotización. En una conversación
+     con Sonnet no corren: el mensaje va a la IA, y el prompt le dice qué
+     hacer con un saludo, un gracias o algo que no es cotizar.
+
+     Lo que NO se quita, porque no son respuestas sino reglas del dueño: el
+     aviso de pago va con una persona (17-sep: «no uses bot» para pagos), y
+     pedir persona también (eso lo ve el cerebro por dentro). */
+  const conIA = agente.usaSonnet(aviso.numero);
+  if (mensaje && !conIA && sinViajeDePorMedio && puerta.soloAgradecimiento(aviso.mensaje)) {
     console.log('[kommo-trabajo] solo un agradecimiento y el cerebro no ha hablado: «de nada» y el bot se apaga');
     colector.envios.push({ para: aviso.numero, texto: TEXTOS.deNada, esPersona: true, pasaAPersona: false, escribio: '[kommo · solo gracias]' });
     resultado = { status: 200 };
@@ -6064,7 +6134,26 @@ async function trabajoDeKommo(crudo, modo) {
     try { await kommo.anotaEnLead(aviso.leadId, TEXTOS.notaPago); } catch (e) { console.error('[kommo-trabajo] la nota del pago tronó: ' + (e && e.message)); }
     colector.envios.push({ para: aviso.numero, texto: '', esPersona: true, pasaAPersona: false, escribio: '[kommo · anuncia pago]' });
     resultado = { status: 200 };
-  } else if (mensaje && primeraVezDelCerebro && !puerta.pideCotizar(aviso.mensaje)) {
+  } else if (mensaje && !conIA && primeraVezDelCerebro && !puerta.pideCotizar(aviso.mensaje) &&
+      !puerta.hablaDeUnContrato(aviso.mensaje)) {
+    /* ------------------------------------------------------------
+       NO PIDIÓ UN VIAJE: SE PREGUNTA UNA VEZ (21-sep-2026)
+       ------------------------------------------------------------
+       Antes esto mandaba con una persona. Visto en el chat de pruebas del
+       dueño: apretó «Nueva cotización», escribió «buenas trades» y le
+       contestaron «ahorita te atiende una persona». El botón lo contesta
+       Kommo con su mensaje fijo y NO llega aquí, así que el primer mensaje
+       del cerebro puede ser de alguien que sí eligió cotizar. No se sabe
+       cuál de los dos es: se le pregunta una vez, sin cotizar nada, y se
+       apunta en la plática para que lo que conteste lo atienda el cerebro.
+       ------------------------------------------------------------ */
+    console.log('[kommo-trabajo] el primer mensaje no pide un viaje: se le pregunta si quiere cotizar');
+    const marcaPregunta = { preguntoSiCotiza: true };
+    webhook.guardaCharla(aviso.numero, marcaPregunta);
+    if (almacen.hayAlmacen()) await almacen.guardaCharla(aviso.numero, marcaPregunta).catch(function () {});
+    colector.envios.push({ para: aviso.numero, texto: TEXTOS.preguntaSiCotiza, esPersona: false, pasaAPersona: false, escribio: '[kommo · ¿quiere cotizar?]' });
+    resultado = { status: 200 };
+  } else if (mensaje && !conIA && primeraVezDelCerebro && !puerta.pideCotizar(aviso.mensaje)) {
     /* ------------------------------------------------------------
        ESCRIBIÓ EN VEZ DE ELEGIR DEL MENÚ, Y NO PIDIÓ COTIZAR
        ------------------------------------------------------------
@@ -6076,8 +6165,9 @@ async function trabajoDeKommo(crudo, modo) {
 
        Ahora el cerebro solo abre la boca si el mensaje pide un viaje —el
        botón, palabras de transporte, una pregunta de precio, cuánta gente
-       o un destino del catálogo—. Lo demás lo atiende una persona; el bot
-       no adivina.
+       o un destino del catálogo—. Si habla de un contrato, un pago o un
+       abono, lo atiende una persona; si no queda claro, arriba se le
+       pregunta una vez (21-sep-2026). El bot no adivina.
 
        Solo la PRIMERA vez: una vez dentro de la cotización, el cerebro
        atiende todo, incluido un «todavía no sé a dónde».

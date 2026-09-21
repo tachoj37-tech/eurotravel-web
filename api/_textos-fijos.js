@@ -55,7 +55,12 @@ const TEXTOS = {
 
   /* 19-sep-2026: el cliente escribió en vez de elegir del menú y lo que
      escribió no pide cotizar. El bot no adivina: lo atiende una persona. */
-  notaSinMenu: '💬 El cliente escribió sin elegir del menú y no pidió cotizar. Lo atiende una persona.'
+  notaSinMenu: '💬 El cliente escribió sin elegir del menú y no pidió cotizar. Lo atiende una persona.',
+  /* 21-sep-2026: el primer mensaje que recibe el cerebro no pide un viaje
+     (un «buenas tardes»). Puede venir de alguien que SÍ apretó «Nueva
+     cotización» —ese botón lo contesta Kommo y no llega aquí—, así que no
+     se manda con una persona: se pregunta una vez. */
+  preguntaSiCotiza: '¿Te ayudo a cotizar un viaje? 🚐 Dime a dónde van, cuándo y cuántos son. Si es por un contrato o un pago, escribe *agente*.'
 };
 
 module.exports = TEXTOS;

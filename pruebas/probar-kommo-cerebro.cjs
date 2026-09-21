@@ -375,11 +375,55 @@ function peticion(cuerpo, cabeceras, llave) {
     await atiende(peticion(avisoDe(lead, texto), { 'x-interno': process.env.WHATSAPP_RUTA_SECRETA }), r);
     return continuaciones[continuaciones.length - 1].body;
   };
+  /* Lo mismo, escogiendo la mitad: la puerta o el cerebro. */
+  const conSesion = async function (lead, texto, llave) {
+    const r = respuesta();
+    await atiende(peticion(avisoDe(lead, texto), { 'x-interno': process.env.WHATSAPP_RUTA_SECRETA }, llave), r);
+    return continuaciones[continuaciones.length - 1].body.data;
+  };
 
-  for (const t of ['Buenas tardes', 'Hola qué tal', 'Sigo esperando', 'Es sobre mi contrato', 'Quién habla']) {
+  /* 21-sep-2026: estos cuatro antes pasaban a una persona. Cambió de lado
+     por un caso real: el dueño apretó «Nueva cotización» en su chat de
+     pruebas, escribió «buenas trades» y le contestaron «ahorita te atiende
+     una persona». El botón lo contesta Kommo con su mensaje fijo y NO
+     llega al servidor, así que el primer mensaje del cerebro puede ser de
+     alguien que sí eligió cotizar. Ahora se le pregunta una vez, sin
+     cotizar, y el bot sigue vivo. Lo que habla de un contrato sí va con
+     una persona, como antes. */
+  for (const t of ['Buenas tardes', 'Hola qué tal', 'Sigo esperando', 'Quién habla']) {
     const c = await alCerebro(26900000 + t.length, t);
-    ok('«' + t + '» no cotiza: pasa a una persona y el bot se apaga',
-      c && c.data.status === 'fin' && !/d[oó]nde van|cu[aá]ntos|qu[eé] d[ií]a/i.test(String(c.data.texto || '')));
+    ok('«' + t + '» no cotiza: pregunta UNA vez si quiere cotizar y el bot sigue',
+      c && c.data.status === 'sigue' && c.data.texto === TEXTOS_FIJOS.preguntaSiCotiza);
+  }
+  {
+    const c = await alCerebro(26900050, 'Es sobre mi contrato');
+    ok('«Es sobre mi contrato» no cotiza: pasa a una persona y el bot se apaga',
+      c && c.data.status === 'fin' && c.data.texto === TEXTOS_FIJOS.agente);
+  }
+
+  titulo('21-sep: el flujo REAL — el botón no llega, el primer mensaje sí');
+  {
+    /* Como en el teléfono del dueño: la puerta saluda, el cliente aprieta
+       «Nueva cotización» (eso lo contesta Kommo, no llega aquí) y escribe
+       «buenas trades». Se le pregunta una vez; lo siguiente ya es del
+       cerebro, que cotiza. */
+    await conSesion(26900800, 'hola', 'kommo-trabajo-puerta');
+    const primero = await conSesion(26900800, 'buenas trades', 'kommo-trabajo');
+    ok('«buenas trades» tras apretar el botón: pregunta si quiere cotizar, NO lo manda con una persona',
+      primero.status === 'sigue' && primero.texto === TEXTOS_FIJOS.preguntaSiCotiza);
+    const luego = await conSesion(26900800, 'a vallarta el 5 de diciembre, somos 40', 'kommo-trabajo');
+    ok('  y lo que contesta después lo atiende el cerebro, sin volver a preguntar',
+      luego.status === 'sigue' && luego.texto && luego.texto !== TEXTOS_FIJOS.preguntaSiCotiza);
+  }
+
+  titulo('21-sep: con Sonnet la IA contesta todo, sin textos fijos de por medio');
+  {
+    /* Dictado del dueño: «la IA debe estar en todo, cada respuesta debe
+       razonar». En su chat de pruebas (lead 26838770, en Sonnet) ni el
+       «de nada» fijo ni la pregunta fija interceptan: va todo al cerebro. */
+    const saludo = await conSesion(26838770, 'buenas trades', 'kommo-trabajo');
+    ok('en Sonnet, «buenas trades» va al cerebro: ni la pregunta fija ni una persona',
+      saludo.status === 'sigue' && saludo.texto !== TEXTOS_FIJOS.preguntaSiCotiza && saludo.texto !== TEXTOS_FIJOS.agente);
   }
 
   /* Y lo que SÍ tiene que seguir trabajando solo, que es el negocio. */
@@ -444,6 +488,47 @@ function peticion(cuerpo, cabeceras, llave) {
   const deOtro = await dosSesiones(26900401, 'Muchas gracias');
   ok('el mismo texto en otro lead sí se contesta',
     deOtro.length === 2 && deOtro.filter(function (d) { return String(d.texto || ''); }).length === 1);
+
+  titulo('21-sep: con una sesión vieja y una nueva, gana la NUEVA');
+  /* Caso real, lead 26818280 (el chat de pruebas del dueño). Su sesión del
+     bot estaba estacionada desde el viernes; el lunes escribió «Hola».
+     Kommo ya había cerrado esa conversación y abrió otra: la sesión vieja
+     despertó y contestó (Sonnet dijo «¡Hola Tacho! ¿Cómo te ayudo…?»),
+     pero ese mensaje se perdió en la conversación cerrada. La sesión
+     nueva, la del disparador, llegó un segundo después y el candado de
+     arriba la CALLÓ. Resultado: silencio total.
+
+     La regla: si el último mensaje del cliente fue hace más de un día, la
+     sesión del cerebro es vieja (el disparador, con su pausa de un día,
+     está abriendo una nueva por la puerta en ese mismo momento). La vieja
+     se calla SIN apartar el mensaje, y la nueva contesta. */
+  const tickets = require(path.join(RAIZ, 'api/_tickets.js'));
+  const hace25h = Date.now() - 25 * 3600 * 1000;
+
+  tickets.anotaEtapa('529926900600', 'escribio', { clienteEn: hace25h });
+  const vieja = await conSesion(26900600, 'Hola', 'kommo-trabajo');
+  ok('la sesión vieja (último mensaje hace 25 h) se calla y para',
+    vieja.callado === 'si' && vieja.status === 'fin' && !vieja.texto);
+  const nueva = await conSesion(26900600, 'Hola', 'kommo-trabajo-puerta');
+  ok('  y la nueva, la del disparador, SÍ contesta: saluda',
+    nueva.modo === 'saludo' && nueva.callado !== 'si');
+
+  /* Lo que no se puede romper: después del saludo el cliente aprieta
+     «Nueva cotización» segundos después. La puerta tiene que apuntar la
+     hora de su mensaje; si no, el cerebro seguiría viendo la de hace 25 h
+     y se callaría a media cotización. */
+  tickets.anotaEtapa('529926900601', 'escribio', { clienteEn: hace25h });
+  await conSesion(26900601, 'hola', 'kommo-trabajo-puerta');
+  const trasSaludo = await conSesion(26900601, 'Nueva cotización', 'kommo-trabajo');
+  ok('tras el saludo, «Nueva cotización» la contesta el cerebro (no se cree vieja)',
+    trasSaludo.status === 'sigue' && String(trasSaludo.texto || '').length > 0);
+
+  /* Y si el cerebro llega primero SIN ser vieja, la puerta no se calla: más
+     vale una respuesta doble que ninguna. */
+  const cerebroPrimero = await conSesion(26900602, 'buenas tardes', 'kommo-trabajo');
+  const puertaDespues = await conSesion(26900602, 'buenas tardes', 'kommo-trabajo-puerta');
+  ok('cerebro primero y puerta después: la puerta NO se calla',
+    cerebroPrimero && puertaDespues.callado !== 'si' && puertaDespues.modo === 'saludo');
 
   /* El primer intento de este candado fue «mismo lead y mismo texto», y se
      llevó por delante una conversación entera: el cliente contesta «sí» a
