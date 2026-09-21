@@ -259,7 +259,12 @@ const escenarios = {
      la clienta pide OTRO viaje —Sprinter de 20 a Nuevo Vallarta desde Villa
      Corona— y el bot en Haiku siguió cargando el Mazatlán. Un modelo que
      razona tiene que notar que cambió el viaje. */
-  r1: ['Nueva cotización', 'a mazatlan', 'el 21 regreso el 24', 'Hola la sprinter de 20 que costo tiene a nuevo vallarta saliendo de villa corona']
+  r1: ['Nueva cotización', 'a mazatlan', 'el 21 regreso el 24', 'Hola la sprinter de 20 que costo tiene a nuevo vallarta saliendo de villa corona'],
+  /* 21-sep-2026, caso real (el dueño en su chat de pruebas): con la lista de
+     autobuses de por medio, le PEGA una lista vieja al bot. La regresó igual,
+     por obedecer «mándala tal cual». Tiene que notar que es raro y preguntar. */
+  r2: ['Nueva cotización', 'quería cotizar un viaje a vta', 'pasado mañana y regresamos dentro de 5 días', 'somos 49', 'si',
+    'Para 50 se ajustan a la capacidad estos:\nMarcopolo Paradiso G8 — Premium — 51 asientos\nIrizar i6S — Premium — 51 asientos\nIrizar i6 — Premium — 47 y 51 asientos\nNeobus — Gran Turismo — 50 asientos\n\nTe los recomiendo porque son los que les caben.\n\nEstos no caben, pero también tenemos otras opciones por si gustas:\nIrizar Century — Clásico — 47 y 49 asientos\nIrizar PB — Turismo — 47 asientos\n\n¿Cuál te late? Si quieres te recomiendo uno.']
 };
 const pedidos = process.argv.slice(2).filter((x) => escenarios[x]);
 let lead = 26818280;

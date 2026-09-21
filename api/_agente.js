@@ -52,10 +52,13 @@ const MODELO = entendedor.MODELO;
      · más tiempo de espera, porque razonar tarda.
    ------------------------------------------------------------ */
 const MODELO_AGENTE = 'claude-sonnet-5';
-/* `medium`: el escalón que la guía de Anthropic compara con el mejor
-   Sonnet anterior a toda máquina. Si en las pláticas se ve que razona de
-   menos, se sube a `high`; si tarda demasiado, se baja a `low`. */
-const ESFUERZO_AGENTE = 'medium';
+/* `high` (21-sep-2026). Empezó en `medium` y el mismo día se vio que
+   razonaba de menos: el dueño le pegó la lista de autobuses y la regresó
+   igual. La guía de Anthropic dice que Sonnet 5 respeta el esfuerzo al pie
+   de la letra —en `medium` hace lo justo que se le pide— y que la salida
+   es subir el esfuerzo, no rodearlo con prompt. El dueño: «cada respuesta
+   debe razonar, para eso es el Sonnet». */
+const ESFUERZO_AGENTE = 'high';
 /* El razonamiento cuenta dentro de este tope. La respuesta en sí mide
    ~150; con 500 (el tope de Haiku) se cortaba a media idea. */
 const TOPE_SALIDA_AGENTE = 6000;
@@ -231,6 +234,12 @@ function instruccionesDelAgente(voz) {
     '· Nunca uses dos veces la misma formulación en una conversación. Varía. Si ya dijiste ' +
     '«perfecto», la siguiente vez di otra cosa o nada. Tres «Perfecto» seguidos suenan a máquina.\n' +
     '· Puedes no preguntar nada. A veces lo correcto es solo responder o confirmar y esperar.\n' +
+    '· LO QUE FALTA es tu mapa, no un guion: primero lee lo que el cliente acaba de escribir y ' +
+    'contéstale a ESO; luego, si toca, avanza con lo que falta. Si escribe algo que no cuadra ' +
+    '—te pega un texto, te repite lo que tú le dijiste, algo sin sentido—, no sigas en automático: ' +
+    'pregúntale qué quiso decir. Un mensaje que se manda «tal cual» se manda una sola vez en la ' +
+    'conversación. Dictado del dueño, 21-sep-2026: «debería haber preguntado y razonado por qué le ' +
+    'mandaba algo así».\n' +
     '· Si el mensaje NO pide un viaje, no empieces a cotizar. A un saludo, pregunta en qué le ' +
     'ayudas o si quiere cotizar un viaje. A un gracias, contesta con cortesía y nada más. Si es ' +
     'de un contrato, un pago o un abono que ya existe, o busca a alguien del equipo, eso lo ' +
@@ -661,7 +670,20 @@ function porQueSeTira(texto) {
   if (DINERO.test(t)) return 'cifra de dinero';
   const m = t.match(PALABRAS_PROHIBIDAS);
   if (m) return 'palabra prohibida «' + m[0] + '»';
-  if (t.length > 480) return 'más de 480 letras (' + t.length + ')';
+  /* La lista de autobuses es la excepción que el prompt ya permite («tres
+     líneas como máximo, salvo la lista de autobuses y la de qué incluye»),
+     pero este tope no la conocía. Con seis unidades mide ~460 letras y
+     cualquier palabra de más la tiraba ENTERA. Visto el 21-sep-2026 en el
+     chat de pruebas del dueño: Sonnet le puso «Va, salen de Guadalajara 🙌»
+     adelante, midió 489, se tiró, y el cliente recibió el respaldo en vez
+     de «en cuáles cabe, su calidad y hasta en los que no». Con dos o más
+     renglones de catálogo («Nombre — Categoría — N asientos», la misma
+     forma que reconoce el guardia de whatsapp.mjs) el tope es otro. Los
+     demás candados —texto interno, dinero, palabras prohibidas— siguen
+     arriba, sin aflojarse. */
+  const renglonesDeCatalogo = t.split('\n').filter(function (l) { return /—.*asientos/.test(l); }).length;
+  const tope = renglonesDeCatalogo >= 2 ? 1000 : 480;
+  if (t.length > tope) return 'más de ' + tope + ' letras (' + t.length + ')';
   return null;
 }
 /* El origen SIEMPRE se pregunta con «zona metropolitana» (dictado del

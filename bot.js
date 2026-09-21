@@ -6169,11 +6169,18 @@ function loQueFalta(estado) {
         ' asientos para ' + e.noCabe.gente + ' personas). Díselo con esos números, sin regaño, y ' +
         'luego el mensaje de abajo. '
       : '';
-    return aviso + 'cuál autobús. Manda este mensaje TAL CUAL, sin agregar baño, puertas ni aire ' +
+    /* 21-sep-2026: esto era una orden sin condición —«Manda este mensaje
+       TAL CUAL»— y con Sonnet, que sigue las órdenes al pie de la letra,
+       se volvió un copiador: el dueño le pegó la lista en su chat de
+       pruebas y el bot se la regresó igual, en vez de preguntarse por qué.
+       Ahora es información con su condición: la lista va tal cual SOLO si
+       no se ha mandado, y lo primero es contestarle al cliente. */
+    return aviso + 'cuál autobús. Si todavía no le has mandado la lista de autobuses, va TAL CUAL, sin agregar baño, puertas ni aire ' +
       (e.gente ? '(primero los que caben; los que no caben van hasta el final, como otras opciones):\n'
         : '(todos, de más a menos asientos; NO preguntes cuántos son):\n') +
       (e.gente ? mensajeDeAutobuses(e.gente) : mensajeDeTodosLosAutobuses()) +
-      '\nSOLO si pide recomendación, recomienda uno' + (e.gente ? ' de los que caben' : '') + ' con una razón. Cuando ' +
+      '\nSi ya se la mandaste (búscala en ÚLTIMOS MENSAJES), NO la repitas: contesta lo que te acaba de ' +
+      'escribir y pregúntale cuál le late. SOLO si pide recomendación, recomienda uno' + (e.gente ? ' de los que caben' : '') + ' con una razón. Cuando ' +
       'elija (o diga «el que tú digas» y tú recomiendes uno), ponlo en datos.autobus';
   }
   return {

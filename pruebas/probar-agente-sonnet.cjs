@@ -122,6 +122,31 @@ const CLIENTE_REAL = '5213312345678';
     ok('  y al quitarlo vuelve a Haiku', api2.pedidos[0].cuerpo.model === 'claude-haiku-4-5-20251001');
   }
 
+  titulo('la lista de autobuses no la tira el tope de letras (caso real, 21-sep)');
+  {
+    /* En el chat de pruebas del dueño, para 49 personas, Sonnet copió la
+       lista del motor pero le puso adelante «Va, salen de Guadalajara 🙌».
+       Midió 489 letras, el tope de 480 la tiró entera y contestó el
+       respaldo. El dueño: «los autobuses me los ofreciste muy mal, antes me
+       decías en cuáles cabía, su calidad y hasta en los que no». */
+    const lista = 'Va, salen de Guadalajara 🙌 Para 49 se ajustan a la capacidad estos:\n' +
+      'Marcopolo Paradiso G8 — Premium — 51 asientos\n' +
+      'Irizar i6S — Premium — 51 asientos\n' +
+      'Irizar i6 — Premium — 47 y 51 asientos\n' +
+      'Neobus — Gran Turismo — 50 asientos\n' +
+      'Irizar Century — Clásico — 47 y 49 asientos\n\n' +
+      'Te los recomiendo porque son los que les caben.\n\n' +
+      'Estos no caben, pero también tenemos otras opciones por si gustas:\n' +
+      'Irizar PB — Turismo — 47 asientos\n\n' +
+      '¿Cuál te late? Si quieres te mando fotos de alguno o te recomiendo uno.';
+    ok('la lista mide más de 480 (si no, esta prueba no prueba nada)', lista.length > 480);
+    ok('la lista completa con su saludo adelante SÍ pasa', agente.sanea(lista) === lista.replace(/\s+\n/g, '\n').trim());
+    ok('pero un texto largo que NO es la lista sigue cayendo en el tope',
+      agente.sanea('Mira, te platico. '.repeat(40)) === null);
+    ok('y la lista con una cifra de dinero sigue cayendo (los demás candados no se aflojan)',
+      agente.sanea(lista + '\nEl G8 sale en $38,000') === null);
+  }
+
   titulo('el costo se cuenta con la tarifa del modelo que contestó');
   {
     const millon = { input_tokens: 1e6, output_tokens: 1e6 };
