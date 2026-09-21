@@ -544,6 +544,49 @@ function peticion(cuerpo, cabeceras, llave) {
   ok('dos «sí» seguidos en la misma cotización se contestan los dos',
     tresTurnos.length === 3 && tresTurnos.every(function (d) { return d.callado !== 'si'; }));
 
+  titulo('21-sep: dos clientes entrelazados, y ninguno ve al otro');
+  {
+    /* Dictado del dueño: «no mezcles chats, me importa mucho eso». Dos
+       leads escriben alternados por el camino real completo (puerta,
+       cerebro, ficha, plática, nota en el lead). Cada uno da un dato que
+       el otro no puede tener: el destino, la gente y un nombre. */
+    const A = 26900910, B = 26900911;
+    const deA = function (t) { return conSesion(A, t, 'kommo-trabajo'); };
+    const deB = function (t) { return conSesion(B, t, 'kommo-trabajo'); };
+    await conSesion(A, 'hola', 'kommo-trabajo-puerta');
+    await conSesion(B, 'hola', 'kommo-trabajo-puerta');
+    await deA('Nueva cotización'); await deB('Nueva cotización');
+    /* El nombre va en su propio mensaje: aquí contesta el guion (sin IA) y
+       «soy Lucía Acme, a chapala…» se lo lee como destino «Acme». Eso es
+       del guion de respaldo, no de la separación entre chats. */
+    /* Un dato por mensaje, como escribe un cliente, y siempre alternando:
+       cada mensaje de A cae entre dos de B. */
+    const pasosA = ['me llamo Ramiro Pérez', 'a mazatlán', 'del 1 al 3 de noviembre', '45', 'el i6s', 'de guadalajara', 'solo nos llevan y traen'];
+    const pasosB = ['me llamo Lucía Acme', 'a chapala', 'el 4 de octubre', 'mismo día', '12', 'de guadalajara', 'solo ida y vuelta'];
+    const dichoA = [], dichoB = [];
+    for (let i = 0; i < pasosA.length; i++) {
+      dichoA.push(await deA(pasosA[i]));
+      dichoB.push(await deB(pasosB[i]));
+    }
+    const junta = function (lista) { return lista.map(function (d) { return String((d && (d.texto || d.pie)) || ''); }).join('\n'); };
+    const textoA = junta(dichoA), textoB = junta(dichoB);
+    ok('el resumen de A trae Mazatlán y sus 45', /Mazatl[aá]n/.test(textoA) && /45/.test(textoA));
+    ok('  y NADA de B: ni Chapala, ni 12 personas, ni Acme', !/Chapala|Acme|12 personas/.test(textoA));
+    ok('el resumen de B trae Chapala y sus 12', /Chapala/.test(textoB) && /12/.test(textoB));
+    ok('  y NADA de A: ni Mazatlán, ni 45, ni Pérez, ni el i6S', !/Mazatl[aá]n|P[eé]rez|45|i6S/.test(textoB));
+    const fichaA = tickets.fichaDe('5299' + A), fichaB = tickets.fichaDe('5299' + B);
+    ok('las fichas son distintas y cada una guarda solo su viaje',
+      fichaA && fichaB && fichaA !== fichaB &&
+      JSON.stringify(fichaA).indexOf('Chapala') < 0 && JSON.stringify(fichaB).indexOf('Mazatl') < 0);
+    const notasA = notas.filter(function (n) { return /\/leads\/26900910\//.test(n.url); });
+    const notasB = notas.filter(function (n) { return /\/leads\/26900911\//.test(n.url); });
+    /* Las notas en el lead (si las hubo en este camino) también van cada
+       una al suyo y solo hablan de su viaje. */
+    ok('ninguna nota de un lead menciona el viaje del otro',
+      notasA.every(function (n) { return !/Chapala|Acme/.test(n.body[0].params.text); }) &&
+      notasB.every(function (n) { return !/Mazatl|P[eé]rez|i6S/.test(n.body[0].params.text); }));
+  }
+
   titulo('la primera puerta reenvía el aviso tal cual');
   /* Kommo manda un formulario; la segunda puerta lo recibe byte por byte
      como texto plano (con application/json Vercel lo parseaba, fallaba y
