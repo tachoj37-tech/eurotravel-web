@@ -187,6 +187,52 @@ titulo('una foto o un documento después del ticket, tampoco');
 }
 
 /* ============================================================ */
+titulo('después del ticket, pedir fotos SÍ se atiende (21-sep-2026)');
+{
+  /* Revisión del 21-sep con el modelo real (escenario x20): tras el resumen
+     el cliente pidió «y fotos de la suburban?» y el bot se calló y pasó el
+     chat a una persona. Las fotos se mandan siempre que las pidan; eso no
+     cambia el viaje ni pide precio. */
+  limpia();
+  const C = '5213366670035';
+  await hastaElTicket(C);
+  laIA = function () { return { respuesta: '', datos: {}, accion: 'fotos', unidadPedida: 'suburban' }; };
+  const antes = textos(C).length;
+  await dice('y fotos de la suburban?', C);
+  const tras = textos(C).slice(antes);
+  ok('le llegan fotos', tras.some((t) => t === '[foto]' || /Suburban/.test(t)));
+  ok('  sin repetir el resumen ni cotizar de nuevo', !tras.some((t) => /ya tengo todo tu viaje/.test(t)));
+  ok('  y la unidad del ticket sigue siendo la Sprinter', /sprinter/i.test(String((tk.fichaDe(C) || {}).porConfirmar && tk.fichaDe(C).porConfirmar.resumen && tk.fichaDe(C).porConfirmar.resumen.unidadNombre || 'sprinter')));
+}
+
+/* ============================================================ */
+titulo('«no nos movemos» después del ticket NO es «algo está mal» (21-sep-2026)');
+{
+  /* Escenario w2: el resumen pregunta «¿Todo bien?» y el cliente contesta
+     «no nos movemos» (confirma que no hay recorridos). El candado leía el
+     «no» del principio y preguntaba «¿Qué le corrijo?». Un «no» a secas
+     sí es corrección; un «no» que empieza una frase del viaje, no. */
+  limpia();
+  const C = '5213366670036';
+  await hastaElTicket(C);
+  laIA = function () { return { respuesta: 'Va, sin movimientos 🙌', datos: { recorridos: 0 }, accion: 'seguir' }; };
+  let antes = textos(C).length;
+  await dice('no nos movemos', C);
+  ok('no le contesta «¿Qué le corrijo?»', !textos(C).slice(antes).some((t) => /Qué le corrijo/.test(t)));
+
+  limpia();
+  const D = '5213366670037';
+  await hastaElTicket(D);
+  laIA = function () { return { respuesta: 'Dime qué corrijo', datos: {}, accion: 'seguir' }; };
+  antes = textos(D).length;
+  await dice('no', D);
+  ok('pero a un «no» a secas sí le pregunta qué corregir', textos(D).slice(antes).some((t) => /Qué le corrijo/.test(t)));
+  antes = textos(D).length;
+  await dice('no, la fecha está mal', D);
+  ok('  y a «no, la fecha está mal» también', textos(D).slice(antes).some((t) => /Qué le corrijo/.test(t)));
+}
+
+/* ============================================================ */
 titulo('con la IA caída después del ticket, tampoco');
 {
   limpia();

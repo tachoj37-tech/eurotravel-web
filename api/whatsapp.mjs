@@ -3266,7 +3266,13 @@ async function loQueDiceElAgente(envio) {
       viajeDeLaFicha && viajeDeLaFicha.estado === 'pedido' && !esOtroViaje) {
     const fichaAhora = tickets.fichaDe(cliente);
     const base = viajeBaseDeLaFicha(fichaAhora);
-    if (base && !cambiaElTicket(nuevo, base)) {
+    /* Pedir fotos o video después del resumen no cambia el viaje ni pide
+       precio, y se atiende siempre (dictado de las fotos: «cuando yo te
+       pido fotos, me las mandas»). Revisión del 21-sep-2026 con el modelo
+       real: «y fotos de la suburban?» tras el ticket dejaba al cliente en
+       silencio. Sigue de largo al camino de las fotos, más abajo. */
+    const pideMedios = dicho.accion === 'fotos' || dicho.accion === 'video';
+    if (base && !cambiaElTicket(nuevo, base) && !pideMedios) {
       /* ------------------------------------------------------------
          UN «NO» AL RESUMEN ES UNA CORRECCIÓN, NO UN ADIÓS — 18-sep-2026
          ------------------------------------------------------------
@@ -3275,8 +3281,14 @@ async function loQueDiceElAgente(envio) {
          que dice es que algo está mal, se le pregunta qué, y el bot sigue
          vivo para corregirlo.
          ------------------------------------------------------------ */
-      const dijoQueEstaMal = /^\s*(no|nel|nop|est[aá] mal|algo est[aá] mal|no est[aá] bien|hay un error|me equivoqu[eé]|corr[ií]gel[oa]|cambia\w*)\b/i
-        .test(conversacion.normaliza(texto));
+      /* Un «no» a secas (con o sin signos) es corrección; un «no» que
+         empieza una frase del viaje —«no nos movemos», «no, solo ida y
+         vuelta»— no lo es: eso lo lee la IA. Las frases explícitas
+         («está mal», «me equivoqué», «cámbialo») cuentan en cualquier
+         parte del mensaje. Revisión del 21-sep-2026 (escenario w2). */
+      const t = conversacion.normaliza(texto);
+      const dijoQueEstaMal = /^\s*(no|nel|nop)\s*[.!…]*\s*$/i.test(t) ||
+        /\b(est[aá] mal|no est[aá] bien|hay un error|me equivoqu[eé]|corr[ií]gel[oa]|c[aá]mbia(?:lo|la|le)?\b)/i.test(t);
       if (dijoQueEstaMal) {
         const queCorrijo = '¿Qué le corrijo? Dime el dato como va (destino, fechas, cuántos o unidad) 🙌';
         console.error('[agente] dijo que algo está mal en el resumen: se le pregunta qué corregir');
