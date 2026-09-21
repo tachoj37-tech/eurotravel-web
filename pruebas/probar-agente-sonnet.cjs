@@ -147,6 +147,49 @@ const CLIENTE_REAL = '5213312345678';
       agente.sanea(lista + '\nEl G8 sale en $38,000') === null);
   }
 
+  titulo('si un candado tira la respuesta de Sonnet, se le pide que la reescriba (21-sep)');
+  {
+    /* Caso real del simulador: a «¿cuál es el más barato?» Sonnet contestó
+       bien, pero dijo «tarifas» (palabra prohibida desde los días de
+       Haiku), el saneado tiró la respuesta entera y contestó el guion, que
+       no razona. La palabra sigue prohibida; lo que cambia es que Sonnet
+       tiene UNA oportunidad de reescribirla. El dueño: «debes poder
+       razonar respuestas derivadas de las respuestas». */
+    const enSerie = function (contenidos) {
+      const pedidos = [];
+      let i = 0;
+      const pide = async function (url, opciones) {
+        pedidos.push(JSON.parse(opciones.body));
+        const content = contenidos[Math.min(i, contenidos.length - 1)]; i++;
+        return { ok: true, status: 200, text: async function () { return ''; },
+          json: async function () { return { content: content, stop_reason: 'end_turn', usage: { input_tokens: 10, output_tokens: 10 } }; } };
+      };
+      return { pide: pide, pedidos: pedidos };
+    };
+    const conTarifa = [{ type: 'thinking', thinking: '', signature: 's' },
+      { type: 'text', text: '{"respuesta":"No manejo tarifas por unidad; el Century es el más económico. ¿Lo cotizamos?","datos":{},"accion":"seguir"}' }];
+    const limpia = [{ type: 'text', text: '{"respuesta":"El precio sale armado por viaje; el Century es el más económico. ¿Lo cotizamos?","datos":{},"accion":"seguir"}' }];
+
+    const api = enSerie([conTarifa, limpia]);
+    const r = await agente.conversa('cuál es el más barato?', { clave: 'x', pide: api.pide, cliente: DE_PRUEBA });
+    ok('se le pidió a Sonnet que la reescribiera (2 llamadas)', api.pedidos.length === 2);
+    ok('  y sale la reescrita, que razonó lo mismo sin la palabra', r && /Century es el más económico/.test(String(r.respuesta)) && !/tarifa/i.test(String(r.respuesta)));
+    const segunda = api.pedidos[1];
+    ok('  la segunda llamada lleva su respuesta anterior tal cual, con su razonamiento',
+      segunda && segunda.messages.length === 3 && segunda.messages[1].role === 'assistant' &&
+      Array.isArray(segunda.messages[1].content) && segunda.messages[1].content[0].type === 'thinking');
+    ok('  y le dice por qué no salió', segunda && /tarifa/i.test(String(segunda.messages[2].content)));
+
+    const terca = enSerie([conTarifa, conTarifa]);
+    const r2 = await agente.conversa('cuál es el más barato?', { clave: 'x', pide: terca.pide, cliente: DE_PRUEBA });
+    ok('si la reescrita también cae, contesta el guion: una sola oportunidad, sin ciclos',
+      terca.pedidos.length === 2 && r2 && r2.respuesta === null);
+
+    const enHaiku = enSerie([[{ type: 'text', text: '{"respuesta":"No manejo tarifas.","datos":{},"accion":"seguir"}' }]]);
+    await agente.conversa('cuál es el más barato?', { clave: 'x', pide: enHaiku.pide, cliente: CLIENTE_REAL });
+    ok('en Haiku no se reintenta: se queda como siempre', enHaiku.pedidos.length === 1);
+  }
+
   titulo('el costo se cuenta con la tarifa del modelo que contestó');
   {
     const millon = { input_tokens: 1e6, output_tokens: 1e6 };

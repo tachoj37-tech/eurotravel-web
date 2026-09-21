@@ -258,7 +258,10 @@ function instruccionesDelAgente(voz) {
     'fecha?». Si dice «a Tequila», confirmas y sigues: «Tequila, va 🙌 ¿Es el mismo día?». ' +
     'Dictado del dueño, 21-sep-2026: «no saques conversación, solo contesta».\n' +
     '· Tres líneas como máximo (las únicas excepciones: la lista de autobuses y la de qué incluye).\n' +
-    '· Nunca digas «paso», «etapa», «proceso», «formulario», «sistema», «opción», «menú». ' +
+    '· Nunca digas «paso», «etapa», «proceso», «formulario», «sistema», «opción», «menú», ' +
+    '«tarifa», «ticket», «captura», «cotizador», «kilómetros», «km», «error», «base de datos», ' +
+    '«bot», «robot», «IA», «perdón», «no te entendí». Si una respuesta tuya lleva una de ésas, ' +
+    'no sale. Para el precio di «el precio» o «la cotización». ' +
     'Nunca listes opciones numeradas salvo que el cliente pida comparar.\n' +
     '· Nunca te presentes dos veces. Nunca repitas una acción de LO QUE YA HICE (foto, ' +
     'precio), salvo los datos de depósito, que se repiten cada vez que los pida.\n' +
@@ -777,6 +780,38 @@ async function conversa(mensaje, opciones) {
     : { model: modelo, max_tokens: TOPE_SALIDA, temperature: 0.4, system: bloques,
         messages: [{ role: 'user', content: texto }] };
 
+  /* La segunda oportunidad (ver UNA SEGUNDA OPORTUNIDAD, abajo): la misma
+     llamada, con su respuesta anterior TAL CUAL —razonamiento incluido,
+     como pide la API al continuar con el mismo modelo— y el motivo por el
+     que no salió. Devuelve el texto ya saneado, o null. */
+  const reescribe = async function (contenidoAnterior, porQue) {
+    try {
+      const otraVez = Object.assign({}, pedido, { messages: [
+        pedido.messages[0],
+        { role: 'assistant', content: contenidoAnterior },
+        { role: 'user', content: 'Esa respuesta no puede salir al cliente (' + porQue + '). Escríbela otra vez ' +
+          'con el mismo sentido y los mismos datos, sin eso, en el mismo formato JSON.' }
+      ] });
+      const r2 = await pide('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        signal: AbortSignal.timeout(ESPERA_AGENTE_MS),
+        headers: { 'content-type': 'application/json', 'x-api-key': clave, 'anthropic-version': '2023-06-01' },
+        body: JSON.stringify(otraVez)
+      });
+      if (!r2 || !r2.ok) return null;
+      const cuerpo2 = await r2.json();
+      entendedor.apuntaElCosto(cuerpo2 && cuerpo2.usage, o.cliente, modelo);
+      const dijo2 = (cuerpo2 && Array.isArray(cuerpo2.content) ? cuerpo2.content : [])
+        .filter(function (b) { return b && (b.type === 'text' || b.type === undefined) && typeof b.text === 'string'; })
+        .map(function (b) { return b.text; }).join('\n');
+      const json2 = entendedor.sacaJSON(dijo2);
+      return json2 && typeof json2 === 'object' ? sanea(json2.respuesta) : null;
+    } catch (e) {
+      console.error('[agente] la reescritura tronó: ' + (e && e.message));
+      return null;
+    }
+  };
+
   try {
     const r = await pide('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -823,7 +858,29 @@ async function conversa(mensaje, opciones) {
     const json = entendedor.sacaJSON(dijo);
     if (!json || typeof json !== 'object') return null;
     const accion = ACCIONES.indexOf(json.accion) >= 0 ? json.accion : 'seguir';
-    const respuesta = sanea(json.respuesta);
+    let respuesta = sanea(json.respuesta);
+    /* ------------------------------------------------------------
+       UNA SEGUNDA OPORTUNIDAD, NO EL GUION (21-sep-2026)
+       ------------------------------------------------------------
+       Cuando un candado tira la respuesta (una palabra prohibida, una
+       cifra, el largo), contestaba el guion, que no razona: de ahí salían
+       casi todas las respuestas tontas del día. Visto en el simulador: a
+       «¿cuál es el más barato?» Sonnet contestó bien pero dijo «tarifas»,
+       y el cliente recibió un «déjame consultarlo» de respaldo.
+
+       Los candados NO se aflojan. Con Sonnet, antes de rendirse, se le
+       regresa su respuesta con el motivo y la reescribe una sola vez. Si
+       la reescrita también cae, contesta el guion como siempre. Dictado
+       del dueño: «debes poder razonar respuestas derivadas de las
+       respuestas». En Haiku no se reintenta: se queda como estaba.
+       ------------------------------------------------------------ */
+    if (conSonnet && json.respuesta && !respuesta) {
+      const porQue = porQueSeTira(conZonaMetropolitana(String(json.respuesta)));
+      console.error('[agente] Sonnet dijo algo que no puede salir (' + porQue + '): se le pide que lo reescriba');
+      const reescrita = await reescribe(cuerpo.content, porQue);
+      if (reescrita) respuesta = reescrita;
+      else console.error('[agente] la reescrita tampoco puede salir: contesta el guion');
+    }
     if (accion === 'seguir' && !respuesta) {
       /* Dijo algo que no puede salir (o nada). El guion contesta de
          respaldo, PERO los datos que leyó se conservan: en la corrida real
