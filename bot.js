@@ -6055,12 +6055,23 @@ function pegaDatos(estado, datos) {
   if (d.autobus) {
     const bus = UNIDADES.find(function (u) { return u.id === d.autobus && u.cat === 'autobus'; });
     /* Criterio (dictado del dueño, 6-sep-2026): un autobús donde no caben
-       no se acepta ni aunque el cliente lo pida. Se deja `noCabe` para que
-       el agente se lo diga con nombre y número y ofrezca los que sí. */
+       se le hace ver con nombre y número (`noCabe`) y se ofrecen los que sí.
+       21-sep-2026, corrección del dueño en su chat de pruebas («se puso
+       bien terco; EL CLIENTE MANDA»): eso se dice UNA vez. Si insiste con
+       el MISMO autobús después del aviso, se acepta y queda `apretado`
+       para que el equipo lo vea en el ticket. Otro autobús que tampoco
+       cabe recibe su propio aviso. */
     if (bus && e.gente && Number(bus.max) < Number(e.gente)) {
-      e.noCabe = { nombre: bus.name, asientos: Number(bus.max), gente: Number(e.gente) };
+      const yaSeLeDijo = e.noCabe && e.noCabe.nombre === bus.name;
+      if (yaSeLeDijo) {
+        e.apretado = { nombre: bus.name, asientos: Number(bus.max), gente: Number(e.gente) };
+        delete e.noCabe;
+        e.unidad = 'autobus'; e.unidadNombre = bus.name; e.unidadId = bus.id;
+      } else {
+        e.noCabe = { nombre: bus.name, asientos: Number(bus.max), gente: Number(e.gente) };
+      }
     } else if (bus) {
-      delete e.noCabe;
+      delete e.noCabe; delete e.apretado;
       e.unidad = 'autobus'; e.unidadNombre = bus.name; e.unidadId = bus.id;
     }
   }

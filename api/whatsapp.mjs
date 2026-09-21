@@ -517,6 +517,10 @@ function ticketDePrecio(res, precio, cal, cliente, unidad, historial, yaDado, ap
     lineas.push('🚌 ' + ((delCatalogo && delCatalogo.name) || comoSeLlama) + (pax ? ' · ' + pax + ' pax' : ''));
   }
   if (res.soloIda) lineas.push('➡️ Solo ida');
+  if (res.apretado) {
+    lineas.push('⚠️ ' + res.apretado.gente + ' personas en ' + res.apretado.nombre + ' (' + res.apretado.asientos +
+      ' asientos): el cliente insistió, dijo que la cifra era aproximada');
+  }
   /* ------------------------------------------------------------
      DE QUÉ ZONA SALEN, DICHO CON TODAS SUS LETRAS
      ------------------------------------------------------------
@@ -2919,7 +2923,9 @@ async function loQueDiceElAgente(envio) {
       const senalaUnViaje = !!viajeArchivadoQueNombra(tickets.fichaDe(cliente), texto);
       const busSenalado = (!busNombrado && !senalaUnViaje && SENALA_ESE.test(t))
         ? unicoAutobusEnTexto(ultimoTexto) : null;
-      const quiere = /\b(quiero|me late|me gusta|reserv|apart|cotiza|cuanto|precio|ese|esa|ese mismo|el mismo)\b/.test(t);
+      /* «el pb está bien», «déjalo en el pb», «va con el pb»: también es
+         escogerlo (21-sep-2026, el cliente insistiendo). */
+      const quiere = /\b(quiero|me late|me gusta|reserv|apart|cotiza|cuanto|precio|ese|esa|ese mismo|el mismo|est[aá] bien|d[eé]jalo|va con|nos vamos con)\b/.test(t);
       const bus = busNombrado || busSenalado;
       if (bus && quiere) {
         console.error('[agente] escogió el ' + bus.name + ' (' + (busNombrado ? 'por nombre' : 'por «ese»') + ')');
@@ -4243,6 +4249,9 @@ async function loQueDiceElAgente(envio) {
            `unidadNombre` (8-sep-2026: un i6 salía como «Sprinter»). */
         unidadNombre: nuevo.unidadNombre || null, nombre: nuevo.nombre || null
       };
+      /* El cliente insistió en un autobús donde no caben (21-sep-2026): el
+         ticket al dueño lo dice; el cliente no ve nada distinto. */
+      if (nuevo.apretado) resumen.apretado = nuevo.apretado;
       /* El nombre de la unidad («Neobus»), no la categoría («autobus»): es lo
          que lee el dueño en el ticket y la llave del precio aprendido. */
       if (nuevo.unidadNombre) resumen.unidad = nuevo.unidadNombre;

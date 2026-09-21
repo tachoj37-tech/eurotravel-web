@@ -247,6 +247,14 @@ const CLIENTE_REAL = '5213312345678';
       /"cotizar"[^\n]*\n?[^\n]*pregunt[oó] algo[^\n]*respuesta/i.test(fijo));
   }
 
+  titulo('el cliente manda: si insiste en un autobús donde no caben, se acepta (21-sep)');
+  {
+    const c = agente.textoDelContexto({ hoy: '2026-09-21', estado: { destino: 'Puerto Vallarta', gente: 50, unidad: 'autobus', unidadNombre: 'Irizar PB', apretado: { nombre: 'Irizar PB', asientos: 47, gente: 50 } }, falta: 'qué día salen' });
+    ok('el contexto le dice a la IA que ya se aceptó y que no lo cuestione más', /insisti/i.test(c) && /no lo vuelvas a cuestionar/i.test(c));
+    const fijo = agente.instruccionesDelAgente();
+    ok('el prompt dice: se avisa UNA vez y si insiste, el cliente manda', /una vez/i.test(fijo) && /el cliente manda/i.test(fijo));
+  }
+
   titulo('el costo se cuenta con la tarifa del modelo que contestó');
   {
     const millon = { input_tokens: 1e6, output_tokens: 1e6 };

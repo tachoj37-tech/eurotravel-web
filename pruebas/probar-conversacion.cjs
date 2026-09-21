@@ -573,6 +573,19 @@ function cotiza(extra) {
   ok('«mejor una Suburban» con 4 personas cambia la unidad', bot.pegaDatos(Object.assign({}, base, { gente: 4 }), { unidad: 'suburban' }).unidad, 'suburban');
   const noCabe = bot.pegaDatos(Object.assign({}, base), { unidad: 'suburban' });
   okQue('  y con 12 no cambia: en la Suburban no caben (noCabe)', noCabe.unidad === 'sprinter' && noCabe.noCabe && noCabe.noCabe.asientos === 6);
+  /* 21-sep-2026, chat de pruebas del dueño: 50 personas, pide el PB (47),
+     el bot se lo niega tres veces. «Se puso bien terco. EL CLIENTE MANDA.»
+     Se le dice UNA vez que no caben; si insiste con el mismo autobús, se
+     acepta y queda marcado para el equipo (`apretado`). */
+  const elPB = catalogo.filter(function (u) { return u.name === 'Irizar PB'; })[0];
+  const cincuenta = { destino: 'Puerto Vallarta', gente: 50, unidad: 'autobus' };
+  const primeraVez = bot.pegaDatos(Object.assign({}, cincuenta), { autobus: elPB.id });
+  okQue('50 personas piden el PB (47): la primera vez NO se acepta y queda noCabe', !primeraVez.unidadId && primeraVez.noCabe && primeraVez.noCabe.nombre === 'Irizar PB');
+  const insiste = bot.pegaDatos(Object.assign({}, primeraVez), { autobus: elPB.id });
+  okQue('  si insiste con el MISMO autobús, el cliente manda: se acepta', insiste.unidadId === elPB.id && insiste.unidadNombre === 'Irizar PB' && !insiste.noCabe);
+  okQue('  y queda marcado para el equipo: 50 en 47 asientos', insiste.apretado && insiste.apretado.gente === 50 && insiste.apretado.asientos === 47);
+  const otro = bot.pegaDatos(Object.assign({}, primeraVez), { autobus: 'irizar' });
+  okQue('  pero si después del aviso pide OTRO que tampoco cabe (Century, 49), se le avisa de ése', !otro.unidadId && otro.noCabe && otro.noCabe.nombre === 'Irizar Century');
   ok('el i6S es 2023', porNombre('Irizar i6S').modelo, 2023);
   ok('el i6 es 2017', porNombre('Irizar i6').modelo, 2017);
   ok('las demás no llevan año (Century, PB, Neobus, Sprinter, Suburban)',

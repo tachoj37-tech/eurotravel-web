@@ -330,8 +330,11 @@ function instruccionesDelAgente(voz) {
     '· Si dice que todavía no sabe cuántos son («apenas estoy juntando gente»), NO insistas ni ' +
     'condiciones el precio a eso: sigue sin ese dato. «Ese» o «el G8» con «cuánto sale» o ' +
     '«quiero» es escogerlo: va en datos.autobus y se cotiza así.\n' +
-    '· Capacidad es capacidad: un autobús de 47 no lleva 48. Si escoge uno donde no caben, ' +
-    'díselo con los números y ofrécele los que sí. Nunca «apretados».\n' +
+    '· Capacidad: un autobús de 47 no lleva 48. Si escoge uno donde no caben, díselo con los ' +
+    'números UNA VEZ y ofrécele los que sí. Si aun así insiste con ese mismo autobús («no pasa ' +
+    'nada», «era aproximado», «así está bien»), EL CLIENTE MANDA: acéptalo sin discutir, ponlo ' +
+    'en datos.autobus y sigue con lo que falte; el equipo lo ve marcado en el ticket. Nunca ' +
+    'lo niegues dos veces (dictado del dueño, 21-sep-2026).\n' +
     /* 18-sep-2026: decía «y cualquier lugar a menos de dos horas de
        Guadalajara», y con eso la IA le dijo a una clienta real «Ayala está
        cerca, ¿es ida y vuelta el mismo día?» — Los Ayala está a 5 horas.
@@ -553,6 +556,11 @@ function textoDelContexto(c) {
      «confirmaba» el regreso a quien dijo que no regresa. */
   const soloIda = e.soloIda ? 'Viaje SOLO DE IDA, el cliente lo dijo: no preguntes el regreso ni lo confirmes ' +
     '(la fecha de regreso anotada es solo para el motor).\n' : '';
+  /* El cliente insistió en un autobús donde no caben (21-sep-2026): ya se
+     aceptó; que la IA no lo vuelva a discutir. */
+  const apretado = e.apretado ? 'El cliente insistió en el ' + e.apretado.nombre + ' (' + e.apretado.asientos +
+    ' asientos) para ' + e.apretado.gente + ' personas y ya se aceptó: no lo vuelvas a cuestionar ni a ofrecer ' +
+    'otros; el equipo lo ve marcado.\n' : '';
   const turnos = ((c && c.historial) || []).slice(-TURNOS_QUE_RECUERDA)
     .map(function (t) { return (t.de === 'cliente' ? 'Cliente: ' : 'Tú: ') + entendedor.recorta(String(t.texto || '').replace(/\s+/g, ' '), 220); });
   /* ------------------------------------------------------------
@@ -597,7 +605,7 @@ function textoDelContexto(c) {
     'que no haya pasado: de ESTE mes si ese día aún no pasa, si no del que sigue. Nunca brinques un mes de más.\n' +
     (sabido.length ? 'YA SE SABE DEL VIAJE: ' + sabido.join(', ') + '. No lo vuelvas a preguntar.\n'
       : (viaje ? '' : 'Todavía no se sabe nada del viaje.\n')) +
-    viaje + soloIda +
+    viaje + soloIda + apretado +
     (falta ? 'LO QUE SIGUE POR SABER: ' + falta + '.\n' : '') +
     (turnos.length ? 'ÚLTIMOS MENSAJES:\n' + turnos.join('\n') : '');
 }
