@@ -841,8 +841,12 @@ async function conversa(mensaje, opciones) {
     /* Sin `temperature`: Sonnet 5 la rechaza. La «temperatura baja» del
        8-sep-2026 (Falla 5: un vendedor que sigue reglas, no uno
        creativo) ahora la dan el razonamiento y las reglas del prompt. */
+    /* `o.esfuerzo` (21-sep-2026, «arregla que la IA tarde tanto»): las
+       regeneraciones —«ya preguntaste eso», «repetiste lo mismo»— no
+       necesitan pensar de nuevo todo el viaje, solo reformular; van en
+       `low` para que el segundo viaje a la IA no duplique la espera. */
     ? { model: modelo, max_tokens: TOPE_SALIDA_AGENTE,
-        thinking: { type: 'adaptive' }, output_config: { effort: ESFUERZO_AGENTE },
+        thinking: { type: 'adaptive' }, output_config: { effort: NIVELES.indexOf(o.esfuerzo) >= 0 ? o.esfuerzo : ESFUERZO_AGENTE },
         system: bloques, messages: [{ role: 'user', content: texto }] }
     /* Temperatura baja (reparación del 8-sep-2026, Falla 5): un vendedor
        que sigue reglas, no uno creativo. Sin este campo quedaba en 1.0. */
@@ -881,6 +885,9 @@ async function conversa(mensaje, opciones) {
     }
   };
 
+  /* Cuánto tardó cada viaje a la IA, en el registro (21-sep-2026): sin
+     esto, «a veces tarda más de 30 s» no se podía rastrear a un turno. */
+  const empezo = Date.now();
   try {
     const r = await pide('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -906,6 +913,9 @@ async function conversa(mensaje, opciones) {
     }
     const cuerpo = await r.json();
     entendedor.apuntaElCosto(cuerpo && cuerpo.usage, o.cliente, modelo);
+    console.log('[ia] tardó ' + (Date.now() - empezo) + ' ms' +
+      ' esfuerzo=' + (conSonnet ? (NIVELES.indexOf(o.esfuerzo) >= 0 ? o.esfuerzo : ESFUERZO_AGENTE) : 'haiku') +
+      (o.aviso ? ' (regeneración)' : ''));
     /* Se quedó sin espacio: no hay respuesta completa que leer. Se dice en
        el registro para que se note y se suba el tope. */
     if (cuerpo && cuerpo.stop_reason === 'max_tokens') {

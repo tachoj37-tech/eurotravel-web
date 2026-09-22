@@ -34,6 +34,10 @@ process.env.DUENO_WHATSAPP = '5213311112222';
 delete process.env.AVISOS_AL_DUENO;
 process.env.ANTHROPIC_API_KEY = 'k';
 process.env.AGENTE_IA = '1';
+/* Esta prueba hace más de 300 turnos con la IA de mentiras en un solo
+   proceso; sin esto, a media prueba «tope diario de IA» y todo cae al
+   guion (21-sep-2026). */
+process.env.TOPE_IA_POR_DIA = '5000';
 process.env.CONFIRMAR_PRECIOS = '1';
 process.env.SITIO_URL = 'https://eurotravel-web.vercel.app';
 delete process.env.BOT_HASTA_COTIZACION;   // como en producción: sin poner = encendido
@@ -150,7 +154,9 @@ titulo('después del ticket, lo que no corrige el viaje no lo contesta el bot');
 {
   /* La IA de mentiras contesta lo que contestó la de verdad el 13-sep. */
   const MENTIRA = { respuesta: 'Ya está apartado desde hace rato 🙌', datos: {}, accion: 'seguir' };
-  for (const frase of ['apártamelo ya', 'sí, todo bien', 'oye y cómo sé que no me van a estafar?',
+  /* «sí, todo bien» ya no está en esta lista: desde el 21-sep-2026 un
+     acuse no apaga el bot (ver el bloque de abajo). */
+  for (const frase of ['apártamelo ya', 'oye y cómo sé que no me van a estafar?',
     'me pasas tu RFC?', 'quiero hablar con una persona']) {
     limpia();
     const C = '5213366670020';
@@ -239,8 +245,63 @@ titulo('con la IA caída después del ticket, tampoco');
   const C = '5213366670040';
   await hastaElTicket(C);
   const antes = textos(C).length;
+  /* Cambió de lado el 21-sep-2026 (dictado: «en breve te lo paso está
+     bien»): una pregunta por el precio, aun sin IA, recibe «en breve» y el
+     bot sigue vivo. Antes: silencio y a la persona. */
   await dice('y cuánto sería más o menos?', C);   // laIA sigue en null: la IA no contesta
-  ok('el bot no escribe «en cuanto tenga tu precio…»', textos(C).slice(antes).length === 0);
+  const trasPrecio = textos(C).slice(antes).join('\n');
+  ok('«¿y cuánto?» sin IA recibe «en breve te paso tu cotización»', /en breve te paso tu cotizaci/i.test(trasPrecio) && textos(C).length - antes === 1);
+  ok('  sin ninguna cifra', !/\$|\d{4,}/.test(trasPrecio));
+  ok('  y el bot sigue vivo', !(tk.fichaDe(C) || {}).enManosDe);
+  const antesOk = textos(C).length;
+  await dice('ok gracias', C);
+  ok('«ok gracias» sin IA: no escribe nada', textos(C).slice(antesOk).length === 0);
+  ok('  y el bot sigue vivo', !(tk.fichaDe(C) || {}).enManosDe);
+  const antesRfc = textos(C).length;
+  await dice('me pasas tu RFC?', C);
+  ok('«RFC» sin IA: no escribe nada y pasa a la persona', textos(C).slice(antesRfc).length === 0 && (tk.fichaDe(C) || {}).enManosDe === 'dueno');
+}
+
+/* ============================================================ */
+titulo('un «ok» después del ticket no apaga el bot; un «¿y cuánto?» recibe «en breve» (21-sep-2026)');
+{
+  /* Dictado: «el ok, ten cuidado que no se apague cuando no debería» y
+     «en breve te lo paso está bien». Caso real: lead 26919490 dijo
+     «Perfecto» al resumen y el bot se apagó para siempre. */
+  const MENTIRA = { respuesta: 'Ya está apartado desde hace rato 🙌', datos: {}, accion: 'seguir' };
+  for (const frase of ['ok', 'Perfecto', 'sí, todo bien', 'muchas gracias', 'va, quedo pendiente', '👍']) {
+    limpia();
+    const C = '5213366670060';
+    await hastaElTicket(C);
+    laIA = function () { return MENTIRA; };
+    const antes = textos(C).length;
+    await dice(frase, C);
+    ok('«' + frase + '» → el bot no escribe nada (escribió ' + textos(C).slice(antes).length + ')', textos(C).slice(antes).length === 0);
+    ok('  y el bot SIGUE vivo (no pasa a la persona)', !(tk.fichaDe(C) || {}).enManosDe);
+  }
+  for (const frase of ['y cuánto sale?', 'ya tienes el precio?', 'cuánto sería más o menos', 'me pasas la cotización?', 'qué costo tiene']) {
+    limpia();
+    const C = '5213366670061';
+    await hastaElTicket(C);
+    laIA = function () { return { respuesta: 'Serían como $38,000 más o menos 🙌', datos: {}, accion: 'seguir' }; };
+    const antes = textos(C).length;
+    await dice(frase, C);
+    const tras = textos(C).slice(antes).join('\n');
+    ok('«' + frase + '» → «en breve te paso tu cotización», sin precio', /en breve te paso tu cotizaci/i.test(tras) && !/\$|38/.test(tras) && textos(C).length - antes === 1);
+    ok('  y el bot sigue vivo', !(tk.fichaDe(C) || {}).enManosDe);
+  }
+  /* Y después del «ok», una pregunta por el precio todavía se contesta:
+     el bot no se apagó con el acuse. */
+  limpia();
+  const D = '5213366670062';
+  await hastaElTicket(D);
+  laIA = function () { return MENTIRA; };
+  await dice('ok', D);
+  const antes2 = textos(D).length;
+  await dice('y ya tienes el precio?', D);
+  ok('tras el «ok», «¿ya tienes el precio?» recibe «en breve»', /en breve te paso tu cotizaci/i.test(textos(D).slice(antes2).join('\n')));
+  /* Pedir fotos después del «ok» tampoco se pierde. */
+  ok('  y sigue vivo', !(tk.fichaDe(D) || {}).enManosDe);
 }
 
 /* ============================================================ */
@@ -265,7 +326,9 @@ titulo('pero una corrección del viaje sí la hace');
   const antes2 = textos(C).length;
   await dice('si asi esta bien', C);
   ok('  y a su «sí» ya no le contesta', textos(C).slice(antes2).length === 0);
-  ok('  y pasa a la persona', (tk.fichaDe(C) || {}).enManosDe === 'dueno');
+  /* Cambió de lado el 21-sep-2026: el «sí» es un acuse y ya no apaga el
+     bot (dictado: «ten cuidado que no se apague cuando no debería»). */
+  ok('  y el bot sigue vivo', !(tk.fichaDe(C) || {}).enManosDe);
 }
 
 /* ============================================================ */

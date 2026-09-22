@@ -1111,7 +1111,9 @@ async function precioDe(envio, opciones) {
    Si no hay clave, si falla, o si la IA no entendio tampoco, se
    deja la respuesta del guion. Nunca truena por esto.
    ------------------------------------------------------------ */
-const TOPE_IA_POR_DIA = 300;
+/* Por instancia y por día. Las pruebas largas lo suben con la variable;
+   en producción se queda en 300 (21-sep-2026). */
+const TOPE_IA_POR_DIA = Number(process.env.TOPE_IA_POR_DIA) > 0 ? Number(process.env.TOPE_IA_POR_DIA) : 300;
 let gastadasHoy = 0;
 let diaDelConteo = '';
 
@@ -2990,6 +2992,19 @@ async function loQueDiceElAgente(envio) {
        igual. Ver «CON EL TICKET MANDADO» más abajo. */
     if (String(process.env.BOT_HASTA_COTIZACION || '1').trim() === '1' &&
         viajeDeLaFicha && viajeDeLaFicha.estado === 'pedido') {
+      /* Sin IA también (21-sep-2026): un «¿y cuánto?» recibe «en breve» y
+         un «ok» no apaga el bot. Lo demás pasa a una persona, como antes. */
+      if (preguntaPorElPrecio(texto)) {
+        console.log('[agente] sin IA: pregunta por el precio después del ticket, «en breve»');
+        await manda({ numeroDeOrigen: envio.numeroDeOrigen, para: cliente, texto: EN_BREVE_EL_PRECIO, pasaAPersona: false, escribio: '[agente · en breve]' });
+        agente.recuerda(cliente, 'cliente', texto);
+        agente.recuerda(cliente, 'bot', EN_BREVE_EL_PRECIO);
+        return true;
+      }
+      if (esSoloUnAcuse(texto)) {
+        agente.recuerda(cliente, 'cliente', texto);
+        return true;
+      }
       console.log('[relevo] la IA no contestó y el ticket ya salió: el chat pasa a una persona, el bot no contesta');
       tickets.anotaEtapa(cliente, tickets.fichaDe(cliente).etapa, { enManosDe: 'dueno' });
       agente.recuerda(cliente, 'cliente', texto);
@@ -3325,6 +3340,33 @@ async function loQueDiceElAgente(envio) {
         agente.recuerda(cliente, 'bot', queCorrijo);
         return true;
       }
+      /* ------------------------------------------------------------
+         UN «OK» NO APAGA EL BOT; UN «¿Y CUÁNTO?» SE CONTESTA — 21-sep-2026
+         ------------------------------------------------------------
+         Dictado del dueño: «el ok, ten cuidado que no se apague cuando no
+         debería» y «en breve te lo paso está bien». Antes cualquier
+         mensaje que no corrigiera el viaje pasaba el chat a una persona y
+         el bot se apagaba: al «Perfecto» de un cliente real (lead
+         26919490) le siguió silencio para siempre. Ahora:
+           · un acuse solo («ok», «perfecto», «gracias», «sí, todo bien»,
+             👍) no se contesta y el bot SIGUE vivo;
+           · una pregunta por el precio se contesta con «en breve» sin
+             dar precio y el bot sigue vivo;
+           · lo demás (RFC, «apártamelo», «hablar con alguien») sigue
+             como el 13-sep: silencio y lo atiende una persona.
+         ------------------------------------------------------------ */
+      if (preguntaPorElPrecio(texto)) {
+        console.log('[agente] pregunta por el precio después del ticket: «en breve», el bot sigue vivo');
+        await manda({ numeroDeOrigen: envio.numeroDeOrigen, para: cliente, texto: EN_BREVE_EL_PRECIO, pasaAPersona: false, escribio: '[agente · en breve]' });
+        agente.recuerda(cliente, 'cliente', texto);
+        agente.recuerda(cliente, 'bot', EN_BREVE_EL_PRECIO);
+        return true;
+      }
+      if (esSoloUnAcuse(texto)) {
+        console.log('[agente] acuse después del ticket: el bot no escribe y sigue vivo');
+        agente.recuerda(cliente, 'cliente', texto);
+        return true;
+      }
       console.log('[relevo] ticket mandado y el mensaje no cambia el viaje: el chat pasa a una persona, el bot no contesta');
       tickets.anotaEtapa(cliente, fichaAhora.etapa, { enManosDe: 'dueno' });
       agente.recuerda(cliente, 'cliente', texto);
@@ -3369,7 +3411,8 @@ async function loQueDiceElAgente(envio) {
     if (ultimoDelBot && parecido(dicho.respuesta, ultimoDelBot.texto) > 0.8) {
       console.error('[agente] repitió casi lo mismo que su último mensaje; se regenera');
       const otra = await agente.conversa(texto, Object.assign({}, opcionesDeLaIA, { estado: nuevo,
-        aviso: 'Ya dijiste eso con esas palabras («' + String(ultimoDelBot.texto).slice(0, 120) + '»); dilo distinto o no lo digas.' }));
+        aviso: 'Ya dijiste eso con esas palabras («' + String(ultimoDelBot.texto).slice(0, 120) + '»); dilo distinto o no lo digas.',
+        esfuerzo: 'low' }));
       if (otra && otra.accion === 'seguir' && otra.respuesta) dicho.respuesta = otra.respuesta;
     }
   }
@@ -3389,7 +3432,7 @@ async function loQueDiceElAgente(envio) {
           ? 'Ya escogió el ' + nuevo.unidadNombre + '. NO preguntes cuántos son: para rentar un autobús no hace falta. Sigue con lo que falta o pásale el precio.'
           : 'NO preguntes hora, dirección ni nombre: eso son datos del contrato y se piden hasta que mande el comprobante. Sigue con lo que falta o con el precio.');
       const otra = await agente.conversa(texto, Object.assign({}, opcionesDeLaIA, {
-        estado: nuevo, falta: conversacion.loQueFalta(nuevo) || null, aviso: aviso
+        estado: nuevo, falta: conversacion.loQueFalta(nuevo) || null, aviso: aviso, esfuerzo: 'low'
       }));
       const bien = function (r) {
         const despues = conversacion.pegaDatos(nuevo, r.datos);
@@ -5881,6 +5924,35 @@ async function atiendeKommoTrabajo(a, b, esWeb, modo) {
    viaje queda en `viajes` de la ficha y en el chat de Kommo.
    ------------------------------------------------------------ */
 const MARCA_NUEVA_CONVERSACION = '[── nueva conversación ──]';
+
+/* Después del ticket (21-sep-2026): una pregunta por el precio se contesta
+   con esto, sin precio y sin apagar el bot. Dictado: «en breve te lo paso
+   está bien». */
+const EN_BREVE_EL_PRECIO = 'En breve te paso tu cotización 🙌';
+/* Un acuse solo («ok», «sí, todo bien», «perfecto, gracias», «va, quedo
+   pendiente», 👍): no se contesta y NO apaga el bot. Más ancho que el
+   «solo gracias» de la puerta porque aquí el «sí» y el «todo bien» son la
+   respuesta natural al «¿Todo bien?» del resumen. */
+const PALABRAS_DE_ACUSE = new Set(['si', 'sii', 'siii', 'claro', 'dale', 'orale', 'andale', 'esta', 'estamos', 'todo',
+  'bien', 'perfecto', 'ok', 'okey', 'okay', 'oki', 'va', 'vale', 'sale', 'listo', 'gracias', 'muchas', 'excelente',
+  'genial', 'super', 'de', 'acuerdo', 'entendido', 'enterado', 'quedo', 'quedamos', 'pendiente', 'pendientes', 'al',
+  'atento', 'atenta', 'espero', 'esperamos', 'entonces', 'ahi', 'nos', 'vemos', 'muy', 'amable', 'por', 'la',
+  'atencion', 'buen', 'buena', 'dia', 'tarde', 'noche', 'tardes', 'noches', 'dias', 'saludos', 'info', 'informacion',
+  'correcto', 'exacto', 'asi', 'es', 'eso', 'mismo', 'me', 'parece', 'gustaria', 'excelente', 'estupendo', 'aja']);
+function esSoloUnAcuse(texto) {
+  const crudo = String(texto || '');
+  if (puerta.soloAgradecimiento(crudo)) return true;
+  if (/[?¿]/.test(crudo)) return false;
+  const t = puerta.limpia(crudo).replace(/[^a-z0-9ñ\s]/g, ' ').replace(/\s+/g, ' ').trim();
+  if (!t) return false;
+  const palabras = t.split(' ');
+  return palabras.length <= 6 && palabras.every(function (p) { return PALABRAS_DE_ACUSE.has(p); });
+}
+function preguntaPorElPrecio(texto) {
+  const t = conversacion.normaliza(String(texto || ''));
+  return /\b(precio|precios|costo|costos|tarifa|tarifas|cotizacion|presupuesto|cuanto|cuantos? (?:sale|cuesta|seria|es)|en cuanto|ya (?:tienes|tienen|esta|quedo) (?:el|la|mi))\b/.test(t) &&
+    !/\b(fotos?|video)\b/.test(t);
+}
 async function empiezaDeNuevo(numero) {
   if (!numero) return;
   if (almacen.hayAlmacen()) {
