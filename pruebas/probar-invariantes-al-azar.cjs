@@ -133,6 +133,9 @@ function peticion(cuerpo, llave) {
           ok('no sale una cifra de dinero', !/\$\s?\d|\d{1,3}(?:,\d{3})+\s*(?:pesos|mxn)?|\bmil pesos\b/i.test(t), t.slice(0, 120) + ' · ' + donde);
           ok('no menciona al otro lead', t.indexOf(otra) < 0 && t.indexOf(otra.split(' ')[1]) < 0, t.slice(0, 160) + ' · ' + donde);
           ok('no manda un texto kilométrico', t.length <= 1500, t.length + ' letras · ' + donde);
+          /* 22-sep-2026: nada de negritas de WhatsApp (en Facebook e
+             Instagram salen los asteriscos a la vista). */
+          ok('no sale ningún asterisco', t.indexOf('*') < 0, t.slice(0, 120) + ' · ' + donde);
         }
       }
     }
