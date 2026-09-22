@@ -441,3 +441,52 @@ almacén. Lo que salió y lo que se arregló:
     return_url de la cuenta). Si el dueño quiere, se pone la llave secreta
     de la integración «Claude Pruebas» en Vercel.
 27. `charlas` en 0 no es falla: la plática se borra al salir el ticket.
+
+---
+
+## 21-sep-2026 (noche) · Instagram y Facebook encendidos, y el hueco del diseñador
+
+**Estado en Kommo (verificado por API después de guardar):**
+
+- EuroBot (84760), disparador 37852198 («En un mensaje recibido desde canales
+  seleccionados, con una pausa de un día»): canales **60430** (WhatsApp real),
+  **60446** (Instagram «Eurotravel | Renta de trasporte turístico»), **60448**
+  (Facebook, mismo nombre, sin icono en Kommo) y **60452** (PRUEBAS).
+- Los 13 bloques de mensaje: `send_to_all_chat_sources:false` y esos cuatro
+  canales. El JSON de referencia se regenera con
+  `CANALES=60430,60452,60446,60448 LISTA=1 node scripts/arma-bot-kommo-v2.mjs pendiente/kommo-bot/EuroBot-real.json`.
+- Facebook (60448) NO aparece en el selector de canales de los bloques del
+  diseñador (solo en el del disparador). Kommo aceptó el id por API, pero
+  **queda por probar con un mensaje real desde Facebook**. Si no contesta:
+  quitar 60448 del disparador (misma llamada de abajo) para que no abra
+  sesiones mudas.
+
+**Hallazgo: guardar desde el diseñador abre canales.** Al guardar, el
+diseñador manda el bot con `send_to_all_chat_sources:true` y sin lista en
+algunos bloques (el 21-sep por la mañana quedó así «Va 🚐 Cuéntame…»; hoy
+iba a quedar también el saludo). Con `true` el bloque escribe por CUALQUIER
+canal: es el hueco por el que el bot le escribió a Yazmin el 18-sep. Regla:
+**después de cualquier guardado en el diseñador, leer el bot por API y
+comprobar que ningún bloque tenga `true`.**
+
+**Cómo se lee y se escribe sin el diseñador** (desde la consola de una
+pestaña de Kommo con sesión; todo con `credentials:'include'` y la
+cabecera `X-Requested-With: XMLHttpRequest`):
+
+- Leer el bot: `GET /ajax/v4/bots/84760/?with=text` → `_embedded.items[0]`
+  con `text` (JSON en cadena) y `positions`.
+- Guardar el bot: `PUT /ajax/v2/salesbot/84760` con `{salesbot: {…el objeto
+  del GET sin _links…, text: '<JSON corregido>'}}` (JSON, no formulario).
+- Leer disparadores: `POST /ajax/v4/triggers/bots/list` (formulario:
+  `filter[bots_ids][]=84760&type_functionalities[]=0`) → `actions[]` con
+  `conditions.chat_sources`.
+- Guardar el disparador: `POST /ajax/v4/triggers/complex` con
+  `{update:[{id, handler_id:5081574, handler_code:'amocrm', handler_type:1,
+  action:'send_chat_message', delay:0, event_type:146,
+  execution_condition:{id:146, name:'incoming_outgoing_message_first_time_that_cool_down',
+  chat_sources:[{id:'…'}], cool_down:86400, message_type:'incoming'},
+  conditions:{segments:[], groups:[], chat_sources:[…], cool_down:86400},
+  settings:{bot_id:84760, silent:0, …}}]}`.
+- Si hay que guardar desde el diseñador (p. ej. el disparador), poner antes
+  un gancho en `XMLHttpRequest.prototype.send` que reemplace `salesbot.text`
+  del PUT por la versión buena leída con el GET.
