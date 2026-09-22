@@ -33,7 +33,11 @@ const TEXTOS = {
   /* 17-sep-2026, decisión final: 3 botones (Nueva cotización · Cotización
      anterior · Abonar contrato) y el agente por texto, en el mismo
      mensaje, para no duplicar el saludo. */
-  saludoConAgente: '¡Qué tal! Estás con *Eurotravel* 🚐\nRenta de autobuses y Sprinter para tu grupo.\n¿Qué necesitas?\n\nSi prefieres hablar con un agente, escribe *agente*.',
+  /* 21-sep-2026, dictado del dueño: «de momento quita la opción de hablar
+     con un agente en el mensaje de saludo». Escribir «agente» sigue
+     pasando con una persona (candado del cerebro); solo no se anuncia. El
+     nombre se conserva para no tocar el generador. */
+  saludoConAgente: '¡Qué tal! Estás con *Eurotravel* 🚐\nRenta de autobuses y Sprinter para tu grupo.\n¿Qué necesitas?',
   /* «Mi cotización anterior» pasa del tope de 20 letras por botón de
      WhatsApp; queda «Cotización anterior». */
   botones: ['Nueva cotización', 'Cotización anterior', 'Hablar con un agente'],

@@ -77,6 +77,10 @@ function peticion(cuerpo, cabeceras, llave) {
     '&data%5Bcontact_phone%5D=%2B52+1+344+102+9307&return_url=' + encodeURIComponent(bueno.return_url);
   const f = kommo.leeAvisoDeWidget(formulario);
   ok('un cuerpo de formulario (data[message]=…) se lee igual', f.leadId === '26818280' && f.mensaje === 'hola que tal' && f.numero === '529926818280' && f.token === 'x.y.z');
+  /* semgrep, 21-sep-2026: una llave `data[__proto__][x]` en el formulario
+     escribiría en el prototipo de TODOS los objetos. Se ignora. */
+  kommo.leeAvisoDeWidget('token=x.y.z&data%5B__proto__%5D%5Bcontaminado%5D=1&data%5Blead_id%5D=26818280&return_url=' + encodeURIComponent(bueno.return_url));
+  ok('una llave __proto__ en el formulario no contamina los objetos', ({}).contaminado === undefined);
   const f2 = kommo.leeAvisoDeWidget('token=x.y.z&data=' + encodeURIComponent(JSON.stringify(bueno.data)) + '&return_url=' + encodeURIComponent(bueno.return_url));
   ok('un formulario con data en JSON también', f2.leadId === '26818280' && f2.mensaje === 'hola');
 

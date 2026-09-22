@@ -1290,6 +1290,10 @@ function comoDestino(crudo) {
      salió un ticket sin precio. Si al quitar saludos, cortesías y
      palabras de intención no queda ni una letra, no nombró un lugar. */
   if (!normaliza(crudo).replace(SALUDO_O_INTENCION, ' ').replace(/[^a-z]/g, '')) return null;
+  /* Presentarse no es nombrar un lugar (21-sep-2026, conversaciones al
+     azar: «me llamo Ramiro Pérez» quedó como destino *Me Llamo Ramiro
+     Pérez* en el guion de respaldo). */
+  if (/^\s*(?:me llamo|mi nombre es|soy|somos|nos llamamos)\b/.test(normaliza(crudo))) return null;
   const d = limpiaDestino(crudo);
   const n = normaliza(d);
   if (!n || n.length < 3) return null;

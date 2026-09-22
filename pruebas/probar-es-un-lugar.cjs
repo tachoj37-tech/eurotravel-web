@@ -67,6 +67,11 @@ titulo('comoDestino · lo que NO es un lugar');
     ['quiero cotizar un viaje', 'una intención sin lugar'],
     ['me interesa rentar una sprinter', 'una unidad, no un lugar'],
     ['informacion de precios porfa', 'una intención sin lugar'],
+    /* 21-sep-2026, conversaciones al azar: «me llamo Ramiro Pérez» quedó
+       como destino *Me Llamo Ramiro Pérez* en el guion de respaldo. */
+    ['me llamo ramiro pérez', 'un nombre'],
+    ['soy mariana', 'un nombre'],
+    ['mi nombre es toño', 'un nombre'],
     ['', 'nada']
   ];
   for (const [t, porque] of colados) {

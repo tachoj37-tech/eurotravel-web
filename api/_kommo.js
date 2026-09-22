@@ -412,6 +412,10 @@ function deFormulario(texto) {
     const llave = par[0], valor = par[1];
     const partes = llave.replace(/\]/g, '').split('[').filter(function (p) { return p !== ''; });
     if (!partes.length) continue;
+    /* Una llave como `data[__proto__][x]` escribiría en el prototipo de
+       TODOS los objetos (semgrep, 21-sep-2026). Esas llaves no existen en
+       un aviso de Kommo: se ignoran. */
+    if (partes.some(function (p) { return p === '__proto__' || p === 'constructor' || p === 'prototype'; })) continue;
     let nodo = raiz;
     for (let i = 0; i < partes.length - 1; i++) {
       if (!nodo[partes[i]] || typeof nodo[partes[i]] !== 'object') nodo[partes[i]] = {};
