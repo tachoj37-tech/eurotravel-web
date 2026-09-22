@@ -6156,7 +6156,7 @@ async function trabajoDeKommo(crudo, modo) {
     }
     /* «pago»: sin modo para el widget, callado y fin → salida «silencio» → parar. */
     const esPago = decision.modo === 'pago';
-    const datosPuerta = { modo: esPago ? '' : decision.modo, texto: decision.texto, status: esPago ? 'fin' : 'sigue', fotos: '', pie: '', callado: esPago ? 'si' : 'no' };
+    const datosPuerta = { modo: esPago ? '' : decision.modo, texto: kommo.sinNegritas(decision.texto), status: esPago ? 'fin' : 'sigue', fotos: '', pie: '', callado: esPago ? 'si' : 'no' };
     const handlersPuerta = [{ handler: 'goto', params: { type: 'question', step: 1 } }];
     console.log('[kommo-puerta] lead ' + aviso.leadId + ' · ' + decision.modo);
     const seguidoPuerta = await kommo.continuaSalesbot(aviso.returnUrl, { data: datosPuerta, execute_handlers: handlersPuerta });
@@ -6411,7 +6411,8 @@ async function trabajoDeKommo(crudo, modo) {
      widget lo saca por la salida «silencio» → parar, sin mandar un
      mensaje vacío. */
   const callado = status === 'fin' && !texto && !fotos;
-  const datos = { status: status, texto: texto, fotos: fotos ? fotos.carpeta : '', pie: pieDeFoto, callado: callado ? 'si' : 'no' };
+  /* Sin asteriscos de negrita en nada que salga al cliente (22-sep-2026). */
+  const datos = { status: status, texto: kommo.sinNegritas(texto), fotos: fotos ? fotos.carpeta : '', pie: kommo.sinNegritas(pieDeFoto), callado: callado ? 'si' : 'no' };
   /* Lo que de verdad le llega al cliente, recortado, para poder revisar
      una plática sin abrir Kommo (21-sep-2026: «me mandó algo de JSON» y no
      había forma de ver qué salió). El registro es privado del sistema. */

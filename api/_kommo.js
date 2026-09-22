@@ -536,6 +536,17 @@ function handlersDeEnvios(envios, opciones) {
    «Mensaje» del bot con `{{json.texto}}`. Las fotos van como liga (el
    bloque no puede adjuntar dinámico) y los botones como renglones.
    ------------------------------------------------------------ */
+/* Sin negritas de WhatsApp (22-sep-2026, dictado: «quita los asteriscos de
+   una vez»). El bot ya escribe por Facebook e Instagram, donde `*texto*`
+   sale con los asteriscos a la vista. Se quitan de TODO lo que va al
+   cliente por Kommo, en cualquier canal: primero los pares (*Irizar i6S*
+   → Irizar i6S) y luego cualquier asterisco suelto. */
+function sinNegritas(texto) {
+  return String(texto == null ? '' : texto)
+    .replace(/\*([^*\n]{1,300})\*/g, '$1')
+    .replace(/\*/g, '');
+}
+
 function textoParaKommo(envios, opciones) {
   const o = opciones || {};
   const sitio = String(o.sitio || '').replace(/\/+$/, '');
@@ -586,7 +597,7 @@ module.exports = {
   hayKommo, pruebaDeVida, mueveDeEtapa, guardaPrecio, leadsConPrecio, anotaEnLead, notaDeTicket,
   leadsConVentaReciente, telefonoDelContacto,
   /* El paso EuroBot. */
-  leeAvisoDeWidget, verificaTokenDeWidget, handlersDeEnvios, textoParaKommo, fotosParaKommo, continuaSalesbot, uuidDeFoto, carpetaDeFoto,
+  leeAvisoDeWidget, verificaTokenDeWidget, handlersDeEnvios, textoParaKommo, fotosParaKommo, continuaSalesbot, uuidDeFoto, carpetaDeFoto, sinNegritas,
   /* Para las pruebas y para el día del alta. */
   config, mapaDeEtapas, pide
 };

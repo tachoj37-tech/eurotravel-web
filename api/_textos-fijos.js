@@ -32,7 +32,7 @@ const TEXTOS = {
   /* Menú numerado (17-sep-2026): Kommo no manda listas de WhatsApp y con
      4 botones parte el saludo en 3 + 1. El cliente contesta con el número
      o con la palabra. */
-  saludoNumerado: '¡Qué tal! Estás con Eurotravel 🚐\nRenta de autobuses y Sprinter para tu grupo.\nResponde con un número:\n*1* Nueva cotización\n*2* Cotización anterior\n*3* Abonar contrato\n*4* Hablar con un agente',
+  saludoNumerado: '¡Qué tal! Estás con Eurotravel 🚐\nRenta de autobuses y Sprinter para tu grupo.\nResponde con un número:\n1 Nueva cotización\n2 Cotización anterior\n3 Abonar contrato\n4 Hablar con un agente',
   /* 17-sep-2026, decisión final: 3 botones (Nueva cotización · Cotización
      anterior · Abonar contrato) y el agente por texto, en el mismo
      mensaje, para no duplicar el saludo. */
@@ -54,7 +54,7 @@ const TEXTOS = {
   abonar: 'Va 🙌 Manda tu comprobante por aquí; el equipo lo revisa y te confirma el abono.',
 
   /* Salida fácil a una persona, en la cotización nueva (spec §5). */
-  ofrecerPersona: 'Perdón, no te estoy entendiendo bien 🙏 ¿Quieres que te atienda una persona? Contéstame *sí* y en un momento te atiende alguien del equipo; o sigue por aquí y lo intento de nuevo.',
+  ofrecerPersona: 'Perdón, no te estoy entendiendo bien 🙏 ¿Quieres que te atienda una persona? Contéstame sí y en un momento te atiende alguien del equipo; o sigue por aquí y lo intento de nuevo.',
   pasoAPersona: 'Va, en un momento te atiende alguien del equipo 🙌',
 
   /* Nota interna en el lead cuando llega un comprobante. */
@@ -67,7 +67,7 @@ const TEXTOS = {
      (un «buenas tardes»). Puede venir de alguien que SÍ apretó «Nueva
      cotización» —ese botón lo contesta Kommo y no llega aquí—, así que no
      se manda con una persona: se pregunta una vez. */
-  preguntaSiCotiza: '¿Te ayudo a cotizar un viaje? 🚐 Dime a dónde van, cuándo y cuántos son. Si es por un contrato o un pago, escribe *agente*.'
+  preguntaSiCotiza: '¿Te ayudo a cotizar un viaje? 🚐 Dime a dónde van, cuándo y cuántos son. Si es por un contrato o un pago, escribe agente.'
 };
 
 module.exports = TEXTOS;

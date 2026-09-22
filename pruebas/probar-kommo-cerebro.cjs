@@ -465,6 +465,22 @@ function peticion(cuerpo, cabeceras, llave) {
   ok('con la instancia reciclada, la plática del almacén salva la cotización',
     cReciclada && cReciclada.data.status === 'sigue');
 
+  /* 22-sep-2026: «quita los asteriscos de una vez». Lo que la IA diga con
+     negritas de WhatsApp sale al cliente sin asteriscos, en cualquier
+     canal (en Facebook e Instagram se veían tal cual). */
+  {
+    const agenteN = require(path.join(RAIZ, 'api/_agente.js'));
+    const conversaAntes = agenteN.conversa;
+    agenteN.conversa = async function () { return { respuesta: 'Va, con la *Irizar i6S* 🙌 ¿Qué fecha salen? Te recomiendo la *Sprinter* para 12', datos: {}, accion: 'seguir' }; };
+    process.env.ANTHROPIC_API_KEY = 'clave-de-mentiras';
+    agenteN.olvida('529926900302');
+    const cN = await alCerebro(26900302, 'vamos a vallarta');
+    delete process.env.ANTHROPIC_API_KEY; agenteN.conversa = conversaAntes;
+    const textoN = String((cN && cN.data && cN.data.texto) || '');
+    ok('lo que sale al cliente no lleva asteriscos de negrita: ' + textoN.slice(0, 50), textoN.length > 0 && textoN.indexOf('*') < 0 && /Irizar i6S/.test(textoN));
+    ok('  y el texto sin asteriscos es el mismo', /Sprinter para 12/.test(textoN));
+  }
+
   /* 21-sep-2026 (noche), lead real 26919490: en una instancia fría la
      puerta pública ya había escrito el mensaje entrante al almacén; el
      cerebro sembró el historial desde ahí (con ese mismo mensaje) y luego
