@@ -490,3 +490,17 @@ cabecera `X-Requested-With: XMLHttpRequest`):
 - Si hay que guardar desde el diseñador (p. ej. el disparador), poner antes
   un gancho en `XMLHttpRequest.prototype.send` que reemplace `salesbot.text`
   del PUT por la versión buena leída con el GET.
+
+### 22-sep-2026 (madrugada) · Facebook: la fuente buena es 60472
+
+El canal 60448 era una conexión rota de la página de Facebook (sin icono,
+Kommo no lo ofrecía para escribir): el bot recibía por ahí pero no podía
+contestar, y la sesión se quedaba atorada en el saludo («Bots: 1» en el
+lead, nada en el chat). Al volver a conectar la página en Kommo (Ajustes →
+Integraciones → Facebook → Messenger → «Agregar página» → «Eurotravel Renta
+de Autobuses», sin pasar por Meta) Kommo creó la fuente **60472** (Messenger,
+icono de Facebook) y **60474** (Comentarios, sin icono; no va en el bot).
+Disparador 37852198 y los 13 bloques quedaron en 60430+60446+60452+60472.
+Las conversaciones abiertas con la fuente vieja no se recuperan: el cliente
+tiene que escribir de nuevo. Cuidado: en la configuración de Facebook, el
+botón sin texto del renglón «Messenger» QUITA la página.
