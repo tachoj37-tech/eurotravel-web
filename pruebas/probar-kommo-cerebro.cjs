@@ -465,6 +465,35 @@ function peticion(cuerpo, cabeceras, llave) {
   ok('con la instancia reciclada, la plática del almacén salva la cotización',
     cReciclada && cReciclada.data.status === 'sigue');
 
+  /* 21-sep-2026 (noche), lead real 26919490: en una instancia fría la
+     puerta pública ya había escrito el mensaje entrante al almacén; el
+     cerebro sembró el historial desde ahí (con ese mismo mensaje) y luego
+     lo volvió a apuntar. La IA vio «Buenas tardes…» dos veces. Con el
+     almacén devolviendo el mensaje de ESTE turno como fila más nueva, el
+     historial lo tiene una sola vez. */
+  const agente = require(path.join(RAIZ, 'api/_agente.js'));
+  const mensajesDeAntes = almacen.mensajesDe;
+  almacen.hayAlmacen = function () { return true; };
+  almacen.leeCharla = async function () { return null; };
+  almacen.leeFicha = async function () { return null; };
+  almacen.mensajesDe = async function (n) {
+    return n === '529926900301'
+      ? [{ de: 'cliente', texto: 'buenas tardes, quiero cotizar a Toluca', cuando: '2026-09-21T01:50:32Z' }]
+      : null;
+  };
+  /* Con IA (de mentiras): la siembra vive en el camino del agente. */
+  const conversaAntes = agente.conversa;
+  agente.conversa = async function () { return { respuesta: '¿Cuántos son los que viajan?', datos: { destino: 'Toluca' }, accion: 'seguir' }; };
+  process.env.ANTHROPIC_API_KEY = 'clave-de-mentiras';
+  agente.olvida('529926900301');
+  await alCerebro(26900301, 'buenas tardes, quiero cotizar a Toluca');
+  delete process.env.ANTHROPIC_API_KEY; agente.conversa = conversaAntes;
+  almacen.hayAlmacen = hubo; almacen.leeCharla = leeCharlaAntes; almacen.leeFicha = leeFichaAntes; almacen.mensajesDe = mensajesDeAntes;
+  const vecesCliente = agente.historialDe('529926900301')
+    .filter(function (t) { return t.de === 'cliente' && /Toluca/.test(t.texto); }).length;
+  ok('el mensaje de este turno, ya guardado en el almacén, queda UNA vez en el historial (no dos): ' + vecesCliente,
+    vecesCliente === 1);
+
   titulo('19-sep: dos sesiones del bot contestando el MISMO mensaje');
   /* Caso real, lead 26878860 (Lucina). El 18-sep le salió el saludo y su
      sesión quedó estacionada esperando que apretara un botón. Contestó 25

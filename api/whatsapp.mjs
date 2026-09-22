@@ -2732,7 +2732,14 @@ async function loQueDiceElAgente(envio) {
          ella: una instancia recién levantada no debe volver a leerle a la
          IA el viaje anterior (17-sep-2026). */
       const corte = filas.findIndex(function (f) { return String(f.texto || '') === MARCA_NUEVA_CONVERSACION; });
-      const utiles = corte >= 0 ? filas.slice(0, corte) : filas;
+      let utiles = corte >= 0 ? filas.slice(0, corte) : filas;
+      /* El mensaje de ESTE turno ya suele estar en el almacén: la puerta
+         pública lo escribe antes de que corra el cerebro. Si es la fila
+         más nueva se salta, porque abajo `recuerda` lo apunta de todos
+         modos. Sin esto la IA lo veía dos veces (21-sep-2026, lead real
+         26919490: «Cliente: Buenas tardes… / Cliente: Buenas tardes…»). */
+      const deAhora = String(texto || '').trim().slice(0, 4000);
+      if (utiles.length && utiles[0].de === 'cliente' && String(utiles[0].texto || '').trim() === deAhora) utiles = utiles.slice(1);
       agente.siembraHistorial(cliente, utiles.slice().reverse().map(function (f) {
         return { de: f.de === 'cliente' ? 'cliente' : 'bot', texto: f.texto };
       }));
