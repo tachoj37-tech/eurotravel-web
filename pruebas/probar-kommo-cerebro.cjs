@@ -591,6 +591,20 @@ function peticion(cuerpo, cabeceras, llave) {
       notasB.every(function (n) { return !/Mazatl|P[eé]rez|i6S/.test(n.body[0].params.text); }));
   }
 
+  titulo('21-sep: una foto a media plática llega como «imagen» y es un comprobante');
+  {
+    /* El dueño mandó una foto y el bot (Sonnet) contestó «me llegó la imagen
+       pero no la puedo ver bien, ¿qué es?». Criterio del dueño: las fotos
+       son abonos. Aunque la IA esté encendida, esto no es para la IA. */
+    const notasAntes = notas.length;
+    const foto = await conSesion(26838770, 'imagen', 'kommo-trabajo');
+    ok('«imagen» → acuse de pago y el bot para', foto.status === 'fin' && foto.texto === TEXTOS_FIJOS.comprobanteRecibido);
+    ok('  con nota de comprobante en SU lead', notas.length === notasAntes + 1 && /\/leads\/26838770\/notes$/.test(notas[notasAntes].url));
+    const audio = await conSesion(26838770, 'audio', 'kommo-trabajo');
+    ok('«audio» → pide que lo escriba por texto, y para', audio.status === 'fin' && audio.texto === TEXTOS_FIJOS.audioRecibido);
+    ok('  sin nota de comprobante', notas.length === notasAntes + 1);
+  }
+
   titulo('la primera puerta reenvía el aviso tal cual');
   /* Kommo manda un formulario; la segunda puerta lo recibe byte por byte
      como texto plano (con application/json Vercel lo parseaba, fallaba y

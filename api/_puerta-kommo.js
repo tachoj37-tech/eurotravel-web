@@ -121,9 +121,27 @@ function anunciaPago(texto) {
    `aviso` es lo que ya leyó `leeAvisoDeWidget`: `mensaje` (texto o
    vacío). Kommo manda el mensaje vacío cuando llega un archivo.
    ------------------------------------------------------------ */
+/* ------------------------------------------------------------
+   UN ADJUNTO LLEGA COMO UNA PALABRA (21-sep-2026)
+   ------------------------------------------------------------
+   El dueño mandó una foto a su chat de pruebas y Kommo se la pasó al bot
+   como el texto «imagen»; el bot la trató como texto y contestó «me llegó
+   la imagen pero no la puedo ver bien, ¿qué es?». Criterio del dueño:
+   «normalmente las fotos son abonos, ajusta ese criterio». Una foto, un
+   archivo o un documento = comprobante: acuse de pago, nota al vendedor
+   y el bot se hace a un lado. Un audio no se puede leer todavía: se pide
+   por texto. Solo cuentan a secas —«imagen», no «imagen del camión»—.
+   ------------------------------------------------------------ */
+const ADJUNTO = /^\s*(?:imagen|imagenes|imágenes|foto|fotos|photo|image|archivo|documento|document|file|pdf|sticker|ubicaci[oó]n|location|video|vídeo)\s*[.!]?\s*$/i;
+const AUDIO = /^\s*(?:audio|nota de voz|voz|voice|ptt)\s*[.!]?\s*$/i;
+function esAdjunto(texto) { return ADJUNTO.test(String(texto || '')); }
+function esAudio(texto) { return AUDIO.test(String(texto || '')); }
+
 function decide(aviso) {
   const texto = String((aviso && aviso.mensaje) || '');
   if (!texto.trim()) return { modo: 'comprobante', texto: TEXTOS.archivoRecibido, nota: TEXTOS.notaComprobante };
+  if (esAdjunto(texto)) return { modo: 'comprobante', texto: TEXTOS.comprobanteRecibido, nota: TEXTOS.notaComprobante };
+  if (esAudio(texto)) return { modo: 'comprobante', texto: TEXTOS.audioRecibido, nota: '' };
   /* Anuncia un pago («adjunto transferencia contrato tal»): el bot NO
      contesta y se apaga; queda nota para el vendedor (dictado del dueño,
      17-sep-2026: la gente saluda, manda la foto y escribe el aviso; el
@@ -303,4 +321,4 @@ function pideCotizar(texto) {
 const DE_UN_CONTRATO = /\b(?:contrat\w*|abon\w*|anticipo|saldo|pag(?:o|os|ar|ue|amos|ado|ada)|factur\w*|deposit\w*|comprobante\w*|folio|reembols\w*|devoluci\w*|cancel\w*)\b/;
 function hablaDeUnContrato(texto) { return DE_UN_CONTRATO.test(limpia(texto)); }
 
-module.exports = { decide, soloAgradecimiento, anunciaPago, esPregunta, limpia, pareceMolesto, pideAAlguienPorSuNombre, pideCotizar, hablaDeUnContrato, pideVariasUnidades, pideCotizacionAnterior, cancela };
+module.exports = { decide, esAdjunto, esAudio, soloAgradecimiento, anunciaPago, esPregunta, limpia, pareceMolesto, pideAAlguienPorSuNombre, pideCotizar, hablaDeUnContrato, pideVariasUnidades, pideCotizacionAnterior, cancela };

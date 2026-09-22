@@ -19,6 +19,9 @@ const TEXTOS = {
      dice): el acuse es neutro. */
   archivoRecibido: 'Recibido 🙌 Si es tu comprobante, en un momento lo revisamos y te confirmamos tu pago por aquí. Si es otra cosa, escríbemela por texto.',
   mandamelo: 'Va, mándamelo por aquí 🙌',
+  /* Un audio (21-sep-2026): por Kommo llega solo la palabra «audio». Aún
+     no se transcribe; se pide por texto y una persona lo escucha. */
+  audioRecibido: 'Recibí tu audio 🙌 Por aquí solo leo texto: ¿me lo escribes? Si prefieres, en un momento lo escucha alguien del equipo.',
   /* Anuncio de pago (17-sep-2026, dictado: «yo recomendaría que no uses
      bot»): el bot se calla y se apaga; esta nota es para el vendedor. */
   notaPago: '💳 El cliente anuncia un pago o comprobante por WhatsApp. Lo atiende una persona: regístralo en EuroSystem y confírmale.',

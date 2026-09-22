@@ -90,6 +90,23 @@ titulo('4 · NO anuncia un pago');
   'ya vi el precio', 'te mando los datos del contrato', 'ahí va mi nombre', 'ya salimos', '', '¿ya les llegó mi pago?'
 ].forEach(function (f) { ok('«' + f + '» NO anuncia pago', !puerta.anunciaPago(f)); });
 
+titulo('3a · una foto llega como la palabra «imagen» (21-sep-2026)');
+{
+  /* El dueño mandó una foto a su chat de pruebas y Kommo se la pasó al
+     bot como el texto «imagen»; el bot contestó «me llegó la imagen pero
+     no la puedo ver bien, ¿qué es?». Criterio del dueño: «normalmente las
+     fotos son abonos». Un adjunto se trata como comprobante. */
+  ['imagen', 'Imagen', 'foto', 'archivo', 'documento', 'image', 'file', 'photo', 'sticker', 'ubicación']
+    .forEach(function (f) { ok('«' + f + '» es un adjunto', puerta.esAdjunto(f)); });
+  ['audio', 'Audio', 'nota de voz', 'voice'].forEach(function (f) { ok('«' + f + '» es un audio', puerta.esAudio(f)); });
+  ['imagen del camión?', 'mándame una foto', 'quiero ver la imagen del i6', 'archivo de excel', 'hola']
+    .forEach(function (f) { ok('«' + f + '» NO es un adjunto', !puerta.esAdjunto(f) && !puerta.esAudio(f)); });
+  const d = puerta.decide({ mensaje: 'imagen' });
+  ok('en la puerta, «imagen» es comprobante con el acuse de pago y nota', d.modo === 'comprobante' && d.texto === TEXTOS.comprobanteRecibido && d.nota === TEXTOS.notaComprobante);
+  const a = puerta.decide({ mensaje: 'audio' });
+  ok('y «audio» avisa que por aquí solo lee texto, y para', a.modo === 'comprobante' && /texto/i.test(a.texto) && !a.nota);
+}
+
 titulo('3b · el pago YA ESTÁ HECHO, sin verbo de mandar (19-sep-2026)');
 {
   /* Caso real, lead 26816888: la clienta escribió «Ya quedo el pago

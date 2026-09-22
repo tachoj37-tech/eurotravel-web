@@ -6094,7 +6094,10 @@ async function trabajoDeKommo(crudo, modo) {
   const waba = String(process.env.WHATSAPP_WABA_ID || 'kommo');
   const telefono = String(process.env.WHATSAPP_PHONE_ID || 'kommo');
   const ahora = Date.now();
-  const mensaje = aviso.mensaje
+  /* Un adjunto llega como la palabra «imagen» / «audio» (21-sep-2026): se
+     trata como archivo, igual que el mensaje vacío, no como texto. */
+  const esArchivo = !aviso.mensaje || puerta.esAdjunto(aviso.mensaje) || puerta.esAudio(aviso.mensaje);
+  const mensaje = !esArchivo
     ? { from: aviso.numero, id: 'wamid.kommo.' + aviso.leadId + '.' + ahora, timestamp: String(Math.floor(ahora / 1000)),
         type: 'text', text: { body: aviso.mensaje } }
     : null;
@@ -6240,8 +6243,9 @@ async function trabajoDeKommo(crudo, modo) {
        ------------------------------------------------------------ */
     const d = puerta.decide(aviso);
     try {
-      const pegada = await kommo.anotaEnLead(aviso.leadId, d.nota);
-      console.log('[kommo-trabajo] archivo a media plática: nota de comprobante en el lead ' + aviso.leadId + ': ' + (pegada ? 'pegada' : 'NO se pegó'));
+      /* Un audio no deja nota (no es un comprobante); una foto o un archivo sí. */
+      const pegada = d.nota ? await kommo.anotaEnLead(aviso.leadId, d.nota) : null;
+      if (d.nota) console.log('[kommo-trabajo] archivo a media plática: nota de comprobante en el lead ' + aviso.leadId + ': ' + (pegada ? 'pegada' : 'NO se pegó'));
     } catch (err) {
       console.error('[kommo-trabajo] la nota del comprobante tronó en el lead ' + aviso.leadId + ': ' + (err && err.message));
     }

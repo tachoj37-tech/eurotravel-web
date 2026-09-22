@@ -62,7 +62,9 @@ const FRASES = [
   'qué opinas de la física cuántica', '???', 'NO ME ENTIENDES', 'quiero hablar con una persona', 'ya no, gracias',
   'perdón, somos 15', 'mejor a mazatlán', 'Para 50 se ajustan a la capacidad estos:\nMarcopolo Paradiso G8 — Premium — 51 asientos',
   '{"respuesta":"hola","datos":{},"accion":"seguir"}', '[Acción: envié 3 fotos]', 'me llamo Toño', 'soy Mariana',
-  'tienen wifi?', 'van niños, cobran igual?', 'necesito dos sprinters para 34', 'hi, do you have a van for 12 people?'
+  'tienen wifi?', 'van niños, cobran igual?', 'necesito dos sprinters para 34', 'hi, do you have a van for 12 people?',
+  /* Así llegan los adjuntos por Kommo: como una palabra. */
+  'imagen', 'audio', 'archivo', 'documento'
 ];
 /* Las marcas de cada lead (Ramiro Pérez / Lucía Acme) NO van en la bolsa:
    si un lead las dijera al azar, verlas en su chat no sería una fuga. */
