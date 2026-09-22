@@ -122,9 +122,17 @@ for (const b of B) if (b.tipo === 'msg' && b.botones) {
 /* ---- text (pasos) y positions (bloques) ---- */
 const step = new Map(B.map((b, i) => [b.id, i]));
 const recipient = { type: 'all_contacts', way_of_communication: 'over_all' };
+/* 22-sep-2026: con la lista explícita de canales Kommo NO entregaba por
+   Facebook (el filtro por id no reconoce la fuente de Messenger); con
+   `send_to_all_chat_sources:true` sí («Entregado», lead 26921946). Desde
+   hoy los bloques van en `true` y el candado de por dónde escribe el bot
+   es el DISPARADOR (solo los canales que el dueño pidió). Con
+   `SOLO_CANALES_LISTADOS=1` se genera como antes (false + lista), para
+   pruebas en un solo canal. */
+const TODOS_LOS_CANALES = process.env.SOLO_CANALES_LISTADOS !== '1';
 const sm = (b, primero) => {
   const p = { tag: '', text: b.texto, type: 'external', on_error: null, recipient,
-    is_in_starting_block: primero, send_to_all_chat_sources: false, chat_sources: CANALES.map(function (id) { return { id: id }; }) };
+    is_in_starting_block: primero, send_to_all_chat_sources: TODOS_LOS_CANALES, chat_sources: CANALES.map(function (id) { return { id: id }; }) };
   if (b.botones && !b.numerado) p.buttons = b.botones.map(([t]) => ({ text: t, type: 'inline' }));
   return p;
 };

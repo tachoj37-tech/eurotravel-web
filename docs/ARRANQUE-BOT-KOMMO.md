@@ -504,3 +504,28 @@ Disparador 37852198 y los 13 bloques quedaron en 60430+60446+60452+60472.
 Las conversaciones abiertas con la fuente vieja no se recuperan: el cliente
 tiene que escribir de nuevo. Cuidado: en la configuración de Facebook, el
 botón sin texto del renglón «Messenger» QUITA la página.
+
+### 22-sep-2026 00:11 · Facebook YA entrega: `send_to_all_chat_sources:true`
+
+Con la lista explícita de canales en los bloques (aunque incluyera 60472 y
+60474) Kommo **no entregaba** lo que el Salesbot escribía por Facebook: el
+bot corría, la puerta contestaba, y nada llegaba al chat. Con
+`send_to_all_chat_sources:true` en los 13 bloques el mismo mensaje salió
+(«SalesBot (EuroBot) Entregado», lead 26921946, plática A929, 00:10). El
+filtro por id de Kommo no reconoce la fuente de Messenger; «enviar por el
+canal de la plática» sí.
+
+Regla desde hoy:
+- Los 13 bloques van en `send_to_all_chat_sources:true` (el generador lo
+  pone así; `SOLO_CANALES_LISTADOS=1` genera como antes).
+- El candado de «por dónde escribe el bot» es el **disparador**: 60430
+  (WhatsApp real), 60452 (PRUEBAS), 60446 (Instagram), 60472 y 60474
+  (Facebook). Nada más arranca el bot.
+- Riesgos conocidos: un lead con dos chats recibe la respuesta en los dos;
+  si un comentario de Facebook (60474) arrancara el bot, contestaría ahí.
+  Si eso pasa, quitar 60474 del disparador.
+- Los leads de Facebook nacen en «Leads entrantes»; el bot corre igual.
+- Arrancar el bot a mano (`POST /api/v2/salesbot/run`) reinicia la pausa del
+  disparador y, sin mensaje entrante, la puerta lo toma como archivo:
+  contesta «Recibido 🙌 Si es tu comprobante…». Para probar el camino real,
+  que escriba otra cuenta.
