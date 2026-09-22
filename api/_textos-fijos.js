@@ -28,11 +28,11 @@ const TEXTOS = {
   deNada: 'De nada 🙌 Quedo a tus órdenes para cualquier duda.',
 
   /* Los que viven en bloques del Salesbot de Kommo (referencia). */
-  saludo: '¡Qué tal! Estás con *Eurotravel* 🚐\nRenta de autobuses y Sprinter para tu grupo.\n¿Qué necesitas?',
+  saludo: '¡Qué tal! Estás con Eurotravel 🚐\nRenta de autobuses y Sprinter para tu grupo.\n¿Qué necesitas?',
   /* Menú numerado (17-sep-2026): Kommo no manda listas de WhatsApp y con
      4 botones parte el saludo en 3 + 1. El cliente contesta con el número
      o con la palabra. */
-  saludoNumerado: '¡Qué tal! Estás con *Eurotravel* 🚐\nRenta de autobuses y Sprinter para tu grupo.\nResponde con un número:\n*1* Nueva cotización\n*2* Cotización anterior\n*3* Abonar contrato\n*4* Hablar con un agente',
+  saludoNumerado: '¡Qué tal! Estás con Eurotravel 🚐\nRenta de autobuses y Sprinter para tu grupo.\nResponde con un número:\n*1* Nueva cotización\n*2* Cotización anterior\n*3* Abonar contrato\n*4* Hablar con un agente',
   /* 17-sep-2026, decisión final: 3 botones (Nueva cotización · Cotización
      anterior · Abonar contrato) y el agente por texto, en el mismo
      mensaje, para no duplicar el saludo. */
@@ -40,7 +40,7 @@ const TEXTOS = {
      con un agente en el mensaje de saludo». Escribir «agente» sigue
      pasando con una persona (candado del cerebro); solo no se anuncia. El
      nombre se conserva para no tocar el generador. */
-  saludoConAgente: '¡Qué tal! Estás con *Eurotravel* 🚐\nRenta de autobuses y Sprinter para tu grupo.\n¿Qué necesitas?',
+  saludoConAgente: '¡Qué tal! Estás con Eurotravel 🚐\nRenta de autobuses y Sprinter para tu grupo.\n¿Qué necesitas?',
   /* «Mi cotización anterior» pasa del tope de 20 letras por botón de
      WhatsApp; queda «Cotización anterior». */
   botones: ['Nueva cotización', 'Cotización anterior', 'Hablar con un agente'],

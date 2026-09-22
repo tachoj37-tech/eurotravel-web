@@ -4639,15 +4639,15 @@ function saludo(vendedor, mensaje) {
       /* Sin «con chofer»: en el saludo solo «renta de autobuses y
          Sprinter» (dictado del dueño, 16-sep-2026). Lo que incluye se
          dice cuando lo preguntan; ver LO_QUE_INCLUYE. */
-      '¡Hola! Soy *' + vendedor + '*, de *Eurotravel* 🚐\n\nRentamos autobuses y Sprinter para grupos.',
-      '¡Qué tal! Te atiende *' + vendedor + '*, de *Eurotravel* 🚐\n\nRenta de autobuses y Sprinter para tu grupo.',
-      'Hola, soy *' + vendedor + '* 🚐 Aquí en *Eurotravel* rentamos autobuses y Sprinter.'
+      '¡Hola! Soy *' + vendedor + '*, de Eurotravel 🚐\n\nRentamos autobuses y Sprinter para grupos.',
+      '¡Qué tal! Te atiende *' + vendedor + '*, de Eurotravel 🚐\n\nRenta de autobuses y Sprinter para tu grupo.',
+      'Hola, soy *' + vendedor + '* 🚐 Aquí en Eurotravel rentamos autobuses y Sprinter.'
     ][n];
   }
   return [
-    '¡Hola! Gracias por escribir a *Eurotravel* 🚐\n\nRentamos autobuses y Sprinter para grupos.',
-    '¡Qué tal! Estás con *Eurotravel* 🚐\n\nRenta de autobuses y Sprinter para tu grupo.',
-    'Hola 🚐 Aquí en *Eurotravel* rentamos autobuses y Sprinter, para grupos.'
+    '¡Hola! Gracias por escribir a Eurotravel 🚐\n\nRentamos autobuses y Sprinter para grupos.',
+    '¡Qué tal! Estás con Eurotravel 🚐\n\nRenta de autobuses y Sprinter para tu grupo.',
+    'Hola 🚐 Aquí en Eurotravel rentamos autobuses y Sprinter, para grupos.'
   ][n];
 }
 
@@ -5533,7 +5533,7 @@ function respuestaBase(mensaje, estado, hoy) {
       /* ------------------------------------------------------------
          EL SALUDO, SEGUNDA VERSIÓN
          ------------------------------------------------------------
-         La primera decía «¡Hola! Aquí *Eurotravel* 🚐 / ¿A dónde va
+         La primera decía «¡Hola! Aquí Eurotravel 🚐 / ¿A dónde va
          el plan?» y el dueño fue directo: *«el saludo está de la
          chingada»*. Tenía razón, y vale la pena escribir por qué,
          porque el defecto no se ve hasta que lo lees en voz alta:
