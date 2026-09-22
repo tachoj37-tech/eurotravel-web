@@ -148,7 +148,11 @@ async function corre(nombre, lead, guion) {
       console.log('         · status ' + c.data.status + (c.data.status === 'fin' ? ' ⏹ (el bot para)' : '') +
         (c.data.callado === 'si' ? ' · callado (salida «silencio», sin mensaje)' : ''));
       if (c.data.status === 'fin' && !c.data.texto && !c.data.fotos && c.data.callado !== 'si') { console.log('✗ FALLA: terminó sin texto y sin marcar callado'); fallas++; }
-      if (c.data.status === 'sigue' && !c.data.texto && !c.data.fotos) { console.log('✗ FALLA: sigue pero no dijo nada'); fallas++; }
+      /* Desde el 21-sep-2026 un acuse tras el resumen («ok», «sí, todo
+         bien», «perfecto quedo pendiente») se queda sin respuesta a
+         propósito y el bot sigue vivo: eso no es falla. */
+      const esAcuse = /^\s*(ok|okey|va|vale|sale|s[ií]|perfecto|gracias|listo|de acuerdo|todo bien|excelente|genial|👍)\b/i.test(String(texto || '')) && String(texto || '').length <= 40;
+      if (c.data.status === 'sigue' && !c.data.texto && !c.data.fotos && !esAcuse) { console.log('✗ FALLA: sigue pero no dijo nada'); fallas++; }
       const noAdmitidos = c.execute_handlers.filter(h => h.handler !== 'show' && h.handler !== 'goto');
       if (noAdmitidos.length) { console.log('✗ FALLA: handler que Kommo no admite: ' + noAdmitidos.map(h => h.handler).join(',')); fallas++; }
       const largos = c.execute_handlers.filter(h => h.handler === 'show' && String(h.params.value || '').length > 80);

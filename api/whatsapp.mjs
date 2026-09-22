@@ -4296,11 +4296,27 @@ async function loQueDiceElAgente(envio) {
          movemos» dijo «¿cuál de los tres días es el que se andan moviendo?»
          y en el mismo segundo llegó el ticket; el cliente contesta una
          pregunta que ya no importa. */
-      const pregunta = /\?/.test(String(dicho.respuesta || ''));
-      if (dicho.respuesta && !corrigeElTicket && !pregunta && !/precio|cotizaci/i.test(dicho.respuesta)) {
-        await manda({ numeroDeOrigen: envio.numeroDeOrigen, para: cliente, texto: dicho.respuesta,
+      /* ------------------------------------------------------------
+         LAS RESPUESTAS SÍ SALEN; SOLO SE QUITA LO DEL PRECIO — 22-sep-2026
+         ------------------------------------------------------------
+         Corrida con el modelo real (escenario x14): el cliente dio todo
+         el viaje y preguntó en el mismo mensaje si el chofer se queda, si
+         puede pagar en dos partes, si hay factura y cuánto sale. La IA
+         contestó las cuatro cosas, pero como su texto mencionaba el
+         precio se tiraba ENTERO y el cliente recibió solo el ticket, sin
+         una sola respuesta. Ahora se quitan nada más las oraciones que
+         hablan del precio o preguntan algo (el ticket ya cierra el
+         viaje) y el resto sale antes de la espera.
+         ------------------------------------------------------------ */
+      const respuestaSinPrecio = String(dicho.respuesta || '')
+        .split(/(?<=[.!?…])\s+|\n+/)
+        .filter(function (o) { return o.trim() && !/\?/.test(o) && !/precio|cotizaci|tarifa|costo|cu[aá]nto sale/i.test(o); })
+        .join(' ').trim();
+      /* Diez letras bastan: «Sí, traen baño 🙌» es una respuesta completa. */
+      if (dicho.respuesta && !corrigeElTicket && respuestaSinPrecio.length >= 10 && /[a-záéíóúñ]/i.test(respuestaSinPrecio)) {
+        await manda({ numeroDeOrigen: envio.numeroDeOrigen, para: cliente, texto: respuestaSinPrecio,
           pasaAPersona: false, escribio: '[agente · antes del precio]' });
-        agente.recuerda(cliente, 'bot', dicho.respuesta);
+        agente.recuerda(cliente, 'bot', respuestaSinPrecio);
       }
       const confirmar = Object.assign({}, nuevo, { paso: 'confirmar' });
       let r = null;

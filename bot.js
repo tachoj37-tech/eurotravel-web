@@ -1101,7 +1101,10 @@ const PASEOS_POR_DESTINO = [
    Y si el recorte deja menos de tres letras, NO se recorta: vale
    más un destino feo que uno mutilado.
    ------------------------------------------------------------ */
-const ARRANQUES = /^(?:nos\s+)?(?:vamos|queremos\s+ir|quiero\s+ir|iremos|vamonos|nos\s+vamos|es|seria|ser[ií]a|ir)\s+(?:a|al|para|hacia|hasta)\s+|^(?:para|hacia|rumbo\s+a|a|al)\s+/i;
+/* 22-sep-2026: «quería cotizar un viaje a vta» quedaba como el destino
+   *Quería Cotizar Un Viaje a Vta* en el guion de respaldo (corrida con el
+   modelo caído). La intención completa se recorta antes del lugar. */
+const ARRANQUES = /^(?:quer[ií]a|quiero|quisiera|queremos|quisi[ée]ramos|necesito|necesitamos|me\s+interesa|ocupo)\s+(?:cotizar\s+|rentar\s+|reservar\s+)?(?:un\s+viaje\s+|un\s+servicio\s+|un\s+traslado\s+|un\s+cami[oó]n\s+|un\s+autob[uú]s\s+|una\s+sprinter\s+|una\s+suburban\s+|ir\s+|irnos\s+)?(?:a|al|para|hacia|hasta)\s+|^(?:nos\s+)?(?:vamos|queremos\s+ir|quiero\s+ir|iremos|vamonos|nos\s+vamos|es|seria|ser[ií]a|ir)\s+(?:a|al|para|hacia|hasta)\s+|^(?:para|hacia|rumbo\s+a|a|al)\s+/i;
 
 /* Muletillas que la gente pega al final y que no son parte del nombre:
    «a tequila entonces», «a chapala porfa», «a vallarta pues». */
@@ -1264,6 +1267,13 @@ function esUnLugar(texto) {
    y el catálogo las reconoce—; lo que no vale es como origen. */
 function comoDestino(crudo) {
   if (!esUnLugar(crudo)) return null;
+  /* Una pregunta no es un lugar (22-sep-2026): «van niños, cobran
+     igual?» quedó como destino *Van Niños, Cobran Igual?* en el guion de
+     respaldo. Con signo de interrogación, no se guarda nada. */
+  if (/[?¿]/.test(String(crudo || ''))) return null;
+  /* Los botones del saludo escritos a mano («nueva cotización») tampoco:
+     en una prueba quedó el destino *Nueva Cotización* (22-sep-2026). */
+  if (/^\s*(?:nueva\s+cotizaci[oó]n|cotizaci[oó]n\s+(?:anterior|nueva)|abonar(?:\s+contrato)?|hablar\s+con\s+(?:un\s+)?agente|agente)\s*[.!]*\s*$/i.test(String(crudo || ''))) return null;
   /* ------------------------------------------------------------
      UN ASENTIMIENTO NO ES UN PUEBLO — 11-sep-2026
      ------------------------------------------------------------
@@ -2478,7 +2488,9 @@ const REPREGUNTA = {
     '¿Para qué fecha lo necesitan? Con día y mes me basta.'
   ],
   regreso: [
-    '¿Y qué día regresan? Puede ser *el 14* o *mismo día*.',
+    /* Sin ejemplo con número (22-sep-2026): «Puede ser el 14» salía tal
+       cual aunque el 14 no tuviera nada que ver con el viaje. */
+    '¿Y qué día regresan? Si es ida y vuelta el mismo día, dime *mismo día*.',
     '¿Cuándo vuelven? Si es ida y vuelta el mismo día, dime *mismo día*.',
     'Dime el día de regreso — por ejemplo *domingo 13*.'
   ],

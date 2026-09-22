@@ -196,5 +196,20 @@ titulo('nadie guarda un destino ni un origen por su cuenta');
   sospechosas.forEach(function (l) { console.log('     bot.js:' + l.n + ' → ' + l.t.trim().slice(0, 90)); });
 }
 
+/* 22-sep-2026, corrida con el modelo caído (guion de respaldo): una pregunta
+   quedó como destino y una intención completa también. */
+{
+  ok('«van niños, cobran igual?» no es un lugar', conv.comoDestino('van niños, cobran igual?') === null);
+  ok('«tienen wifi y tele las unidades?» no es un lugar', conv.comoDestino('tienen wifi y tele las unidades?') === null);
+  ok('«quería cotizar un viaje a vta» es Puerto Vallarta', conv.comoDestino('quería cotizar un viaje a vta') === 'Puerto Vallarta');
+  /* «necesito un camión a mazatlán» NO entra aquí a propósito: nombrar una
+     unidad ya lo descarta como lugar (13-sep-2026) y esa regla se queda. */
+  ok('«quisiera cotizar un viaje a mazatlán» es Mazatlán', conv.comoDestino('quisiera cotizar un viaje a mazatlán') === 'Mazatlán');
+  ok('«me interesa ir a chapala» es Chapala', conv.comoDestino('me interesa ir a chapala') === 'Chapala');
+  ok('«a vta» sigue siendo Puerto Vallarta', conv.comoDestino('a vta') === 'Puerto Vallarta');
+  ok('«Nueva cotización» (el botón escrito) no es un lugar', conv.comoDestino('Nueva cotización') === null);
+  ok('«Cotización anterior» no es un lugar', conv.comoDestino('Cotización anterior') === null);
+}
+
 console.log('\n' + buenas + ' buenas, ' + malas + ' malas');
 process.exit(malas ? 1 : 0);

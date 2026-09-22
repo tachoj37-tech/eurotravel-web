@@ -411,6 +411,29 @@ titulo('la segunda prueba del dueño: «15 a 20 de septiembre»');
 }
 
 /* ============================================================ */
+titulo('las preguntas del mismo mensaje se contestan antes del ticket; solo se calla lo del precio (22-sep-2026)');
+{
+  /* Escenario x14 con el modelo real: dio todo el viaje y preguntó cuatro
+     cosas; la IA las contestó y el bot tiró su texto entero porque
+     mencionaba el precio. El cliente recibió solo el ticket. */
+  limpia();
+  const C = '5213366670070';
+  await dice('hola', C);
+  await dice('Nueva cotización', C);
+  laIA = function () {
+    return { respuesta: 'Sí, el operador se queda con ustedes todo el viaje. Sí se puede pagar en dos partes y sí hay factura. El precio te lo paso en un momento.',
+      datos: { destino: 'Chapala', origen: 'Guadalajara', salida: '2026-10-04', regreso: '2026-10-04', gente: 12, unidad: 'sprinter', recorridos: 0 },
+      accion: 'cotizar' };
+  };
+  const antes = textos(C).length;
+  await dice('a chapala el 4 de octubre somos 12 de guadalajara mismo dia sin movimientos, ¿el chofer se queda con nosotros, se puede pagar en dos partes y hay factura? y cuánto sale', C);
+  const tras = textos(C).slice(antes).join('\n');
+  ok('contesta lo del operador y el pago', /operador se queda/.test(tras) && /dos partes/.test(tras) && /factura/.test(tras));
+  ok('  sin la oración del precio', !/precio te lo paso/.test(tras));
+  ok('  y el ticket sale también', /Chapala/.test(tras) && /en un momento te paso tu precio/i.test(tras));
+}
+
+/* ============================================================ */
 titulo('y al dueño, nada');
 {
   ok('en toda la batería no le llegó nada a su número', textos(process.env.DUENO_WHATSAPP).length === 0);
