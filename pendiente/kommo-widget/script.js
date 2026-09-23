@@ -82,6 +82,22 @@ define(['jquery'], function ($) {
     };
   }
 
+  /* Un mensaje de texto solo, mismo formato. Va a todos los canales del
+     lead, como los de fotos. */
+  function sinFoto(texto) {
+    return {
+      handler: 'send_message',
+      params: {
+        tag: '', text: texto, type: 'external', on_error: null,
+        recipient: { type: 'all_contacts', way_of_communication: 'over_all' },
+        send_to_all_chat_sources: true, chat_sources: [], is_in_starting_block: false
+      }
+    };
+  }
+  /* Lo que dice el cerebro cuando el servidor no contestó (1.0.9). Sin
+     prometer hora: el vendedor ve el chat en Kommo y contesta cuando puede. */
+  var SE_TRABO = 'Perdón, se me trabó un momento 🙏 Tu mensaje ya quedó con el equipo y te contestan por aquí.';
+
   var CustomWidget = function () {
     var self = this;
 
@@ -119,6 +135,7 @@ define(['jquery'], function ($) {
            2 · según `status`, salir por success o por fail. */
       onSalesbotDesignerSave: function (handler_code, params) {
         var url = (params && params.url) ? String(params.url) : '';
+        var esPuerta = /kommo-puerta\/?$/.test(url);
         var pasoDeFotos = [];
         Object.keys(FOTOS).forEach(function (carpeta) {
           var envios = FOTOS[carpeta].map(function (uuid, i) { return conFoto(uuid, i === 0 ? '{{json.pie}}' : ''); });
@@ -210,8 +227,29 @@ define(['jquery'], function ($) {
                   result: [{ handler: 'exits', params: { value: 'success' } }]
                 }
               },
-              { handler: 'exits', params: { value: 'fail' } }
-            ]
+              /* ------------------------------------------------------------
+                 SI NO LLEGÓ NADA, NADA DE «{{json.texto}}» (1.0.9, 22-sep-2026)
+                 ------------------------------------------------------------
+                 Antes, todo lo que no fuera «sigue» salía por `fail`, cuyo
+                 bloque es «Mensaje {{json.texto}}» → parar. Y Kommo pinta esa
+                 plantilla TAL CUAL, con llaves, cuando el dato no existe: si el
+                 servidor no contestó (caído, token viejo, tiempo agotado) el
+                 cliente recibía «{{json.texto}}». Ahora `fail` solo se toma con
+                 un «fin» de verdad; sin respuesta, el cerebro pide perdón con
+                 un texto fijo y para (salida «silencio», sin bloque de mensaje).
+                 La puerta conserva su fallback a `fail` → saludo: sin servidor,
+                 el saludo con botones es mejor que nada. */
+              {
+                handler: 'conditions',
+                params: {
+                  logic: 'and',
+                  conditions: [{ term1: '{{json.status}}', term2: 'fin', operation: '=' }],
+                  result: [{ handler: 'exits', params: { value: 'fail' } }]
+                }
+              }
+            ].concat(esPuerta
+              ? [{ handler: 'exits', params: { value: 'fail' } }]
+              : [sinFoto(SE_TRABO), { handler: 'exits', params: { value: 'silencio' } }])
           }
         ];
         return JSON.stringify(flujo);

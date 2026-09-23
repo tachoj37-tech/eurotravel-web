@@ -578,3 +578,26 @@ el resumen con la IA → «espera», sin texto, vivo), invariante nueva en
 Regla para siempre: **nunca mandar `texto:''` por una salida que pase por
 un bloque «Mensaje {{json.texto}}»**. Si no hay nada que decir, la salida
 tiene que ir a la pausa o a parar.
+
+### 22-sep-2026 (noche, 2.ª parte) · widget 1.0.9: sin respuesta del servidor, nada de «{{json.texto}}»
+
+El hueco que quedaba: el `fail` del widget se tomaba con TODO lo que no
+fuera «sigue», también cuando el servidor no contestó (caído, token viejo,
+tiempo agotado), y `fail` va a «Mensaje {{json.texto}}» → literal. Desde
+1.0.9 (`pendiente/kommo-widget/script.js`): `fail` solo con `status = fin`;
+sin respuesta, el bloque del cerebro manda un texto fijo («Perdón, se me
+trabó un momento 🙏 Tu mensaje ya quedó con el equipo y te contestan por
+aquí.») y sale por «silencio» → parar. La puerta conserva su fallback a
+`fail` → saludo.
+
+Cómo quedó registrado: el flujo NO viene del zip subido a Kommo (sigue
+1.0.8) sino del `widget_source` registrado por instancia con `POST
+/private/ajax/v2/json/salesbot/widgets/`; el cuerpo exacto está en
+`pendiente/kommo-bot/EuroBot-real.widget-sources.json` (instancias reales
+del bot 84760: paso 0 puerta, paso 11 cerebro). Un guardado desde el
+diseñador volvería a registrar el flujo del zip (1.0.8) y perdería esto:
+una razón más para no guardar desde el diseñador. Pendiente del dueño:
+subir el zip 1.0.9 en Ajustes → Integraciones cuando haya calma.
+
+También: `continuaSalesbot` reintenta UNA vez un tropiezo de red o un 5xx
+de Kommo (`pruebas/probar-kommo-continuacion.cjs`); un 4xx no.

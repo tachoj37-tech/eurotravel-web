@@ -153,7 +153,22 @@ function peticion(cuerpo, cabeceras, llave) {
       }));
     ok('«callado = si» sale por silencio antes de mirar el status',
       salidasPaso[4].params.conditions[0].term1 === '{{json.callado}}' && salidasPaso[4].params.result[0].params.value === 'silencio' &&
-      salidasPaso[5].params.conditions[0].term1 === '{{json.status}}' && salidasPaso[6].params.value === 'fail');
+      salidasPaso[5].params.conditions[0].term1 === '{{json.status}}' && salidasPaso[5].params.conditions[0].term2 === 'sigue' &&
+      salidasPaso[5].params.result[0].params.value === 'success');
+    /* 1.0.9 (22-sep-2026): `fail` solo con un «fin» de verdad. Sin respuesta
+       del servidor, el cerebro pide perdón con texto fijo y para por
+       «silencio»; nunca un «Mensaje {{json.texto}}» sin dato. */
+    ok('«fin» sale por fail, y sin respuesta: perdón fijo + silencio (nunca {{json.texto}})',
+      salidasPaso[6].params.conditions[0].term1 === '{{json.status}}' && salidasPaso[6].params.conditions[0].term2 === 'fin' &&
+      salidasPaso[6].params.result[0].params.value === 'fail' &&
+      salidasPaso[7].handler === 'send_message' && /se me trabó/.test(salidasPaso[7].params.text) && !/\{\{/.test(salidasPaso[7].params.text) &&
+      salidasPaso[7].params.send_to_all_chat_sources === true && !salidasPaso[7].params.attachments &&
+      salidasPaso[8].handler === 'exits' && salidasPaso[8].params.value === 'silencio' && salidasPaso.length === 9);
+    const flujoPuerta = JSON.parse(w.callbacks.onSalesbotDesignerSave('eurobot', { url: 'https://x/api/whatsapp/kommo-puerta' }));
+    const salidasPuerta = flujoPuerta[2].question;
+    ok('la puerta conserva su fallback a fail (→ saludo): sin servidor, el saludo con botones',
+      salidasPuerta.length === 8 && salidasPuerta[7].handler === 'exits' && salidasPuerta[7].params.value === 'fail' &&
+      !salidasPuerta.some(function (h) { return h.handler === 'send_message'; }));
   }
 
   titulo('el camino entero, con el guion');

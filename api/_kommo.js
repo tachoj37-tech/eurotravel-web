@@ -574,23 +574,29 @@ async function continuaSalesbot(returnUrl, cuerpo, opciones) {
   const o = opciones || {};
   const traer = o.pide || (typeof fetch === 'function' ? fetch : null);
   if (!c || !traer || !returnUrl) return false;
-  try {
-    const r = await traer(returnUrl, {
-      method: 'POST',
-      signal: AbortSignal.timeout(ESPERA_MS),
-      headers: { 'Authorization': 'Bearer ' + c.token, 'Content-Type': 'application/json' },
-      body: JSON.stringify(cuerpo)
-    });
-    if (!r || !r.ok) {
+  /* Si la continuación no llega, Kommo no reintenta: el bot se queda
+     esperando y el cliente sin respuesta. Un tropiezo de red o un 5xx de
+     Kommo se reintenta UNA vez (22-sep-2026); un 4xx no, porque volvería
+     a fallar igual (token viejo, return_url caducado). */
+  for (let intento = 1; intento <= 2; intento++) {
+    try {
+      const r = await traer(returnUrl, {
+        method: 'POST',
+        signal: AbortSignal.timeout(ESPERA_MS),
+        headers: { 'Authorization': 'Bearer ' + c.token, 'Content-Type': 'application/json' },
+        body: JSON.stringify(cuerpo)
+      });
+      if (r && r.ok) return true;
       const detalle = r && r.text ? await r.text().catch(function () { return ''; }) : '';
       console.error('[kommo] continue contestó ' + (r && r.status) + ': ' + String(detalle).replace(/\s+/g, ' ').slice(0, 300));
-      return false;
+      if (!r || r.status < 500 || intento === 2) return false;
+    } catch (e) {
+      console.error('[kommo] no se pudo continuar el Salesbot' + (intento === 1 ? ' (se reintenta una vez)' : '') + ': ' + (e && e.message));
+      if (intento === 2) return false;
     }
-    return true;
-  } catch (e) {
-    console.error('[kommo] no se pudo continuar el Salesbot: ' + (e && e.message));
-    return false;
+    await new Promise(function (listo) { setTimeout(listo, 400); });
   }
+  return false;
 }
 
 module.exports = {
