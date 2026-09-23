@@ -356,8 +356,11 @@ titulo('5 · la decisión');
   res = respuesta();
   await atiende(peticion(aviso('hola, quiero cotizar un viaje'), { 'x-interno': process.env.WHATSAPP_RUTA_SECRETA }, 'kommo-trabajo'), res);
   const viejo = continuaciones[continuaciones.length - 1].body;
+  /* 22-sep-2026: el cerebro manda `modo:''` (y «espera» solo cuando sigue
+     sin texto); con texto, el modo va vacío y ninguna salida de la puerta
+     casa. */
   ok('kommo-trabajo (sin puerta) sigue contestando como cerebro: texto y sin modo',
-    viejo && viejo.data.modo === undefined && typeof viejo.data.texto === 'string' && viejo.data.texto.length > 0);
+    viejo && !viejo.data.modo && typeof viejo.data.texto === 'string' && viejo.data.texto.length > 0);
 
   global.fetch = fetchDeAntes;
   console.log('\n' + buenas + ' buenas, ' + malas + ' malas');

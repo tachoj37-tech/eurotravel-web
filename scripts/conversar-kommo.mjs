@@ -147,7 +147,12 @@ async function corre(nombre, lead, guion) {
       for (const h of c.execute_handlers) console.log('BOT:     ' + pinta(h).replace(/\n/g, '\n         '));
       console.log('         · status ' + c.data.status + (c.data.status === 'fin' ? ' ⏹ (el bot para)' : '') +
         (c.data.callado === 'si' ? ' · callado (salida «silencio», sin mensaje)' : ''));
-      if (c.data.status === 'fin' && !c.data.texto && !c.data.fotos && c.data.callado !== 'si') { console.log('✗ FALLA: terminó sin texto y sin marcar callado'); fallas++; }
+      /* 22-sep-2026: Kommo pinta «{{json.texto}}» literal si el texto va
+         vacío por un bloque de mensaje. Sin texto, «fin» va con callado
+         (salida «silencio») y «sigue» con modo «espera» (directo a la pausa). */
+      if (c.data.status === 'fin' && !c.data.texto && c.data.callado !== 'si') { console.log('✗ FALLA: terminó sin texto y sin marcar callado (saldría «{{json.texto}}»)'); fallas++; }
+      if (c.data.status === 'sigue' && !c.data.texto && c.data.modo !== 'espera') { console.log('✗ FALLA: sigue sin texto y sin salida «espera» (saldría «{{json.texto}}»)'); fallas++; }
+      if (c.data.status === 'sigue' && !c.data.texto && c.data.modo === 'espera') console.log('         · sin nada que decir: salida «espera» (directo a la pausa)');
       /* Desde el 21-sep-2026 un acuse tras el resumen («ok», «sí, todo
          bien», «perfecto quedo pendiente») se queda sin respuesta a
          propósito y el bot sigue vivo: eso no es falla. */

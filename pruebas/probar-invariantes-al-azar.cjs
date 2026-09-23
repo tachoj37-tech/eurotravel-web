@@ -126,7 +126,16 @@ function peticion(cuerpo, llave) {
           if (!d) continue;
           const t = String(d.texto || '') + '\n' + String(d.pie || '');
           ok('status válido', d.status === 'sigue' || d.status === 'fin', JSON.stringify(d).slice(0, 120) + ' · ' + donde);
-          ok('callado solo con fin y sin texto', d.callado !== 'si' || (d.status === 'fin' && !d.texto && !d.fotos), JSON.stringify(d).slice(0, 120) + ' · ' + donde);
+          ok('callado solo con fin y sin texto', d.callado !== 'si' || (d.status === 'fin' && !d.texto), JSON.stringify(d).slice(0, 120) + ' · ' + donde);
+          /* 22-sep-2026: Kommo pinta «{{json.texto}}» literal si el texto va
+             vacío por un bloque de mensaje. Sin texto solo se sale por
+             «silencio» (fin) o por «espera» (sigue), que no pasan por uno. */
+          ok('sin texto: callado (fin) o espera (sigue), nunca un mensaje vacío',
+            !!d.texto ||
+            (!!d.modo && d.modo !== 'espera') ||                       /* la puerta: saludo/comprobante/denada traen su propio bloque */
+            (d.status === 'fin' && d.callado === 'si') ||
+            (d.status === 'sigue' && d.modo === 'espera'),
+            JSON.stringify(d).slice(0, 120) + ' · ' + donde);
           ok('no sale JSON ni código', !/```|\{\s*"[A-Za-z_]+"\s*:/.test(t), t.slice(0, 120) + ' · ' + donde);
           ok('no sale «[Acción:»', t.indexOf('[Acción:') < 0, t.slice(0, 120) + ' · ' + donde);
           ok('no sale texto interno del prompt', !agente.esTextoInterno(t), t.slice(0, 120) + ' · ' + donde);

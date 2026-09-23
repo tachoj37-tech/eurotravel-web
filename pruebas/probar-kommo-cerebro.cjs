@@ -326,6 +326,29 @@ function peticion(cuerpo, cabeceras, llave) {
   const alCliente = ultima.data.texto || ultima.data.pie || '';
   ok('al cliente le llegó el resumen con lo que incluye, y NADA del ticket',
     /Incluye:/.test(alCliente) && !/Precio por confirmar|Calculado/.test(alCliente));
+  /* 22-sep-2026: con el resumen como pie, `texto` va vacío. Kommo pinta el
+     bloque «Mensaje {{json.texto}}» con llaves y todo si el texto viene
+     vacío (12 clientes lo recibieron), así que ese «sigue» sin texto sale
+     por «espera», que en el cerebro va directo a la pausa. */
+  ok('si el texto fue como pie, el widget sale por «espera» (directo a la pausa), no por un mensaje vacío',
+    ultima.data.texto ? ultima.data.modo === '' : (ultima.data.status === 'sigue' && ultima.data.modo === 'espera'));
+
+  titulo('22-sep: un «ok» después del resumen sale por «espera», nunca como mensaje vacío');
+  /* Como en producción: con la IA encendida (aquí de mentiras, contesta
+     lo que la regla del acuse no deja salir). Sin llave, la cáscara ni
+     entra al agente y el guion viejo contesta; eso no es producción. */
+  {
+    const agenteOk = require(path.join(RAIZ, 'api/_agente.js'));
+    const conversaAntesOk = agenteOk.conversa;
+    agenteOk.conversa = async function () { return { respuesta: 'Perfecto 🙌', datos: {}, accion: 'seguir' }; };
+    process.env.ANTHROPIC_API_KEY = 'clave-de-mentiras';
+    res = respuesta();
+    await atiende(peticion(aviso('ok'), { 'x-interno': process.env.WHATSAPP_RUTA_SECRETA }), res);
+    delete process.env.ANTHROPIC_API_KEY; agenteOk.conversa = conversaAntesOk;
+  }
+  const cOk = continuaciones[continuaciones.length - 1].body;
+  ok('el acuse no se contesta, el bot sigue vivo y el widget va directo a la pausa (modo «espera»)',
+    cOk && cOk.data.status === 'sigue' && !cOk.data.texto && cOk.data.modo === 'espera' && cOk.data.callado !== 'si');
 
   titulo('x9 (17-sep): «ya deposité, ahí les mando el comprobante» a media plática');
   res = respuesta();

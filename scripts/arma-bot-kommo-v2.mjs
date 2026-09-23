@@ -15,6 +15,8 @@
                 │                 │       success → [{{json.texto}}] → (pausa) ↺
                 │                 │       fail    → [{{json.texto}}] → parar
                 │                 │       silencio→ parar
+                │                 │       espera  → (pausa) ↺   sigue SIN texto (22-sep-2026:
+                │                 │                 Kommo pinta «{{json.texto}}» literal si va vacío)
                 │                 ├ Mi cotización anterior → [¿misma fecha o nueva?: 2 botones]
                 │                 │       Misma fecha → [agente se comunica] → parar
                 │                 │       Fecha nueva → [¿para qué fecha?] → (pausa) → [anotado, agente] → parar
@@ -92,7 +94,11 @@ msg(40, 1, 4, '{{json.texto}}', { sig: 41 }); parar(41, 2, 4);
 /* Columna 2–4: cotización nueva (el cerebro de siempre). */
 msg(50, 2, 0, 'Va 🚐 Cuéntame: ¿a dónde van, para cuándo y cuántas personas?', { sig: 51 });
 pausa(51, 3, 0, 52);
-widget(52, 4, 0, 'EuroBot (cerebro)', SITIO + '/api/whatsapp/kommo', { success: 53, fail: 55, silencio: 57 });
+/* «espera» en el CEREBRO = sigue sin nada que decir (acuse tras el ticket,
+   o el resumen ya fue como pie de foto): directo a la pausa, sin pasar por
+   un bloque de mensaje, porque Kommo pinta «{{json.texto}}» con llaves y
+   todo cuando el texto viene vacío (12 clientes, 21 y 22-sep-2026). */
+widget(52, 4, 0, 'EuroBot (cerebro)', SITIO + '/api/whatsapp/kommo', { success: 53, fail: 55, silencio: 57, espera: 51 });
 msg(53, 5, 0, '{{json.texto}}', { sig: 51 });
 msg(55, 5, 1, '{{json.texto}}', { sig: 56 }); parar(56, 6, 1);
 parar(57, 5, 2);

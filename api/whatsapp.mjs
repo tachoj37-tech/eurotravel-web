@@ -6422,13 +6422,33 @@ async function trabajoDeKommo(crudo, modo) {
   console.log('[kommo-trabajo] lead ' + aviso.leadId + ' · ' + alCliente.length + ' envíos · ' + status +
     (resultado && resultado.status !== 200 ? ' · el cerebro contestó ' + resultado.status : ''));
 
-  /* `callado`: terminó sin nada que decir (el ticket ya avisó que en un
-     momento le pasan su precio; la persona lee el mensaje igual). El
-     widget lo saca por la salida «silencio» → parar, sin mandar un
-     mensaje vacío. */
-  const callado = status === 'fin' && !texto && !fotos;
+  /* ------------------------------------------------------------
+     NUNCA UN «{{json.texto}}» VACÍO — 22-sep-2026
+     ------------------------------------------------------------
+     Kommo pinta el bloque «Mensaje {{json.texto}}» TAL CUAL, con las
+     llaves, cuando `texto` viene vacío: doce clientes recibieron
+     «{{json.texto}}» el 21 y el 22-sep (leads 26938242, 26938108,
+     26919490, 26918080, 26916514, 26916182, 26912810 y el de pruebas).
+     Los dos caminos que mandaban texto vacío con «sigue»:
+       · el acuse después del ticket («ok», «todo está bien»): el bot no
+         escribe y sigue vivo (0 envíos);
+       · las fotos con el resumen como PIE de la primera (arriba): el
+         texto se vacía y el widget lo manda con la foto.
+     Así que un «sigue» sin texto sale por «espera», que en el bloque del
+     cerebro va DIRECTO a la pausa (sin bloque de mensaje); y un «fin» sin
+     texto sale por «silencio» → parar (las fotos van igual: el widget las
+     adjunta en su paso 1, antes de decidir la salida en el paso 2).
+     Las tres salidas, y qué pinta Kommo:
+       sigue + texto  → success  → Mensaje {{json.texto}} → pausa
+       sigue sin texto→ espera   → pausa
+       fin + texto    → fail     → Mensaje {{json.texto}} → parar
+       fin sin texto  → silencio → parar
+     ------------------------------------------------------------ */
+  const callado = status === 'fin' && !texto;
+  const sinNadaQueDecir = status === 'sigue' && !texto;
+  if (sinNadaQueDecir) console.log('[kommo-trabajo] sigue sin texto: salida «espera» (directo a la pausa, sin bloque de mensaje)');
   /* Sin asteriscos de negrita en nada que salga al cliente (22-sep-2026). */
-  const datos = { status: status, texto: kommo.sinNegritas(texto), fotos: fotos ? fotos.carpeta : '', pie: kommo.sinNegritas(pieDeFoto), callado: callado ? 'si' : 'no' };
+  const datos = { modo: sinNadaQueDecir ? 'espera' : '', status: status, texto: kommo.sinNegritas(texto), fotos: fotos ? fotos.carpeta : '', pie: kommo.sinNegritas(pieDeFoto), callado: callado ? 'si' : 'no' };
   /* Lo que de verdad le llega al cliente, recortado, para poder revisar
      una plática sin abrir Kommo (21-sep-2026: «me mandó algo de JSON» y no
      había forma de ver qué salió). El registro es privado del sistema. */

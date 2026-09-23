@@ -529,3 +529,52 @@ Regla desde hoy:
   disparador y, sin mensaje entrante, la puerta lo toma como archivo:
   contesta «Recibido 🙌 Si es tu comprobante…». Para probar el camino real,
   que escriba otra cuenta.
+
+### 22-sep-2026 (noche) · «{{json.texto}}» a doce clientes: Kommo pinta el bloque tal cual si el texto va vacío
+
+Lo que se vio: en Chats, buscando «json», doce mensajes salientes con el
+texto literal `{{json.texto}}` (leads 26938242, 26938108, 26919490,
+26918080, 26916514, 26916182, 26912810 y el de pruebas 26818280), del
+21-sep 11:38 al 22-sep 16:21.
+
+Causa, cruzando las horas con el registro de Vercel: cada uno coincide con
+un turno en que el servidor contestó `status:'sigue'` con `texto:''`. Kommo
+**no** manda un mensaje vacío ni se lo salta: pinta la plantilla con las
+llaves. Dos caminos mandaban texto vacío con «sigue»:
+
+- el acuse después del resumen («ok», «todo está bien»): desde el 21-sep el
+  bot no escribe y sigue vivo → 0 envíos → texto vacío;
+- las fotos con el resumen como pie de la primera (18-sep): el texto se
+  vacía y viaja en `pie`; el bloque «Mensaje {{json.texto}}» de después
+  salía vacío.
+
+NO fue el servidor caído ni un tiempo de espera: los tres fallos de
+continuación de la noche del 21 (KOMMO_SECRETO equivocada y KOMMO_TOKEN
+viejo, leads 26818280 y 26921946) fueron por la puerta, cuya salida `fail`
+va al saludo, no a un mensaje.
+
+Arreglo, en dos lados:
+
+1. Servidor (`trabajoDeKommo`): un «sigue» sin texto sale con
+   `modo:'espera'`; un «fin» sin texto sale con `callado:'si'` (antes
+   pedía también «sin fotos»; las fotos las adjunta el widget en su paso 1,
+   antes de escoger salida, así que van igual). Las cuatro salidas:
+   `sigue+texto → success → Mensaje → pausa` · `sigue sin texto → espera →
+   pausa` · `fin+texto → fail → Mensaje → parar` · `fin sin texto →
+   silencio → parar`.
+2. Bot 84760: la salida `espera` del bloque «EuroBot (cerebro)» (paso 11)
+   enlazada DIRECTO a la Pausa (bloque 51, paso 10), sin bloque de mensaje.
+   El widget ya sabía salir por `espera` (condición `{{json.modo}}`); solo
+   faltaba el enlace en el bloque del cerebro. El generador
+   (`arma-bot-kommo-v2.mjs`) ya lo trae: `{ success: 53, fail: 55,
+   silencio: 57, espera: 51 }`.
+
+Pruebas: `probar-kommo-cerebro.cjs` (resumen como pie → «espera»; «ok» tras
+el resumen con la IA → «espera», sin texto, vivo), invariante nueva en
+`probar-invariantes-al-azar.cjs` («sin texto: callado (fin) o espera
+(sigue), nunca un mensaje vacío») y las dos comprobaciones en
+`conversar-kommo.mjs`.
+
+Regla para siempre: **nunca mandar `texto:''` por una salida que pase por
+un bloque «Mensaje {{json.texto}}»**. Si no hay nada que decir, la salida
+tiene que ir a la pausa o a parar.
