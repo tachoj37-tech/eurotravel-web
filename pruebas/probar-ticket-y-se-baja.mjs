@@ -263,6 +263,25 @@ titulo('con la IA caída después del ticket, tampoco');
 }
 
 /* ============================================================ */
+titulo('«cotización de autobús de 57 o 53» no es «enséñame los autobuses» (26-sep-2026, lead 26991356)');
+{
+  /* La IA contestó de fondo y el código la tiró por el catálogo pelón
+     porque el mensaje traía «autobús». El cliente se fue. */
+  limpia();
+  const C = '5213366670072';
+  laIA = function () { return { respuesta: 'Buen día. De 57 o 53 no tenemos, las capacidades que manejamos son 47, 49, 50 y 51 pasajeros. ¿Cuántos son en total para ver cuál les acomoda?', datos: { destino: 'Los Ayala', salida: '2026-10-24', regreso: '2026-10-24' }, accion: 'seguir' }; };
+  await dice('Hola buen día, disculpe para una cotización de autobús de 57 o 53\n\nSería a los Ayala ida y vuelta el sábado 24 de octubre. Salimos 3 am regresando 6 pm\n\nPuntos de abordardaje \n\n- Cántaros \n- Arvento \n- Chapala y Periférico \n\nMuchas gracias', C);
+  const tras = textos(C).join('\n');
+  ok('le llega la respuesta de la IA (de 57 o 53 no hay)', /57 o 53 no tenemos/.test(tras));
+  ok('  y NO el catálogo pelón en su lugar', !/Estos son los autobuses que tenemos/.test(tras));
+  /* Y «¿qué camiones tienen?» a secas sigue enseñando la lista. */
+  limpia();
+  const D = '5213366670073';
+  laIA = function () { return { respuesta: 'Tenemos varias opciones 🚌 ¿Cuántos son?', datos: {}, accion: 'seguir' }; };
+  await dice('que camiones tienen?', D);
+  ok('«¿qué camiones tienen?» a secas sí enseña la lista', /Marcopolo Paradiso G8/.test(textos(D).join('\n')));
+}
+
 titulo('«¿y dan factura?» a media cotización: se contesta y luego se pregunta lo que falta (26-sep-2026, y3)');
 {
   /* La IA contestó lo de la factura y de paso prometió el precio con datos

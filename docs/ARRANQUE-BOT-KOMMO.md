@@ -676,3 +676,12 @@ factura. Ahora `sinPromesaDePrecio` conserva lo que contestó (sin la
 promesa ni su pregunta; corta también después de un emoji) y le pega la
 pregunta del guion. Prueba en `probar-ticket-y-se-baja.mjs`. Gasto total
 de la noche con el modelo real: $0.51.
+
+**26-sep, del registro real (sin gastar):** lead 26991356 (15:05, con la IA
+viva): «cotización de autobús de 57 o 53, a los Ayala ida y vuelta el 24 de
+octubre…». La IA contestó de fondo («de 57 o 53 no tenemos; manejamos 47,
+49, 50 y 51, ¿cuántos son?») y `conLosAutobusesQuePidio` la tiró por el
+catálogo pelón porque el mensaje traía «autobús». La clienta dijo «ok muchas
+gracias» y se fue. Ahora, si el mensaje trae fecha o cuántos, o la IA
+contestó de fondo (capacidades, «no tenemos», «caben»), la respuesta se
+queda; «¿qué camiones tienen?» a secas sigue enseñando la lista (R11).

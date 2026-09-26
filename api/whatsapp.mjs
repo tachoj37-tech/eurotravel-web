@@ -2154,7 +2154,26 @@ function conLosAutobusesQuePidio(respuesta, textoDelCliente, estado) {
      flota (simulación x6, 17-sep-2026): la respuesta se queda. */
   if (/\b(ba[ñn]os?|aire|clima|wifi|pantallas?|tele|tv|reclinables?)\b/i.test(String(textoDelCliente || ''))) return respuesta;
   if (estado && estado.unidadNombre) return respuesta;
+  /* ------------------------------------------------------------
+     «AUTOBÚS» DENTRO DE UNA PETICIÓN NO ES «ENSÉÑAME LOS AUTOBUSES» — 26-sep-2026
+     ------------------------------------------------------------
+     Lead real 26991356 (25-sep, 15:05): «cotización de autobús de 57 o 53,
+     a los Ayala ida y vuelta el 24 de octubre, salimos 3 am…». La IA
+     contestó bien («de 57 o 53 no tenemos; manejamos 47, 49, 50 y 51,
+     ¿cuántos son en total?») y esta función la tiró por el catálogo pelón,
+     porque el mensaje traía la palabra «autobús». El cliente dijo «ok
+     muchas gracias» y se fue. Si el mensaje trae datos del viaje (fecha,
+     cuántos, destino) o la IA contestó de fondo (capacidades, «no
+     tenemos», «caben»), la respuesta se queda. */
+  const n = conversacion.normaliza(String(textoDelCliente || ''));
+  let traeFecha = false;
+  try { traeFecha = !!conversacion.fechaDe(textoDelCliente); } catch (e) { traeFecha = false; }
+  const traeGente = /\b(somos|\d{1,3}\s*(?:personas|pax|pasajeros|gentes?|pasajero)|de \d{2,3}\b)/.test(n);
+  /* Lo que cuenta es lo que trae ESTE mensaje: «vamos a Vallarta» y luego
+     «¿qué camiones tiene?» sí es pedir la lista (R11). */
+  if (traeFecha || traeGente) return respuesta;
   const texto = String(respuesta || '').toLowerCase();
+  if (/\b(no tenemos|capacidad\w*|caben|hasta \d+|manejamos)\b/.test(texto)) return respuesta;
   const nombraUnAutobus = (conversacion.UNIDADES || []).some(function (u) {
     return u.cat === 'autobus' && u.name && texto.indexOf(String(u.name).toLowerCase()) >= 0;
   });

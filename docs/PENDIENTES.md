@@ -256,3 +256,14 @@ seguimiento 24 h / 3 d / 7 d por cron con plantillas y textos investigados
 (`docs/SEGUIMIENTO.md`); memoria de 7 días y de dos cotizaciones; «para 20
 solo hay Sprinter»; destinos de un día; RFC y cancelación pasan por ti;
 liquidación sin fecha límite; SQL corrido; plan del agente (`docs/AGENTE.md`).
+
+## Del dueño · nuevos desde el 22-sep-2026
+
+| # | Qué | Cómo | Cómo se comprueba |
+|---|---|---|---|
+| 24 | **Escribirle a Sol (lead 26991356 no; es el 26992600)** | Su viaje real: San Juan de los Lagos, Villa Hidalgo y Santo Toribio · 28 de noviembre, mismo día · 47 a 51 personas · Irizar i6S. Lo del «Apartar» y los $5,000 lo inventó el guion el 25-sep con la IA sin saldo | Que le llegue su cotización |
+| 25 | **Contestarle al lead 26991356** (Los Ayala, 24 de octubre, 57 o 53 personas, salida 3 am, paradas Cántaros / Arvento / Chapala y Periférico) | El bot le mandó el catálogo pelón en vez de decirle que el tope es 51; dijo «ok muchas gracias» y se fue | Que le llegue una propuesta (dos unidades, o una de 51) |
+| 26 | **Vigilar el tope de gasto de Anthropic** (Settings → Limits) | Se agotó el 25-sep a las 18:21; lo subiste el 26. Si vuelve a pasar, el bot dice «ahorita te contesta una persona» y se apaga; el registro lo grita con `[ia-agotada]` | Que el registro no traiga `[ia-agotada]` |
+| 27 | **Subir el zip del widget 1.0.9** en Kommo (Ajustes → Integraciones → Claude Pruebas) cuando haya calma | Lo registrado por API ya corre; el zip es para que quede parejo | — |
+| 28 | **`KOMMO_SECRETO` correcta en Vercel** (la clave de la integración «Claude Pruebas», no la de EuroBot) y probar en tu lead antes de dejarla | Hoy el token del widget no se comprueba (el registro lo dice en cada aviso) | `[kommo-trabajo]` sin «sin KOMMO_SECRETO» |
+| 29 | **Instagram: probar con un mensaje desde otra cuenta** | El canal está encendido en el disparador; nunca se ha probado | Que conteste el saludo |
