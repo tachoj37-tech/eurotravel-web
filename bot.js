@@ -1327,8 +1327,19 @@ function comoDestino(crudo) {
    salida, y una calle no empata con ninguna zona. */
 function comoOrigen(crudo) {
   if (!esUnLugar(crudo)) return null;
+  /* Una pregunta no es una ciudad (25-sep-2026, modelo real, escenario
+     a1): a «¿salen de la zona metropolitana?» la clienta contestó «Y se
+     liquida cuando ?» y quedó como origen *Y Se Liquida Cuando ?*, y así
+     salió en el resumen. Con signo de interrogación, o empezando como
+     pregunta («cómo es la dinámica…»), no se guarda nada. Misma regla que
+     `comoDestino` desde el 22-sep. */
+  if (/[?¿]/.test(String(crudo || ''))) return null;
   const bruto = String(crudo || '').trim();
   const n = normaliza(bruto);
+  if (/^\s*(?:y\s+|pero\s+|oye\s+)?(?:como|cuando|cuanto|cuantos|cuantas|donde|que|cual|cuales|quien|se puede|hay|tienen|manejan)\b/.test(n)) return null;
+  /* Y las palabras de pregunta o de pago en cualquier parte: ninguna
+     ciudad se llama «cuándo», «liquida» ni «apartar». */
+  if (/\b(cuando|cuanto|cuantos|cuantas|liquid\w*|pag\w+|deposit\w+|apart\w+|anticipo)\b/.test(n)) return null;
   if (NO_ES_CIUDAD.test(n) || NO_ES_UN_LUGAR.test(n) || SOLO_ES_FECHA.test(n)) return null;
   if (pareceDireccion(bruto)) return null;
   /* Ni una petición ni una unidad son una ciudad (18-sep-2026, simulación
@@ -1341,6 +1352,11 @@ function comoOrigen(crudo) {
   const limpio = normaliza(o);
   if (!limpio || limpio.length < 3) return null;
   if (NO_ES_UN_LUGAR.test(limpio) || SOLO_ES_FECHA.test(limpio)) return null;
+  /* «sí, un día allá» contestando «¿salen de la ZMG?» quedó como origen
+     *Un Día Allá* (25-sep-2026, modelo real, x14). Se mira DESPUÉS de
+     limpiar: «gdl sin movimientos» se limpia a Guadalajara y pasa; lo que
+     sigue hablando de días, «allá» o movimientos no es una ciudad. */
+  if (/\b(dia|dias|alla|aya|movimiento\w*|recorrido\w*|nos movemos|solo ida|ida y vuelta)\b/.test(limpio)) return null;
   return String(o).slice(0, 120);
 }
 

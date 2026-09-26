@@ -2863,7 +2863,10 @@ async function loQueDiceElAgente(envio) {
       /* «sí» (o «ai», «va») = Guadalajara; y si contesta con la ciudad
          («de gdl», «zapopan»), ésa es (18-sep-2026: «de gdl» se perdía y
          el bot preguntaba el origen dos veces). */
-      const ciudad = esUnSiConDedazo(texto) ? 'Guadalajara' : conversacion.comoOrigen(texto);
+      /* «sí, un día allá» (25-sep-2026, modelo real, x14): un sí con cola
+         que NO nombra ciudad es Guadalajara, no la ciudad *Un Día Allá*. */
+      const ciudad = esUnSiConDedazo(texto) ? 'Guadalajara'
+        : (conversacion.comoOrigen(texto) || (empiezaConSi(texto, hoy) ? 'Guadalajara' : null));
       if (ciudad) {
         console.error('[agente] «' + String(texto).slice(0, 15) + '» a la pregunta del origen: ' + ciudad);
         antes = Object.assign({}, antes, { origen: ciudad }); cambio = true;
@@ -3808,16 +3811,21 @@ async function loQueDiceElAgente(envio) {
      Si el cliente la vuelve a pedir, se repite: eso es atenderlo. Lo que
      no se vale es contestar con el catálogo algo que no lo pidió.
      ------------------------------------------------------------ */
+  /* ¿El catálogo (entero o en parte) ya iba en el mensaje anterior del bot? */
+  const catalogoYaIba = (function () {
+    const anterior = agente.historialDe(cliente).filter(function (h) { return h.de === 'bot'; }).pop();
+    const t = anterior ? String(anterior.texto || '') : '';
+    return !!t && (ES_CATALOGO.test(t) || traeLaListaDeAutobuses(t));
+  })();
   {
     const r = String(dicho.respuesta || '');
-    if (ES_CATALOGO.test(r) && !pideAutobuses(texto || '')) {
-      const anterior = agente.historialDe(cliente).filter(function (h) { return h.de === 'bot'; }).pop();
-      if (anterior && ES_CATALOGO.test(String(anterior.texto || ''))) {
-        console.error('[agente] el catálogo ya iba en el mensaje anterior: no se repite');
-        dicho.accion = 'seguir';
-        dicho.respuesta = 'Los de arriba son todos los que tenemos 🙌 Dime cuál te late y te mando sus fotos, ' +
-          'o si quieres te recomiendo uno.';
-      }
+    if ((ES_CATALOGO.test(r) || traeLaListaDeAutobuses(r)) && !pideAutobuses(texto || '') && catalogoYaIba) {
+      /* 25-sep-2026 (modelo real, escenario a1): se conserva lo que la IA
+         contestó («sí, el i6S es de doble puerta») y solo se quita la lista;
+         antes se tiraba la respuesta entera. */
+      console.error('[agente] el catálogo ya iba en el mensaje anterior: no se repite');
+      dicho.accion = 'seguir';
+      dicho.respuesta = sinLaListaDeAutobuses(r, LOS_DE_ARRIBA);
     }
   }
 
@@ -3889,7 +3897,20 @@ async function loQueDiceElAgente(envio) {
         const esperado = String(u.asientos || u.max) + ' asientos';
         if (l.indexOf(esperado) === -1) malEscritos.push(u.name + ' (debe decir ' + esperado + ')');
       });
-      if (faltan.length || malEscritos.length) {
+      if ((faltan.length || malEscritos.length) && catalogoYaIba && !pideAutobuses(texto || '')) {
+        /* ------------------------------------------------------------
+           LA LISTA COMPLETA NO SE MANDA DOS VECES — 25-sep-2026
+           ------------------------------------------------------------
+           Modelo real, escenario a1 (la plática de Sol): a «¿solo tienes el
+           Irizar i6S de doble puerta?» la IA nombró tres autobuses; como la
+           lista iba «incompleta», este bloque mandó la del motor ENTERA, un
+           turno después de haberla mandado, y se perdió la respuesta. Si el
+           catálogo ya iba antes, se quita la lista y queda lo que contestó.
+           ------------------------------------------------------------ */
+        console.error('[agente] la lista iba incompleta pero el catálogo ya iba antes: se quita la lista y queda la respuesta');
+        dicho.accion = 'seguir';
+        dicho.respuesta = sinLaListaDeAutobuses(r, LOS_DE_ARRIBA);
+      } else if (faltan.length || malEscritos.length) {
         console.error('[agente] la lista de autobuses iba ' + (faltan.length ? 'incompleta (faltó ' +
           faltan.map(function (u) { return u.name; }).join(', ') + ')' : 'con asientos mal (' + malEscritos.join('; ') + ')') +
           ': se manda la del motor');
@@ -6010,6 +6031,26 @@ function esSoloUnAcuse(texto) {
    total, redondeado hacia arriba a los $500. El bot no sabe el total por
    Kommo, así que dice la regla sin cifras y sigue vivo.
    ------------------------------------------------------------ */
+/* Renglones de la lista de autobuses («Irizar i6S — Premium — 51 asientos»):
+   tres o más en un texto es la lista entera. */
+const RENGLON_DE_AUTOBUS = /^[^\n]*\b(marcopolo|irizar|neobus|century)\b[^\n]*\b(asientos|pasajeros)\b[^\n]*$/gim;
+function traeLaListaDeAutobuses(texto) {
+  const m = String(texto || '').match(RENGLON_DE_AUTOBUS);
+  return !!m && m.length >= 3;
+}
+const LOS_DE_ARRIBA = 'Los de arriba son todos los que tenemos 🙌 Dime cuál te late y te mando sus fotos, o si quieres te recomiendo uno.';
+/* Quita la lista de autobuses de una respuesta y deja lo demás (lo que la
+   IA contestó de verdad). Si no queda nada, `siNadaQueda`. */
+function sinLaListaDeAutobuses(texto, siNadaQueda) {
+  const quedan = String(texto || '')
+    .replace(/\s*(?:para \d+ se ajustan a la capacidad estos|estos son los autobuses que tenemos|te los recomiendo porque son los que les caben\.?|estos no caben, pero tambi[eé]n tenemos otras opciones por si gustas)\s*:?/gi, '')
+    .split('\n').filter(function (l) {
+      return !/\b(marcopolo|irizar|neobus|century)\b/i.test(l) || !/\b(asientos|pasajeros)\b/i.test(l);
+    })
+    .join('\n').replace(/\n{3,}/g, '\n\n').replace(/[ \t]+\n/g, '\n').trim();
+  const util = quedan.replace(/¿cu[aá]l te late\??/i, '').replace(/[^a-záéíóúñ]/gi, '');
+  return util.length >= 6 ? quedan : (siNadaQueda || LOS_DE_ARRIBA);
+}
 function preguntaPorElApartado(texto) {
   const t = conversacion.normaliza(String(texto || ''));
   return /\b(apartado|apartar|aparto|anticipo|deposito|enganche|reserva|reservar|apartarlo|apartarla)\b/.test(t) &&

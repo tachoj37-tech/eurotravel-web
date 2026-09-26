@@ -263,6 +263,34 @@ titulo('con la IA caída después del ticket, tampoco');
 }
 
 /* ============================================================ */
+titulo('la lista de autobuses se manda una vez (25-sep-2026, modelo real, escenario a1)');
+{
+  /* A «¿solo tienes el i6S de doble puerta?» la IA contestó la lista de
+     seis autobuses otra vez, un turno después de mandarla. Si insiste, la
+     lista se recorta y queda lo demás. */
+  const LISTA = 'Para 51 se ajustan a la capacidad estos:\nMarcopolo Paradiso G8 — Premium — 51 asientos\nIrizar i6S — Premium — 51 asientos\nIrizar i6 — Premium — 47 y 51 asientos\nNeobus — Gran Turismo — 50 asientos\n\n¿Cuál te late?';
+  limpia();
+  const C = '5213366670070';
+  let vez = 0;
+  laIA = function () {
+    vez++;
+    if (vez === 1) return { respuesta: 'San Juan de los Lagos, va 🙌 ' + LISTA, datos: { destino: 'San Juan de los Lagos', salida: '2026-11-28', regreso: '2026-11-28', unidad: 'autobus' }, accion: 'seguir' };
+    /* Segunda llamada: contesta, pero con la lista (a medias) otra vez. */
+    return { respuesta: 'Sí, el i6S es de doble puerta 🚌 ' + LISTA, datos: {}, accion: 'seguir' };
+  };
+  await dice('a san juan de los lagos el 28 de noviembre, mismo día, 50 personas en autobús', C);
+  const antes = textos(C).length;
+  await dice('solo tienes el irizar i6s de doble puerta?', C);
+  const tras = textos(C).slice(antes).join('\n');
+  ok('la segunda vez la lista NO sale (ni la de la IA ni la del motor)', !/Neobus — Gran Turismo|Marcopolo Paradiso G8 — Premium|se ajustan a la capacidad/.test(tras));
+  ok('  pero sí sale lo que contestó', /doble puerta/.test(tras));
+  ok('  y sin gastar una llamada más a la IA', vez === 2);
+  /* Si la vuelve a pedir, sí se repite: eso es atenderlo. */
+  const antes2 = textos(C).length;
+  await dice('a ver, qué camiones tienes?', C);
+  ok('si pide los camiones otra vez, la lista sí sale', /Neobus — Gran Turismo/.test(textos(C).slice(antes2).join('\n')));
+}
+
 titulo('un «ok» después del ticket no apaga el bot; un «¿y cuánto?» recibe «en breve» (21-sep-2026)');
 {
   /* Dictado: «el ok, ten cuidado que no se apague cuando no debería» y

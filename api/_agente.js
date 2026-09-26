@@ -68,8 +68,12 @@ const ESFUERZO_AGENTE = NIVELES.indexOf(process.env.AGENTE_ESFUERZO) >= 0 ? proc
 const TOPE_SALIDA_AGENTE = 6000;
 /* Razonar tarda más que contestar. Si la IA no llega a tiempo contesta el
    guion, así que un tope corto convertiría la mejora en el bot tonto de
-   siempre sin que nadie se enterara. */
-const ESPERA_AGENTE_MS = 30000;
+   siempre sin que nadie se enterara. 25-sep-2026: el primer turno de una
+   plática (caché frío + mensaje largo con todo el viaje) pasó de 30 s y el
+   guion contestó «¿y qué día regresan?»; en Vercel un turno de 25 s ya
+   había salido bien. Sube a 45 s: la función aguanta y un turno lento es
+   mejor que el guion adivinando. */
+const ESPERA_AGENTE_MS = 45000;
 /* ------------------------------------------------------------
    PRIMERO EN PRUEBAS (dictado del dueño, 21-sep-2026: «publícalo en
    prueba y le damos»)
@@ -739,7 +743,13 @@ function porQueSeTira(texto) {
      las llaves conocidas. Una llave con comillas seguida de dos puntos, o
      un bloque de código, no es una frase para un cliente. */
   if (/```|\{\s*"[A-Za-z_]+"\s*:/.test(t)) return 'JSON o código en la respuesta';
-  if (DINERO.test(t)) return 'cifra de dinero';
+  /* La regla del apartado no es un precio (25-sep-2026, modelo real, a1):
+     «el 20 % del total, redondeado a los 500 pesos» se tiraba por «cifra
+     de dinero» y el guion contestó «No cobramos apartado». Con el «20 %»
+     en la frase, los «500 pesos» del redondeo pasan; «son 500 pesos» a
+     secas sigue sin pasar. */
+  const sinLaRegla = /20\s?%/.test(t) ? t.replace(/\b500\s*pesos\b/gi, 'medio millar') : t;
+  if (DINERO.test(sinLaRegla)) return 'cifra de dinero';
   const m = t.match(PALABRAS_PROHIBIDAS);
   if (m) return 'palabra prohibida «' + m[0] + '»';
   /* La lista de autobuses es la excepción que el prompt ya permite («tres

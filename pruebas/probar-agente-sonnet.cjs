@@ -145,6 +145,11 @@ const CLIENTE_REAL = '5213312345678';
       agente.sanea('Mira, te platico. '.repeat(40)) === null);
     ok('y la lista con una cifra de dinero sigue cayendo (los demás candados no se aflojan)',
       agente.sanea(lista + '\nEl G8 sale en $38,000') === null);
+    /* 25-sep-2026 (modelo real, a1): la regla del apartado no es un precio. */
+    const regla = 'El apartado es el 20% del total, redondeado a los 500 pesos. En cuanto tengamos el precio te paso el monto exacto.';
+    ok('la regla del apartado («20 % … 500 pesos») SÍ pasa', agente.sanea(regla) === regla);
+    ok('  pero «son 500 pesos» a secas sigue cayendo', agente.sanea('Son 500 pesos de apartado 🙌') === null);
+    ok('  y «20 % … $9,500» también cae', agente.sanea('El apartado es el 20%, serían $9,500') === null);
   }
 
   titulo('si un candado tira la respuesta de Sonnet, se le pide que la reescriba (21-sep)');

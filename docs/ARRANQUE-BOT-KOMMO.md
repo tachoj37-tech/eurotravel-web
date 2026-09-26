@@ -631,3 +631,40 @@ Dos arreglos:
 Lo que solo el dueño puede hacer: subir el tope de uso mensual en la
 consola de Anthropic (Settings → Limits), o la IA sigue apagada hasta el
 1 de octubre. El registro lo grita con `[ia-agotada]`.
+
+### 26-sep-2026 (madrugada) · Tanda con el modelo real ($0.42): cinco cosas que salieron
+
+Escenarios nuevos `a1` (la plática de Sol tal cual), `a2` y `a3` (el
+apartado antes y después del resumen) en `conversar-kommo.mjs`, más `x14`
+y `y3`. Lo que se corrigió, cada uno con su prueba:
+
+1. **«Y se liquida cuando ?» como ciudad de origen.** A «¿salen de la
+   ZMG?» la clienta contestó con una pregunta y `comoOrigen` la guardó
+   (*Y Se Liquida Cuando ?*), y así salió en el resumen al cliente. Ahora
+   `comoOrigen` rechaza preguntas (signo, o «cómo/cuándo/cuánto…» al
+   frente, o palabras de pago) igual que `comoDestino`.
+2. **«sí, un día allá» como origen *Un Día Allá*.** Un sí con cola que no
+   nombra ciudad es Guadalajara (`empiezaConSi`), y lo que hable de días,
+   «allá» o movimientos no es ciudad (se mira después de limpiar, para que
+   «gdl sin movimientos» siga siendo Guadalajara).
+3. **La lista de autobuses dos veces seguidas.** A «¿solo tienes el i6S de
+   doble puerta?» la IA nombró tres autobuses; el bloque «lista incompleta
+   → se manda la del motor» mandó el catálogo ENTERO otra vez y tiró la
+   respuesta. Si el catálogo ya iba en el mensaje anterior, se quita la
+   lista y queda lo que contestó (`sinLaListaDeAutobuses`); si la vuelve a
+   pedir, sí se repite.
+4. **La regla del apartado no es un precio.** Antes del resumen la IA dijo
+   bien «el 20 % del total, redondeado a los 500 pesos» y `sanea` la tiró
+   por «cifra de dinero»; el guion contestó «No cobramos apartado» (falso).
+   Con «20 %» en la frase, los «500 pesos» del redondeo pasan; «son 500
+   pesos» a secas sigue sin pasar.
+5. **Tope de la IA de 30 a 45 s.** El primer turno de a1 (caché frío +
+   mensaje largo) pasó de 30 s y el guion contestó; en Vercel un turno de
+   25 s ya salía bien.
+
+Y en el simulador: el «modo espera» del cerebro ya no se confunde con la
+puerta, y el «sí» con acento ya cuenta como acuse (dos falsos positivos).
+
+Queda anotado, sin arreglar: a «¿y dan factura?» a media cotización la IA
+prometió el precio con datos que faltaban y el guion preguntó la fecha sin
+contestar lo de la factura (y3).

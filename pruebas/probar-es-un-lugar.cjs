@@ -85,7 +85,16 @@ titulo('comoOrigen · una petición no es una ciudad (18-sep-2026)');
      ZMG?» se guardó como origen y salió en el resumen y en el ticket. */
   [['mandame fotos del neobus', 'pide fotos'], ['fotos del i6s', 'pide fotos'],
    ['mándame el video', 'pide video'], ['quiero cotizar', 'una intención'],
-   ['el neobus', 'una unidad'], ['hola buenas', 'un saludo']]
+   ['el neobus', 'una unidad'], ['hola buenas', 'un saludo'],
+   /* 25-sep-2026, modelo real (a1): «Y se liquida cuando ?» contestando
+      «¿salen de la ZMG?» quedó como origen y salió en el resumen. */
+   ['Y se liquida cuando ?', 'una pregunta'], ['y se liquida cuando', 'una pregunta sin signo'],
+   ['como es la dinamica para apartar', 'una pregunta'], ['¿de dónde salen ustedes?', 'una pregunta'],
+   ['tienen wifi?', 'una pregunta'],
+   /* x14 con el modelo real (25-sep-2026): «sí, un día allá» quedó como
+      origen *Un Día Allá*. */
+   ['sí, un día allá', 'un sí con los movimientos'], ['un dia alla', 'los movimientos'],
+   ['si, nos movemos 2 dias', 'los movimientos'], ['sí, solo ida y vuelta', 'un sí con el recorrido']]
     .forEach(function (par) { ok('«' + par[0] + '» no es origen (' + par[1] + ')', conv.comoOrigen(par[0]) === null); });
   [['de guadalajara', 'Guadalajara'], ['zapopan', 'Zapopan'], ['de gdl', 'Guadalajara'], ['tlaquepaque', 'Tlaquepaque']]
     .forEach(function (par) { ok('«' + par[0] + '» → ' + par[1], conv.comoOrigen(par[0]) === par[1]); });
