@@ -668,3 +668,11 @@ puerta, y el «sí» con acento ya cuenta como acuse (dos falsos positivos).
 Queda anotado, sin arreglar: a «¿y dan factura?» a media cotización la IA
 prometió el precio con datos que faltaban y el guion preguntó la fecha sin
 contestar lo de la factura (y3).
+
+**26-sep, lo que quedaba (y3):** «¿y dan factura?» a media cotización. La
+IA contestaba y de paso prometía el precio con datos que faltaban; el
+candado tiraba TODO y el guion preguntaba la fecha sin contestar lo de la
+factura. Ahora `sinPromesaDePrecio` conserva lo que contestó (sin la
+promesa ni su pregunta; corta también después de un emoji) y le pega la
+pregunta del guion. Prueba en `probar-ticket-y-se-baja.mjs`. Gasto total
+de la noche con el modelo real: $0.51.

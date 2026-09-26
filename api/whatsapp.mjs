@@ -2032,6 +2032,17 @@ function cambiaElTicket(nuevo, base) {
    8-sep, escenario c: 30 a Mazatlán, tres veces «te paso el precio», cero
    tickets). Si promete el precio y falta algo, sale la pregunta del guion. */
 const PROMETE_PRECIO = /te (paso|mando|doy|saco) (el|tu|la) (precio|cotizaci[oó]n)|en un momento te (paso|mando)|te lo (paso|mando|cotizo) en un momento|ahorita te (paso|mando|cotizo)/i;
+/* Lo que la IA contestó, sin la frase que promete el precio ni la pregunta
+   con que cerró (la pregunta la pone el guion). Vacío si no queda nada. */
+function sinPromesaDePrecio(texto) {
+  /* Corta en punto, signo, salto de línea… y también después de un emoji:
+     la IA escribe «Sí, damos factura 🧾 En un momento te paso el precio»
+     sin punto en medio. */
+  const frases = String(texto || '').split(/(?<=[.!?…])\s+|\n+|(?<=[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}])\s+/u).map(function (f) { return f.trim(); }).filter(Boolean);
+  const quedan = frases.filter(function (f) { return !PROMETE_PRECIO.test(f) && !/[?¿]/.test(f); });
+  const util = quedan.join(' ').trim();
+  return util.replace(/[^a-záéíóúñ]/gi, '').length >= 10 ? util : '';
+}
 
 /* ------------------------------------------------------------
    NADA INTERNO LE LLEGA A UN CLIENTE
@@ -4166,7 +4177,12 @@ async function loQueDiceElAgente(envio) {
   if (accion === 'seguir' && !yaEstaTodo && dicho.respuesta && PROMETE_PRECIO.test(dicho.respuesta) &&
       !(viajeDeLaFicha && viajeDeLaFicha.estado)) {
     console.error('[agente] prometió el precio con datos que faltan (' + String(conversacion.loQueFalta(nuevo)).slice(0, 40) + '); pregunta el guion');
-    dicho.respuesta = preguntaParaElCliente(nuevo);
+    /* 26-sep-2026 (modelo real, y3): a «¿y dan factura?» la IA contestó y
+       de paso prometió el precio; se tiraba TODO y el guion preguntaba la
+       fecha sin contestar lo de la factura. Se conserva lo que contestó
+       (sin la promesa ni su pregunta) y se le pega la pregunta del guion. */
+    const loContestado = sinPromesaDePrecio(dicho.respuesta);
+    dicho.respuesta = (loContestado ? loContestado + '\n\n' : '') + preguntaParaElCliente(nuevo);
   }
   /* «Quiero apartar» sin precio dado (A7): antes se reinyectaba al guion
      con la plática limpia y salía la CLABE sin viaje ni monto. Sin precio

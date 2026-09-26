@@ -263,6 +263,23 @@ titulo('con la IA caída después del ticket, tampoco');
 }
 
 /* ============================================================ */
+titulo('«¿y dan factura?» a media cotización: se contesta y luego se pregunta lo que falta (26-sep-2026, y3)');
+{
+  /* La IA contestó lo de la factura y de paso prometió el precio con datos
+     que faltaban; antes se tiraba todo y solo salía «¿Qué día salen?». */
+  limpia();
+  const C = '5213366670071';
+  laIA = function () { return { respuesta: 'Vallarta con 14, va 🙌 ¿Qué fechas tienen en mente?', datos: { destino: 'Puerto Vallarta', gente: 14 }, accion: 'seguir' }; };
+  await dice('a vallarta, somos 14', C);
+  laIA = function () { return { respuesta: 'Sí, damos factura sin problema 🧾 En un momento te paso el precio. ¿Te late?', datos: {}, accion: 'seguir' }; };
+  const antes = textos(C).length;
+  await dice('y dan factura?', C);
+  const tras = textos(C).slice(antes).join('\n');
+  ok('contesta lo de la factura', /factura/i.test(tras));
+  ok('  sin la promesa del precio ni su pregunta', !/te paso el precio|te late/i.test(tras));
+  ok('  y sigue con lo que falta (la fecha)', /qu[eé] d[ií]a salen/i.test(tras));
+}
+
 titulo('la lista de autobuses se manda una vez (25-sep-2026, modelo real, escenario a1)');
 {
   /* A «¿solo tienes el i6S de doble puerta?» la IA contestó la lista de
