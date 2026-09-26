@@ -290,6 +290,22 @@ titulo('un «ok» después del ticket no apaga el bot; un «¿y cuánto?» recib
     ok('«' + frase + '» → «en breve te paso tu cotización», sin precio', /en breve te paso tu cotizaci/i.test(tras) && !/\$|38/.test(tras) && textos(C).length - antes === 1);
     ok('  y el bot sigue vivo', !(tk.fichaDe(C) || {}).enManosDe);
   }
+  /* 25-sep-2026, dictado: «ya sabes cuál es la regla del apartado». Después
+     del resumen, «¿cuánto es el apartado?» NO es una pregunta por el
+     precio: se contesta la regla (20 % a los $500), sin cifras del viaje,
+     y el bot sigue vivo. */
+  for (const frase of ['cuánto es el apartado?', 'y de anticipo cuánto sería', 'cuánto tengo que depositar para apartar', 'como es la dinámica para apartar']) {
+    limpia();
+    const C = '5213366670063';
+    await hastaElTicket(C);
+    laIA = function () { return { respuesta: 'Serían $7,600 de apartado 🙌', datos: {}, accion: 'seguir' }; };
+    const antes = textos(C).length;
+    await dice(frase, C);
+    const tras = textos(C).slice(antes).join('\n');
+    ok('«' + frase + '» → la regla del apartado (20 % a los $500), sin cifras del viaje ni «en breve»',
+      /20 %/.test(tras) && /500 pesos/.test(tras) && !/7,600|en breve|\$/i.test(tras) && textos(C).length - antes === 1);
+    ok('  y el bot sigue vivo', !(tk.fichaDe(C) || {}).enManosDe);
+  }
   /* Y después del «ok», una pregunta por el precio todavía se contesta:
      el bot no se apagó con el acuse. */
   limpia();

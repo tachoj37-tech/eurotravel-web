@@ -199,6 +199,14 @@ function peticion(cuerpo, cabeceras, llave) {
       notas.push({ url: u, metodo: init.method, auth: init.headers.Authorization, body: JSON.parse(init.body) });
       return { ok: true, status: 200, text: async function () { return ''; }, json: async function () { return { _embedded: { notes: [{ id: 1 }] } }; } };
     }
+    /* 25-sep-2026: la API de Anthropic diciendo que la llave pegó en su
+       tope mensual (lo que pasó de verdad ese día). Solo cuando la prueba
+       lo enciende. */
+    if (/api\.anthropic\.com/.test(u) && global.__iaSinSaldo) {
+      return { ok: false, status: 400, json: async function () { return {}; }, text: async function () {
+        return '{"type":"error","error":{"type":"invalid_request_error","message":"You have reached your specified API usage limits. You will regain access on 2099-10-01 at 00:00 UTC."}}';
+      } };
+    }
     throw new Error('la prueba no debía llamar a ' + u);
   };
   const reenvios = [];
@@ -686,6 +694,41 @@ function peticion(cuerpo, cabeceras, llave) {
     const audio = await conSesion(26838770, 'audio', 'kommo-trabajo');
     ok('«audio» → pide que lo escriba por texto, y para', audio.status === 'fin' && audio.texto === TEXTOS_FIJOS.audioRecibido);
     ok('  sin nota de comprobante', notas.length === notasAntes + 1);
+  }
+
+  titulo('25-sep: con la IA sin saldo, el guion NO adivina; el chat pasa a una persona');
+  {
+    /* Lead real 26992600: la llave en su tope mensual, y el guion de
+       respaldo leyó «Como es la dinámica para apartar» como el destino
+       «Apartar» y dio un apartado de $5,000. */
+    const agenteA = require(path.join(RAIZ, 'api/_agente.js'));
+    const conversacionA = require(path.join(RAIZ, 'bot.js'));
+    const webhookA = require(path.join(RAIZ, 'api/_whatsapp-webhook.js'));
+    agenteA.olvidaAgotamiento();
+    process.env.ANTHROPIC_API_KEY = 'clave-de-mentiras';
+    global.__iaSinSaldo = true;
+    await conSesion(26992600, 'hola', 'kommo-trabajo-puerta');
+    const antes = webhookA.charlaDe('529926992600');
+    /* El primer turno que toca la IA ya se topa con el «sin saldo». */
+    const sinSaldo = await conSesion(26992600, 'Nueva cotización', 'kommo-trabajo');
+    ok('la API dijo «usage limits» y el agente quedó marcado como agotado', agenteA.iaAgotada() && /usage limits/.test(agenteA.iaAgotadaMotivo()));
+    ok('el cliente recibe el relevo fijo, no una adivinanza del guion', sinSaldo && sinSaldo.texto === TEXTOS_FIJOS.agente);
+    ok('  y el bot se apaga (fin) para que conteste una persona', sinSaldo && sinSaldo.status === 'fin');
+    /* Lo que escriba después ya lo lee la persona: el bot calla. */
+    const luego = await conSesion(26992600, 'Como es la dinámica para apartar', 'kommo-trabajo');
+    ok('  lo que sigue no lo contesta el bot (ni «Apartar» como destino)', luego && !luego.texto && luego.status === 'fin');
+    const despues = webhookA.charlaDe('529926992600');
+    ok('  «Apartar» NO quedó como destino: la plática sigue sin destino, como antes',
+      !(despues && despues.destino) && !(antes && antes.destino));
+    const fichaSinSaldo = tickets.fichaDe('529926992600');
+    ok('  la ficha queda en manos de una persona', !!(fichaSinSaldo && fichaSinSaldo.enManosDe === 'dueno'));
+    /* Diez minutos después (o al día siguiente) se vuelve a intentar: con
+       la IA de vuelta, todo sigue normal. */
+    agenteA.olvidaAgotamiento();
+    ok('al olvidar el agotamiento la IA vuelve a intentarse', !agenteA.iaAgotada());
+    global.__iaSinSaldo = false;
+    delete process.env.ANTHROPIC_API_KEY;
+    void conversacionA;
   }
 
   titulo('la primera puerta reenvía el aviso tal cual');

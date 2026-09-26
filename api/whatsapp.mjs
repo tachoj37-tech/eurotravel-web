@@ -2977,6 +2977,28 @@ async function loQueDiceElAgente(envio) {
   };
   const dicho = await agente.conversa(texto, opcionesDeLaIA);
   if (!dicho) {
+    /* ------------------------------------------------------------
+       SIN SALDO O SIN ACCESO, EL GUION NO ADIVINA — 25-sep-2026
+       ------------------------------------------------------------
+       Ver la nota de `apuntaSiEstaAgotada` en _agente.js: con la llave en
+       su tope mensual el guion leyó «cómo es la dinámica para apartar»
+       como el destino «Apartar» y le dio a una clienta real un apartado
+       de $5,000 (lead 26992600). Regla del dueño: el bot no adivina; si
+       no puede pensar, lo atiende una persona. Se contesta con el texto
+       fijo del relevo, el chat queda en manos de una persona (por Kommo
+       `esPersona` apaga el bot) y la plática vuelve a como estaba antes de
+       que el guion leyera el mensaje.
+       ------------------------------------------------------------ */
+    if (agente.iaAgotada()) {
+      console.error('[ia-agotada] ' + agente.iaAgotadaMotivo() + ' · el chat de ' + cliente + ' pasa a una persona sin que el guion conteste');
+      await manda({ numeroDeOrigen: envio.numeroDeOrigen, para: cliente, texto: TEXTOS.agente, pasaAPersona: true, esPersona: true, escribio: '[agente · ia agotada]' });
+      const fichaAgotada = tickets.fichaDe(cliente);
+      tickets.anotaEtapa(cliente, fichaAgotada ? fichaAgotada.etapa : null, { enManosDe: 'dueno' });
+      agente.recuerda(cliente, 'cliente', texto);
+      agente.recuerda(cliente, 'bot', TEXTOS.agente);
+      webhook.guardaCharla(cliente, (envio.estadoAntes && typeof envio.estadoAntes === 'object') ? envio.estadoAntes : null);
+      return true;
+    }
     /* La IA no contestó (o contestó algo inválido). Con un precio pedido o
        dado NO se le suelta al guion viejo, que leería el mensaje como un
        viaje nuevo (escenario b real, 8-sep-2026). */
@@ -2994,6 +3016,13 @@ async function loQueDiceElAgente(envio) {
         viajeDeLaFicha && viajeDeLaFicha.estado === 'pedido') {
       /* Sin IA también (21-sep-2026): un «¿y cuánto?» recibe «en breve» y
          un «ok» no apaga el bot. Lo demás pasa a una persona, como antes. */
+      if (preguntaPorElApartado(texto)) {
+        console.log('[agente] sin IA: pregunta por el apartado después del ticket, la regla');
+        await manda({ numeroDeOrigen: envio.numeroDeOrigen, para: cliente, texto: TEXTOS.reglaDelApartado, pasaAPersona: false, escribio: '[agente · regla del apartado]' });
+        agente.recuerda(cliente, 'cliente', texto);
+        agente.recuerda(cliente, 'bot', TEXTOS.reglaDelApartado);
+        return true;
+      }
       if (preguntaPorElPrecio(texto)) {
         console.log('[agente] sin IA: pregunta por el precio después del ticket, «en breve»');
         await manda({ numeroDeOrigen: envio.numeroDeOrigen, para: cliente, texto: EN_BREVE_EL_PRECIO, pasaAPersona: false, escribio: '[agente · en breve]' });
@@ -3355,6 +3384,13 @@ async function loQueDiceElAgente(envio) {
            · lo demás (RFC, «apártamelo», «hablar con alguien») sigue
              como el 13-sep: silencio y lo atiende una persona.
          ------------------------------------------------------------ */
+      if (preguntaPorElApartado(texto)) {
+        console.log('[agente] pregunta por el apartado después del ticket: la regla (20 % a los $500), el bot sigue vivo');
+        await manda({ numeroDeOrigen: envio.numeroDeOrigen, para: cliente, texto: TEXTOS.reglaDelApartado, pasaAPersona: false, escribio: '[agente · regla del apartado]' });
+        agente.recuerda(cliente, 'cliente', texto);
+        agente.recuerda(cliente, 'bot', TEXTOS.reglaDelApartado);
+        return true;
+      }
       if (preguntaPorElPrecio(texto)) {
         console.log('[agente] pregunta por el precio después del ticket: «en breve», el bot sigue vivo');
         await manda({ numeroDeOrigen: envio.numeroDeOrigen, para: cliente, texto: EN_BREVE_EL_PRECIO, pasaAPersona: false, escribio: '[agente · en breve]' });
@@ -5964,8 +6000,24 @@ function esSoloUnAcuse(texto) {
   const palabras = t.split(' ');
   return palabras.length <= 6 && palabras.every(function (p) { return PALABRAS_DE_ACUSE.has(p); });
 }
+/* ------------------------------------------------------------
+   «¿CUÁNTO ES EL APARTADO?» DESPUÉS DEL RESUMEN — 25-sep-2026
+   ------------------------------------------------------------
+   Dictado del dueño: «ya sabes cuál es la regla del apartado, no deberías
+   equivocarte ahí». Antes, «¿cuánto es el apartado?» casaba con «cuánto»
+   y el bot contestaba «en breve te paso tu cotización», aunque el
+   vendedor ya hubiera dado el precio en el chat. La regla (R51): 20 % del
+   total, redondeado hacia arriba a los $500. El bot no sabe el total por
+   Kommo, así que dice la regla sin cifras y sigue vivo.
+   ------------------------------------------------------------ */
+function preguntaPorElApartado(texto) {
+  const t = conversacion.normaliza(String(texto || ''));
+  return /\b(apartado|apartar|aparto|anticipo|deposito|enganche|reserva|reservar|apartarlo|apartarla)\b/.test(t) &&
+    !/\b(fotos?|video)\b/.test(t);
+}
 function preguntaPorElPrecio(texto) {
   const t = conversacion.normaliza(String(texto || ''));
+  if (preguntaPorElApartado(texto)) return false;
   return /\b(precio|precios|costo|costos|tarifa|tarifas|cotizacion|presupuesto|cuanto|cuantos? (?:sale|cuesta|seria|es)|en cuanto|ya (?:tienes|tienen|esta|quedo) (?:el|la|mi))\b/.test(t) &&
     !/\b(fotos?|video)\b/.test(t);
 }

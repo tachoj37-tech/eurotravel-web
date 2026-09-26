@@ -413,7 +413,9 @@ function instruccionesDelAgente(voz) {
     '(combustible y casetas son dos cosas distintas, nunca en el mismo renglón):\n' +
     '👨‍✈️ Operador profesional\n⛽ Combustible\n🛣️ Casetas\n🛡️ Seguro de viajero\n📡 Monitoreo GPS 24/7\n' +
     'Se aparta la fecha con un anticipo por transferencia ' +
-    'y el resto antes de la salida o al abordar. Rutas de siempre, por si el cliente va a ' +
+    'y el resto antes de la salida o al abordar. La regla del apartado, si preguntan cuánto es: ' +
+    'el 20 % del total, redondeado hacia arriba a los 500 pesos (así se dice, como regla; el monto ' +
+    'exacto lo manda el sistema, tú no haces la cuenta). Rutas de siempre, por si el cliente va a ' +
     'una de ellas: Vallarta, Mazatlán, Ciudad de México y Tequila. El AÑO de una unidad ' +
     'solo se dice de las que lo traen en el catálogo (i6S, i6, G8); de las demás nunca, ni ' +
     'aproximado. Del permiso federal no hablas: si preguntan, es acción "dueno". Nada más: ' +
@@ -817,6 +819,41 @@ function limpiaDatos(d, hoy) {
    dijo algo que no puede salir. `pide`/`clave` entran como
    parámetros para probar sin gastar.
    ------------------------------------------------------------ */
+/* ------------------------------------------------------------
+   LA IA SIN SALDO NO ES UNA CAÍDA PASAJERA — 25-sep-2026
+   ------------------------------------------------------------
+   Lead real 26992600, 18:21 a 18:32: la llave de Anthropic pegó en su
+   tope mensual («You have reached your specified API usage limits. You
+   will regain access on 2026-10-01») y CADA turno cayó al guion de
+   respaldo, que leyó «cómo es la dinámica para apartar» como el destino
+   «Apartar», armó un viaje Guadalajara → Apartar y le dio al cliente un
+   apartado de $5,000. Once mensajes así, con la clienta diciendo «me
+   confunde el contestador automático».
+
+   El guion es respaldo para un tropiezo de segundos, no para días sin
+   IA. Cuando la API dice que no hay saldo o acceso (tope de uso, saldo
+   en cero, llave inválida), se anota HASTA CUÁNDO y la cáscara manda el
+   chat a una persona en vez de dejar que el guion adivine. Un 5xx o un
+   tiempo agotado siguen como antes: el guion contesta ese turno.
+   ------------------------------------------------------------ */
+let agotadaHasta = 0;
+let agotadaMotivo = '';
+const SIN_ACCESO = /usage limits|regain access|credit balance|authentication_error|invalid x-api-key|api key|billing|permission_error/i;
+function apuntaSiEstaAgotada(status, motivo) {
+  const m = String(motivo || '');
+  if (!(status === 401 || status === 403 || status === 402 || SIN_ACCESO.test(m))) return;
+  const cuando = /regain access on (\d{4}-\d{2}-\d{2}) at (\d{2}:\d{2}) UTC/i.exec(m);
+  const hasta = cuando ? Date.parse(cuando[1] + 'T' + cuando[2] + ':00Z') : NaN;
+  /* Con fecha, hasta esa fecha; sin fecha, diez minutos y se vuelve a
+     intentar (por si el dueño ya la arregló). */
+  agotadaHasta = Number.isFinite(hasta) && hasta > Date.now() ? hasta : Date.now() + 10 * 60 * 1000;
+  agotadaMotivo = (status ? status + ' · ' : '') + m.replace(/\s+/g, ' ').slice(0, 160);
+  console.error('[ia-agotada] la IA no tiene saldo o acceso hasta ' + new Date(agotadaHasta).toISOString() + ': el guion NO improvisa, los chats pasan a una persona');
+}
+function iaAgotada() { return Date.now() < agotadaHasta; }
+function iaAgotadaMotivo() { return iaAgotada() ? agotadaMotivo : ''; }
+function olvidaAgotamiento() { agotadaHasta = 0; agotadaMotivo = ''; }
+
 async function conversa(mensaje, opciones) {
   const o = opciones || {};
   const clave = o.clave || process.env.ANTHROPIC_API_KEY;
@@ -909,6 +946,7 @@ async function conversa(mensaje, opciones) {
       const motivo = r ? await r.text().catch(function () { return ''; }) : '';
       console.error('[agente] la IA contesto ' + (r && r.status) +
         (motivo ? ' · ' + String(motivo).replace(/\s+/g, ' ').slice(0, 300) : ''));
+      apuntaSiEstaAgotada(r && r.status, motivo);
       return null;
     }
     const cuerpo = await r.json();
@@ -1087,6 +1125,7 @@ async function redactaSeguimiento(opciones) {
 
 module.exports = {
   conversa, usaSonnet, sanea, conZonaMetropolitana, limpiaDatos, instruccionesDelAgente, textoDelContexto,
+  iaAgotada, iaAgotadaMotivo, olvidaAgotamiento, apuntaSiEstaAgotada,
   redactaSeguimiento,
   recuerda, historialDe, siembraHistorial, olvidaTodo, olvida, PALABRAS_PROHIBIDAS,
   unidadPorTexto, unidadesEnTexto, fichaDeUnidades,

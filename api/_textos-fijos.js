@@ -50,6 +50,10 @@ const TEXTOS = {
   fechaNuevaPregunta: '¿Para qué fecha sería?',
   fechaNuevaAnotado: 'Anotado 🙌 Un agente se comunica contigo por aquí para revisar tu cotización con la fecha nueva y seguir con el pago.',
   agente: 'Va 🙌 Ahorita te contesta una persona por aquí mismo.',
+  /* La regla del apartado (R51 del criterio): 20 % del total, redondeado
+     hacia arriba a los $500. Después del resumen el bot no sabe el total
+     (lo da el vendedor), así que dice la regla sin cifras (25-sep-2026). */
+  reglaDelApartado: 'Para apartar es el 20 % del total, redondeado hacia arriba a los 500 pesos, por transferencia 🙌 El resto se cubre antes de la salida o al abordar.',
   /* Botón «Abonar contrato» del saludo en lista (17-sep-2026): 100 % persona. */
   abonar: 'Va 🙌 Manda tu comprobante por aquí; el equipo lo revisa y te confirma el abono.',
 

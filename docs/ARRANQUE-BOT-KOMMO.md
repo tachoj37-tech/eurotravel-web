@@ -601,3 +601,33 @@ subir el zip 1.0.9 en Ajustes → Integraciones cuando haya calma.
 
 También: `continuaSalesbot` reintenta UNA vez un tropiezo de red o un 5xx
 de Kommo (`pruebas/probar-kommo-continuacion.cjs`); un 4xx no.
+
+### 25-sep-2026 · La llave de Anthropic pegó en su tope mensual, y el guion adivinó
+
+Lead 26992600 (Sol), 18:21 a 18:32: la API contestó 400 en cada turno
+(«You have reached your specified API usage limits. You will regain access
+on 2026-10-01 at 00:00 UTC»). Sin IA, el guion de respaldo leyó «cómo es la
+dinámica para apartar» como el destino «Apartar», armó Guadalajara →
+Apartar, «Creo que entendí: autobús, a No Tener Errores Es» y un apartado
+de $5,000. La clienta: «me confunde el contestador automático».
+
+Dos arreglos:
+
+1. **Sin saldo o sin acceso, el guion no adivina.** `_agente.js` anota
+   hasta cuándo (`apuntaSiEstaAgotada`: tope de uso, saldo en cero, llave
+   inválida; con la fecha que diga la API o diez minutos) y la cáscara
+   manda el relevo fijo («Va 🙌 Ahorita te contesta una persona…»), deja
+   el chat en manos de una persona (por Kommo, `fin`) y la plática vuelve
+   a como estaba. Un 5xx o un tiempo agotado siguen con el guion, como
+   antes. Prueba en `probar-kommo-cerebro.cjs` (25-sep).
+2. **La regla del apartado después del resumen.** «¿Cuánto es el
+   apartado?» casaba con «cuánto» y salía «en breve te paso tu
+   cotización». Ahora `preguntaPorElApartado` va antes y contesta
+   `TEXTOS.reglaDelApartado` (20 % del total, redondeado hacia arriba a los
+   500 pesos, por transferencia; el resto antes de la salida o al abordar),
+   sin cifras del viaje, y el bot sigue vivo. Con y sin IA. El prompt de la
+   IA trae la misma regla. Prueba en `probar-ticket-y-se-baja.mjs`.
+
+Lo que solo el dueño puede hacer: subir el tope de uso mensual en la
+consola de Anthropic (Settings → Limits), o la IA sigue apagada hasta el
+1 de octubre. El registro lo grita con `[ia-agotada]`.
